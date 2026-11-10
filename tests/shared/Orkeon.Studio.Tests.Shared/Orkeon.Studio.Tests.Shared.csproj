@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The fixtures of Orkeon's tests/shared/Orkeon.Tests.Shared that the Studio suites use,
+       copied with their namespaces (Orkeon.Tests.Shared.*) unchanged. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Orkeon.Tests.Shared</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- IFileSystemService (FakeFileSystemService), the LLM provider constants, the path
+         security types. -->
+    <PackageReference Include="Orkeon" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.assert" />
+  </ItemGroup>
+
+</Project>

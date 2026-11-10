@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dotnet-coverage settings: only Orkeon Studio's own assemblies are measured (Orkeon.Studio.*),
+  never the Orkeon packages it consumes. Test assemblies and the shared fixtures are left out,
+  with one exception: Orkeon.Studio.Wpf.Tests compiles the WPF ViewModels by link (the WPF
+  project targets net10.0-windows, the suite runs on Linux), so that assembly is measured, and
+  only its sources under src/ count: the ViewModels are credited to src/apps/Orkeon.Studio.Wpf.
+-->
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*[\\/]Orkeon\.Studio(\.[^\\/]*)?\.(dll|exe)$</ModulePath>
+      </Include>
+      <Exclude>
+        <ModulePath>^(?!.*[\\/]Orkeon\.Studio\.Wpf\.Tests\.dll$).*\.Tests\.dll$</ModulePath>
+        <ModulePath>.*[\\/]Orkeon\.Studio\.Tests\.Shared\.dll$</ModulePath>
+      </Exclude>
+    </ModulePaths>
+    <Sources>
+      <Exclude>
+        <Source>.*[\\/]tests[\\/].*</Source>
+      </Exclude>
+    </Sources>
+    <IncludeTestAssembly>false</IncludeTestAssembly>
+  </CodeCoverage>
+</Configuration>

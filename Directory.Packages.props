@@ -1,0 +1,44 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <!-- NuGet vulnerability audit, stated rather than inherited from SDK defaults: direct AND
+       transitive dependencies, every severity. An advisory surfaces as an NU19xx warning and
+       CI builds with -warnaserror, so an advisory fails the CI build: the fix is to move a
+       pin, never to suppress the code. -->
+  <PropertyGroup>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+  <!-- The Orkeon packages Studio consumes, all at one version. The local build
+       (1.0.0-studio.local) comes from the `orkeon-local` source in nuget.config until the
+       packages are published. -->
+  <PropertyGroup>
+    <OrkeonVersion>1.0.0-studio.local</OrkeonVersion>
+  </PropertyGroup>
+  <ItemGroup Label="Orkeon">
+    <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Constants.Cli" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Cli.Abstractions" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Cli.TerminalGui" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Tools" Version="$(OrkeonVersion)" />
+    <!-- Ships Orkeon.Hosting.dll too: the parity and drift tests of Studio.Core.Tests need it. -->
+    <PackageVersion Include="Orkeon.Scripting" Version="$(OrkeonVersion)" />
+    <PackageVersion Include="Orkeon.Compliance.Vfs" Version="$(OrkeonVersion)" />
+  </ItemGroup>
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
+    <PackageVersion Include="xunit.v3.assert" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+  <ItemGroup Label="TUI">
+    <PackageVersion Include="Terminal.Gui" Version="2.5.0" />
+  </ItemGroup>
+  <ItemGroup Label="Roslyn">
+    <!-- Pins the compiler (Directory.Build.props) to the Roslyn the VFS analyzer is built on. -->
+    <PackageVersion Include="Microsoft.Net.Compilers.Toolset" Version="5.9.0" />
+  </ItemGroup>
+</Project>

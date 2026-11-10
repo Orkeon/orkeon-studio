@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\apps\Orkeon.Studio.Core\Orkeon.Studio.Core.csproj" />
+    <!-- STUDIO-51: the cmd and C runtime models every launcher writer's suite reads run.cmd with. -->
+    <ProjectReference Include="..\..\shared\Orkeon.Studio.Tests.Shared\Orkeon.Studio.Tests.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Core does not need Infrastructure, Tools or Hosting (see its csproj). The test project
+      does, so ConstantDriftTests and DirectoryLayoutEquivalenceTests can check Core's copies
+      against the real thing. Orkeon.Scripting carries Orkeon.Hosting.dll.
+    -->
+    <PackageReference Include="Orkeon" />
+    <PackageReference Include="Orkeon.Tools" />
+    <PackageReference Include="Orkeon.Scripting" />
+  </ItemGroup>
+
+</Project>

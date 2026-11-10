@@ -1,0 +1,320 @@
+# Builds the Orkeon Studio release on a v* tag, smokes it on a real Windows and a real
+# Ubuntu runner, and only then attaches it to a draft GitHub Release.
+#
+# Pipeline: build-test -> package -> {smoke-linux, msi} -> release
+#
+#   package      ubuntu: scripts/package-studio.sh cross-publishes both RIDs (the WPF
+#                project sets EnableWindowsTargeting): the win-x64 zip (WPF app) and the
+#                linux-x64 tar.gz (the two Terminal.Gui apps), plus SHA256SUMS.
+#   smoke-linux  ubuntu: the tarball extracted, both TUIs answer --version headless.
+#   msi          windows: the zip smoked (`--smoke-exit` opens and closes the WPF window),
+#                the MSI built from it with WiX (scripts/build-msi.ps1), installed, smoked
+#                again with its Start-menu shortcut, uninstalled.
+#   release      tag only: every asset checked against its checksum line, then attached
+#                to a draft Release, marked prerelease when the version has a suffix. The
+#                draft is published by hand.
+#
+# The smokes install from the job artifacts, never from the Release. workflow_dispatch
+# runs everything except the release job.
+#
+# The orkeon CLI is a prerequisite installed separately: nothing here bundles it, and
+# the smokes do not need it (--version and --smoke-exit never start it).
+#
+# Until Orkeon publishes the packages Studio consumes, pack-orkeon packs them from the
+# commit .github/orkeon-source-ref names into orkeon-feed/, as in ci.yml.
+name: Release
+on:
+  push: { tags: [ 'v*' ] }
+  workflow_dispatch:
+
+# Least privilege: read-only everywhere; only the release job may write contents.
+permissions: { contents: read }
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pack-orkeon:
+    # TEMPORARY, until Orkeon publishes the packages Studio consumes: packs them from the
+    # Orkeon commit .github/orkeon-source-ref names into the orkeon-feed/ folder nuget.config
+    # reads, and hands it to the jobs that restore.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Clone Orkeon at the pinned commit
+        run: |
+          git init -q "$RUNNER_TEMP/orkeon"
+          git -C "$RUNNER_TEMP/orkeon" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "$(cat .github/orkeon-source-ref)"
+          git -C "$RUNNER_TEMP/orkeon" checkout -q FETCH_HEAD
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/orkeon/packages
+          key: orkeon-pack-${{ runner.os }}-${{ hashFiles('.github/orkeon-source-ref') }}
+          restore-keys: orkeon-pack-${{ runner.os }}-
+      - run: ./scripts/pack-orkeon-feed.sh "$RUNNER_TEMP/orkeon"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orkeon-feed
+          path: orkeon-feed/*.nupkg
+          if-no-files-found: error
+          retention-days: 1
+
+  build-test:
+    needs: pack-orkeon
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ORKEON_SOURCE_ROOT: ${{ github.workspace }}/.orkeon-src
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with: { name: orkeon-feed, path: orkeon-feed }
+
+      # src/Directory.Build.props is the single source of truth; the tag only has to agree
+      # with it. A mistyped tag would ship archives named after a version that exists
+      # nowhere else. workflow_dispatch has no tag to check.
+      - name: Verify tag matches src/Directory.Build.props version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          prefix=$(sed -n 's/.*<VersionPrefix>\(.*\)<\/VersionPrefix>.*/\1/p' src/Directory.Build.props)
+          suffix=$(sed -n 's/.*<VersionSuffix>\(.*\)<\/VersionSuffix>.*/\1/p' src/Directory.Build.props)
+          version="$prefix${suffix:+-$suffix}"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag v$tag does not match src/Directory.Build.props version $version. Bump the props before tagging."
+            exit 1
+          fi
+          echo "Tag v$tag matches props version $version."
+      - name: Check comments carry no accented letter
+        run: python3 scripts/check-comment-accents.py
+      - name: Clone the Orkeon sources the drift tests read
+        # The commit pack-orkeon packed (.github/orkeon-source-ref), so the drift tests read the
+        # sources of the packages Studio builds against, not whatever main holds today.
+        run: |
+          git init -q "$ORKEON_SOURCE_ROOT"
+          git -C "$ORKEON_SOURCE_ROOT" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "$(cat .github/orkeon-source-ref)"
+          git -C "$ORKEON_SOURCE_ROOT" checkout -q FETCH_HEAD
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Orkeon.* is packed at one fixed version from whatever commit the ref names: never
+          # cache its extraction, NuGet would reuse the previous commit's assemblies.
+          path: |
+            packages
+            ~/.nuget/packages
+            !packages/orkeon*
+            !~/.nuget/packages/orkeon*
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - run: dotnet restore Orkeon.Studio.sln
+      - run: dotnet build Orkeon.Studio.sln -c Release --no-restore -warnaserror
+      - run: dotnet test Orkeon.Studio.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow"
+
+  package:
+    runs-on: ubuntu-latest
+    needs: [ build-test, pack-orkeon ]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with: { name: orkeon-feed, path: orkeon-feed }
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Orkeon.* is packed at one fixed version from whatever commit the ref names: never
+          # cache its extraction, NuGet would reuse the previous commit's assemblies.
+          path: |
+            packages
+            ~/.nuget/packages
+            !packages/orkeon*
+            !~/.nuget/packages/orkeon*
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      # On a tag the version is the tag minus its v (the guard above proved it equals the
+      # props version); on workflow_dispatch the script reads the props.
+      - name: Package the archives (win-x64 zip, linux-x64 tar.gz)
+        run: |
+          version_arg=()
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then version_arg=(--version "${GITHUB_REF_NAME#v}"); fi
+          ./scripts/package-studio.sh "${version_arg[@]}" --out artifacts/release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-release-archives
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/*.tar.gz
+            artifacts/release/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  smoke-linux:
+    runs-on: ubuntu-latest
+    needs: package
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: studio-release-archives
+          path: artifacts/release
+      - name: Check the archives against SHA256SUMS
+        working-directory: artifacts/release
+        run: sha256sum -c SHA256SUMS
+      - name: Smoke the linux tarball (Studio TUIs present, headless --version)
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          shopt -s nullglob
+          archives=(artifacts/release/orkeon-studio-*-linux-x64.tar.gz)
+          [[ ${#archives[@]} -eq 1 ]] || { echo "Expected one linux-x64 tarball, found ${#archives[@]}"; exit 1; }
+          ./scripts/smoke-studio-linux.sh "${archives[0]}" "$RUNNER_TEMP/studio-smoke" "${TAG#v}"
+
+  msi:
+    runs-on: windows-latest
+    needs: package
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The wix tool is restored from .config/dotnet-tools.json.
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: studio-release-archives
+          path: artifacts/release
+
+      # build-msi.ps1 harvests the zip's single top-level folder, not the raw
+      # Expand-Archive destination.
+      - name: Extract the win-x64 zip
+        shell: pwsh
+        run: |
+          $zip = @(Get-ChildItem artifacts\release -Filter 'orkeon-studio-*-win-x64.zip')
+          if ($zip.Count -ne 1) { throw "Expected one orkeon-studio-*-win-x64.zip, found $($zip.Count)." }
+          Expand-Archive -LiteralPath $zip[0].FullName -DestinationPath artifacts\_extract -Force
+          $roots = @(Get-ChildItem artifacts\_extract -Directory)
+          if ($roots.Count -ne 1) { throw "Expected exactly one top-level folder in the archive, found $($roots.Count)." }
+          "STAGE_DIR=$($roots[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Smoke the zip (WPF window opens and closes)
+        shell: pwsh
+        run: ./scripts/smoke-studio-windows.ps1 -InstallRoot "$env:STAGE_DIR" -LogDir artifacts\msi-logs\zip
+
+      - name: Build the MSI
+        shell: pwsh
+        run: ./scripts/build-msi.ps1 -StageDir "$env:STAGE_DIR" -OutDir artifacts\msi
+
+      # Install -> smoke (payload, Start-menu shortcut, --smoke-exit) -> uninstall. msiexec
+      # 0 or 3010 (reboot pending) both mean success.
+      - name: Smoke the MSI (install, start, uninstall)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $msi = (Get-ChildItem artifacts\msi -Filter 'orkeon-studio-*-win-x64.msi' | Select-Object -First 1).FullName
+          if (-not $msi) { throw 'No orkeon-studio-*-win-x64.msi produced.' }
+          $installDir = Join-Path $env:LOCALAPPDATA 'Programs\Orkeon Studio'
+          $logsDir = 'artifacts\msi-logs'
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+
+          function Find-StudioArpEntry {
+            foreach ($root in 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall',
+                              'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall') {
+              $hit = Get-ItemProperty -Path "$root\*" -ErrorAction SilentlyContinue |
+                Where-Object { $_.DisplayName -eq 'Orkeon Studio' } | Select-Object -First 1
+              if ($hit) { return $hit }
+            }
+            return $null
+          }
+
+          $p = Start-Process msiexec.exe -ArgumentList @('/i', "`"$msi`"", '/qn', '/l*v', "$logsDir\install.log") -Wait -PassThru
+          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { Get-Content "$logsDir\install.log" -Tail 60; throw "msiexec /i exited $($p.ExitCode)" }
+          Write-Host "PASS install -- $installDir"
+
+          if (-not (Find-StudioArpEntry)) { throw 'No Add/Remove Programs entry named Orkeon Studio after install.' }
+          Write-Host 'PASS arp -- Orkeon Studio registered'
+
+          ./scripts/smoke-studio-windows.ps1 -InstallRoot $installDir -LogDir "$logsDir\installed" -ExpectStartMenuShortcut
+          if ($LASTEXITCODE -ne 0) { throw 'Orkeon Studio smoke failed on the MSI install.' }
+
+          $p = Start-Process msiexec.exe -ArgumentList @('/x', "`"$msi`"", '/qn', '/l*v', "$logsDir\uninstall.log") -Wait -PassThru
+          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { Get-Content "$logsDir\uninstall.log" -Tail 60; throw "msiexec /x exited $($p.ExitCode)" }
+          if (Test-Path -LiteralPath (Join-Path $installDir 'libexec\orkeon-studio\Orkeon.Studio.exe')) { throw "Uninstall left the payload under $installDir" }
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Orkeon Studio.lnk'
+          if (Test-Path -LiteralPath $shortcut) { throw "Uninstall left the Start-menu shortcut $shortcut" }
+          if (Find-StudioArpEntry) { throw 'Add/Remove Programs entry still present after uninstall.' }
+          Write-Host 'PASS uninstall -- payload, shortcut and ARP entry gone'
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: studio-msi-logs
+          path: artifacts/msi-logs
+          if-no-files-found: ignore
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-msi
+          path: |
+            artifacts/msi/*.msi
+            artifacts/msi/SHA256SUMS.msi
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [ smoke-linux, msi ]
+    if: startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 10
+    # contents: write publishes the draft Release and its assets, at job scope only.
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: studio-release-archives
+          path: artifacts/release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: studio-msi
+          path: artifacts/release
+
+      # One SHA256SUMS for every asset: the archives' lines (Linux job) plus the MSI's
+      # (Windows job), each checked before anything is attached.
+      - name: Merge and check SHA256SUMS
+        working-directory: artifacts/release
+        run: |
+          cat SHA256SUMS.msi >> SHA256SUMS
+          rm SHA256SUMS.msi
+          sort -k2 -o SHA256SUMS SHA256SUMS
+          sha256sum -c SHA256SUMS
+          ls -lh
+
+      # A published Release is final: refuse to write it again. A draft left by a failed
+      # run is deleted (the tag stays) and made again. The draft is published by hand;
+      # a version with a suffix (a SemVer pre-release) is marked prerelease, so it never
+      # becomes the latest release.
+      - name: Create the draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          state="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || echo none)"
+          case "$state" in
+            none) ;;
+            true) gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes ;;
+            *) echo "::error::The Release $TAG is already published: tag a new version."; exit 1 ;;
+          esac
+          prerelease=()
+          if [[ "$TAG" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft "${prerelease[@]}" \
+            --title "Orkeon Studio ${TAG#v}" \
+            --notes "Release notes: the section matching this tag in [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/CHANGELOG.md). Prerequisite: the \`orkeon\` CLI (\`dotnet tool install -g Orkeon.Scripting.Cli\`)." \
+            artifacts/release/*.zip artifacts/release/*.tar.gz artifacts/release/*.msi artifacts/release/SHA256SUMS
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,url

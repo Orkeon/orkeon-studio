@@ -1,0 +1,40 @@
+<Project>
+  <!-- Import the parent Directory.Build.props (dual-OS, Debug/Release) -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- The single source of truth for Orkeon Studio's version. The Orkeon packages Studio
+         consumes carry their own version: OrkeonVersion in Directory.Packages.props. -->
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionSuffix>alpha.1</VersionSuffix>
+    <Authors>Orkeon Contributors</Authors>
+    <Company>Orkeon</Company>
+    <Product>Orkeon Studio</Product>
+    <PackageProjectUrl>https://github.com/Orkeon/orkeon-studio</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Orkeon/orkeon-studio</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Orkeon Studio: desktop and terminal front-ends for the Orkeon agent framework</Description>
+    <Copyright>Copyright (c) 2024-2026 Orkeon Contributors</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Warnings policy: CI builds with -warnaserror, so any new warning fails the CI build.
+         CS1998 (async method lacks await) and CS1574 (unresolvable XML doc cref) also break
+         local builds. A legitimate async-without-await uses a LOCAL, commented
+         `#pragma warning disable CS1998`. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS1998;CS1574</WarningsAsErrors>
+    <!-- The ORKEXP diagnostics flag Orkeon's experimental surfaces (A2A, Autonomous,
+         corrective RAG, MCP); Studio only names them, it does not build on them. -->
+    <NoWarn>$(NoWarn);ORKEXP001;ORKEXP002;ORKEXP003;ORKEXP004;ORKEXP005</NoWarn>
+    <NoWarn>$(NoWarn);ORKEXP006;ORKEXP007</NoWarn>
+  </PropertyGroup>
+
+  <!-- VFS compliance analyzer (a development-dependency package from Orkeon): forbids direct
+       System.IO and System.Console usage. Opt out per symbol with
+       [SuppressVfsCompliance("reason")] / [SuppressConsoleCompliance("reason")]. -->
+  <ItemGroup>
+    <PackageReference Include="Orkeon.Compliance.Vfs" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

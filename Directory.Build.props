@@ -1,0 +1,60 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- Exclude the other OS's artefacts to avoid duplicate CS0579/CS0757 -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);obj-linux/**;obj/**</DefaultItemExcludes>
+    <!-- PUB-18 (P5 of the 2026-06-15 zero-warning campaign): the FULL analyzer set
+         is on, permanently. Every family is either clean or explicitly arbitrated
+         in .editorconfig (the ledger); the 2026-08-18 inventory found 4 stragglers
+         solution-wide, all fixed the same day. CI builds with -warnaserror, so the
+         whole repo is ratcheted at zero warnings under the complete rule set. -->
+    <AnalysisMode>All</AnalysisMode>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+  </PropertyGroup>
+  <!-- Build-only: replaces the SDK's csc with the pinned Roslyn, so the Orkeon.Compliance.Vfs
+       analyzer (built against Microsoft.CodeAnalysis 5.9.0) can be loaded by the compiler that
+       runs it. Repository-wide because every project under src/ loads it. -->
+  <ItemGroup Condition="'$(ManagePackageVersionsCentrally)' == 'true'">
+    <PackageReference Include="Microsoft.Net.Compilers.Toolset" PrivateAssets="all" />
+  </ItemGroup>
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)/obj-linux/</BaseIntermediateOutputPath>
+    <!-- A restore under Linux reads and fills <repository>/packages, never ~/.nuget/packages.
+         The CI caches this folder (actions/cache in ci.yml): moving it means changing that step. -->
+    <RestorePackagesPath>$(MSBuildThisFileDirectory)packages</RestorePackagesPath>
+  </PropertyGroup>
+  <!-- scripts/install-from-source.* builds against another OrkeonVersion: StudioBuildRoot keeps
+       that build's obj/ and bin/ out of the projects, so a later build of the checkout that
+       skips the restore never picks up its assets file. Unset, nothing changes. WPF's markup pass
+       builds a <name>_<random>_wpftmp project and hands it the parent's name as
+       _TargetAssemblyProjectName: keying on that keeps both in the folder holding the assets. -->
+  <PropertyGroup Condition="'$(StudioBuildRoot)' != ''">
+    <_StudioBuildName>$([MSBuild]::ValueOrDefault('$(_TargetAssemblyProjectName)', '$(MSBuildProjectName)'))</_StudioBuildName>
+    <BaseIntermediateOutputPath>$(StudioBuildRoot)/obj/$(_StudioBuildName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(StudioBuildRoot)/bin/$(_StudioBuildName)/</BaseOutputPath>
+    <!-- The SDK excludes only the output paths in use: the checkout's own bin/ would be globbed. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <Optimize>false</Optimize>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>portable</DebugType>
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
+    <!-- R1.5/ORG-008: no global RID pin in Release — libraries must pack portable
+         (AnyCPU) packages. Executables that need a platform-specific build pass the
+         RID explicitly at publish time: `dotnet publish -c Release -r linux-x64`. -->
+    <!--<PublishReadyToRun>true</PublishReadyToRun>-->
+    <!--<PublishAot>true</PublishAot>-->
+    <!-- PUB-24 P1: emit embedded portable PDBs in Release. DebugSymbols=false used to
+         disable emission entirely (DebugType=embedded was inert), shipping non-debuggable
+         packages: no step-into, no line numbers in stack traces, and the SDK's implicit
+         SourceLink had nothing to attach to. Embedded PDBs ride inside each DLL — no
+         extra artifact, deterministic builds keep their Reproducible entry. -->
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>embedded</DebugType>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+</Project>

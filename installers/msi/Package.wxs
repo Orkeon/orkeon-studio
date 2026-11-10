@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Orkeon Studio, per-user MSI (WiX v5). Built by scripts/build-msi.ps1 from the
+  orkeon-studio-<ver>-win-x64.zip tree that scripts/package-studio.sh produces:
+
+    bin\orkeon-studio.cmd                   the launcher
+    libexec\orkeon-studio\Orkeon.Studio.exe  the self-contained WPF app
+    licenses\**                              notices of the bundled .NET runtimes
+    README.md, LICENSE.md, NOTICE.md, THIRD-PARTY-NOTICES.md, VERSION
+
+  Adapted from Orkeon's installers/msi/Package.wxs (its Studio payload and its
+  StudioShortcutComponent), trimmed to Studio: no PATH entry, no CLI. The orkeon CLI
+  is a prerequisite installed separately; Studio finds it through ORKEON_CLI_DIR or PATH.
+
+  Defines passed by build-msi.ps1:
+    StudioVersion      x.y.z (MSI ProductVersion takes no suffix)
+    StudioVersionFull  the full version, suffix included
+    PublishDir         the extracted zip tree (its single top-level folder)
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!--
+    UpgradeCode: generated once (2026-11-10) for Orkeon Studio, distinct from Orkeon's.
+    NEVER REGENERATE: MajorUpgrade recognizes an earlier Orkeon Studio by it; a new one
+    makes every later release a second, parallel product.
+  -->
+  <?define StudioUpgradeCode = "298AA033-FBC0-4CCD-8B40-026C38758AD8" ?>
+
+  <Package Name="Orkeon Studio"
+           Manufacturer="Orkeon"
+           Version="$(var.StudioVersion)"
+           UpgradeCode="$(var.StudioUpgradeCode)"
+           Scope="perUser"
+           Language="1033"
+           InstallerVersion="500">
+
+    <SummaryInformation Keywords="Installer" Description="Orkeon Studio $(var.StudioVersionFull) - per-user setup" />
+
+    <!-- Unsigned: SmartScreen warns on first run until the package is code-signed. -->
+
+    <!-- Two pre-releases share one x.y.z ProductVersion (the suffix is dropped): the same
+         version must upgrade, not fail with error 1638. -->
+    <MajorUpgrade
+      AllowSameVersionUpgrades="yes"
+      DowngradeErrorMessage="A newer version of Orkeon Studio is already installed. Uninstall it first if you need to downgrade." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPCOMMENTS" Value="Orkeon Studio $(var.StudioVersionFull)" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Orkeon/orkeon-studio" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Orkeon/orkeon-studio#readme" />
+    <!-- ARPNOMODIFY is already set by WixUI_Minimal (WIX0091 if declared twice). -->
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <!-- %LOCALAPPDATA%\Programs\Orkeon Studio, spelled out under LocalAppDataFolder
+         rather than inferred from Scope="perUser" (see Orkeon's Package.wxs). -->
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Orkeon Studio" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- The zip tree, harvested whole. <Files> generates one component per file with
+         per-path stable GUIDs, stable as long as the tree's shape is. -->
+    <ComponentGroup Id="PayloadComponents" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+
+    <!-- Start-menu shortcut. A per-user shortcut needs an HKCU registry KeyPath (the
+         shortcut cannot be one). RemoveFolder cleans INSTALLFOLDER on uninstall, which
+         Windows Installer does not always infer under LocalAppDataFolder.
+         GUID generated once (2026-11-10): stable across releases. -->
+    <Component Id="StudioShortcutComponent" Directory="ProgramMenuFolder" Guid="EED209BE-57DF-45EB-890E-3C6697B8066F">
+      <RegistryValue Root="HKCU" Key="Software\Orkeon\Studio\Msi" Name="StudioShortcut" Type="integer" Value="1" KeyPath="yes" />
+      <Shortcut Id="OrkeonStudioShortcut"
+                Name="Orkeon Studio"
+                Description="Orkeon Studio - settings editor and crew launcher"
+                Target="[INSTALLFOLDER]libexec\orkeon-studio\Orkeon.Studio.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+    </Component>
+
+    <Feature Id="MainFeature" Title="Orkeon Studio" Level="1">
+      <ComponentGroupRef Id="PayloadComponents" />
+      <ComponentRef Id="StudioShortcutComponent" />
+    </Feature>
+
+    <!-- WixUI_Minimal: license, progress, exit. The install path is fixed. -->
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT"
+              Value="Orkeon Studio drives the orkeon CLI: install it first (dotnet tool install -g Orkeon.Scripting.Cli), then start Orkeon Studio from the Start menu." />
+
+  </Package>
+</Wix>

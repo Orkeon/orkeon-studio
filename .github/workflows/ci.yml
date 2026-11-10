@@ -1,0 +1,105 @@
+# Build and test Orkeon Studio.
+#
+# Studio consumes Orkeon as NuGet packages, which are not published yet: nuget.config
+# resolves Orkeon.* from the git-ignored orkeon-feed/ folder. The pack-orkeon job fills it
+# from the Orkeon commit .github/orkeon-source-ref names (scripts/pack-orkeon-feed.sh) and
+# hands it to the jobs that restore. Once Orkeon publishes the packages: drop that job,
+# the script, the ref file and the `orkeon-local` source of nuget.config, and set
+# OrkeonVersion in Directory.Packages.props to the published version.
+#
+# The drift tests of Orkeon.Studio.Core.Tests read files Orkeon ships but does not package
+# (example crews, the installer's sample settings, the tool inventory, the CLI sources):
+# the job clones the same Orkeon commit next to the checkout and points ORKEON_SOURCE_ROOT
+# at it.
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pack-orkeon:
+    # TEMPORARY, until Orkeon publishes the packages Studio consumes: packs them from the
+    # Orkeon commit .github/orkeon-source-ref names into the orkeon-feed/ folder nuget.config
+    # reads, and hands it to the jobs that restore.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Clone Orkeon at the pinned commit
+        run: |
+          git init -q "$RUNNER_TEMP/orkeon"
+          git -C "$RUNNER_TEMP/orkeon" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "$(cat .github/orkeon-source-ref)"
+          git -C "$RUNNER_TEMP/orkeon" checkout -q FETCH_HEAD
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/orkeon/packages
+          key: orkeon-pack-${{ runner.os }}-${{ hashFiles('.github/orkeon-source-ref') }}
+          restore-keys: orkeon-pack-${{ runner.os }}-
+      - run: ./scripts/pack-orkeon-feed.sh "$RUNNER_TEMP/orkeon"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orkeon-feed
+          path: orkeon-feed/*.nupkg
+          if-no-files-found: error
+          retention-days: 1
+
+  build-test:
+    needs: pack-orkeon
+    runs-on: ubuntu-latest
+    env:
+      ORKEON_SOURCE_ROOT: ${{ github.workspace }}/.orkeon-src
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with: { name: orkeon-feed, path: orkeon-feed }
+      - name: Check comments carry no accented letter
+        run: python3 scripts/check-comment-accents.py
+      - name: Clone the Orkeon sources the drift tests read
+        # The commit pack-orkeon packed (.github/orkeon-source-ref), so the drift tests read the
+        # sources of the packages Studio builds against, not whatever main holds today.
+        run: |
+          git init -q "$ORKEON_SOURCE_ROOT"
+          git -C "$ORKEON_SOURCE_ROOT" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "$(cat .github/orkeon-source-ref)"
+          git -C "$ORKEON_SOURCE_ROOT" checkout -q FETCH_HEAD
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Orkeon.* is packed at one fixed version from whatever commit the ref names: never
+          # cache its extraction, NuGet would reuse the previous commit's assemblies.
+          path: |
+            packages
+            ~/.nuget/packages
+            !packages/orkeon*
+            !~/.nuget/packages/orkeon*
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - run: dotnet restore Orkeon.Studio.sln
+      - run: dotnet build Orkeon.Studio.sln -c Release --no-restore -warnaserror
+      - run: dotnet test Orkeon.Studio.sln -c Release --no-build --filter "Category!=Integration&Category!=Slow"
+
+  build-wpf:
+    # The WPF front-end targets net10.0-windows; its ViewModels are tested on Linux by link
+    # (Orkeon.Studio.Wpf.Tests), the XAML is compiled here.
+    needs: pack-orkeon
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with: { name: orkeon-feed, path: orkeon-feed }
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with: { global-json-file: global.json }
+      - run: dotnet restore src/apps/Orkeon.Studio.Wpf/Orkeon.Studio.Wpf.csproj
+      - run: dotnet build src/apps/Orkeon.Studio.Wpf/Orkeon.Studio.Wpf.csproj -c Release --no-restore -warnaserror

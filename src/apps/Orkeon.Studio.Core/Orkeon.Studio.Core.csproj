@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Library only: no UI, no entry point. The three Studio front-ends
+         (WPF + two Terminal.Gui apps) are the only consumers. -->
+    <IsPackable>false</IsPackable>
+
+    <!-- Package Metadata -->
+    <Authors>Orkeon Contributors</Authors>
+    <Description>UI-agnostic core of Orkeon Studio: lossless appsettings.json editing model, LLM presets, VFS mount editing, validation and settings locations.</Description>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    SPEC §7: Core is referenced by three self-contained front-ends, so every transitive
+    dependency is paid three times on disk. In the Orkeon repository Core referenced only
+    Domain, Rag.Abstractions and the Constants.* satellites. Those ship inside the `Orkeon`
+    umbrella package, which also carries Infrastructure and its heavy dependencies
+    (tree-sitter, ONNX, ...): a publish is heavier until Orkeon ships slimmer packages.
+    Orkeon.Constants.Cli is its own package.
+  -->
+  <ItemGroup>
+    <!-- FileSystemMount (mount round-trip), LlmDefaults, [SuppressVfsCompliance], the RAG
+         profile presets and the Constants.* satellites (ADR-009 in Orkeon). -->
+    <PackageReference Include="Orkeon" />
+    <!-- The run option grammar Studio predicts for a process it cannot reference. -->
+    <PackageReference Include="Orkeon.Constants.Cli" />
+  </ItemGroup>
+
+</Project>
