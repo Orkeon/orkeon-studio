@@ -536,7 +536,7 @@
                               controls:ButtonIcon.Kind="archive"
                               Content="{Binding [Studio.Teams.Archive], Source={x:Static services:I18n.Instance}}"/>
                       <Button Style="{StaticResource BtnGhost}" controls:ButtonSize.Height="32" Margin="8,0,0,0"
-                              Command="{Binding DataContext.DismissSuggestionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              Command="{Binding DismissSuggestionCommand}"
                               Content="{Binding [Studio.Teams.SuggestionLater], Source={x:Static services:I18n.Instance}}"/>
                     </StackPanel>
                   </controls:Alert.Actions>

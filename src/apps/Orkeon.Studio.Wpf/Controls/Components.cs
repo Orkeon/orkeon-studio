@@ -38,7 +38,7 @@ public sealed class Alert : ContentControl
         nameof(Details), typeof(string), typeof(Alert), new FrameworkPropertyMetadata(null));
 
     public static readonly DependencyProperty ActionsProperty = DependencyProperty.Register(
-        nameof(Actions), typeof(object), typeof(Alert), new FrameworkPropertyMetadata(null));
+        nameof(Actions), typeof(object), typeof(Alert), new FrameworkPropertyMetadata(null, OnSlotChanged));
 
     public static readonly DependencyProperty IsBannerProperty = DependencyProperty.Register(
         nameof(IsBanner), typeof(bool), typeof(Alert), new FrameworkPropertyMetadata(false));
@@ -62,6 +62,15 @@ public sealed class Alert : ContentControl
     {
         DefaultStyleKeyProperty.OverrideMetadata(typeof(Alert), new FrameworkPropertyMetadata(typeof(Alert)));
         FocusableProperty.OverrideMetadata(typeof(Alert), new FrameworkPropertyMetadata(false));
+    }
+
+    /// <summary>The slots are logical children (<see cref="LogicalSlots"/>): their bindings resolve while the control is collapsed.</summary>
+    protected override System.Collections.IEnumerator LogicalChildren => LogicalSlots.Concat(base.LogicalChildren, Actions);
+
+    private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var self = (Alert)d;
+        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     public Tone Tone { get => (Tone)GetValue(ToneProperty); set => SetValue(ToneProperty, value); }
@@ -123,12 +132,21 @@ public sealed class PropertyRow : ContentControl
         nameof(Label), typeof(string), typeof(PropertyRow), new FrameworkPropertyMetadata(""));
 
     public static readonly DependencyProperty ActionProperty = DependencyProperty.Register(
-        nameof(Action), typeof(object), typeof(PropertyRow), new FrameworkPropertyMetadata(null));
+        nameof(Action), typeof(object), typeof(PropertyRow), new FrameworkPropertyMetadata(null, OnSlotChanged));
 
     static PropertyRow()
     {
         DefaultStyleKeyProperty.OverrideMetadata(typeof(PropertyRow), new FrameworkPropertyMetadata(typeof(PropertyRow)));
         FocusableProperty.OverrideMetadata(typeof(PropertyRow), new FrameworkPropertyMetadata(false));
+    }
+
+    /// <summary>The slots are logical children (<see cref="LogicalSlots"/>): their bindings resolve while the control is collapsed.</summary>
+    protected override System.Collections.IEnumerator LogicalChildren => LogicalSlots.Concat(base.LogicalChildren, Action);
+
+    private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var self = (PropertyRow)d;
+        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }

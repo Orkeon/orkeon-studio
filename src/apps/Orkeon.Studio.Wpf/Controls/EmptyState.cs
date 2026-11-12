@@ -23,7 +23,7 @@ public sealed class EmptyState : Control
         nameof(Text), typeof(string), typeof(EmptyState), new FrameworkPropertyMetadata(""));
 
     public static readonly DependencyProperty ActionsProperty = DependencyProperty.Register(
-        nameof(Actions), typeof(object), typeof(EmptyState), new FrameworkPropertyMetadata(null));
+        nameof(Actions), typeof(object), typeof(EmptyState), new FrameworkPropertyMetadata(null, OnSlotChanged));
 
     public static readonly DependencyProperty IsCompactProperty = DependencyProperty.Register(
         nameof(IsCompact), typeof(bool), typeof(EmptyState), new FrameworkPropertyMetadata(false));
@@ -32,6 +32,15 @@ public sealed class EmptyState : Control
     {
         DefaultStyleKeyProperty.OverrideMetadata(typeof(EmptyState), new FrameworkPropertyMetadata(typeof(EmptyState)));
         FocusableProperty.OverrideMetadata(typeof(EmptyState), new FrameworkPropertyMetadata(false));
+    }
+
+    /// <summary>The slots are logical children (<see cref="LogicalSlots"/>): their bindings resolve while the control is collapsed.</summary>
+    protected override System.Collections.IEnumerator LogicalChildren => LogicalSlots.Concat(base.LogicalChildren, Actions);
+
+    private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var self = (EmptyState)d;
+        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     /// <summary>The Lucide kind drawn in the circle («brain-circuit», «history», «mail»…).</summary>

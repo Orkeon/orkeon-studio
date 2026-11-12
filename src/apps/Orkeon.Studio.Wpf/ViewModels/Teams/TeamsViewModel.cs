@@ -213,6 +213,9 @@ public sealed class TeamCardViewModel : ObservableObject
         StopScheduleAndArchiveCommand = new AsyncRelayCommand(() => owner.ArchiveAsync(this, stopSchedule: true), () => !IsArchived);
         RestoreCommand = new RelayCommand(() => owner.Restore(this), () => IsArchived);
         DismissArchiveNoticeCommand = new RelayCommand(ClearArchiveNotice);
+        // The card's « Not now » on the archive suggestion: the owner's answer, reached through the
+        // card so the view needs no ancestor lookup (the alert's actions sit outside the tree while collapsed).
+        DismissSuggestionCommand = new RelayCommand(owner.DismissSuggestion);
         // «Modifier» (W-09, FORGE-09, STUDIO-25): always through `forge reopen` on the folder —
         // the engine finds the session rule R links it to, or rebuilds one from the team's own
         // crew/, so an imported team, or one whose session is gone, is modifiable again and not
@@ -880,6 +883,9 @@ public sealed class TeamCardViewModel : ObservableObject
 
     /// <summary>Whether the card carries the archive suggestion.</summary>
     public bool HasArchiveSuggestionNotice => ArchiveSuggestionNotice.Length > 0;
+
+    /// <summary>« Not now » on the card's archive suggestion: the owner's suggestion goes for this session.</summary>
+    public RelayCommand DismissSuggestionCommand { get; }
 
     /// <summary>The owner's suggestion changed: the card's line is read again.</summary>
     internal void OnSuggestionChanged() =>
@@ -2279,7 +2285,7 @@ public sealed class TeamsViewModel : ObservableObject
     }
 
     /// <summary>« Not now » (DB-1): the suggestion goes for this session, and nothing is archived.</summary>
-    private void DismissSuggestion()
+    internal void DismissSuggestion()
     {
         _suggestionAnswered = true;
         OnPropertyChanged(nameof(HasArchiveSuggestion));
