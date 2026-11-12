@@ -40,7 +40,7 @@ public sealed class EmptyState : Control
     private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var self = (EmptyState)d;
-        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
+        LogicalSlots.Changed(self, e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     /// <summary>The Lucide kind drawn in the circle («brain-circuit», «history», «mail»…).</summary>

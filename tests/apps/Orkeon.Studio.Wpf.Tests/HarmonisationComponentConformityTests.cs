@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace Orkeon.Studio.Wpf.Tests;
@@ -10,7 +11,7 @@ namespace Orkeon.Studio.Wpf.Tests;
 /// property row (R10) and the card action bar's «…» (R23). The XAML is read as XML from the
 /// source tree, like <see cref="ChipShapeConformityTests"/>: no WPF, the suite runs on Linux.
 /// </summary>
-public sealed class HarmonisationComponentConformityTests
+public sealed partial class HarmonisationComponentConformityTests
 {
     private static readonly XNamespace X = "http://schemas.microsoft.com/winfx/2006/xaml";
 
@@ -268,4 +269,58 @@ public sealed class HarmonisationComponentConformityTests
         Assert.Contains("item.SetBinding(ToolTipService.IsEnabledProperty", code, StringComparison.Ordinal);
         Assert.DoesNotContain("if (button.IsEnabled ||", code, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Should_Make_Every_Object_Slot_A_Logical_Child_When_A_Control_Holds_Content()
+    {
+        // An element held by an object-typed property has no parent until the template presents it,
+        // never while the control is collapsed: no DataContext, and every FindAncestor binding in it
+        // fails (binding error 4). Each such slot goes through LogicalSlots, as Alert.Actions does.
+        var register = SlotRegistration();
+        var offenders = new List<string>();
+        var slots = 0;
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(WpfSourceRoot(), "Controls"), "*.cs"))
+        {
+            var code = File.ReadAllText(file);
+            foreach (Match m in register.Matches(code))
+            {
+                slots++;
+                var name = m.Groups["name"].Value;
+                if (!m.Groups["rest"].Value.Contains("OnSlotChanged", StringComparison.Ordinal))
+                    offenders.Add($"{m.Groups["owner"].Value}.{name}: no OnSlotChanged callback");
+                if (!Regex.IsMatch(code, $@"LogicalSlots\.Concat\(base\.LogicalChildren,[^;]*\b{name}\b"))
+                    offenders.Add($"{m.Groups["owner"].Value}.{name}: not listed in LogicalChildren");
+            }
+        }
+
+        Assert.True(slots >= 4, $"the four known slots were not found ({slots}): the pattern no longer reads Controls/");
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void Should_Bind_By_DataContext_Or_Source_When_Inside_A_Menu_Or_A_ToolTip()
+    {
+        // A ContextMenu, a ToolTip, or the menu of an OverflowMenuButton is a tree of its own: a
+        // FindAncestor or ElementName binding inside it finds nothing, permanently.
+        var separator = Path.DirectorySeparatorChar;
+        bool IsDetached(XElement e) =>
+            e.Name.LocalName is "ContextMenu" or "ToolTip" or "OverflowMenuButton"
+            || e.Name.LocalName.EndsWith(".ToolTip", StringComparison.Ordinal)
+            || e.Name.LocalName.EndsWith(".ContextMenu", StringComparison.Ordinal);
+        var offenders = Directory.EnumerateFiles(WpfSourceRoot(), "*.xaml", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{separator}obj{separator}", StringComparison.Ordinal)
+                && !f.Contains($"{separator}bin{separator}", StringComparison.Ordinal))
+            .SelectMany(file => XDocument.Load(file).Descendants()
+                .Where(e => e.Ancestors().Any(IsDetached)
+                    && e.Attributes().Any(a => a.Value.Contains("AncestorType", StringComparison.Ordinal)
+                        || a.Value.Contains("FindAncestor", StringComparison.Ordinal)
+                        || a.Value.Contains("ElementName", StringComparison.Ordinal)))
+                .Select(e => $"{Path.GetFileName(file)}: <{e.Name.LocalName}>"))
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+
+    [GeneratedRegex(@"DependencyProperty\.Register\(\s*nameof\((?<name>\w+)\),\s*typeof\((?:object|UIElement|FrameworkElement)\),\s*typeof\((?<owner>\w+)\),(?<rest>[^;]*);", RegexOptions.Singleline)]
+    private static partial Regex SlotRegistration();
 }

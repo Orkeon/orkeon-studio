@@ -160,7 +160,7 @@ public sealed class StepTabs : TabControl
     private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var self = (StepTabs)d;
-        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
+        LogicalSlots.Changed(self, e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     /// <summary>Builds the classeur; the group bar's command picks a group.</summary>

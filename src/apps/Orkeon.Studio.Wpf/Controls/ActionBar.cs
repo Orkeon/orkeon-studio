@@ -66,6 +66,9 @@ public sealed class ActionBar : Panel
         element.SetValue(InMenuProperty, value);
     }
 
+    /// <summary>The «…» button is a logical child of the bar (AddLogicalChild above): the bar lists it too.</summary>
+    protected override System.Collections.IEnumerator LogicalChildren => LogicalSlots.Concat(base.LogicalChildren, _more);
+
     protected override int VisualChildrenCount => base.VisualChildrenCount + 1;
 
     protected override Visual GetVisualChild(int index) =>

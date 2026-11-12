@@ -70,7 +70,7 @@ public sealed class Alert : ContentControl
     private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var self = (Alert)d;
-        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
+        LogicalSlots.Changed(self, e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     public Tone Tone { get => (Tone)GetValue(ToneProperty); set => SetValue(ToneProperty, value); }
@@ -146,7 +146,7 @@ public sealed class PropertyRow : ContentControl
     private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var self = (PropertyRow)d;
-        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
+        LogicalSlots.Changed(self, e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     public string Label { get => (string)GetValue(LabelProperty); set => SetValue(LabelProperty, value); }
