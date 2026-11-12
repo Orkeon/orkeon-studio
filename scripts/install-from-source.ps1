@@ -19,7 +19,9 @@
        unless the feed already holds them: a new Orkeon commit gives a new version, and
        no cache is ever cleared. Two commits of the same minute share a version, and
        NuGet keeps the first copy it extracted: the script refuses to pack a checkout
-       with uncommitted changes, or to reuse a feed packed from another commit;
+       with uncommitted changes, or to reuse a feed packed from another commit. The
+       repository's nuget.config reads nuget.org alone: the build reads a nuget.config
+       the script writes next to it, which resolves Orkeon.* from orkeon-feed\ instead;
     4. publishes the Studio apps -- orkeon-studio (WPF), orkeon-studio-config and
        orkeon-studio-run -- into <InstallDir>\libexec, next to the CLI, where Studio
        looks for it first; writes their launchers into <InstallDir>\bin, which the CLI's
@@ -302,11 +304,13 @@ if (Test-FeedComplete) {
 }
 
 $orkeonInstaller = Join-Path $OrkeonSrc 'scripts\install-from-source.ps1'
-# NU1603 is the restore settling for a higher version than the one asked when that one is
-# missing: 1.0.0-studio.local sorts above every 1.0.0-rc.N.local.* stamp, so that would be
-# a Studio built against the wrong Orkeon.
-$versionProps = @("-p:OrkeonVersion=$orkeonVersion", '-p:NuGetAudit=false', '-warnaserror:NU1603')
 $stage = Join-Path $RepoRoot "artifacts\install-from-source\$rid"
+# The restore reads this nuget.config instead of the repository's (nuget.org alone): it maps
+# Orkeon.* to orkeon-feed\, where the packages of the checkout are, and the rest to nuget.org.
+$restoreConfig = Join-Path $stage 'nuget.config'
+# NU1603 is the restore settling for a higher version than the one asked when that one is
+# missing: a later dated stamp of the feed would be a Studio built against the wrong Orkeon.
+$versionProps = @("-p:OrkeonVersion=$orkeonVersion", "-p:RestoreConfigFile=$restoreConfig", '-p:NuGetAudit=false', '-warnaserror:NU1603')
 # StudioBuildRoot (Directory.Build.props) keeps this build's obj\ and bin\ under the stage,
 # which is emptied first: restored with another OrkeonVersion, it must not leave its assets
 # file in the projects. The Orkeon packages may bring one file twice, as the Orkeon
@@ -324,6 +328,7 @@ if ($WhatIf) {
             Write-Host "  dotnet pack $(Join-Path $OrkeonSrc $package.Project) -c Release -p:Version=$orkeonVersion -p:NuGetAudit=false -o $feed --nologo -v quiet"
         }
     }
+    Write-Host "  (writes ${restoreConfig}: Orkeon.* from $feed, the rest from nuget.org)"
     foreach ($app in $apps) {
         Write-Host "  dotnet publish $($app.Project) -c Release -r $rid --self-contained $selfContainedArg -p:Version=$studioVersion $($versionProps -join ' ') $($publishProps -join ' ') -o $(Join-Path $stage $app.Name)"
         Write-Host "    then copied to $(Join-Path $libexecDir $app.Name), launcher $(Join-Path $binDir "$($app.Name).cmd")"
@@ -375,6 +380,29 @@ if (Test-FeedComplete) {
 # --- Studio ---------------------------------------------------------------------------------
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
+$feedXml = [System.Security.SecurityElement]::Escape($feed)
+$srcXml = [System.Security.SecurityElement]::Escape($OrkeonSrc)
+[IO.File]::WriteAllText($restoreConfig, @"
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by orkeon-studio's scripts\install-from-source.ps1: Orkeon.* from the packages
+     packed from $srcXml, the rest from nuget.org. -->
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="orkeon-local" value="$feedXml" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="orkeon-local">
+      <package pattern="Orkeon.*" />
+      <package pattern="Orkeon" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+"@)
 
 Write-Host ''
 Write-Host "==> Publishing Studio for $rid (self-contained: $selfContainedArg)"

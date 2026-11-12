@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Orkeon.Cli.TerminalGui.Layout;
 using Orkeon.Studio.Core.FileSystem;
 using TerminalApp = Terminal.Gui.App.Application;
 using Terminal.Gui.ViewBase;

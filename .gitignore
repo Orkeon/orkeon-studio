@@ -444,5 +444,5 @@ captures/
 packages/
 /.orkeon-src/
 
-# Local Orkeon package feed (nuget.config `orkeon-local`), filled with dotnet pack
+# Local Orkeon package feed of scripts/install-from-source.*, filled with dotnet pack
 /orkeon-feed/

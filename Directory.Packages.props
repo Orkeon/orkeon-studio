@@ -11,11 +11,11 @@
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
   </PropertyGroup>
-  <!-- The Orkeon packages Studio consumes, all at one version. The local build
-       (1.0.0-studio.local) comes from the `orkeon-local` source in nuget.config until the
-       packages are published. -->
+  <!-- The Orkeon packages Studio consumes, all at one published version (nuget.org). CI
+       and the release pipeline clone the Orkeon tag v$(OrkeonVersion) for the drift tests:
+       moving it moves both. -->
   <PropertyGroup>
-    <OrkeonVersion>1.0.0-studio.local</OrkeonVersion>
+    <OrkeonVersion>1.0.0</OrkeonVersion>
   </PropertyGroup>
   <ItemGroup Label="Orkeon">
     <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />
@@ -33,6 +33,8 @@
     <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
     <PackageVersion Include="xunit.v3.assert" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <!-- Orkeon.Studio.Core.Tests only: compiles against Orkeon.Tools.Email/Drive internals (see its csproj). -->
+    <PackageVersion Include="Krafs.Publicizer" Version="2.3.2" />
   </ItemGroup>
   <ItemGroup Label="TUI">
     <PackageVersion Include="Terminal.Gui" Version="2.5.0" />

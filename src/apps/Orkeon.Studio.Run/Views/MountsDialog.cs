@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Orkeon.Cli.TerminalGui.Layout;
 using Orkeon.Studio.Core.Launch;
 using Orkeon.Studio.Run.Launcher;
 using Terminal.Gui.App;

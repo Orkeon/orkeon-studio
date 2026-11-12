@@ -78,6 +78,59 @@ public sealed class TeamCatalogTests : IDisposable
         Assert.True(File.Exists(Path.Combine(destination!, "revue-contrats.yaml")));
     }
 
+    /// <summary>
+    /// Orkeon 1.0.0-rc.7 renamed the sidecar <c>team.json</c> and no longer reads
+    /// <c>studio-team.json</c>: a team adopted before keeps its name, need and folders, its sidecar
+    /// renamed the first time the catalog lists it, byte for byte.
+    /// </summary>
+    [Fact]
+    public void A_sidecar_under_its_former_name_is_renamed_and_read()
+    {
+        var team = Path.Combine(_root, "veille");
+        Directory.CreateDirectory(team);
+        const string Json = """{"name":"Veille docs","description":"le besoin","mounts":["./output:/output:rw"]}""" + "\n";
+        File.WriteAllText(Path.Combine(team, StudioTeamMetadata.LegacyFileName), Json);
+
+        var summary = Assert.Single(TeamCatalog.List(_root));
+
+        Assert.Equal("Veille docs", summary.Name);
+        Assert.Equal("le besoin", summary.Metadata?.Description);
+        Assert.False(File.Exists(Path.Combine(team, StudioTeamMetadata.LegacyFileName)));
+        Assert.Equal(Json, File.ReadAllText(Path.Combine(team, StudioTeamMetadata.FileName)));
+    }
+
+    /// <summary>A <c>team.json</c> already there is the sidecar: a former one beside it is neither read nor touched.</summary>
+    [Fact]
+    public void A_team_json_beside_a_former_sidecar_wins_and_leaves_it_alone()
+    {
+        var team = Path.Combine(_root, "veille");
+        Directory.CreateDirectory(team);
+        File.WriteAllText(Path.Combine(team, StudioTeamMetadata.FileName), """{"name":"Nouveau"}""");
+        File.WriteAllText(Path.Combine(team, StudioTeamMetadata.LegacyFileName), """{"name":"Ancien"}""");
+
+        var summary = Assert.Single(TeamCatalog.List(_root));
+
+        Assert.Equal("Nouveau", summary.Name);
+        Assert.Equal("""{"name":"Ancien"}""", File.ReadAllText(Path.Combine(team, StudioTeamMetadata.LegacyFileName)));
+    }
+
+    /// <summary>A folder imported with a former sidecar arrives with it renamed, its name kept, never a blank one written over it.</summary>
+    [Fact]
+    public void Importing_a_folder_with_a_former_sidecar_keeps_what_it_says()
+    {
+        var source = Path.Combine(_root, "incoming", "revue");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "crew.yaml"), "name: revue");
+        File.WriteAllText(Path.Combine(source, StudioTeamMetadata.LegacyFileName), """{"name":"Revue de presse"}""");
+
+        var destination = TeamCatalog.Import(source, Path.Combine(_root, "teams"), AddedOn, out var refusal);
+
+        Assert.Null(refusal);
+        Assert.NotNull(destination);
+        Assert.False(File.Exists(Path.Combine(destination, StudioTeamMetadata.LegacyFileName)));
+        Assert.Equal("Revue de presse", TeamCatalog.Describe(destination).Name);
+    }
+
     [Fact]
     public void Importing_the_same_folder_twice_never_overwrites()
     {

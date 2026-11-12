@@ -9,7 +9,7 @@ namespace Orkeon.Studio.Core.Teams;
 /// <summary>
 /// The sidecar's convention for a folder that lives INSIDE the team: a physical segment
 /// that starts with <c>./</c> is relative to the team folder — the one that carries
-/// <c>studio-team.json</c>. Canonical forms: <c>./input:/workspace:ro</c>,
+/// <c>team.json</c>. Canonical forms: <c>./input:/workspace:ro</c>,
 /// <c>./output:/output:rw</c>, <c>./rapports:/rapports:rw</c> — one folder name, <c>/</c>
 /// on both OSes, never <c>..</c>, never quoted. An absolute entry stays what it is: a folder
 /// of the user's, outside the team. An entry nobody can parse passes through untouched, both

@@ -7,7 +7,7 @@ namespace Orkeon.Studio.Core.Tests.Doubles;
 /// <summary>
 /// <c>orkeon usecases export</c>, scripted (STUDIO-41): it writes at <c>--to</c> the team folder
 /// the CLI writes — <c>crew/config.yaml</c>, <c>data/</c>, <c>output/</c> and a
-/// <c>studio-team.json</c> in the CLI's own shape — and answers with the <c>usecases.exported</c>
+/// <c>team.json</c> in the CLI's own shape — and answers with the <c>usecases.exported</c>
 /// line; or, given a <see cref="Refusal"/>, answers with an <c>error</c> line and writes nothing.
 /// Nothing is ever spawned.
 /// </summary>
@@ -66,7 +66,7 @@ public sealed class FakeUseCaseExportLauncher : IProcessLauncher
         await File.WriteAllTextAsync(Path.Combine(destination, "data", "inbox.eml"), "Subject: hello\n", cancellationToken).ConfigureAwait(false);
         Directory.CreateDirectory(Path.Combine(destination, "output"));
         await File.WriteAllTextAsync(
-            Path.Combine(destination, "studio-team.json"),
+            Path.Combine(destination, "team.json"),
             JsonSerializer.Serialize(
                 new JsonObject
                 {
@@ -83,7 +83,7 @@ public sealed class FakeUseCaseExportLauncher : IProcessLauncher
             ["path"] = destination,
             ["name"] = Name,
             ["lang"] = "en",
-            ["files"] = new JsonArray("crew/config.yaml", "data/inbox.eml", "studio-team.json"),
+            ["files"] = new JsonArray("crew/config.yaml", "data/inbox.eml", "team.json"),
             ["mounts"] = new JsonArray([.. Mounts.Select(mount => (JsonNode?)mount)]),
         })));
         return ProcessRunResult.FromExitCode(0, TimeSpan.Zero);

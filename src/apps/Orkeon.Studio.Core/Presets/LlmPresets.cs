@@ -151,7 +151,7 @@ public static class LlmPresets
     /// in the user scope, the card's key became the default key of every run of the user, whatever
     /// its setting or endpoint. A setting created before keeps its variable; its card says so.
     /// </summary>
-    public const string CustomApiKeyEnv = EnvironmentVariableNames.CustomLlmApiKey;
+    public const string CustomApiKeyEnv = "ORKEON_CUSTOM_LLM_API_KEY";
 
     /// <summary>
     /// The timeout the profile editor pre-fills for a provider whose default model reasons
@@ -167,7 +167,7 @@ public static class LlmPresets
     public const string DockerModelRunnerBaseUrl = LlmProviderEndpoints.DockerModelRunner;
 
     /// <summary>Docker Model Runner default model (parity with <c>examples/appsettings/appsettings.json</c>).</summary>
-    public const string DockerModelRunnerDefaultModel = LlmProviderDefaultModels.DockerModelRunner;
+    public static readonly string DockerModelRunnerDefaultModel = LlmProviderDefaultModels.DockerModelRunner;
 
     /// <summary>The endpoint needs no auth; the committed template ships this same placeholder.</summary>
     public const string DockerModelRunnerApiKeyPlaceholder = LlmProviderDefaultModels.DockerModelRunnerApiKeyPlaceholder;

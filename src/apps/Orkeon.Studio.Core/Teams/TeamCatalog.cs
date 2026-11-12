@@ -25,6 +25,12 @@ public sealed record StudioTeamMetadata
     /// </summary>
     public const string FileName = ConventionalNames.TeamSidecarFile;
 
+    /// <summary>
+    /// The sidecar's name before Orkeon 1.0.0-rc.7, which the engine no longer reads: the catalog
+    /// renames it to <see cref="FileName"/> the first time it meets one (<c>TeamCatalog.SidecarPath</c>).
+    /// </summary>
+    public const string LegacyFileName = "studio-team.json";
+
     /// <summary>Display name; the folder name when absent.</summary>
     [JsonPropertyName("name")]
     public string? Name { get; init; }
@@ -701,7 +707,7 @@ public static partial class TeamCatalog
             Directory.CreateDirectory(teamDirectory);
             CreateTeamFolders(teamDirectory, relativized.Mounts);
             File.WriteAllText(
-                Path.Combine(teamDirectory, StudioTeamMetadata.FileName),
+                SidecarPath(teamDirectory),
                 JsonSerializer.Serialize(relativized, Options) + "\n");
             return true;
         }
@@ -777,7 +783,7 @@ public static partial class TeamCatalog
         if (team is null || !IsTeamFolderOf(teamsRoot, team))
             return false;
 
-        return File.Exists(Path.Combine(team, StudioTeamMetadata.FileName))
+        return File.Exists(SidecarPath(team))
             && TryReadMetadata(team) is { } metadata
             && TryWriteMetadata(team, metadata with { LastRunAt = startedAt });
     }
@@ -804,7 +810,7 @@ public static partial class TeamCatalog
         if (!Directory.Exists(teamDirectory))
             return false;
 
-        if (!File.Exists(Path.Combine(teamDirectory, StudioTeamMetadata.FileName)))
+        if (!File.Exists(SidecarPath(teamDirectory)))
             return true;
 
         if (TryReadMetadata(teamDirectory) is not { } read)
@@ -1000,7 +1006,7 @@ public static partial class TeamCatalog
     /// </summary>
     private static void DateArrival(string destination, DateTimeOffset addedAt)
     {
-        if (!File.Exists(Path.Combine(destination, StudioTeamMetadata.FileName)))
+        if (!File.Exists(SidecarPath(destination)))
             _ = TryWriteMetadata(destination, new StudioTeamMetadata { AddedAt = addedAt });
     }
 
@@ -1497,11 +1503,39 @@ public static partial class TeamCatalog
         }
     }
 
+    /// <summary>
+    /// Where the sidecar of <paramref name="teamDirectory"/> is read and written: <c>team.json</c>. A
+    /// team adopted before Orkeon 1.0.0-rc.7 holds it as <c>studio-team.json</c>, which the engine no
+    /// longer reads (<c>forge rename</c>, <c>forge promote</c>): met without a <c>team.json</c> beside
+    /// it, it is renamed, its bytes untouched, so a team keeps its name, need, profile and folders. A
+    /// disk that refuses the rename leaves the old file read and written where it is.
+    /// </summary>
+    private static string SidecarPath(string teamDirectory)
+    {
+        var path = Path.Combine(teamDirectory, StudioTeamMetadata.FileName);
+        if (File.Exists(path))
+            return path;
+
+        var legacy = Path.Combine(teamDirectory, StudioTeamMetadata.LegacyFileName);
+        if (!File.Exists(legacy))
+            return path;
+
+        try
+        {
+            File.Move(legacy, path);
+            return path;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return legacy;
+        }
+    }
+
     private static StudioTeamMetadata? TryReadMetadata(string teamDirectory)
     {
         try
         {
-            var path = Path.Combine(teamDirectory, StudioTeamMetadata.FileName);
+            var path = SidecarPath(teamDirectory);
             if (!File.Exists(path))
                 return null;
 

@@ -4,6 +4,21 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
+## [1.0.0-rc.8] - 2026-11-12
+
+### Orkeon from nuget.org
+
+Studio now builds against Orkeon `1.0.0` from nuget.org: the local `orkeon-feed/` source is gone from `nuget.config`.
+
+- `OrkeonVersion` in `Directory.Packages.props` is a published version; CI and the release pipeline clone the Orkeon tag `v<OrkeonVersion>` for the drift tests. `.github/orkeon-source-ref` and `scripts/pack-orkeon-feed.sh` are removed.
+- `scripts/install-from-source.*` still pack an Orkeon checkout into `orkeon-feed/`, and now restore through a `nuget.config` they write in their stage folder.
+- A plain build of the checkout no longer reads `orkeon-feed/`: a local build against unpublished Orkeon packages goes through `scripts/install-from-source.*`.
+- **Team sidecar** **[breaking]**: Orkeon 1.0.0-rc.7 names it `team.json` (`ConventionalNames.TeamSidecarFile`) and no longer reads `studio-team.json`. Studio follows; the catalog renames a `studio-team.json` it meets without a `team.json` beside it, bytes untouched, so a team adopted before keeps its name, need, profile and folders. A disk that refuses the rename leaves the old file read and written in place.
+- The launchers Studio writes say `team.json` in their note line; Orkeon no longer carries Studio's note (`TeamLauncherSpec.WrittenByStudio` became `WriterNote`), Studio passes its own (`TeamLaunchers.WriterNote`).
+- `ORKEON_CLI_DIR`, `ORKEON_CUSTOM_LLM_API_KEY` and `ORKEON_STUDIO_TEAMS_ROOT` left Orkeon's `EnvironmentVariableNames`: Studio defines them itself, unchanged.
+- Orkeon 1.0.0 keeps `AcceptHandlers` (Orkeon.Cli.TerminalGui) internal: the Terminal.Gui apps carry their own `OnAccept`. `LlmPresets.DockerModelRunnerDefaultModel` is `static readonly`, like the Orkeon model id it copies.
+- The Email and Drive oracle and drift tests of `Orkeon.Studio.Core.Tests` reach the engine's internal option types through `Krafs.Publicizer` (test project only), Orkeon no longer opening them to Studio.
+
 ### Own release pipeline
 
 Orkeon Studio is released from this repository, on its own version, and no longer through Orkeon's installers. The `orkeon` CLI becomes a prerequisite installed separately (`dotnet tool install -g Orkeon.Scripting.Cli`, or Orkeon's installers).

@@ -473,7 +473,7 @@ public partial class CreateTeamWizardTests
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille","title":"Veille","format":"yaml","state":"Promoted","status":"Promoted","promotedTo":{{System.Text.Json.JsonSerializer.Serialize(teamDir)}}}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(sessionDir, "blueprint.json"),
             """{"crew":{"name":"veille"},"agents":[{"key":"a","role":"A","tools":["file_read"]}],"tasks":[{"key":"t","description":"d","agent":"a"}]}""", TestContext.Current.CancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(teamDir, "studio-team.json"),
+        await File.WriteAllTextAsync(Path.Combine(teamDir, "team.json"),
             """{"name":"Veille docs","description":"le besoin d'origine","profile":"Local","schedule":"daily@07:30","mounts":["/data/docs:/docs:ro"]}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(teamDir, "forge.json"),
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille"}""", TestContext.Current.CancellationToken);
@@ -2409,7 +2409,7 @@ public partial class CreateTeamWizardTests
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille","title":"Veille","format":"yaml","state":"Promoted","status":"Promoted","promotedTo":{{System.Text.Json.JsonSerializer.Serialize(teamDir)}}}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(sessionDir, "blueprint.json"),
             """{"crew":{"name":"veille"},"agents":[{"key":"a","role":"A","tools":["file_read","file_write"]}],"tasks":[{"key":"t","description":"d","agent":"a","deliverable":"/output/rapport.md"}]}""", TestContext.Current.CancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(teamDir, "studio-team.json"),
+        await File.WriteAllTextAsync(Path.Combine(teamDir, "team.json"),
             $$"""{"name":"Veille docs","description":"le besoin","profile":"Local","mounts":{{mountsJson}}}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(teamDir, "forge.json"),
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille"}""", TestContext.Current.CancellationToken);
@@ -3428,7 +3428,7 @@ public partial class CreateTeamWizardTests
         var sessionDir = Path.Combine(root, ".orkeon", "forge", "veille-docs");
         Directory.CreateDirectory(Path.Combine(teamDir, "crew"));
         await File.WriteAllTextAsync(Path.Combine(teamDir, "crew", "config.yaml"), "name: veille\ngoal: g\n", TestContext.Current.CancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(teamDir, "studio-team.json"),
+        await File.WriteAllTextAsync(Path.Combine(teamDir, "team.json"),
             """{"name":"Veille docs","description":"le besoin d'origine","profile":"Local","schedule":"daily@07:30","mounts":["./output:/output:rw"]}""", TestContext.Current.CancellationToken);
         return (root, teamDir, sessionDir);
     }
@@ -3769,7 +3769,7 @@ public partial class CreateTeamWizardTests
             var copyDir = Path.Combine(root, "teams", "veille-docs-copie");
             Directory.CreateDirectory(copyDir);
             File.Copy(Path.Combine(originalDir, "forge.json"), Path.Combine(copyDir, "forge.json"));
-            File.Copy(Path.Combine(originalDir, "studio-team.json"), Path.Combine(copyDir, "studio-team.json"));
+            File.Copy(Path.Combine(originalDir, "team.json"), Path.Combine(copyDir, "team.json"));
             var (vm, processes, _) = Build(teamsRoot: Path.Combine(root, "teams"), workspace: root);
             processes.OutputToEmit.Add(Out("""{"v":2,"seq":1,"ts":"t","kind":"session.finished","status":"paused","exitCode":0}"""));
 

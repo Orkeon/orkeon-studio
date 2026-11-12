@@ -18,7 +18,9 @@
 #      the feed already holds them: a new Orkeon commit gives a new version, and no cache
 #      is ever cleared. Two commits of the same minute share a version, and NuGet keeps
 #      the first copy it extracted: the script refuses to pack a checkout with uncommitted
-#      changes, or to reuse a feed packed from another commit;
+#      changes, or to reuse a feed packed from another commit. The repository's
+#      nuget.config reads nuget.org alone: the build reads a nuget.config the script
+#      writes next to it, which resolves Orkeon.* from orkeon-feed/ instead;
 #   4. publishes the Studio apps of this machine -- orkeon-studio-config and
 #      orkeon-studio-run -- into <prefix>/lib/orkeon/libexec, next to the CLI, where
 #      Studio looks for it first, and links their launchers into <prefix>/bin.
@@ -250,11 +252,14 @@ fi
 
 ORKEON_INSTALL=(bash "$ORKEON_SRC/scripts/install-from-source.sh" --prefix "$PREFIX")
 [[ "$MODIFY_PATH" -eq 1 ]] && ORKEON_INSTALL+=(--modify-path)
-# NU1603 is the restore settling for a higher version than the one asked when that one is
-# missing: 1.0.0-studio.local sorts above every 1.0.0-rc.N.local.* stamp, so that would be
-# a Studio built against the wrong Orkeon.
-VERSION_PROPS=(-p:OrkeonVersion="$ORKEON_VERSION" -p:NuGetAudit=false -warnaserror:NU1603)
 STAGE="$REPO_ROOT/artifacts/install-from-source/$RID"
+# The restore reads this nuget.config instead of the repository's (nuget.org alone): it maps
+# Orkeon.* to orkeon-feed/, where the packages of the checkout are, and the rest to nuget.org.
+RESTORE_CONFIG="$STAGE/nuget.config"
+# NU1603 is the restore settling for a higher version than the one asked when that one is
+# missing: a later dated stamp of the feed would be a Studio built against the wrong Orkeon.
+VERSION_PROPS=(-p:OrkeonVersion="$ORKEON_VERSION" -p:RestoreConfigFile="$RESTORE_CONFIG"
+               -p:NuGetAudit=false -warnaserror:NU1603)
 # StudioBuildRoot (Directory.Build.props) keeps this build's obj/ and bin/ under $STAGE:
 # restored with another OrkeonVersion, it must not leave its assets file where a plain
 # `dotnet build` of the checkout that skips the restore would pick it up. The Orkeon
@@ -272,6 +277,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
       show dotnet pack "$ORKEON_SRC/$csproj" -c Release -p:Version="$ORKEON_VERSION" -p:NuGetAudit=false -o "$FEED" --nologo -v quiet
     done
   fi
+  echo "  (writes $RESTORE_CONFIG: Orkeon.* from $FEED, the rest from nuget.org)"
   for entry in "${APPS[@]}"; do
     IFS='|' read -r name csproj apphost <<<"$entry"
     show dotnet publish "$REPO_ROOT/$csproj" -c Release -r "$RID" --self-contained "$SELF_CONTAINED" \
@@ -321,6 +327,27 @@ fi
 # --- Studio --------------------------------------------------------------------------
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
+cat > "$RESTORE_CONFIG" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by orkeon-studio's scripts/install-from-source.sh: Orkeon.* from the packages
+     packed from $ORKEON_SRC, the rest from nuget.org. -->
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="orkeon-local" value="$FEED" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="orkeon-local">
+      <package pattern="Orkeon.*" />
+      <package pattern="Orkeon" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+EOF
 
 step "Publishing Studio for $RID (self-contained: $SELF_CONTAINED)"
 for entry in "${APPS[@]}"; do
