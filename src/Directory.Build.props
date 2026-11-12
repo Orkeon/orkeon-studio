@@ -9,8 +9,8 @@
 
     <!-- The single source of truth for Orkeon Studio's version. The Orkeon packages Studio
          consumes carry their own version: OrkeonVersion in Directory.Packages.props. -->
-    <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>alpha.1</VersionSuffix>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <VersionSuffix>rc.8</VersionSuffix>
     <Authors>Orkeon Contributors</Authors>
     <Company>Orkeon</Company>
     <Product>Orkeon Studio</Product>

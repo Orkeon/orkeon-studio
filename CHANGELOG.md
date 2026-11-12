@@ -4,6 +4,8 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
+## [1.0.0-rc.8] - 2026-11-12
+
 ### Orkeon from nuget.org
 
 Studio now builds against Orkeon `1.0.0` from nuget.org: the local `orkeon-feed/` source is gone from `nuget.config`.
