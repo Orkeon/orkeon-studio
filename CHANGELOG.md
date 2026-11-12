@@ -4,6 +4,14 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
+## [1.0.0] - 2026-11-12
+
+First stable release, on Orkeon `1.0.0`. No breaking change since 1.0.0-rc.8.
+
+### Fixed
+
+- **WPF binding errors** on "My teams", the diagnostic view and the help panel of "Create a team" (`Cannot find source for binding with reference 'RelativeSource FindAncestor'`): the content slots of the controls (`Alert.Actions`, `PropertyRow.Action`, `EmptyState.Actions`, `StepTabs.SideContent`) are now logical children of their control, so their bindings resolve while the control is collapsed. A team card's "Not now" on the archive suggestion binds to the card's own `DismissSuggestionCommand`.
+
 ## [1.0.0-rc.8] - 2026-11-12
 
 ### Orkeon from nuget.org
