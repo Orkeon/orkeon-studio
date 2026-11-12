@@ -514,19 +514,36 @@ public sealed class TeamsScreenTests : IDisposable
         Assert.False(TeamCatalog.Describe(ancienne).IsArchived);
     }
 
-    /// <summary>The card's « Not now » answers for the screen: the card needs no ancestor to reach it.</summary>
+    /// <summary>
+    /// While a refused scheduled run holds the screen's banner, the suggestion is the card's own line
+    /// (UX lot 08); the card's « Not now » answers for the screen, and the line goes from the card.
+    /// </summary>
     [Fact]
-    public void Dismissing_the_suggestion_from_a_card_hides_it_for_the_session()
+    public void Dismissing_the_suggestion_from_a_card_clears_the_card_line()
     {
-        var ancienne = Team("ancienne", ranDaysAgo: 90);
-        var screen = Screen();
-        var card = Assert.Single(screen.Cards);
+        var ancienne = Team("ancienne", "Ancienne veille", ranDaysAgo: 90);
+        Team("veille", schedule: "daily@07:00");
+        var screen = new TeamsViewModel(new TeamsDependencies
+        {
+            TeamsRoot = TeamsRoot,
+            WorkspaceDirectory = _root,
+            LoadSessions = () => [],
+            Clock = new StubTimeProvider { Now = Now },
+            ScheduledRun = _ => new ScheduledRunNotice(ScheduledRunIssue.SettingRefused, "Local"),
+        });
+        var card = screen.Cards.Single(c => c.Slug == "ancienne");
+        Assert.True(screen.HasRefusedRuns);
+        Assert.False(screen.ShowsArchiveSuggestionBanner);
+        Assert.True(card.HasArchiveSuggestionNotice);
+        var changed = new List<string?>();
+        card.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
         card.DismissSuggestionCommand.Execute(null);
-        screen.Refresh();
-        screen.RefreshArchiveSuggestion();
 
         Assert.False(screen.HasArchiveSuggestion);
+        Assert.False(card.HasArchiveSuggestionNotice);
+        Assert.Equal("", card.ArchiveSuggestionNotice);
+        Assert.Contains(nameof(TeamCardViewModel.HasArchiveSuggestionNotice), changed);
         Assert.False(TeamCatalog.Describe(ancienne).IsArchived);
     }
 

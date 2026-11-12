@@ -39,8 +39,10 @@
 
     <!-- Unsigned: SmartScreen warns on first run until the package is code-signed. -->
 
-    <!-- Two pre-releases share one x.y.z ProductVersion (the suffix is dropped): the same
-         version must upgrade, not fail with error 1638. -->
+    <!-- The ProductVersion drops the suffix: two pre-releases of one x.y.z, or a pre-release and
+         its final release (1.0.0-rc.8 then 1.0.0), share it. The same version must upgrade, not
+         fail with error 1638; the price is that an older pre-release of that x.y.z replaces the
+         final one without the downgrade message. -->
     <MajorUpgrade
       AllowSameVersionUpgrades="yes"
       DowngradeErrorMessage="A newer version of Orkeon Studio is already installed. Uninstall it first if you need to downgrade." />
