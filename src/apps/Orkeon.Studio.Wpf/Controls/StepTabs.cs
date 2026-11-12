@@ -137,7 +137,7 @@ public sealed class StepTabGroup : INotifyPropertyChanged
 public sealed class StepTabs : TabControl
 {
     public static readonly DependencyProperty SideContentProperty = DependencyProperty.Register(
-        nameof(SideContent), typeof(object), typeof(StepTabs), new FrameworkPropertyMetadata(null));
+        nameof(SideContent), typeof(object), typeof(StepTabs), new FrameworkPropertyMetadata(null, OnSlotChanged));
 
     private static readonly DependencyPropertyKey HasGroupsPropertyKey = DependencyProperty.RegisterReadOnly(
         nameof(HasGroups), typeof(bool), typeof(StepTabs), new FrameworkPropertyMetadata(false));
@@ -152,6 +152,15 @@ public sealed class StepTabs : TabControl
     static StepTabs()
     {
         DefaultStyleKeyProperty.OverrideMetadata(typeof(StepTabs), new FrameworkPropertyMetadata(typeof(StepTabs)));
+    }
+
+    /// <summary>The slots are logical children (<see cref="LogicalSlots"/>): their bindings resolve while the control is collapsed.</summary>
+    protected override System.Collections.IEnumerator LogicalChildren => LogicalSlots.Concat(base.LogicalChildren, SideContent);
+
+    private static void OnSlotChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var self = (StepTabs)d;
+        LogicalSlots.Changed(e, self.RemoveLogicalChild, self.AddLogicalChild);
     }
 
     /// <summary>Builds the classeur; the group bar's command picks a group.</summary>

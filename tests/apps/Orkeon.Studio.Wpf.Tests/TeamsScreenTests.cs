@@ -514,6 +514,22 @@ public sealed class TeamsScreenTests : IDisposable
         Assert.False(TeamCatalog.Describe(ancienne).IsArchived);
     }
 
+    /// <summary>The card's « Not now » answers for the screen: the card needs no ancestor to reach it.</summary>
+    [Fact]
+    public void Dismissing_the_suggestion_from_a_card_hides_it_for_the_session()
+    {
+        var ancienne = Team("ancienne", ranDaysAgo: 90);
+        var screen = Screen();
+        var card = Assert.Single(screen.Cards);
+
+        card.DismissSuggestionCommand.Execute(null);
+        screen.Refresh();
+        screen.RefreshArchiveSuggestion();
+
+        Assert.False(screen.HasArchiveSuggestion);
+        Assert.False(TeamCatalog.Describe(ancienne).IsArchived);
+    }
+
     /// <summary>
     /// The history may know a later run than the sidecar: nothing is proposed before it was read.
     /// Then the proposal follows Settings › Studio — the threshold, and the switch that turns it off.
