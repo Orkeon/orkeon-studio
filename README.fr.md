@@ -2,6 +2,11 @@
 
 # Orkeon Studio
 
+[![Build](https://github.com/Orkeon/orkeon-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/Orkeon/orkeon-studio/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Orkeon/orkeon-studio)](https://github.com/Orkeon/orkeon-studio/releases)
+[![Documentation](https://img.shields.io/badge/documentation-docs-blue.svg)](docs/fr/INDEX.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
+
 <p align="center">
   <img src="docs/assets/orkeon-studio.png" alt="Orkeon Studio : le caméléon forgeron à son enclume" width="280">
 </p>
