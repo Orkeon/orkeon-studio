@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Orkeon.Cli.TerminalGui.Layout;
 using Orkeon.Studio.Config.Presentation;
 using Orkeon.Studio.Core.FileSystem;
 using Orkeon.Studio.Core.Validation;

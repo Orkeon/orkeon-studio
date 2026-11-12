@@ -3,7 +3,7 @@ using Orkeon.Studio.Core.Teams;
 namespace Orkeon.Studio.Wpf.Tests;
 
 /// <summary>
-/// STUDIO-31, D-02: the adoption writes <c>studio-team.json</c> by merge. It used to build a new
+/// STUDIO-31, D-02: the adoption writes <c>team.json</c> by merge. It used to build a new
 /// record every time, and a « Modify » erased whatever it did not own.
 /// </summary>
 public partial class CreateTeamWizardTests
@@ -26,7 +26,7 @@ public partial class CreateTeamWizardTests
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille","title":"Veille","format":"yaml","state":"Promoted","status":"Promoted","promotedTo":{{System.Text.Json.JsonSerializer.Serialize(teamDir)}}}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(sessionDir, "blueprint.json"),
             """{"crew":{"name":"veille"},"agents":[{"key":"a","role":"A","tools":["file_read"]}],"tasks":[{"key":"t","description":"d","agent":"a"}]}""", TestContext.Current.CancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(teamDir, "studio-team.json"),
+        await File.WriteAllTextAsync(Path.Combine(teamDir, "team.json"),
             """{"name":"Veille docs","description":"le besoin d'origine","profile":"Local","archived":true,"archivedAt":"2026-09-20T08:00:00+00:00","lastRunAt":"2026-09-18T07:30:00+00:00"}""", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(teamDir, "forge.json"),
             $$"""{"v":1,"id":"{{ReopenedSessionId}}","slug":"veille"}""", TestContext.Current.CancellationToken);

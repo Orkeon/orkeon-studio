@@ -127,7 +127,7 @@ public sealed class FakeUseCaseCli : IProcessLauncher
 
         var name = TextIn(useCase.Title, language) ?? id;
         await File.WriteAllTextAsync(
-            Path.Combine(destination, "studio-team.json"),
+            Path.Combine(destination, "team.json"),
             JsonSerializer.Serialize(
                 new JsonObject
                 {
@@ -143,7 +143,7 @@ public sealed class FakeUseCaseCli : IProcessLauncher
             ["path"] = destination,
             ["name"] = name,
             ["lang"] = language,
-            ["files"] = new JsonArray("crew/config.yaml", "studio-team.json"),
+            ["files"] = new JsonArray("crew/config.yaml", "team.json"),
             ["mounts"] = new JsonArray([.. mounts.Select(mount => (JsonNode?)mount)]),
         })));
         return ProcessRunResult.FromExitCode(0, TimeSpan.Zero);

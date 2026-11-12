@@ -389,6 +389,15 @@ public static class TeamLaunchers
     /// <summary><c>run.cmd</c>'s text for <paramref name="launch"/>.</summary>
     public static string ComposeWindows(TeamLaunch launch) => TeamLauncherScript.Windows(Spec(launch));
 
+    /// <summary>
+    /// The comment line Studio's launchers carry after their header: who writes them again, and when
+    /// an edit made there is lost (<see cref="TeamLauncherSpec.WriterNote"/>). ASCII, so <c>run.cmd</c>
+    /// carries it unchanged.
+    /// </summary>
+    public const string WriterNote =
+        "Orkeon Studio writes this file again from team.json whenever the team's model setting or folders change, "
+        + "at its import and before its schedule is installed: an edit made here is lost then.";
+
     /// <summary>What the composer writes for <paramref name="launch"/>: the launchers Studio writes, which say it.</summary>
     private static TeamLauncherSpec Spec(TeamLaunch launch)
     {
@@ -398,7 +407,7 @@ public static class TeamLaunchers
         {
             TeamName = launch.TeamName,
             TeamDirectory = launch.TeamDirectory,
-            WrittenByStudio = true,
+            WriterNote = WriterNote,
             IsScript = launch.IsScript,
             Segments = Segments(launch),
         };

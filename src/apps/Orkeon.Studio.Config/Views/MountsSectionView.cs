@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Orkeon.Cli.TerminalGui.Layout;
 using Orkeon.Studio.Config.Presentation;
 using Orkeon.Studio.Core.FileSystem;
 using Terminal.Gui.ViewBase;

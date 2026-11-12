@@ -39,4 +39,21 @@
     <PackageReference Include="Orkeon.Scripting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      The Email and Drive oracle and drift tests bind Studio's settings through the engine's own
+      option types, account registries and OAuth settings, which Orkeon keeps internal.
+      Publicizer compiles this project against public copies of those assemblies and emits
+      IgnoresAccessChecksTo for the runtime. The test project only: Studio itself never reaches
+      into Orkeon internals.
+    -->
+    <PackageReference Include="Krafs.Publicizer">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <Publicize Include="Orkeon.Tools.Email" />
+    <Publicize Include="Orkeon.Tools.Drive" />
+    <Publicize Include="Orkeon.Tools.Abstractions" />
+  </ItemGroup>
+
 </Project>

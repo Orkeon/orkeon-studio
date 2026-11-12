@@ -344,7 +344,7 @@ public sealed class RunTargetDetectorTests
     {
         var probe = new FakeTargetProbe()
             .WithDirectories("/teams/veille", "/teams/veille/crew", "/teams/veille/crew/agents", "/teams/veille/output")
-            .WithFiles("/teams/veille/crew/config.yaml", "/teams/veille/run.sh", "/teams/veille/studio-team.json");
+            .WithFiles("/teams/veille/crew/config.yaml", "/teams/veille/run.sh", "/teams/veille/team.json");
 
         var detection = new RunTargetDetector(probe).Detect("/teams/veille");
 
@@ -451,7 +451,7 @@ public sealed class RunTargetDetectorTests
     {
         var probe = new FakeTargetProbe()
             .WithDirectories("/teams/factures", "/teams/factures/crew", "/teams/factures/output")
-            .WithFiles("/teams/factures/crew/config.yaml", "/teams/factures/studio-team.json");
+            .WithFiles("/teams/factures/crew/config.yaml", "/teams/factures/team.json");
 
         var target = Detector(probe).Detect("/teams/factures").Target;
 
@@ -467,7 +467,7 @@ public sealed class RunTargetDetectorTests
     {
         var probe = new FakeTargetProbe()
             .WithDirectories("/teams/veille", "/teams/veille/crew", "/teams/veille/crew/agents", "/teams/veille/crew/tasks")
-            .WithFiles("/teams/veille/crew/config.yaml", "/teams/veille/studio-team.json");
+            .WithFiles("/teams/veille/crew/config.yaml", "/teams/veille/team.json");
 
         var target = Detector(probe).Detect("/teams/veille").Target;
 
@@ -585,7 +585,7 @@ public sealed class RunTargetDetectorTests
     {
         var probe = new FakeTargetProbe()
             .WithDirectories("/teams/t", "/teams/t/crew", "/teams/t/crew/agents", "/teams/t/output", "/teams/t/input")
-            .WithFiles("/teams/t/crew/config.yaml", "/teams/t/run.sh", "/teams/t/studio-team.json");
+            .WithFiles("/teams/t/crew/config.yaml", "/teams/t/run.sh", "/teams/t/team.json");
 
         var detection = Detector(probe).Detect("/teams/t");
 

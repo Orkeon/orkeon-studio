@@ -22,7 +22,7 @@ namespace Orkeon.Studio.Core.Tests.Teams;
 /// <summary>
 /// STUDIO-50: a scheduled team runs as Studio launches it. The operating system runs a team's
 /// <c>run.cmd</c>/<c>run.sh</c> (STUDIO-27), so Studio writes them again from the companion file
-/// (<c>studio-team.json</c>): the team's model setting as <c>--llm-profile</c> — the host profile
+/// (<c>team.json</c>): the team's model setting as <c>--llm-profile</c> — the host profile
 /// that setting is in the settings file (STUDIO-48) — and its folders as Studio launches them
 /// (<see cref="LaunchMountPlan"/>), the team's own anchored to the launcher's folder. Never a key.
 /// STUDIO-51: through the composer <c>forge promote</c> writes with, so every value reaches the

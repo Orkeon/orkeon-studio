@@ -397,7 +397,7 @@ public sealed class HostLlmProfilesScreenTests
 
         Assert.Equal("sk-ds", team["ORKEON_Llm__Profiles__deepseek__ApiKey"]);
         Assert.Equal("sk-zai", team["ORKEON_Llm__Profiles__z-ai__ApiKey"]);
-        Assert.Equal("glm-5.2", team["ORKEON_Llm__Model"]);   // the team's own election, as before
+        Assert.Equal(Orkeon.Constants.Llm.LlmProviderDefaultModels.Zai, team["ORKEON_Llm__Model"]);   // the team's own election, as before: the card's default model
         Assert.Equal("sk-zai", team["ORKEON_Llm__ApiKey"]);
         Assert.Equal("ZAI_API_KEY", team["ORKEON_Llm__ApiKeyEnvVar"]);
         Assert.Equal("sk-ds", bare["ORKEON_Llm__Profiles__deepseek__ApiKey"]);

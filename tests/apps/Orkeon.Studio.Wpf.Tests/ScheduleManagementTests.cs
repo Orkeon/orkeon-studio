@@ -546,7 +546,7 @@ public sealed class ScheduleManagementTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(sessionDir, "blueprint.json"),
             """{"crew":{"name":"veille"},"agents":[{"key":"a","role":"A","tools":["file_read"]}],"tasks":[{"key":"t","description":"d","agent":"a"}]}""",
             TestContext.Current.CancellationToken);
-        await File.WriteAllTextAsync(Path.Combine(teamDir, "studio-team.json"),
+        await File.WriteAllTextAsync(Path.Combine(teamDir, "team.json"),
             """{"name":"Veille docs","description":"le besoin d'origine","profile":"Local","schedule":"daily@07:30"}""",
             TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(teamDir, "forge.json"),

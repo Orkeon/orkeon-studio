@@ -1,4 +1,3 @@
-using Orkeon.Cli.TerminalGui.Layout;
 using Orkeon.Studio.Config.Presentation;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
