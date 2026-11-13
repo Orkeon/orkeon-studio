@@ -272,6 +272,6 @@ jobs:
           if [[ "$TAG" == *-* ]]; then prerelease=(--prerelease); fi
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft "${prerelease[@]}" \
             --title "Orkeon Studio ${TAG#v}" \
-            --notes "Release notes: the section matching this tag in [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/CHANGELOG.md). Prerequisite: the \`orkeon\` CLI (\`dotnet tool install -g Orkeon.Scripting.Cli\`)." \
+            --notes "Release notes: the section matching this tag in [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/CHANGELOG.md). Prerequisite: the \`orkeon\` CLI (the Orkeon installers, or \`dotnet tool install -g Orkeon.Scripting.Cli\`)." \
             artifacts/release/*.zip artifacts/release/*.tar.gz artifacts/release/*.msi artifacts/release/SHA256SUMS
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,url

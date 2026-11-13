@@ -10,7 +10,8 @@
 
   Adapted from Orkeon's installers/msi/Package.wxs (its Studio payload and its
   StudioShortcutComponent), trimmed to Studio: no PATH entry, no CLI. The orkeon CLI
-  is a prerequisite installed separately; Studio finds it through ORKEON_CLI_DIR or PATH.
+  is a prerequisite installed separately; Studio finds it through ORKEON_CLI_DIR, PATH or
+  the Orkeon installer's folder (%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon).
 
   Defines passed by build-msi.ps1:
     StudioVersion      x.y.z (MSI ProductVersion takes no suffix)
@@ -92,7 +93,7 @@
     <ui:WixUI Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT"
-              Value="Orkeon Studio drives the orkeon CLI: install it first (dotnet tool install -g Orkeon.Scripting.Cli), then start Orkeon Studio from the Start menu." />
+              Value="Orkeon Studio drives the orkeon CLI: install it first (the Orkeon installer, or dotnet tool install -g Orkeon.Scripting.Cli), then start Orkeon Studio from the Start menu." />
 
   </Package>
 </Wix>

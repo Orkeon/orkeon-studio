@@ -4,6 +4,16 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
+### Fixed
+
+- **The CLI installed by the Orkeon Windows installers is found without `ORKEON_CLI_DIR`** ([#5](https://github.com/Orkeon/orkeon-studio/issues/5)). Those installers (the MSI, or the zip's `install.ps1`) put `bin\orkeon.cmd` on `PATH` and the real `orkeon.exe` in `libexec\orkeon`, which Studio's `orkeon.exe`-only lookup never reached. On Windows the lookup now follows a `bin\orkeon.cmd` found on `PATH` to its `..\libexec\orkeon\orkeon.exe`, at that `PATH` entry's rank, then tries the installers' default folder `%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon` after `PATH` (a `PATH` inherited before the install, or trimmed). Either hit reports the new `BinarySource.OrkeonInstaller`. A `bin` folder named with `--cli-dir` or `ORKEON_CLI_DIR` is followed the same way, and both keep their precedence. The "CLI not found" message lists both new steps.
+- **A `.ork.ts` crew finds the esbuild of an Orkeon install.** Only the `bin\orkeon.cmd` launcher points the CLI at the esbuild shipped in `libexec\esbuild-bin` (`ORKEON_ESBUILD_PATH`); Studio runs `libexec\orkeon\orkeon.exe` directly, so the CLI found no compiler, and the Diagnostic reported it missing. The same gap hit the `ORKEON_CLI_DIR` workaround and a Studio installed inside the CLI's tree. `BinaryLocation.LaunchEnvironment` now carries that variable whenever the binary sits in `libexec/orkeon` beside a `libexec/esbuild-bin` esbuild and the variable is unset, and every launch (run, doctor, forge) passes it; a variable the caller sets still wins.
+- The README shipped in the Windows zip and MSI, the MSI's closing dialog and the release notes no longer ask for `ORKEON_CLI_DIR` after an Orkeon installer, and name the Orkeon installers as a way to get the CLI.
+
+### Changed
+
+- On a Windows machine that also has an Orkeon install, a Studio started from a development checkout now drives the installed CLI rather than the one built in the Orkeon checkout (`ORKEON_SOURCE_ROOT` or `../orkeon`), as a CLI on `PATH` (the .NET tool, or Linux packages) already did. To drive the checkout's build, name its directory with `--cli-dir` (WPF app) or `ORKEON_CLI_DIR`.
+
 ## [1.0.0] - 2026-11-12
 
 First stable release, on Orkeon `1.0.0`. No breaking change since 1.0.0-rc.8.

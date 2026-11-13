@@ -11,8 +11,8 @@
 #                                                   (`orkeon-studio-config`, `orkeon-studio-run`)
 # Every app is published self-contained (the .NET runtime is bundled, no SDK or runtime
 # needed on the target), untrimmed and not single-file, into libexec/<app>/, with a
-# launcher in bin/. The orkeon CLI is NOT bundled: Studio finds it through ORKEON_CLI_DIR
-# or PATH (OrkeonBinaryLocator). The win-x64 zip is also the tree scripts/build-msi.ps1
+# launcher in bin/. The orkeon CLI is NOT bundled: Studio finds it through ORKEON_CLI_DIR,
+# PATH or, on Windows, the Orkeon installer's folder (OrkeonBinaryLocator). The win-x64 zip is also the tree scripts/build-msi.ps1
 # harvests into the MSI.
 #
 # A single Linux machine publishes both RIDs: the WPF project sets EnableWindowsTargeting,
@@ -218,10 +218,15 @@ the bundled .NET runtime are under \`licenses/\`.
 
 Studio never runs a crew itself: it drives the \`orkeon\` CLI, installed separately with
 \`dotnet tool install -g Orkeon.Scripting.Cli\` or with the Orkeon installers
-(https://github.com/Orkeon/orkeon/releases). Studio looks for it in the
-\`ORKEON_CLI_DIR\` environment variable, then on \`PATH\`. On Windows it needs
-\`orkeon.exe\` itself: the .NET tool puts one on \`PATH\`; for an Orkeon installer, set
-\`ORKEON_CLI_DIR\` to its \`libexec\\orkeon\` folder.
+(https://github.com/Orkeon/orkeon/releases). Studio looks for it next to itself, in the
+\`ORKEON_CLI_DIR\` environment variable, on \`PATH\`, then, on Windows, in the Orkeon
+installer's folder. On Windows it runs \`orkeon.exe\` itself: the .NET tool puts one on
+\`PATH\`; after an Orkeon installer, Studio follows its \`bin\\orkeon.cmd\` to the
+\`orkeon.exe\` in \`libexec\\orkeon\`, and looks in
+\`%LOCALAPPDATA%\\Programs\\Orkeon\\libexec\\orkeon\` even when \`PATH\` does not list it.
+Nothing to set: \`ORKEON_CLI_DIR\` is only for a CLI kept elsewhere. The launchers and
+schedules Studio writes for a team run \`orkeon\` from \`PATH\`, so they need the
+installer's \`bin\\\` there, as the installer leaves it.
 
 ## Install
 

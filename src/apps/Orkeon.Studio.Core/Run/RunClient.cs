@@ -140,6 +140,7 @@ public sealed class RunClient
                 FileName = location.Path!,
                 Arguments = RunArgumentsBuilder.Build(target, watched),
                 WorkingDirectory = workingDirectory,
+                Environment = location.EnvironmentWith(null),
                 OnInputReady = writer => _input = writer,
             };
 

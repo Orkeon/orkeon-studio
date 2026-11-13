@@ -30,6 +30,6 @@ Orkeon Studio est un front-end : il édite la configuration, lance la CLI `orkeo
 ## Recommandations de durcissement
 
 - Installez Studio depuis les fichiers de la Release GitHub et vérifiez-les avec le fichier `SHA256SUMS` publié à côté (`sha256sum -c SHA256SUMS`) avant de lancer quoi que ce soit.
-- Installez la CLI `orkeon` depuis une source de confiance, et ne renseignez `ORKEON_CLI_DIR` que vers un dossier que vous contrôlez : Studio exécute le binaire qu'il y trouve.
+- Installez la CLI `orkeon` depuis une source de confiance, et ne renseignez `ORKEON_CLI_DIR` que vers un dossier que vous contrôlez : Studio exécute le binaire qu'il y trouve. Sous Windows, Studio exécute aussi l'`orkeon.exe` du `libexec\orkeon` voisin du `bin\` d'un `orkeon.cmd` trouvé dans le `PATH`, et celui de `%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon` : gardez ces dossiers modifiables par vous seul.
 - Gardez les secrets hors des fichiers de configuration que vous partagez. Un secret va dans une variable d'environnement, ou dans le coffre de clés que Studio propose.
 - Relisez les montages et les droits d'outils qu'une équipe reçoit avant de la lancer : la configuration que Studio édite est celle que la CLI applique.

@@ -299,6 +299,36 @@ public class ForgeClientTests
         client.RequestCancellation();
         await run;
     }
+
+    [Fact]
+    public async Task Every_forge_launch_carries_the_launch_environment_of_the_binary()
+    {
+        // The CLI started from libexec/orkeon, past the launcher that alone names its esbuild:
+        // the forge renders and trials .ork.ts scripts, so each of its launches needs it.
+        // A native absolute root keeps the fixture valid under either separator.
+        var root = Path.Combine(Path.GetTempPath(), "orkeon-cli");
+        var cli = Path.Combine(root, "libexec", "orkeon", "orkeon");
+        var esbuild = Path.Combine(root, "libexec", "esbuild-bin", "esbuild");
+        var executables = new FakeExecutableProbe { BaseDirectory = Path.Combine(root, "libexec", "orkeon-studio") }
+            .WithFile(cli)
+            .WithFile(esbuild);
+        var processes = new FakeProcessLauncher();
+        var client = new ForgeClient(processes, new OrkeonBinaryLocator(executables, ["orkeon"], environment: _ => null));
+        var token = TestContext.Current.CancellationToken;
+
+        await client.RunAsync(new ForgeStartRequest { Need = "veille", WorkingDirectory = "/ws" }, _ => { }, cancellationToken: token);
+        await client.RephraseAsync(new ForgeRephraseRequest { Need = "veille" }, token);
+        await client.PromoteAsync(new ForgePromoteRequest("veille", "/teams/v", "V", Schedule: null), "/ws", _ => { }, cancellationToken: token);
+        await client.ScheduleAsync("/teams/v", ForgeScheduleVerb.Check, token);
+        await client.RenameAsync("/teams/v", "W", "/ws", token);
+
+        Assert.Equal(5, processes.Requests.Count);
+        Assert.All(processes.Requests, request =>
+        {
+            Assert.Equal(cli, request.FileName);
+            Assert.Equal(esbuild, request.Environment["ORKEON_ESBUILD_PATH"]);
+        });
+    }
 }
 
 /// <summary>
