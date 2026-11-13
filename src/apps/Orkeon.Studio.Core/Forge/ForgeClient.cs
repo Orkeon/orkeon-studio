@@ -375,7 +375,7 @@ public sealed class ForgeClient
                 FileName = location.Path!,
                 Arguments = ForgeArgumentsBuilder.Build(request),
                 WorkingDirectory = request.WorkingDirectory,
-                Environment = request.EnvironmentOverrides,
+                Environment = location.EnvironmentWith(request.EnvironmentOverrides),
                 OnInputReady = writer =>
                 {
                     _input = writer;
@@ -432,7 +432,7 @@ public sealed class ForgeClient
                 FileName = location.Path!,
                 Arguments = ForgeArgumentsBuilder.BuildRephrase(request),
                 WorkingDirectory = request.WorkingDirectory,
-                Environment = request.EnvironmentOverrides,
+                Environment = location.EnvironmentWith(request.EnvironmentOverrides),
             },
             line =>
             {
@@ -493,6 +493,7 @@ public sealed class ForgeClient
                 FileName = location.Path!,
                 Arguments = ForgeArgumentsBuilder.BuildPromote(request.Slug, request.Destination, request.TeamName, request.Schedule),
                 WorkingDirectory = workingDirectory,
+                Environment = location.EnvironmentWith(null),
             };
 
             return await _launcher.RunAsync(
@@ -546,6 +547,7 @@ public sealed class ForgeClient
             {
                 FileName = location.Path!,
                 Arguments = ForgeArgumentsBuilder.BuildSchedule(teamDirectory, verb),
+                Environment = location.EnvironmentWith(null),
             },
             line =>
             {
@@ -596,6 +598,7 @@ public sealed class ForgeClient
                 FileName = location.Path!,
                 Arguments = ForgeArgumentsBuilder.BuildRename(teamDirectory, name),
                 WorkingDirectory = workingDirectory,
+                Environment = location.EnvironmentWith(null),
             },
             line =>
             {

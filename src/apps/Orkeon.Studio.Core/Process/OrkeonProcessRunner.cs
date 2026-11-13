@@ -73,7 +73,7 @@ public sealed class OrkeonProcessRunner
             WorkingDirectory = workingDirectory,
             GracePeriod = gracePeriod ?? ProcessLaunchRequest.DefaultGracePeriod,
             OnInputReady = onInputReady,
-            Environment = environment ?? new Dictionary<string, string>(StringComparer.Ordinal),
+            Environment = location.EnvironmentWith(environment),
         };
 
         return await _launcher.RunAsync(request, onOutput, cancellationToken).ConfigureAwait(false);

@@ -54,6 +54,33 @@ public class RunClientTests
     }
 
     [Fact]
+    public async Task A_run_carries_the_launch_environment_of_the_binary()
+    {
+        // The CLI started from libexec/orkeon, past the launcher that alone names its esbuild.
+        // A native absolute root: GetDirectoryName rewrites "/" on Windows, so a "/opt" fixture
+        // would no longer match the fake's ordinal paths there.
+        var root = Path.Combine(Path.GetTempPath(), "orkeon-cli");
+        var cli = Path.Combine(root, "libexec", "orkeon", "orkeon");
+        var esbuild = Path.Combine(root, "libexec", "esbuild-bin", "esbuild");
+        var executables = new FakeExecutableProbe { BaseDirectory = Path.Combine(root, "libexec", "orkeon-studio") }
+            .WithFile(cli)
+            .WithFile(esbuild);
+        var processes = new FakeProcessLauncher();
+        var client = new RunClient(processes, new OrkeonBinaryLocator(executables, ["orkeon"], environment: _ => null));
+
+        await client.RunAsync(
+            Target,
+            new RunLaunchOptions(),
+            _ => { },
+            workingDirectory: "/ws",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var request = Assert.Single(processes.Requests);
+        Assert.Equal(cli, request.FileName);
+        Assert.Equal(esbuild, request.Environment["ORKEON_ESBUILD_PATH"]);
+    }
+
+    [Fact]
     public async Task A_watched_run_always_asks_for_the_protocol()
     {
         // A screen cannot show progress it never asked for, so the client forces the flag

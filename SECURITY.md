@@ -30,6 +30,6 @@ Orkeon Studio is a front-end: it edits settings, and it launches and reads the o
 ## Hardening Recommendations
 
 - Install Studio from the GitHub Release assets and check them against the `SHA256SUMS` file published with them (`sha256sum -c SHA256SUMS`) before running anything.
-- Install the `orkeon` CLI from a source you trust, and set `ORKEON_CLI_DIR` only to a directory you control: Studio runs the binary it finds there.
+- Install the `orkeon` CLI from a source you trust, and set `ORKEON_CLI_DIR` only to a directory you control: Studio runs the binary it finds there. On Windows, Studio also runs the `orkeon.exe` in the `libexec\orkeon` beside the `bin\` of an `orkeon.cmd` found on `PATH`, and the one in `%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon`: keep those folders writable by you alone.
 - Keep secrets out of settings files you share. A secret belongs in an environment variable, or in the key store Studio offers.
 - Review the mounts and the tool rights a crew gets before launching it: the settings Studio edits are the ones the CLI enforces.

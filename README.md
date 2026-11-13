@@ -23,7 +23,7 @@ All three share `Orkeon.Studio.Core`, a UI-agnostic library. See [docs/architect
 
 ## Studio drives the `orkeon` CLI
 
-Studio never runs a crew in-process: it starts the `orkeon` CLI and reads its event stream. The CLI must be installed, and Studio looks for it in this order: the `--cli-dir` argument (WPF app only), next to the Studio executable, the `ORKEON_CLI_DIR` environment variable, then `PATH`. Install it with the [Orkeon installers](https://github.com/Orkeon/orkeon/blob/main/docs/reference/publication-matrix.md) or as a .NET tool, and check it with `orkeon doctor`.
+Studio never runs a crew in-process: it starts the `orkeon` CLI and reads its event stream. The CLI must be installed, and Studio looks for it in this order: the `--cli-dir` argument (WPF app only), next to the Studio executable, the `ORKEON_CLI_DIR` environment variable, `PATH`, on Windows the folder of the Orkeon installer (`%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon`), then, in a clone, the CLI built in the Orkeon checkout. Install it with the [Orkeon installers](https://github.com/Orkeon/orkeon/blob/main/docs/reference/publication-matrix.md) or as a .NET tool, and check it with `orkeon doctor`.
 
 ## Install
 
@@ -37,7 +37,7 @@ Download the asset for your platform from the [Releases](https://github.com/Orke
 
 Every application is self-contained: no .NET runtime is needed. The packages are not code-signed yet, so Windows SmartScreen warns on the first start.
 
-**Prerequisite: the `orkeon` CLI on `PATH`.** Studio does not ship it. Install it as a .NET tool, `dotnet tool install -g Orkeon.Scripting.Cli`, or with the [Orkeon installers](https://github.com/Orkeon/orkeon/releases), then check it with `orkeon doctor`. On Windows, Studio runs `orkeon.exe` itself: the .NET tool puts one on `PATH`; after an Orkeon installer, whose `bin\` holds `.cmd` launchers, set `ORKEON_CLI_DIR` to its `libexec\orkeon` folder (`%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon`).
+**Prerequisite: the `orkeon` CLI, installed.** Studio does not ship it. Install it as a .NET tool, `dotnet tool install -g Orkeon.Scripting.Cli`, or with the [Orkeon installers](https://github.com/Orkeon/orkeon/releases), then check it with `orkeon doctor`. On Windows, Studio runs `orkeon.exe` itself: the .NET tool puts one on `PATH`; after an Orkeon installer, whose `bin\` on `PATH` holds `.cmd` launchers, Studio follows `bin\orkeon.cmd` to the `orkeon.exe` in `libexec\orkeon`, and looks in `%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon` even when `PATH` does not list it. Nothing to set: `ORKEON_CLI_DIR` is only for a CLI kept elsewhere. The launchers and schedules Studio writes for a team run `orkeon` from `PATH`, so they need the installer's `bin\` there, as the installer leaves it.
 
 How a release is built: [docs/reference/release.md](docs/reference/release.md).
 

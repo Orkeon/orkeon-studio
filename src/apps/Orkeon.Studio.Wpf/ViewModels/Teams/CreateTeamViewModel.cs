@@ -928,7 +928,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// Which engine build answered — «1.0.0-rc.2», or empty until a session says.
     /// <para>
     /// Studio does not embed the engine: it launches whichever <c>orkeon</c> its locator
-    /// finds first, which may be co-installed, on PATH, or built from this checkout. Naming
+    /// finds first, which may be co-installed, on PATH, in the Orkeon installer's folder, or
+    /// built from this checkout. Naming
     /// it here is what lets a reader tell a screen that shows nothing because the engine
     /// reported nothing from one that shows nothing because the engine is old.
     /// </para>

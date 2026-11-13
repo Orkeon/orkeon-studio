@@ -1,4 +1,5 @@
 using Orkeon.Compliance.Vfs;
+using Orkeon.Constants.Configuration;
 
 namespace Orkeon.Studio.Core.Process;
 
@@ -11,7 +12,7 @@ public enum BinarySource
     /// <summary>In the directory the operator named (the <c>--cli-dir</c> argument).</summary>
     ExplicitDirectory,
 
-    /// <summary>Next to Studio — the co-installed binary the packages guarantee.</summary>
+    /// <summary>Next to Studio — a Studio installed inside the CLI's own tree.</summary>
     InstallDirectory,
 
     /// <summary>In the directory named by the <c>ORKEON_CLI_DIR</c> environment variable.</summary>
@@ -26,6 +27,14 @@ public enum BinarySource
     /// of sitting next to Studio.
     /// </summary>
     DevelopmentTree,
+
+    /// <summary>
+    /// In the layout of an Orkeon Windows install (its MSI, or its zip installed with
+    /// <c>install.ps1</c>, wherever it was put): the <c>libexec\orkeon</c> folder behind a
+    /// <c>bin\orkeon.cmd</c> launcher found on <c>PATH</c>, or the installers' default folder,
+    /// <c>%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon</c>.
+    /// </summary>
+    OrkeonInstaller,
 }
 
 /// <summary>
@@ -46,19 +55,55 @@ public sealed record BinaryLocation
     /// <summary>Every candidate path that was probed, in order.</summary>
     public IReadOnlyList<string> ProbedPaths { get; init; } = [];
 
+    /// <summary>
+    /// Variables the launch must add to the inherited environment, the ones the Orkeon
+    /// launcher would have set had Studio gone through it: running <c>libexec/orkeon/orkeon</c>
+    /// (<c>orkeon.exe</c> on Windows) directly skips the <c>bin/</c> launcher, which alone
+    /// points the CLI at the esbuild the install ships in <c>libexec/esbuild-bin</c>
+    /// (<c>ORKEON_ESBUILD_PATH</c>). Set on every platform for that layout, unless the
+    /// variable is already set; empty in every other case.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> LaunchEnvironment { get; init; } = NoVariables;
+
     /// <summary>True when <see cref="Path"/> holds a usable binary.</summary>
     public bool Found => Path is not null;
+
+    private static readonly IReadOnlyDictionary<string, string> NoVariables =
+        new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The environment of a launch of the located binary: <see cref="LaunchEnvironment"/>, then
+    /// <paramref name="overrides"/>, which win, as the launcher's own «if not defined» lets a
+    /// variable set by the caller stand.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> EnvironmentWith(IReadOnlyDictionary<string, string>? overrides)
+    {
+        if (LaunchEnvironment.Count == 0)
+            return overrides ?? new Dictionary<string, string>(StringComparer.Ordinal);
+
+        var merged = new Dictionary<string, string>(LaunchEnvironment, StringComparer.Ordinal);
+        if (overrides is not null)
+        {
+            foreach (var (key, value) in overrides)
+                merged[key] = value;
+        }
+
+        return merged;
+    }
 }
 
 /// <summary>
-/// Finds the co-installed <c>orkeon</c> executable.
+/// Finds the <c>orkeon</c> executable Studio drives.
 /// <para>
-/// The install directory comes first, and deliberately so: every onboarding channel ships
-/// the CLI alongside Studio (zip/tarball <c>bin/</c>, the <c>.deb</c> payload under
-/// <c>/usr/lib/orkeon</c> that the <c>/usr/bin</c> wrappers point at, the MSI install
-/// folder). Preferring it means Studio drives the binary it was shipped with, not whichever
-/// older <c>orkeon</c> happens to sit earlier on <c>PATH</c>. <c>PATH</c> is the fallback for
-/// development trees and for a CLI installed on its own.
+/// In order: the <c>--cli-dir</c> argument, next to Studio, <c>ORKEON_CLI_DIR</c>, <c>PATH</c>,
+/// the Orkeon Windows installers' default folder, then the development checkout. Studio's
+/// own packages never bundle the CLI; the install directory still comes before
+/// <c>ORKEON_CLI_DIR</c> and <c>PATH</c> for a Studio installed inside the CLI's tree
+/// (<c>scripts/install-from-source.*</c>), which then drives the CLI it was installed with.
+/// On Windows the lookup accepts <c>orkeon.exe</c> alone, and an Orkeon install puts only
+/// <c>.cmd</c> launchers in its <c>bin\</c>: a <c>bin\orkeon.cmd</c> in the <c>--cli-dir</c>
+/// directory, in <c>ORKEON_CLI_DIR</c> or on <c>PATH</c> leads to its
+/// <c>..\libexec\orkeon\orkeon.exe</c>, at that directory's rank.
 /// </para>
 /// </summary>
 [SuppressVfsCompliance(
@@ -74,6 +119,19 @@ public sealed class OrkeonBinaryLocator
 
     /// <summary>Environment variable naming the directory that holds the CLI.</summary>
     public const string DirectoryEnvironmentVariable = "ORKEON_CLI_DIR";
+
+    /// <summary>Environment variable naming the per-user local application data folder (Windows).</summary>
+    public const string LocalAppDataEnvironmentVariable = "LOCALAPPDATA";
+
+    /// <summary>
+    /// The launcher the Orkeon Windows installer puts in its <c>bin\</c>, the folder it adds to
+    /// <c>PATH</c>. It is a <c>.cmd</c>, which the lookup never starts: it only tells where the
+    /// real <c>orkeon.exe</c> sits, in <c>..\libexec\orkeon</c>.
+    /// </summary>
+    public const string WindowsLauncherName = ExecutableBaseName + ".cmd";
+
+    /// <summary>Name of the Windows executable, the one name the Windows lookup accepts.</summary>
+    private const string WindowsExecutableName = ExecutableBaseName + ".exe";
 
     /// <summary>
     /// Process-wide directory override, set once at startup from the front-end's
@@ -99,6 +157,12 @@ public sealed class OrkeonBinaryLocator
     private readonly Func<string, string?> _environment;
 
     /// <summary>
+    /// True when <see cref="_environment"/> is the process environment: only then may an unset
+    /// <c>LOCALAPPDATA</c> fall back to the known folder, which a test reader must not reach.
+    /// </summary>
+    private readonly bool _readsProcessEnvironment;
+
+    /// <summary>
     /// The first build for another platform walked past during the current <see cref="Locate"/>,
     /// if any: a file named exactly <c>orkeon</c> on a Windows machine, which cannot be started
     /// there. Kept so the failure can name it instead of claiming nothing was seen.
@@ -109,7 +173,7 @@ public sealed class OrkeonBinaryLocator
     /// <param name="probe">File-system and <c>PATH</c> access used for the lookup.</param>
     /// <param name="fileNames">
     /// Candidate file names, most specific first; defaults to the platform's
-    /// (<c>orkeon.exe</c> then <c>orkeon</c> on Windows, <c>orkeon</c> elsewhere).
+    /// (<c>orkeon.exe</c> on Windows, <c>orkeon</c> elsewhere).
     /// </param>
     /// <param name="explicitDirectory">The directory the caller was told the CLI lives in (<c>--cli-dir</c>); searched first.</param>
     /// <param name="environment">Environment-variable reader (<c>ORKEON_CLI_DIR</c>); defaults to the process environment.</param>
@@ -123,6 +187,7 @@ public sealed class OrkeonBinaryLocator
         _fileNames = fileNames is { Count: > 0 } ? fileNames : DefaultFileNames();
         _explicitDirectory = explicitDirectory;
         _environment = environment ?? Environment.GetEnvironmentVariable;
+        _readsProcessEnvironment = environment is null;
     }
 
     /// <summary>A locator over the real machine, honouring <see cref="DirectoryOverride"/>.</summary>
@@ -144,7 +209,7 @@ public sealed class OrkeonBinaryLocator
     /// </summary>
     public static IReadOnlyList<string> DefaultFileNames() =>
         OperatingSystem.IsWindows()
-            ? [ExecutableBaseName + ".exe"]
+            ? [WindowsExecutableName]
             : [ExecutableBaseName];
 
     /// <summary>
@@ -159,37 +224,54 @@ public sealed class OrkeonBinaryLocator
 
         // 1. The directory the operator named beats everything: an explicit choice must
         //    never lose to whatever happens to sit next to Studio.
-        if (_explicitDirectory is { Length: > 0 } explicitDirectory
-            && TryDirectory(explicitDirectory, probed, out var explicitFound))
+        if (Unquote(_explicitDirectory) is { Length: > 0 } explicitDirectory
+            && TryDirectoryOrLauncher(explicitDirectory, probed, out var explicitFound))
         {
-            return new BinaryLocation { Path = explicitFound, Source = BinarySource.ExplicitDirectory, ProbedPaths = probed };
+            return Located(explicitFound, BinarySource.ExplicitDirectory, probed);
         }
 
         // 2. Next to the executable — the layout every package guarantees.
         foreach (var directory in InstallDirectories())
         {
             if (TryDirectory(directory, probed, out var found))
-                return new BinaryLocation { Path = found, Source = BinarySource.InstallDirectory, ProbedPaths = probed };
+                return Located(found, BinarySource.InstallDirectory, probed);
         }
 
         // 3. The environment variable — machine-wide configuration without a flag.
-        if (_environment(DirectoryEnvironmentVariable) is { Length: > 0 } environmentDirectory
-            && TryDirectory(environmentDirectory.Trim(), probed, out var environmentFound))
+        if (Unquote(_environment(DirectoryEnvironmentVariable)) is { Length: > 0 } environmentDirectory
+            && TryDirectoryOrLauncher(environmentDirectory, probed, out var environmentFound))
         {
-            return new BinaryLocation { Path = environmentFound, Source = BinarySource.EnvironmentVariable, ProbedPaths = probed };
+            return Located(environmentFound, BinarySource.EnvironmentVariable, probed);
         }
 
-        // 4. PATH, then 5. the development checkout.
+        // 4. PATH. An Orkeon install's bin\ there holds orkeon.cmd, never orkeon.exe: the
+        //    executable it launches sits in ..\libexec\orkeon, probed at the same PATH rank.
         foreach (var directory in _probe.SearchPathDirectories)
         {
             if (TryDirectory(directory, probed, out var found))
-                return new BinaryLocation { Path = found, Source = BinarySource.SearchPath, ProbedPaths = probed };
+                return Located(found, BinarySource.SearchPath, probed);
+
+            if (InstallerLibexecBehindLauncher(directory) is { } libexec
+                && TryDirectory(libexec, probed, out var installerFound))
+            {
+                return Located(installerFound, BinarySource.OrkeonInstaller, probed);
+            }
+        }
+
+        // 5. The Orkeon Windows installers' default folder, for a PATH this process inherited
+        //    before the install (the zip's install.ps1 does not broadcast its PATH change), or
+        //    one the user trimmed. Then 6. the development checkout.
+        if (DefaultInstallerDirectory() is { } installerDirectory
+            && !probed.Contains(System.IO.Path.Combine(installerDirectory, WindowsExecutableName), StringComparer.OrdinalIgnoreCase)
+            && TryDirectory(installerDirectory, probed, out var defaultFound))
+        {
+            return Located(defaultFound, BinarySource.OrkeonInstaller, probed);
         }
 
         foreach (var directory in DevelopmentTreeDirectories())
         {
             if (TryDirectory(directory, probed, out var found))
-                return new BinaryLocation { Path = found, Source = BinarySource.DevelopmentTree, ProbedPaths = probed };
+                return Located(found, BinarySource.DevelopmentTree, probed);
         }
 
         // Telling someone «not found» while a file called orkeon sits in the directory they
@@ -212,6 +294,11 @@ public sealed class OrkeonBinaryLocator
             };
         }
 
+        var installerSteps = LooksForWindowsExecutable
+            ? $"PATH (with the libexec\\orkeon folder behind an {WindowsLauncherName} found there), " +
+              $"the Orkeon installer's folder ({DefaultInstallerDirectory() ?? DefaultInstallerDirectoryDisplay}), "
+            : "PATH, ";
+
         return new BinaryLocation
         {
             Source = BinarySource.NotFound,
@@ -221,11 +308,131 @@ public sealed class OrkeonBinaryLocator
                 $"Studio runs crews by " +
                 $"invoking it, so nothing can be launched until it is installed. Looked, in order: " +
                 $"the --cli-dir argument, next to Studio ({_probe.BaseDirectory}), the " +
-                $"{DirectoryEnvironmentVariable} environment variable, PATH, and the development " +
+                $"{DirectoryEnvironmentVariable} environment variable, {installerSteps}and the development " +
                 $"checkout. Reinstall the Orkeon package, point --cli-dir or " +
                 $"{DirectoryEnvironmentVariable} at the CLI's directory, or in a checkout build it " +
                 $"first: dotnet build src/scripting/Orkeon.Scripting.Cli.",
         };
+    }
+
+    /// <summary>The installer's default folder as the user would type it, shown when <c>LOCALAPPDATA</c> is unset.</summary>
+    private const string DefaultInstallerDirectoryDisplay = @"%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon";
+
+    /// <summary>
+    /// True when the lookup accepts <c>orkeon.exe</c>, the Windows lookup. The installer steps
+    /// key on the configured names, not on the running OS, like the foreign-build diagnosis:
+    /// the suite exercises them anywhere.
+    /// </summary>
+    private bool LooksForWindowsExecutable =>
+        _fileNames.Contains(WindowsExecutableName, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The <c>libexec\orkeon</c> folder of an Orkeon install whose <c>bin\</c> is
+    /// <paramref name="directory"/>, when that directory is named <c>bin</c> and holds the
+    /// install's <c>orkeon.cmd</c> launcher; null otherwise. The name is checked first, so
+    /// the other PATH entries cost no extra probe. The launcher only marks the layout and is
+    /// not a candidate, so it stays out of the probed paths.
+    /// </summary>
+    private string? InstallerLibexecBehindLauncher(string directory)
+    {
+        if (!LooksForWindowsExecutable || string.IsNullOrWhiteSpace(directory))
+            return null;
+
+        // TrimEndingDirectorySeparator keeps a root whole, where TrimEnd would turn C:\ into
+        // the drive-relative C: and probe against the current directory.
+        var trimmed = System.IO.Path.TrimEndingDirectorySeparator(directory);
+        if (!string.Equals(System.IO.Path.GetFileName(trimmed), "bin", StringComparison.OrdinalIgnoreCase)
+            || System.IO.Path.GetDirectoryName(trimmed) is not { Length: > 0 } root
+            || !_probe.FileExists(System.IO.Path.Combine(trimmed, WindowsLauncherName)))
+        {
+            return null;
+        }
+
+        return System.IO.Path.Combine(root, "libexec", ExecutableBaseName);
+    }
+
+    /// <summary>
+    /// <see cref="TryDirectory"/>, then, for a directory the user named, the install behind
+    /// the <c>bin\orkeon.cmd</c> it may hold: pointing <c>--cli-dir</c> or <c>ORKEON_CLI_DIR</c>
+    /// at the folder where <c>orkeon</c> seems to live must not lose to a CLI on <c>PATH</c>.
+    /// </summary>
+    private bool TryDirectoryOrLauncher(string directory, List<string> probed, out string? found)
+    {
+        if (TryDirectory(directory, probed, out found))
+            return true;
+
+        if (InstallerLibexecBehindLauncher(directory) is { } libexec)
+            return TryDirectory(libexec, probed, out found);
+
+        return false;
+    }
+
+    /// <summary>
+    /// A path read from a variable or an argument, without the quotes a shell would have
+    /// stripped; empty for null, blank or <c>""</c>, so a caller never probes the current directory.
+    /// </summary>
+    private static string Unquote(string? value) => value is null ? "" : value.Trim().Trim('"').Trim();
+
+    /// <summary>A hit, with the variables the launch of that binary needs.</summary>
+    private BinaryLocation Located(string? path, BinarySource source, List<string> probed) => new()
+    {
+        Path = path,
+        Source = source,
+        ProbedPaths = probed,
+        LaunchEnvironment = path is null ? new Dictionary<string, string>(StringComparer.Ordinal) : LaunchEnvironmentFor(path),
+    };
+
+    /// <summary>
+    /// What the Orkeon launcher sets before it starts <c>libexec\orkeon\orkeon</c>: the esbuild
+    /// its install ships in <c>libexec\esbuild-bin</c>, unless <c>ORKEON_ESBUILD_PATH</c> is
+    /// already set (the launcher's «if not defined»). The CLI itself only looks for a bundled
+    /// esbuild under its own folder, so without this a <c>.ork.ts</c> crew finds no compiler.
+    /// </summary>
+    private Dictionary<string, string> LaunchEnvironmentFor(string binary)
+    {
+        var none = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(_environment(EnvironmentVariableNames.EsbuildPath)))
+            return none;
+
+        var appDirectory = System.IO.Path.GetDirectoryName(binary);
+        var libexec = appDirectory is null ? null : System.IO.Path.GetDirectoryName(appDirectory);
+        if (appDirectory is null || libexec is null
+            || !string.Equals(System.IO.Path.GetFileName(appDirectory), ExecutableBaseName, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(System.IO.Path.GetFileName(libexec), "libexec", StringComparison.OrdinalIgnoreCase))
+        {
+            return none;
+        }
+
+        var esbuildName = binary.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? "esbuild.exe" : "esbuild";
+        var esbuild = System.IO.Path.Combine(libexec, "esbuild-bin", esbuildName);
+        if (!_probe.FileExists(esbuild))
+            return none;
+
+        none[EnvironmentVariableNames.EsbuildPath] = esbuild;
+        return none;
+    }
+
+    /// <summary>
+    /// The Orkeon Windows installer's default CLI folder,
+    /// <c>%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon</c> (its per-user MSI installs under
+    /// <c>LocalAppDataFolder</c>); null outside the Windows lookup or when the variable is unset.
+    /// </summary>
+    private string? DefaultInstallerDirectory()
+    {
+        if (!LooksForWindowsExecutable)
+            return null;
+
+        // The MSI resolves LocalAppDataFolder from the known folder; the variable normally
+        // matches it, and the known folder covers a parent process that dropped the variable.
+        var localAppData = Unquote(_environment(LocalAppDataEnvironmentVariable)) is { Length: > 0 } variable
+            ? variable
+            : _readsProcessEnvironment
+                ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+                : null;
+
+        return string.IsNullOrWhiteSpace(localAppData)
+            ? null
+            : System.IO.Path.Combine(localAppData, "Programs", "Orkeon", "libexec", ExecutableBaseName);
     }
 
     /// <summary>
@@ -242,9 +449,10 @@ public sealed class OrkeonBinaryLocator
         var parent = System.IO.Path.GetDirectoryName(trimmed) ?? trimmed;
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        // The libexec/orkeon sibling is the archive and MSI layout: Studio publishes into
-        // libexec/<studio-app>/, the CLI into libexec/orkeon/. On Windows it is the only way
-        // to reach it — bin\ holds .cmd wrappers, never the orkeon.exe the lookup accepts.
+        // The libexec/orkeon sibling is the layout of a Studio installed inside the CLI's tree
+        // (scripts/install-from-source.*): Studio in libexec/<studio-app>/, the CLI in
+        // libexec/orkeon/. On Windows bin\ there holds .cmd wrappers, never the orkeon.exe the
+        // lookup accepts, so this sibling is what reaches it from Studio's own folder.
         foreach (var candidate in new[]
                  {
                      trimmed,

@@ -40,6 +40,35 @@ public sealed class OrkeonProcessRunnerTests
         Assert.Equal(ProcessLaunchRequest.DefaultGracePeriod, request.GracePeriod);
     }
 
+    [Fact]
+    public async Task The_launch_environment_of_the_binary_reaches_the_child_under_the_callers_variables()
+    {
+        // Orkeon's archive layout: the CLI in libexec/orkeon, its esbuild in libexec/esbuild-bin,
+        // which only the bin/ launcher names to it. Studio runs the CLI directly, so it passes
+        // the variable itself; a variable the caller sets still wins.
+        // A native absolute root: GetDirectoryName rewrites "/" on Windows, so a "/opt" fixture
+        // would no longer match the fake's ordinal paths there.
+        var root = Path.Combine(Path.GetTempPath(), "orkeon-cli");
+        var cli = Path.Combine(root, "libexec", "orkeon", "orkeon");
+        var esbuild = Path.Combine(root, "libexec", "esbuild-bin", "esbuild");
+        var probe = new FakeExecutableProbe { BaseDirectory = Path.Combine(root, "libexec", "orkeon-studio") }
+            .WithFile(cli)
+            .WithFile(esbuild);
+        var launcher = new FakeProcessLauncher();
+        var runner = new OrkeonProcessRunner(launcher, new OrkeonBinaryLocator(probe, ["orkeon"], environment: _ => null));
+
+        await runner.RunAsync(["doctor"], cancellationToken: TestContext.Current.CancellationToken);
+        await runner.RunAsync(
+            ["doctor"],
+            environment: new Dictionary<string, string> { ["ORKEON_ESBUILD_PATH"] = "/usr/bin/esbuild", ["X"] = "1" },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(cli, launcher.Requests[0].FileName);
+        Assert.Equal(esbuild, launcher.Requests[0].Environment["ORKEON_ESBUILD_PATH"]);
+        Assert.Equal("/usr/bin/esbuild", launcher.Requests[1].Environment["ORKEON_ESBUILD_PATH"]);
+        Assert.Equal("1", launcher.Requests[1].Environment["X"]);
+    }
+
     [Theory]
     [InlineData(0, RunOutcome.Success)]
     [InlineData(1, RunOutcome.ScriptError)]
