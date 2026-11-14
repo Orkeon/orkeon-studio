@@ -573,6 +573,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>A model profile is named 'default', the Llm section's own name: the engine refuses to start. Rename it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve"><value>Two folders carry the same identifier: an identifier names one folder.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>An agent's filesystem: scope or working root asks for a folder the run's mounts do not grant: the engine stops the run when it starts that agent.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY" xml:space="preserve"><value>The team is a folder: the engine runs it as a whole.</value></data>
@@ -852,6 +853,7 @@
   <data name="Studio.Create.UnknownMountId" xml:space="preserve"><value>This declaration ({0}) is missing on this machine</value></data>
   <data name="Studio.Create.DeclaredFolder" xml:space="preserve"><value>“{0}” authorized and bound as {1}</value></data>
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>This team refers to authorized folders missing here: {0}. Allow them in Settings › Authorized folders or change the team's folders.</value></data>
+  <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>The engine will refuse to start this team as its folders are mounted: {0} Give the folders the rights the agents declare, or change their filesystem: scope.</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (selected by id among {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (not mounted for this run)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (one of {1} entries — nothing selects it)</value></data>
@@ -2281,6 +2283,9 @@
   </data>
   <data name="Studio.Run.BlockedFolders" xml:space="preserve">
     <value>A folder of the team is not allowed on this machine.</value>
+  </data>
+  <data name="Studio.Run.BlockedScope" xml:space="preserve">
+    <value>An agent's file-system scope does not fit the folders of this run.</value>
   </data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Not allowed</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Allow this folder</value></data>

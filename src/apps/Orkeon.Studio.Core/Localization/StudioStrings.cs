@@ -615,6 +615,9 @@ public static class StudioStringKeys
     /// <summary>"This team refers to authorized folders missing here: {0}. Allow them in Settings › Authorized folders or change the team's folders."</summary>
     public const string RunBlockedUnknownMountId = "Studio.Run.BlockedUnknownMountId";
 
+    /// <summary>"The engine will refuse to start this team as its folders are mounted: {0} …" — an agent's <c>filesystem:</c> scope or working root the run's mounts refuse (#349); {0} is the engine's own refusals.</summary>
+    public const string RunBlockedFileSystemScope = "Studio.Run.BlockedFileSystemScope";
+
     /// <summary>"Open the result" — the Launch screen's button once a run finished, one writable folder.</summary>
     public const string RunOpenResult = "Studio.Run.OpenResult";
 
@@ -702,6 +705,7 @@ public static class StudioStringKeys
     public const string RunBlockedNoCli = "Studio.Run.BlockedNoCli";
     public const string RunBlockedNoTeam = "Studio.Run.BlockedNoTeam";
     public const string RunBlockedFolders = "Studio.Run.BlockedFolders";
+    public const string RunBlockedScope = "Studio.Run.BlockedScope";
 
     /// <summary>"Not allowed" (UX lot 08).</summary>
     public const string RunFolderNotAllowed = "Studio.Run.FolderNotAllowed";
@@ -2911,6 +2915,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardDeclaredFolder] = "“{0}” authorized and bound as {1}",
         [StudioStringKeys.RunBlockedUnknownMountId] =
             "This team refers to authorized folders missing here: {0}. Allow them in Settings › Authorized folders or change the team's folders.",
+        [StudioStringKeys.RunBlockedFileSystemScope] =
+            "The engine will refuse to start this team as its folders are mounted: {0} Give the folders the rights the agents declare, or change their filesystem: scope.",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
         [StudioStringKeys.RunOpenLogsNotYet] = "The logs folder does not exist yet: it is created at the first logged call.",
@@ -2985,6 +2991,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedNoCli] = "The Orkeon engine is not found: the launch waits for the diagnostic.",
         [StudioStringKeys.RunBlockedNoTeam] = "Choose a team first.",
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
+        [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
         [StudioStringKeys.RunFolderNotAllowed] = "Not allowed",
         [StudioStringKeys.RunAllowThisFolder] = "Allow this folder",
         [StudioStringKeys.RunBlockedArchived] = "This team is archived: restore it to launch it.",
@@ -3235,6 +3242,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME"] = "A model profile is named 'default', the Llm section's own name: the engine refuses to start. Rename it.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
+        ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: scope or working root asks for a folder the run's mounts do not grant: the engine stops the run when it starts that agent.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",

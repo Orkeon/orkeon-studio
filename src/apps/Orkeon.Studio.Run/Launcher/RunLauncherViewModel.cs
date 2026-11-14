@@ -123,6 +123,9 @@ internal sealed class RunLauncherViewModel
     /// <summary>Why <see cref="SettingsMounts"/> is empty, when it is empty for a reason.</summary>
     public string? SettingsMountsNotice { get; private set; }
 
+    /// <summary>Whether <see cref="SettingsMounts"/> is the list of a settings file read here, not a blank for an unknown one.</summary>
+    private bool _settingsMountsKnown;
+
     /// <summary>Options the form leaves enabled for the detected target.</summary>
     public IReadOnlyList<RunOption> AvailableOptions => LaunchOptionsModel.AvailableOptions(Target.Target);
 
@@ -187,7 +190,31 @@ internal sealed class RunLauncherViewModel
         }
 
         messages.AddRange(Options.ValidateMounts());
+        messages.AddRange(ValidateFileSystemScopes());
         return messages;
+    }
+
+    /// <summary>
+    /// The agents the engine will refuse to start with the mounts of this run (#349): a
+    /// <c>filesystem:</c> scope or a working root the folders do not grant, judged by the engine's
+    /// own rule (<see cref="FileSystemScopePreflight"/>). An error when the settings file is read
+    /// here; a warning when the CLI resolves it at launch, for its mounts may then grant what the
+    /// list shown here does not.
+    /// </summary>
+    private IEnumerable<ValidationMessage> ValidateFileSystemScopes()
+    {
+        if (Target.Target is not { } target)
+            return [];
+
+        return FileSystemScopeRefusals.Select(refusal => _settingsMountsKnown
+            ? ValidationMessage.Error(
+                ValidationCodes.FileSystemScopeRefused,
+                $"The engine will refuse to start agent '{refusal.Agent}' with these mounts: {refusal.Reason}",
+                target.RunPath)
+            : ValidationMessage.Warning(
+                ValidationCodes.FileSystemScopeRefused,
+                $"Unless the settings the CLI reads mount it, the engine will refuse to start agent '{refusal.Agent}': {refusal.Reason}",
+                target.RunPath));
     }
 
     /// <summary>True when <see cref="Validate"/> found nothing that would break the launch.</summary>
@@ -201,6 +228,15 @@ internal sealed class RunLauncherViewModel
     /// </summary>
     public IReadOnlyList<EffectiveMount> EffectiveMounts =>
         Target.Target is { } target ? Options.ComputeEffectiveMounts(target, SettingsMounts) : [];
+
+    /// <summary>
+    /// The agents of the crew the engine will refuse to start with <see cref="EffectiveMounts"/>
+    /// (#349); empty without a crew, or when no agent declares a scope or a working root.
+    /// </summary>
+    public IReadOnlyList<FileSystemScopeRefusal> FileSystemScopeRefusals =>
+        Target.Target is { } target && CrewFileSystemScopes.In(target.SelectedPath) is { Count: > 0 } agents
+            ? FileSystemScopePreflight.Check(agents, EffectiveMounts)
+            : [];
 
     /// <summary>Why <see cref="EffectiveMounts"/> is empty while no crew is selected.</summary>
     public const string EffectiveMountsUnknownNotice =
@@ -216,6 +252,7 @@ internal sealed class RunLauncherViewModel
     public void RefreshSettingsMounts()
     {
         var path = ResolvedSettingsPath;
+        _settingsMountsKnown = false;
 
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -241,6 +278,7 @@ internal sealed class RunLauncherViewModel
         }
 
         SettingsMounts = document.Mounts.RawEntries;
+        _settingsMountsKnown = true;
         SettingsMountsNotice = SettingsMounts.Count == 0
             ? $"'{path}' declares no mount."
             : null;

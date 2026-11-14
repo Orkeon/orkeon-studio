@@ -322,4 +322,38 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         Assert.True(tab.IsBlockedByUndeclaredFolders);
         Assert.False(tab.ReplayCommand.CanExecute(null));
     }
+
+    [Fact]
+    public void An_agent_scope_the_teams_folders_do_not_grant_refuses_the_launch_before_the_engine_does()
+    {
+        // #349: the engine stops the run when it starts this agent; the screen says so first.
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        Directory.CreateDirectory(Path.Combine(team, "agents"));
+        File.WriteAllText(
+            Path.Combine(team, "agents", "writer.yaml"),
+            "role: Writer\nfilesystem:\n  - path: /output\n    access: rw\n");
+        var tab = Launcher(team, "/data/out:/output:ro");
+
+        Assert.True(tab.IsBlockedByFileSystemScope);
+        Assert.Equal("Writer", Assert.Single(tab.FileSystemScopeRefusals).Agent);
+        Assert.Contains("/output", tab.FileSystemScopeMessage, StringComparison.Ordinal);
+        Assert.False(tab.RunCommand.CanExecute(null));
+        Assert.False(tab.ValidateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void An_agent_scope_inside_the_teams_folders_launches()
+    {
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        Directory.CreateDirectory(Path.Combine(team, "agents"));
+        File.WriteAllText(
+            Path.Combine(team, "agents", "writer.yaml"),
+            "role: Writer\nfilesystem:\n  - path: /output\n    access: rw\n");
+        var tab = Launcher(team, "/data/out:/output:rw");
+
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.Equal("", tab.FileSystemScopeMessage);
+        Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
 }

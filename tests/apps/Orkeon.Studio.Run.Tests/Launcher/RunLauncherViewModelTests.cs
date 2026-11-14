@@ -576,4 +576,58 @@ public class RunLauncherViewModelTests
         Assert.Equal(["/ws/mounts.docs/veille:/docs:ro"], launcher.SettingsMounts);
         Assert.Null(launcher.SettingsMountsNotice);
     }
+
+    [Fact]
+    public void An_agent_scope_a_launch_mount_lowers_blocks_the_launch_with_the_engines_reason()
+    {
+        // #349: the settings grant /output rw, the --mount lowers it to ro, and the writer's scope
+        // asks rw there: the engine would stop the run when it starts the writer.
+        var folder = Path.Combine(Path.GetTempPath(), "orkeon-run-scope-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var crewFile = Path.Combine(folder, "crew.yaml");
+            File.WriteAllText(crewFile, """
+                agents:
+                  writer:
+                    role: Writer
+                    filesystem:
+                      - path: /output
+                        access: rw
+                """);
+            var fixture = new LauncherFixture().WithInstalledCli();
+            fixture.Directories.Create("/data");
+            fixture.Settings.WithFile("/etc/orkeon/appsettings.json", """
+            { "Orkeon": { "FileSystem": { "Mounts": [ "/out:/output:rw" ] } } }
+            """);
+            var crew = fixture.WithYamlCrew(crewFile);
+            var launcher = fixture.Build();
+            launcher.Target.Select(crew);
+
+            launcher.Options.UseAutomaticSettings = false;
+            launcher.Options.ExplicitSettingsPath = "/etc/orkeon/appsettings.json";
+            launcher.RefreshSettingsMounts();
+            Assert.Empty(launcher.FileSystemScopeRefusals);
+            Assert.DoesNotContain(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
+
+            launcher.Options.AddMount(new MountDefinition { PhysicalPath = "/data", VirtualPath = "/output", Rights = MountRights.ReadOnly });
+            var refusal = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
+            Assert.Equal(ValidationSeverity.Error, refusal.Severity);
+            Assert.Contains("'Writer'", refusal.Text, StringComparison.Ordinal);
+            Assert.True(launcher.HasBlockingErrors());
+
+            // Settings the CLI resolves at launch may mount what the list here lacks: a warning only.
+            launcher.Options.UseAutomaticSettings = true;
+            launcher.Options.ExplicitSettingsPath = null;
+            launcher.RefreshSettingsMounts();
+            Assert.Equal(
+                ValidationSeverity.Warning,
+                Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused).Severity);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
 }

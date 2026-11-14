@@ -59,6 +59,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private string? _runLlmProfile;
     /// <summary>How many agents and tasks of the target's crew name their own model.</summary>
     private int _crewLlmDeclarations;
+    private IReadOnlyList<CrewAgentFileSystem> _crewFileSystems = [];
     /// <summary>The pinned settings file the panel's settings mounts were read from; null for the live declared list.</summary>
     private string? _settingsMountsSource;
     private string? _commandLinePreview;
@@ -124,7 +125,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         Target.TargetChanged += OnTargetChanged;
         Options.Changed += OnInputsChanged;
-        Mounts.Changed += OnInputsChanged;
+        Mounts.Changed += OnMountsChanged;
         History.ReplayRequested += OnReplayRequested;
         History.RestoreRequested += OnRestoreRequested;
 
@@ -644,7 +645,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     // offers the restore instead of a button that would run it anyway.
     private bool CanLaunch() =>
         IsBinaryAvailable && !IsRunning && Target.IsResolved && !IsBlockedByUndeclaredFolders && !IsBlockedByUnknownMountIds
-        && !IsTargetArchived;
+        && !IsBlockedByFileSystemScope && !IsTargetArchived;
 
     private async Task<ProcessRunResult?> LaunchAsync(bool validate, CancellationToken cancellationToken)
     {
@@ -1019,6 +1020,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         var saved = _team.LlmChoice;
         _team = TeamCatalog.DescribeTarget(Target.SelectedPath, _declaredMounts());
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
+        _crewFileSystems = CrewFileSystemScopes.In(Target.SelectedPath);
         // A choice saved from the card replaces the run's; a choice made here for this run stays.
         if (_team.LlmChoice != saved)
             ApplyRunLlmChoice(_team.LlmChoice);
@@ -1028,6 +1030,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         OnPropertiesChanged(nameof(TeamHeadline), nameof(TeamMetaLine), nameof(TeamDescription), nameof(HasTeamCard),
             nameof(UndeclaredTeamFolders), nameof(IsBlockedByUndeclaredFolders), nameof(UndeclaredFoldersMessage),
             nameof(UnknownTeamMountIds), nameof(IsBlockedByUnknownMountIds), nameof(UnknownMountIdsMessage),
+            nameof(FileSystemScopeRefusals), nameof(IsBlockedByFileSystemScope), nameof(FileSystemScopeMessage),
             nameof(IsTargetArchived), nameof(ArchivedTargetMessage), nameof(CrewLlmWarning));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();
@@ -1345,6 +1348,28 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             : "";
 
     /// <summary>
+    /// The agents of the team the engine will refuse to start with the mounts of this run: a
+    /// <c>filesystem:</c> scope (#349) or a working root the folders do not grant. Judged by the
+    /// engine's own rule (<see cref="FileSystemScopePreflight"/>), so the refusal comes before the run
+    /// rather than from its first task.
+    /// </summary>
+    public IReadOnlyList<FileSystemScopeRefusal> FileSystemScopeRefusals =>
+        _crewFileSystems.Count == 0
+            ? []
+            : FileSystemScopePreflight.Check(_crewFileSystems, Mounts.EffectiveMounts.Select(row => row.Mount).ToList());
+
+    /// <summary>Whether the run is refused because an agent's scope does not fit its mounts.</summary>
+    public bool IsBlockedByFileSystemScope => FileSystemScopeRefusals.Count > 0;
+
+    /// <summary>The refusal, quoting the engine's reasons and the two ways out.</summary>
+    public string FileSystemScopeMessage =>
+        FileSystemScopeRefusals is { Count: > 0 } refusals
+            ? _strings.Format(
+                StudioStringKeys.RunBlockedFileSystemScope,
+                string.Join(" ", refusals.Select(refusal => refusal.Reason)))
+            : "";
+
+    /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches
     /// nor tests it — the banner offers to restore it. The CLI, the terminal launcher and the
     /// operating system run it as ever: archiving is Studio's notion.
@@ -1618,6 +1643,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         Options.Target = Target.Target;
         _team = TeamCatalog.DescribeTarget(Target.SelectedPath, _declaredMounts());
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
+        _crewFileSystems = CrewFileSystemScopes.In(Target.SelectedPath);
         // The run takes the team's model unless changed here (STUDIO-73); a target that is no team, the default.
         ApplyRunLlmChoice(_team.LlmChoice);
         RefreshTeamSettingsPath();
@@ -1626,6 +1652,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         OnPropertiesChanged(nameof(TeamHeadline), nameof(TeamMetaLine), nameof(TeamDescription), nameof(HasTeamCard),
             nameof(UndeclaredTeamFolders), nameof(IsBlockedByUndeclaredFolders), nameof(UndeclaredFoldersMessage),
             nameof(UnknownTeamMountIds), nameof(IsBlockedByUnknownMountIds), nameof(UnknownMountIdsMessage),
+            nameof(FileSystemScopeRefusals), nameof(IsBlockedByFileSystemScope), nameof(FileSystemScopeMessage),
             nameof(IsTargetArchived), nameof(ArchivedTargetMessage), nameof(CrewLlmWarning));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();
@@ -1634,6 +1661,16 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     }
 
     private void OnInputsChanged(object? sender, EventArgs e) => RefreshPreview();
+
+    // The mounts of the run decide whether the agents' scopes fit (#349): a launch mount that lowers a
+    // root's rights refuses the run as surely as the team's own declaration.
+    private void OnMountsChanged(object? sender, EventArgs e)
+    {
+        OnPropertiesChanged(nameof(FileSystemScopeRefusals), nameof(IsBlockedByFileSystemScope), nameof(FileSystemScopeMessage));
+        RunCommand.RaiseCanExecuteChanged();
+        ValidateCommand.RaiseCanExecuteChanged();
+        RefreshPreview();
+    }
 
     /// <summary>
     /// One click replays: the history panel's button runs the recorded command line, it does not
