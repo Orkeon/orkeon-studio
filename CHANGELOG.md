@@ -4,7 +4,7 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
-Follows Orkeon `main` after `1.0.0` (issues #348–#365): `OrkeonVersion` moves to the next Orkeon tag before release.
+Follows Orkeon `main` after `1.0.0` (issues #348–#370): `OrkeonVersion` moves to the next Orkeon tag before release.
 
 ### Added
 
@@ -21,6 +21,7 @@ Follows Orkeon `main` after `1.0.0` (issues #348–#365): `OrkeonVersion` moves 
 
 ### Changed
 
+- **No build downloads the local embeddings model** (Orkeon [#368](https://github.com/Orkeon/orkeon/issues/368)). `Orkeon.Scripting`, which `Orkeon.Studio.Core.Tests` references, now lets the `SmartComponents.LocalEmbeddings` build target reach its consumers: that target downloads the BGE-micro-v2 weights (~17 MB) from huggingface.co on a first build, and fails an offline one. No Studio project embeds anything, so `Directory.Build.targets` replaces those targets with empty ones: nothing is downloaded or copied to `LocalEmbeddingsModel/`.
 - On a Windows machine that also has an Orkeon install, a Studio started from a development checkout now drives the installed CLI rather than the one built in the Orkeon checkout (`ORKEON_SOURCE_ROOT` or `../orkeon`), as a CLI on `PATH` (the .NET tool, or Linux packages) already did. To drive the checkout's build, name its directory with `--cli-dir` (WPF app) or `ORKEON_CLI_DIR`.
 
 ## [1.0.0] - 2026-11-12
