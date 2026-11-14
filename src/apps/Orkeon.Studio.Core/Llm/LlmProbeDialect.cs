@@ -58,6 +58,84 @@ public static class LlmProbeDialect
     public static ThinkingSupport ThinkingSupportOf(string providerKey) =>
         Thinking.TryGetValue(providerKey, out var support) ? support : Thinking[LlmProviderKeys.OpenAI];
 
+    /// <summary>
+    /// The rows of the runtime's built-in model table (<c>ModelCapabilityRegistry</c>, #356) that say
+    /// how a model takes thinking: <see cref="ThinkingSupport.None"/> for a model with no reasoning
+    /// pass, <see cref="ThinkingSupport.EffortOnly"/> for one that always reasons and refuses every
+    /// off value (<c>claude-opus-5-5</c>, <c>MiniMax-M3.1-Flash</c>...). A null row says nothing of
+    /// thinking: it is copied because it is longer than a row that does, and wins over it. Matched
+    /// as the table matches: <c>&lt;provider&gt;/&lt;model&gt;</c> first, then the longest id at a
+    /// boundary, then the part after the model's last slash. Pinned by
+    /// <c>LlmProbeDialectDriftTests</c>; the profile's <c>Llm:ModelCapabilities</c> overrides are
+    /// not read here.
+    /// </summary>
+    private static readonly Dictionary<string, ThinkingSupport?> ModelThinking = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["gpt-3.5"] = ThinkingSupport.None,
+        ["gpt-4"] = ThinkingSupport.None,
+        ["gpt-4-turbo"] = ThinkingSupport.None,
+        ["gpt-4o"] = ThinkingSupport.None,
+        ["gpt-4.1"] = ThinkingSupport.None,
+        ["gpt-4o-audio"] = ThinkingSupport.None,
+        ["gpt-4o-mini-audio"] = ThinkingSupport.None,
+        ["gpt-audio"] = ThinkingSupport.None,
+        ["gpt-5-chat"] = ThinkingSupport.None,
+        ["gemini-1.5"] = ThinkingSupport.None,
+        ["gemini-2.0"] = ThinkingSupport.None,
+        ["gemini-3.7"] = ThinkingSupport.EffortOnly,
+        ["gemini-3.8"] = ThinkingSupport.EffortOnly,
+        ["claude-opus-5-5"] = ThinkingSupport.EffortOnly,
+        ["claude-fable-5"] = ThinkingSupport.EffortOnly,
+        ["kimi-k2.7-code"] = ThinkingSupport.EffortOnly,
+        ["glm-5.3"] = ThinkingSupport.EffortOnly,
+        ["MiniMax-M3.1-Flash"] = ThinkingSupport.EffortOnly,
+        ["mammouth/gemini-3.7"] = ThinkingSupport.EffortOnly,
+        ["mammouth/gemini-3.8"] = ThinkingSupport.EffortOnly,
+        ["openrouter/google/gemini-3.7"] = ThinkingSupport.EffortOnly,
+        ["openrouter/google/gemini-3.8"] = ThinkingSupport.EffortOnly,
+        ["together/zai-org/glm-5.3"] = null,
+    };
+
+    /// <summary>
+    /// The thinking control <paramref name="model"/> behind <paramref name="providerKey"/> takes, as
+    /// the runtime judges it: the lower of the provider's declaration and the model's row.
+    /// </summary>
+    public static ThinkingSupport ThinkingSupportOf(string providerKey, string? model)
+    {
+        var provider = ThinkingSupportOf(providerKey);
+        return ModelThinkingOf(providerKey, model) is { } narrowed && narrowed < provider ? narrowed : provider;
+    }
+
+    /// <summary>What the runtime's model table says of <paramref name="model"/>'s thinking; null when nothing.</summary>
+    public static ThinkingSupport? ModelThinkingOf(string? providerKey, string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+            return null;
+
+        model = model.Trim();
+        if (!string.IsNullOrWhiteSpace(providerKey) && Longest($"{providerKey.Trim()}/{model}") is { } served)
+            return served.Value;
+
+        if (Longest(model) is { } whole)
+            return whole.Value;
+
+        var slash = model.LastIndexOf('/');
+        return slash >= 0 && slash < model.Length - 1 ? Longest(model[(slash + 1)..])?.Value : null;
+    }
+
+    /// <summary>The row of the longest id <paramref name="model"/> matches at a boundary; null when none.</summary>
+    private static KeyValuePair<string, ThinkingSupport?>? Longest(string model)
+    {
+        KeyValuePair<string, ThinkingSupport?>? best = null;
+        foreach (var row in ModelThinking)
+        {
+            if (row.Key.Length > (best?.Key.Length ?? 0) && MatchesAtBoundary(model, row.Key))
+                best = row;
+        }
+
+        return best;
+    }
+
     /// <summary>Builds the test completion for <paramref name="provider"/>.</summary>
     internal static HttpRequestMessage BuildCompletion(
         string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled)
@@ -73,7 +151,8 @@ public static class LlmProbeDialect
             url = $"{LlmEndpointReading.NativeOllamaRoot(baseUri.AbsoluteUri)}/api/chat";
             payload["stream"] = false;
             payload["options"] = new Dictionary<string, object> { ["num_predict"] = CompletionMaxTokens };
-            if (thinkingEnabled is { } think)
+            // A model that always reasons gets no switch, as the runtime sends it none.
+            if (thinkingEnabled is { } think && ThinkingSupportOf(provider, model) >= ThinkingSupport.Toggle)
                 payload["think"] = think;
 
             return Post(url, payload);
@@ -83,8 +162,8 @@ public static class LlmProbeDialect
         {
             url = $"{baseUrl}/v1/messages";
             payload["max_tokens"] = CompletionMaxTokens;
-            if (thinkingEnabled is { } enabled)
-                payload["thinking"] = AnthropicThinking(model, enabled);
+            if (thinkingEnabled is { } enabled && AnthropicThinking(model, enabled) is { } block)
+                payload["thinking"] = block;
 
             var anthropic = Post(url, payload);
             anthropic.Headers.Add("x-api-key", apiKey ?? "");
@@ -98,7 +177,7 @@ public static class LlmProbeDialect
             ? "max_completion_tokens"   // OpenAI retired max_tokens on its current chat models
             : "max_tokens"] = CompletionMaxTokens;
         if (thinkingEnabled is { } on)
-            WriteThinkingSwitch(provider, payload, on);
+            WriteThinkingSwitch(provider, model, payload, on);
 
         var message = Post(url, payload);
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -115,15 +194,13 @@ public static class LlmProbeDialect
     /// (<c>MiniMax-M3</c> answers an explicit <c>enabled</c> with a 400), the rest a
     /// <c>thinking</c> block.
     /// <para>
-    /// The runtime also narrows the switch per model through its capability table (#356): a model
-    /// that always reasons, such as GLM-5.3 or <c>MiniMax-M3.1-Flash</c>, gets no off switch. That
-    /// table lives in Infrastructure, out of Core's reach: the probe stays at the provider's level
-    /// and may send a switch the runtime would drop.
+    /// The switch is narrowed per model as the runtime narrows it (#356): a model that always
+    /// reasons, such as GLM-5.3 or <c>MiniMax-M3.1-Flash</c>, gets none (<see cref="ModelThinking"/>).
     /// </para>
     /// </summary>
-    private static void WriteThinkingSwitch(string provider, Dictionary<string, object> payload, bool enabled)
+    private static void WriteThinkingSwitch(string provider, string model, Dictionary<string, object> payload, bool enabled)
     {
-        if (ThinkingSupportOf(provider) < ThinkingSupport.Toggle)
+        if (ThinkingSupportOf(provider, model) < ThinkingSupport.Toggle)
             return;
 
         switch (provider)
@@ -162,12 +239,17 @@ public static class LlmProbeDialect
     /// <summary>
     /// The Messages API thinking block, as the runtime writes it: on is <c>adaptive</c> with
     /// <c>display: summarized</c> (without it a Claude 5 model returns its thinking blocks empty),
-    /// off the model's own value, never with <c>display</c>, which <c>between_tools</c> refuses.
+    /// sent to a model that always reasons too; off the model's own value, never with
+    /// <c>display</c>, which <c>between_tools</c> refuses, and nothing to a model that refuses every
+    /// off value (<c>claude-opus-5-5</c>, <c>claude-fable-5</c>): the runtime drops it.
     /// </summary>
-    private static Dictionary<string, object> AnthropicThinking(string model, bool enabled)
+    private static Dictionary<string, object>? AnthropicThinking(string model, bool enabled)
     {
         if (enabled)
             return new Dictionary<string, object> { ["type"] = "adaptive", ["display"] = "summarized" };
+
+        if (ThinkingSupportOf(LlmProviderKeys.Anthropic, model) < ThinkingSupport.Toggle)
+            return null;
 
         var value = "disabled";
         var matched = 0;

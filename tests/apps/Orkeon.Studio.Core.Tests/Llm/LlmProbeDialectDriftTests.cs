@@ -1,8 +1,10 @@
+using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Orkeon.Constants.Llm;
 using Orkeon.Domain.SharedKernel;
 using Orkeon.Domain.SharedKernel.ValueObjects;
 using Orkeon.Infrastructure.LLMs;
+using Orkeon.Infrastructure.LLMs.Capabilities;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Llm;
 
@@ -52,5 +54,40 @@ public sealed class LlmProbeDialectDriftTests
             : ((ILlmProvider)built).Capabilities;
 
         Assert.Equal(declared.Thinking, LlmProbeDialect.ThinkingSupportOf(LlmEndpointReading.Of(endpoint, null, null).ProviderKey));
+    }
+
+    /// <summary>
+    /// Every id of the runtime's built-in model table, asked as a model of that id (a gateway row
+    /// <c>provider/model</c> through its provider): the probe narrows thinking the way the table does.
+    /// </summary>
+    public static TheoryData<string, string> ModelTableIds()
+    {
+#pragma warning disable ORKEXP005 // The model table is experimental in Orkeon; the probe follows it.
+        var builtIn = typeof(ModelCapabilityRegistry).GetMethod("BuiltIn", BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, null) as IReadOnlyDictionary<string, ModelCapabilities>;
+#pragma warning restore ORKEXP005
+        var data = new TheoryData<string, string>();
+        foreach (var id in builtIn!.Keys)
+        {
+            var slash = id.IndexOf('/', StringComparison.Ordinal);
+            var provider = slash > 0 && KnownProvider(id[..slash]) ? id[..slash] : LlmProviderKeys.OpenAI;
+            data.Add(provider, provider == LlmProviderKeys.OpenAI ? id : id[(slash + 1)..]);
+        }
+
+        return data;
+    }
+
+    private static bool KnownProvider(string key) =>
+        key is LlmProviderKeys.Mammouth or LlmProviderKeys.OpenRouter or LlmProviderKeys.Together;
+
+    [Theory]
+    [MemberData(nameof(ModelTableIds))]
+    public void The_probe_narrows_thinking_by_the_runtimes_model_table(string provider, string model)
+    {
+#pragma warning disable ORKEXP005
+        var entry = ModelCapabilityRegistry.Default.TryGet(model, provider);
+#pragma warning restore ORKEXP005
+
+        Assert.Equal(entry?.Thinking, LlmProbeDialect.ModelThinkingOf(provider, model));
     }
 }
