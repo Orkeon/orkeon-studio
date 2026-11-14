@@ -1695,9 +1695,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>Automatique</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>Tampon</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>Flux</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Défaut du fournisseur : le modèle décide — Kimi K2.6, DeepSeek V4 et GLM réfléchissent sauf consigne contraire. Désactivée répond plus vite et moins cher ; Activée impose la passe de raisonnement là où le modèle a l'interrupteur.</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Défaut du fournisseur : le modèle décide — Kimi K2.6, DeepSeek V4 et GLM réfléchissent sauf consigne contraire. Désactivée répond plus vite et moins cher ; Activée impose la passe de raisonnement là où le modèle a l'interrupteur. Un modèle qui raisonne toujours ignore Désactivée, avec un avertissement.</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>Effort de raisonnement</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vide : le défaut du fournisseur. low / medium / high (max sur certains modèles), pour les modèles qui acceptent l'indication.</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vide : le défaut du fournisseur. low / medium / high / xhigh / max, pour les modèles qui acceptent l'indication ; un niveau que le modèle ne prend pas est abaissé au plus proche qu'il prend, avec un avertissement.</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>Parcourir les cas d'usage</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>Parcourir les cas d'usage ({0})</value></data>

@@ -3312,9 +3312,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>Automático</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>En búfer</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>En flujo</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Valor por defecto del proveedor: decide el modelo — Kimi K2.6, DeepSeek V4 y GLM razonan salvo indicación contraria. Desactivado responde más rápido y más barato; Activado fuerza la pasada de razonamiento donde el modelo tiene el interruptor.</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Valor por defecto del proveedor: decide el modelo — Kimi K2.6, DeepSeek V4 y GLM razonan salvo indicación contraria. Desactivado responde más rápido y más barato; Activado fuerza la pasada de razonamiento donde el modelo tiene el interruptor. Un modelo que siempre razona ignora Desactivado, con un aviso.</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>Esfuerzo de razonamiento</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vacío: el valor por defecto del proveedor. low / medium / high (max en algunos modelos), para los modelos que aceptan la indicación.</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vacío: el valor por defecto del proveedor. low / medium / high / xhigh / max, para los modelos que aceptan la indicación; un nivel que el modelo no acepta se rebaja al más cercano que acepta, con un aviso.</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>Explorar los casos de uso</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>Explorar los casos de uso ({0})</value></data>

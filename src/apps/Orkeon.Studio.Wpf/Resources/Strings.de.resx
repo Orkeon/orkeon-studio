@@ -3312,9 +3312,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>Automatisch</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>Gepuffert</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>Streaming</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Standard des Anbieters: das Modell entscheidet — Kimi K2.6, DeepSeek V4 und GLM denken nach, sofern nichts anderes gesagt wird. Aus antwortet schneller und günstiger; Ein erzwingt den Denkschritt, wo das Modell den Schalter hat.</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Standard des Anbieters: das Modell entscheidet — Kimi K2.6, DeepSeek V4 und GLM denken nach, sofern nichts anderes gesagt wird. Aus antwortet schneller und günstiger; Ein erzwingt den Denkschritt, wo das Modell den Schalter hat. Ein Modell, das immer nachdenkt, ignoriert Aus mit einer Warnung.</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>Denkaufwand</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Leer: Standard des Anbieters. low / medium / high (max bei manchen Modellen), für Modelle, die den Hinweis annehmen.</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Leer: Standard des Anbieters. low / medium / high / xhigh / max, für Modelle, die den Hinweis annehmen; eine Stufe, die das Modell nicht annimmt, wird mit einer Warnung auf die nächste angenommene gesenkt.</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>Anwendungsfälle durchsuchen</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>Anwendungsfälle durchsuchen ({0})</value></data>

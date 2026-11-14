@@ -1695,9 +1695,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>Auto</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>Buffer</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>Stream</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Provider default: the model decides — Kimi K2.6, DeepSeek V4 and GLM think unless told not to. Off answers faster and cheaper; On forces the reasoning pass where the model has the switch.</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Provider default: the model decides — Kimi K2.6, DeepSeek V4 and GLM think unless told not to. Off answers faster and cheaper; On forces the reasoning pass where the model has the switch. A model that always reasons ignores Off, with a warning.</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>Reasoning effort</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Empty: the provider's default. low / medium / high (max on some models), for the models that take the hint.</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Empty: the provider's default. low / medium / high / xhigh / max, for the models that take the hint; a level the model does not take is lowered to the nearest one it does, with a warning.</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>Browse the use cases</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>Browse the use cases ({0})</value></data>

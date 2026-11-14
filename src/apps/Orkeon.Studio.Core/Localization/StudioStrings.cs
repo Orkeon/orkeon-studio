@@ -2717,7 +2717,7 @@ public static class StudioStringKeys
     /// <summary>"Reasoning effort"</summary>
     public const string ProfileThinkingEffortLabel = "Studio.Settings.ProfileLblThinkingEffort";
 
-    /// <summary>"Empty: the provider's default. low / medium / high (max on some models), …"</summary>
+    /// <summary>"Empty: the provider's default. low / medium / high / xhigh / max, …"</summary>
     public const string ProfileThinkingEffortHint = "Studio.Settings.ProfileThinkingEffortHint";
 
     // STUDIO-14 wizard — where a team's folders live: the in-team label of a row, the step-2
@@ -3973,9 +3973,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.StatusBarModeStream] = "Stream",
         [StudioStringKeys.StatusBarModeBuffer] = "Buffer",
         [StudioStringKeys.StatusBarModeFallback] = "Buffer (fallback)",
-        [StudioStringKeys.ProfileThinkingHint] = "Provider default: the model decides — Kimi K2.6, DeepSeek V4 and GLM think unless told not to. Off answers faster and cheaper; On forces the reasoning pass where the model has the switch.",
+        [StudioStringKeys.ProfileThinkingHint] = "Provider default: the model decides — Kimi K2.6, DeepSeek V4 and GLM think unless told not to. Off answers faster and cheaper; On forces the reasoning pass where the model has the switch. A model that always reasons ignores Off, with a warning.",
         [StudioStringKeys.ProfileThinkingEffortLabel] = "Reasoning effort",
-        [StudioStringKeys.ProfileThinkingEffortHint] = "Empty: the provider's default. low / medium / high (max on some models), for the models that take the hint.",
+        [StudioStringKeys.ProfileThinkingEffortHint] = "Empty: the provider's default. low / medium / high / xhigh / max, for the models that take the hint; a level the model does not take is lowered to the nearest one it does, with a warning.",
 
         // STUDIO-14 wizard: where a team's folders live; STUDIO-46: the Folders step
         [StudioStringKeys.WizardFolderRoleInput] = "read",

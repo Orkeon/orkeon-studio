@@ -3312,9 +3312,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>自动</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>缓冲</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>流式</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>提供商默认：由模型决定 — Kimi K2.6、DeepSeek V4 和 GLM 默认会思考。关闭后回答更快更省；开启则在模型支持开关时强制推理。</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>提供商默认：由模型决定 — Kimi K2.6、DeepSeek V4 和 GLM 默认会思考。关闭后回答更快更省；开启则在模型支持开关时强制推理。始终推理的模型会忽略关闭，并给出警告。</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>推理强度</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>留空：提供商默认。low / medium / high（部分模型支持 max），仅对接受该提示的模型生效。</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>留空：提供商默认。low / medium / high / xhigh / max，仅对接受该提示的模型生效；模型不支持的级别会降到它支持的最接近级别，并给出警告。</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>浏览用例</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>浏览用例（{0}）</value></data>
