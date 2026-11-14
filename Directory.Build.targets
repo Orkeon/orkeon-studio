@@ -41,7 +41,8 @@
        build, fails an offline one, and copies them to LocalEmbeddingsModel/default/ for
        AddOrkeonLocalEmbeddings(). No Studio project embeds anything: the CLI loads its own
        copy. These empty targets replace the upstream ones by name (this file is imported
-       after the packages' targets), so nothing is downloaded or copied. -->
+       after the packages' targets), so nothing is downloaded or copied. Orkeon #376 asks for
+       a supported opt-out: once Orkeon ships one, use it and drop these targets. -->
   <Target Name="AcquireLocalEmbeddingsModel" />
   <Target Name="AcquireLocalEmbeddingsVocab" />
   <Target Name="AttachEmbeddingsContentFiles" />
