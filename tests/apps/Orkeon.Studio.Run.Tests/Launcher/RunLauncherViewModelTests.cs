@@ -594,6 +594,9 @@ public class RunLauncherViewModelTests
                     filesystem:
                       - path: /output
                         access: rw
+                tasks:
+                  draft:
+                    agent: writer
                 """);
             var fixture = new LauncherFixture().WithInstalledCli();
             fixture.Directories.Create("/data");
@@ -615,6 +618,16 @@ public class RunLauncherViewModelTests
             Assert.Equal(ValidationSeverity.Error, refusal.Severity);
             Assert.Contains("'Writer'", refusal.Text, StringComparison.Ordinal);
             Assert.True(launcher.HasBlockingErrors());
+            // A check loads the crew and starts no agent: it passes, and is told what a run would meet.
+            Assert.Equal(
+                ValidationSeverity.Warning,
+                Assert.Single(launcher.Validate(dryRun: true), m => m.Code == ValidationCodes.FileSystemScopeRefused).Severity);
+
+            // No task names the writer: the run starts it only if its course picks it.
+            File.WriteAllText(crewFile, "agents:\n  writer:\n    role: Writer\n    filesystem:\n      - path: /output\n        access: rw\n");
+            var unassigned = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
+            Assert.Equal(ValidationSeverity.Warning, unassigned.Severity);
+            Assert.Contains("If the run starts agent 'Writer'", unassigned.Text, StringComparison.Ordinal);
 
             // Settings the CLI resolves at launch may mount what the list here lacks: a warning only.
             launcher.Options.UseAutomaticSettings = true;

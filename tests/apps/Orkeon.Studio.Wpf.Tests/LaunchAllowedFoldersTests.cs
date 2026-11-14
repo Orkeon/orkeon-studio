@@ -323,35 +323,87 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         Assert.False(tab.ReplayCommand.CanExecute(null));
     }
 
+    /// <summary>A per-entity crew in the team folder: a writer asking /output rw, and a task naming it or not.</summary>
+    private static void WriteCrew(string team, string scope = "filesystem:\n  - path: /output\n    access: rw\n", bool assigned = true)
+    {
+        File.WriteAllText(Path.Combine(team, "crew.yaml"), "name: veille\ngoal: watch\n");
+        Directory.CreateDirectory(Path.Combine(team, "agents"));
+        File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\n" + scope);
+        Directory.CreateDirectory(Path.Combine(team, "tasks"));
+        File.WriteAllText(
+            Path.Combine(team, "tasks", "draft.yaml"),
+            "description: draft\nexpected_output: a draft\n" + (assigned ? "agent: writer\n" : ""));
+    }
+
     [Fact]
     public void An_agent_scope_the_teams_folders_do_not_grant_refuses_the_launch_before_the_engine_does()
     {
         // #349: the engine stops the run when it starts this agent; the screen says so first.
         var team = NewTeam("veille", "/data/out:/output:ro");
-        Directory.CreateDirectory(Path.Combine(team, "agents"));
-        File.WriteAllText(
-            Path.Combine(team, "agents", "writer.yaml"),
-            "role: Writer\nfilesystem:\n  - path: /output\n    access: rw\n");
+        WriteCrew(team);
         var tab = Launcher(team, "/data/out:/output:ro");
 
         Assert.True(tab.IsBlockedByFileSystemScope);
         Assert.Equal("Writer", Assert.Single(tab.FileSystemScopeRefusals).Agent);
         Assert.Contains("/output", tab.FileSystemScopeMessage, StringComparison.Ordinal);
+        Assert.False(tab.HasFileSystemScopeWarning);
+        Assert.False(tab.RunCommand.CanExecute(null));
+        // A check loads the crew and starts no agent: it passes, and stays offered.
+        Assert.True(tab.ValidateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void An_agent_the_run_may_not_start_is_a_warning_not_a_refusal()
+    {
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team, assigned: false);
+        var tab = Launcher(team, "/data/out:/output:ro");
+
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.HasFileSystemScopeWarning);
+        Assert.Contains("/output", tab.FileSystemScopeWarning, StringComparison.Ordinal);
+        Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void A_malformed_scope_refuses_the_check_too()
+    {
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team, scope: "filesystem: []\n");
+        var tab = Launcher(team, "/data/out:/output:rw");
+
+        Assert.True(tab.IsBlockedByFileSystemScope);
+        Assert.Contains("Agent 'writer' filesystem", tab.FileSystemScopeMessage, StringComparison.Ordinal);
         Assert.False(tab.RunCommand.CanExecute(null));
         Assert.False(tab.ValidateCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Settings_Studio_cannot_read_turn_the_refusal_into_a_warning()
+    {
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team);
+        var tab = Launcher(team, "/data/out:/output:ro");
+        Assert.True(tab.IsBlockedByFileSystemScope);
+
+        // A pinned file this machine does not have: the CLI may mount what the panel cannot show.
+        tab.Options.SettingsPath = Path.Combine(team, "missing-appsettings.json");
+        tab.Options.SettingsMode = SettingsSelectionMode.ExplicitPath;
+
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.HasFileSystemScopeWarning);
+        Assert.True(tab.RunCommand.CanExecute(null));
     }
 
     [Fact]
     public void An_agent_scope_inside_the_teams_folders_launches()
     {
         var team = NewTeam("veille", "/data/out:/output:rw");
-        Directory.CreateDirectory(Path.Combine(team, "agents"));
-        File.WriteAllText(
-            Path.Combine(team, "agents", "writer.yaml"),
-            "role: Writer\nfilesystem:\n  - path: /output\n    access: rw\n");
+        WriteCrew(team);
         var tab = Launcher(team, "/data/out:/output:rw");
 
         Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.False(tab.HasFileSystemScopeWarning);
         Assert.Equal("", tab.FileSystemScopeMessage);
         Assert.True(tab.RunCommand.CanExecute(null));
     }

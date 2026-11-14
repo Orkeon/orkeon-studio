@@ -17,7 +17,7 @@ public sealed class FileSystemScopePreflightTests
         new EffectiveMount(index, $"{Physical}:{virtualPath}:{rights}", MountOrigin.Settings) { Selection = selection };
 
     private static CrewAgentFileSystem Agent(string name, string? root, params FileSystemScopeEntry[] entries) =>
-        new(name.ToLowerInvariant(), name, entries, root);
+        new(name.ToLowerInvariant(), name, entries, root, StartsForSure: true);
 
     [Fact]
     public void A_scope_inside_the_mounts_is_not_refused()
@@ -39,6 +39,17 @@ public sealed class FileSystemScopePreflightTests
         var refusal = Assert.Single(refusals);
         Assert.Equal("Writer", refusal.Agent);
         Assert.Contains("/output", refusal.Reason);
+        Assert.Equal(FileSystemScopeRefusalKind.AtStart, refusal.Kind);
+    }
+
+    [Fact]
+    public void An_agent_the_run_may_not_start_is_refused_only_if_started()
+    {
+        var spare = Agent("Spare", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite)) with { StartsForSure = false };
+
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([spare], [Mount("/output", "ro")]));
+
+        Assert.Equal(FileSystemScopeRefusalKind.IfStarted, refusal.Kind);
     }
 
     [Fact]
@@ -93,7 +104,12 @@ public sealed class FileSystemScopePreflightTests
 
         var refusal = Assert.Single(FileSystemScopePreflight.Check([malformed], [Mount("/workspace", "rw")]));
 
-        Assert.Equal(("analyst", malformed.Refusal), (refusal.Agent, refusal.Reason));
+        Assert.Equal(("analyst", malformed.Refusal, FileSystemScopeRefusalKind.Load), (refusal.Agent, refusal.Reason, refusal.Kind));
+        // The crew is refused as it loads: what the mounts are does not matter.
+        Assert.Single(FileSystemScopePreflight.Check([malformed],
+            [Mount("/workspace", "rw", selection: EffectiveMountSelection.Conflict)]));
+        Assert.Single(FileSystemScopePreflight.Check([malformed],
+            [new EffectiveMount(0, "not a mount", MountOrigin.CommandLine)]));
     }
 
     [Fact]

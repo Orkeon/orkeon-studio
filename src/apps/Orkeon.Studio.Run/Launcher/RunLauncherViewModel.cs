@@ -190,31 +190,48 @@ internal sealed class RunLauncherViewModel
         }
 
         messages.AddRange(Options.ValidateMounts());
-        messages.AddRange(ValidateFileSystemScopes());
+        messages.AddRange(ValidateFileSystemScopes(dryRun));
         return messages;
     }
 
     /// <summary>
-    /// The agents the engine will refuse to start with the mounts of this run (#349): a
-    /// <c>filesystem:</c> scope or a working root the folders do not grant, judged by the engine's
-    /// own rule (<see cref="FileSystemScopePreflight"/>). An error when the settings file is read
-    /// here; a warning when the CLI resolves it at launch, for its mounts may then grant what the
-    /// list shown here does not.
+    /// The agents the engine will refuse with the mounts of this run (#349): a <c>filesystem:</c>
+    /// scope or a working root the folders do not grant, judged by the engine's own rule
+    /// (<see cref="FileSystemScopePreflight"/>). A malformed declaration is an error, for the crew
+    /// does not load. A scope that does not fit is an error only for a run that starts the agent for
+    /// sure with the settings file read here; a warning for a check (<c>--validate</c> starts no
+    /// agent), for an agent the run may not start, and when the CLI resolves the settings at launch,
+    /// for its mounts may then grant what the list shown here does not. The crew is read again: a
+    /// launch sees the files as they are now.
     /// </summary>
-    private IEnumerable<ValidationMessage> ValidateFileSystemScopes()
+    private List<ValidationMessage> ValidateFileSystemScopes(bool dryRun)
     {
         if (Target.Target is not { } target)
             return [];
 
-        return FileSystemScopeRefusals.Select(refusal => _settingsMountsKnown
-            ? ValidationMessage.Error(
+        return JudgeFileSystemScopes(target, reread: true).Select(refusal => refusal.Kind switch
+        {
+            FileSystemScopeRefusalKind.Load => ValidationMessage.Error(
+                ValidationCodes.FileSystemScopeRefused,
+                $"The engine will refuse this crew as it loads: {refusal.Reason}",
+                target.RunPath),
+            FileSystemScopeRefusalKind.AtStart when dryRun => ValidationMessage.Warning(
+                ValidationCodes.FileSystemScopeRefused,
+                $"A check starts no agent, but a run will refuse to start agent '{refusal.Agent}' with these mounts: {refusal.Reason}",
+                target.RunPath),
+            FileSystemScopeRefusalKind.AtStart when _settingsMountsKnown => ValidationMessage.Error(
                 ValidationCodes.FileSystemScopeRefused,
                 $"The engine will refuse to start agent '{refusal.Agent}' with these mounts: {refusal.Reason}",
-                target.RunPath)
-            : ValidationMessage.Warning(
+                target.RunPath),
+            FileSystemScopeRefusalKind.AtStart => ValidationMessage.Warning(
                 ValidationCodes.FileSystemScopeRefused,
                 $"Unless the settings the CLI reads mount it, the engine will refuse to start agent '{refusal.Agent}': {refusal.Reason}",
-                target.RunPath));
+                target.RunPath),
+            _ => ValidationMessage.Warning(
+                ValidationCodes.FileSystemScopeRefused,
+                $"If the run starts agent '{refusal.Agent}', the engine will refuse it with these mounts: {refusal.Reason}",
+                target.RunPath),
+        }).ToList();
     }
 
     /// <summary>True when <see cref="Validate"/> found nothing that would break the launch.</summary>
@@ -234,9 +251,20 @@ internal sealed class RunLauncherViewModel
     /// (#349); empty without a crew, or when no agent declares a scope or a working root.
     /// </summary>
     public IReadOnlyList<FileSystemScopeRefusal> FileSystemScopeRefusals =>
-        Target.Target is { } target && CrewFileSystemScopes.In(target.SelectedPath) is { Count: > 0 } agents
+        Target.Target is { } target ? JudgeFileSystemScopes(target, reread: false) : [];
+
+    /// <summary>The crew's declarations, read once per run path (the mounts dialog judges them at every edit).</summary>
+    private (string RunPath, IReadOnlyList<CrewAgentFileSystem> Agents)? _crewFileSystems;
+
+    private IReadOnlyList<FileSystemScopeRefusal> JudgeFileSystemScopes(RunTarget target, bool reread)
+    {
+        if (reread || _crewFileSystems is not { } cached || !string.Equals(cached.RunPath, target.RunPath, StringComparison.Ordinal))
+            _crewFileSystems = (target.RunPath, CrewFileSystemScopes.Of(target));
+
+        return _crewFileSystems.Value.Agents is { Count: > 0 } agents
             ? FileSystemScopePreflight.Check(agents, EffectiveMounts)
             : [];
+    }
 
     /// <summary>Why <see cref="EffectiveMounts"/> is empty while no crew is selected.</summary>
     public const string EffectiveMountsUnknownNotice =

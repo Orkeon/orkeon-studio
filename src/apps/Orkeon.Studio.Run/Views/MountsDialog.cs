@@ -175,9 +175,16 @@ internal sealed class MountsDialog : Window
                 $"{mount.ConfigurationKey} = {mount.Value}   [{origin}]{replaced}{selection}");
         }
 
-        // #349: what the engine will refuse at start, with these mounts, of the agents' own scopes.
+        // #349: what the engine will refuse, with these mounts, of the agents' own scopes.
         foreach (var refusal in _launcher.FileSystemScopeRefusals)
-            yield return $"Refused at start - agent '{refusal.Agent}': {refusal.Reason}";
+        {
+            yield return refusal.Kind switch
+            {
+                FileSystemScopeRefusalKind.Load => $"Refused at load - agent '{refusal.Agent}': {refusal.Reason}",
+                FileSystemScopeRefusalKind.AtStart => $"Refused at start - agent '{refusal.Agent}': {refusal.Reason}",
+                _ => $"Refused if started - agent '{refusal.Agent}': {refusal.Reason}",
+            };
+        }
     }
 
     /// <summary>

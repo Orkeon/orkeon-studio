@@ -5,10 +5,32 @@ using Orkeon.Studio.Core.Teams;
 
 namespace Orkeon.Studio.Core.Launch;
 
-/// <summary>An agent whose file-system declaration the runtime will refuse when it starts it.</summary>
+/// <summary>When the runtime makes a <see cref="FileSystemScopeRefusal"/>, which decides what it stops.</summary>
+public enum FileSystemScopeRefusalKind
+{
+    /// <summary>
+    /// The declaration is malformed: the crew is refused as it loads, so <c>--validate</c> fails too.
+    /// </summary>
+    Load,
+
+    /// <summary>
+    /// The scope does not fit the mounts, and the run starts the agent for sure: the run stops there.
+    /// <c>--validate</c>, which starts no agent, passes.
+    /// </summary>
+    AtStart,
+
+    /// <summary>
+    /// The scope does not fit the mounts, but the agent is started only if a manager, a planner or
+    /// the course of the run picks it: the run may finish without the refusal.
+    /// </summary>
+    IfStarted,
+}
+
+/// <summary>An agent whose file-system declaration the runtime will refuse.</summary>
 /// <param name="Agent">The agent as the refusal names it.</param>
 /// <param name="Reason">The runtime's own refusal.</param>
-public sealed record FileSystemScopeRefusal(string Agent, string Reason);
+/// <param name="Kind">When the runtime makes it.</param>
+public sealed record FileSystemScopeRefusal(string Agent, string Reason, FileSystemScopeRefusalKind Kind);
 
 /// <summary>
 /// Tells, before a run, which agents of a YAML crew the runtime will refuse to start because of
@@ -27,8 +49,11 @@ public sealed record FileSystemScopeRefusal(string Agent, string Reason);
 /// </summary>
 public static class FileSystemScopePreflight
 {
-    /// <summary>The refusals the runtime will make, in the agents' order; empty when it will start them all.</summary>
-    /// <param name="agents">The crew's declarations (<see cref="CrewFileSystemScopes.In"/>).</param>
+    /// <summary>
+    /// The refusals the runtime will make, the malformed declarations first, then the scopes that do
+    /// not fit, each in the agents' order; empty when it will start them all.
+    /// </summary>
+    /// <param name="agents">The crew's declarations (<see cref="CrewFileSystemScopes.Of"/>).</param>
     /// <param name="effective">The mount list the run will see (<c>ComputeEffectiveMounts</c>).</param>
     public static IReadOnlyList<FileSystemScopeRefusal> Check(
         IReadOnlyList<CrewAgentFileSystem> agents,
@@ -37,23 +62,18 @@ public static class FileSystemScopePreflight
         ArgumentNullException.ThrowIfNull(agents);
         ArgumentNullException.ThrowIfNull(effective);
 
-        if (agents.Count == 0 || effective.Any(mount => mount.Selection == EffectiveMountSelection.Conflict))
-            return [];
+        // A malformed declaration is refused at load, whatever the mounts.
+        var refusals = agents
+            .Where(agent => agent.Refusal is not null)
+            .Select(agent => new FileSystemScopeRefusal(agent.Key, agent.Refusal!, FileSystemScopeRefusalKind.Load))
+            .ToList();
 
-        var mounts = MountsOf(effective);
-        if (mounts is null)
-            return [];
+        if (effective.Any(mount => mount.Selection == EffectiveMountSelection.Conflict) || MountsOf(effective) is not { } mounts)
+            return refusals;
 
-        var refusals = new List<FileSystemScopeRefusal>();
         foreach (var agent in agents)
         {
-            if (agent.Refusal is { } shape)
-            {
-                refusals.Add(new FileSystemScopeRefusal(agent.Key, shape));
-                continue;
-            }
-
-            if (ReachesAnUnseenRunnerRoot(agent, mounts))
+            if (agent.Refusal is not null || ReachesAnUnseenRunnerRoot(agent, mounts))
                 continue;
 
             try
@@ -63,7 +83,9 @@ public static class FileSystemScopePreflight
             }
             catch (InvalidOperationException ex)
             {
-                refusals.Add(new FileSystemScopeRefusal(agent.Name, ex.Message));
+                refusals.Add(new FileSystemScopeRefusal(agent.Name, ex.Message, agent.StartsForSure
+                    ? FileSystemScopeRefusalKind.AtStart
+                    : FileSystemScopeRefusalKind.IfStarted));
             }
         }
 
