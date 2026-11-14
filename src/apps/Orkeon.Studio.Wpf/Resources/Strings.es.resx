@@ -1560,6 +1560,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve">
     <value>Varias entradas comparten un mismo nombre interno: un equipo elige una por ejecución, y la misma carpeta dos veces sobra.</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>El ámbito filesystem: o la raíz de trabajo de un agente pide una carpeta que los montajes de la ejecución no conceden: el motor detiene la ejecución al iniciar ese agente.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Una línea de carpeta añadida empieza por «-»: el motor la leería como una opción.</value>
   </data>
@@ -2349,6 +2350,7 @@
   <data name="Studio.Create.UnknownMountId" xml:space="preserve"><value>Esta declaración ({0}) falta en esta máquina</value></data>
   <data name="Studio.Create.DeclaredFolder" xml:space="preserve"><value>«{0}» autorizada y vinculada como {1}</value></data>
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>Este equipo hace referencia a carpetas autorizadas que faltan aquí: {0}. Autorízalas en Ajustes › Carpetas autorizadas o cambia las carpetas del equipo.</value></data>
+  <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>El motor se negará a iniciar este equipo con estas carpetas montadas: {0} Da a las carpetas los derechos que declaran los agentes o cambia su ámbito filesystem:.</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (seleccionada por identificador entre {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (no montada en esta ejecución)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (una de {1} entradas — nada la selecciona)</value></data>
@@ -3312,9 +3314,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>Automático</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>En búfer</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>En flujo</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Valor por defecto del proveedor: decide el modelo — Kimi K2.6, DeepSeek V4 y GLM razonan salvo indicación contraria. Desactivado responde más rápido y más barato; Activado fuerza la pasada de razonamiento donde el modelo tiene el interruptor.</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>Valor por defecto del proveedor: decide el modelo — Kimi K2.6, DeepSeek V4 y GLM razonan salvo indicación contraria. Desactivado responde más rápido y más barato; Activado fuerza la pasada de razonamiento donde el modelo tiene el interruptor. Un modelo que siempre razona ignora Desactivado, con un aviso.</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>Esfuerzo de razonamiento</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vacío: el valor por defecto del proveedor. low / medium / high (max en algunos modelos), para los modelos que aceptan la indicación.</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>Vacío: el valor por defecto del proveedor. low / medium / high / xhigh / max, para los modelos que aceptan la indicación; un nivel que el modelo no acepta se rebaja al más cercano que acepta, con un aviso.</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>Explorar los casos de uso</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>Explorar los casos de uso ({0})</value></data>
@@ -3981,6 +3983,9 @@
   </data>
   <data name="Studio.Run.BlockedFolders" xml:space="preserve">
     <value>Una carpeta del equipo no está autorizada en esta máquina.</value>
+  </data>
+  <data name="Studio.Run.BlockedScope" xml:space="preserve">
+    <value>El ámbito de archivos de un agente no cabe en las carpetas de esta ejecución.</value>
   </data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>No autorizada</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Autorizar esta carpeta</value></data>

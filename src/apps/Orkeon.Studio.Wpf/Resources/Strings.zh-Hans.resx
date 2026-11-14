@@ -1560,6 +1560,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve">
     <value>多个条目共用同一个内部名称：团队每次运行选择其中一个；同一个文件夹出现两次则多余。</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>某个智能体的 filesystem: 范围或工作根目录要求的文件夹未被此次运行的挂载授予：引擎会在启动该智能体时停止运行。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
   </data>
@@ -2349,6 +2350,7 @@
   <data name="Studio.Create.UnknownMountId" xml:space="preserve"><value>此机器上缺少该声明（{0}）</value></data>
   <data name="Studio.Create.DeclaredFolder" xml:space="preserve"><value>“{0}”已授权并绑定为 {1}</value></data>
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>该团队引用了此处缺少的已授权文件夹：{0}。请在“设置 › 已授权文件夹”中授权它们，或更改团队的文件夹。</value></data>
+  <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>按当前挂载的文件夹，引擎将拒绝启动此团队：{0} 请为文件夹授予智能体声明的权限，或更改其 filesystem: 范围。</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0}（在 {1} 个条目中按标识选中）</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0}（本次运行未挂载）</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0}（{1} 个条目之一 — 没有任何选择）</value></data>
@@ -3312,9 +3314,9 @@
   <data name="Studio.Settings.CallModeAuto" xml:space="preserve"><value>自动</value></data>
   <data name="Studio.Settings.CallModeBuffer" xml:space="preserve"><value>缓冲</value></data>
   <data name="Studio.Settings.CallModeStream" xml:space="preserve"><value>流式</value></data>
-  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>提供商默认：由模型决定 — Kimi K2.6、DeepSeek V4 和 GLM 默认会思考。关闭后回答更快更省；开启则在模型支持开关时强制推理。</value></data>
+  <data name="Studio.Settings.ProfileThinkingHint" xml:space="preserve"><value>提供商默认：由模型决定 — Kimi K2.6、DeepSeek V4 和 GLM 默认会思考。关闭后回答更快更省；开启则在模型支持开关时强制推理。始终推理的模型会忽略关闭，并给出警告。</value></data>
   <data name="Studio.Settings.ProfileLblThinkingEffort" xml:space="preserve"><value>推理强度</value></data>
-  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>留空：提供商默认。low / medium / high（部分模型支持 max），仅对接受该提示的模型生效。</value></data>
+  <data name="Studio.Settings.ProfileThinkingEffortHint" xml:space="preserve"><value>留空：提供商默认。low / medium / high / xhigh / max，仅对接受该提示的模型生效；模型不支持的级别会降到它支持的最接近级别，并给出警告。</value></data>
   <!-- STUDIO-39: the use-case gallery of step 1 -->
   <data name="Studio.Create.GalleryBrowse" xml:space="preserve"><value>浏览用例</value></data>
   <data name="Studio.Create.GalleryBrowseCount" xml:space="preserve"><value>浏览用例（{0}）</value></data>
@@ -3981,6 +3983,9 @@
   </data>
   <data name="Studio.Run.BlockedFolders" xml:space="preserve">
     <value>团队的某个文件夹在此计算机上未获允许。</value>
+  </data>
+  <data name="Studio.Run.BlockedScope" xml:space="preserve">
+    <value>某个智能体的文件系统范围与此次运行的文件夹不符。</value>
   </data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>未允许</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>允许此文件夹</value></data>

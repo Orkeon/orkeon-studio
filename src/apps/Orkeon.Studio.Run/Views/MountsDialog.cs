@@ -174,6 +174,10 @@ internal sealed class MountsDialog : Window
                 CultureInfo.InvariantCulture,
                 $"{mount.ConfigurationKey} = {mount.Value}   [{origin}]{replaced}{selection}");
         }
+
+        // #349: what the engine will refuse at start, with these mounts, of the agents' own scopes.
+        foreach (var refusal in _launcher.FileSystemScopeRefusals)
+            yield return $"Refused at start - agent '{refusal.Agent}': {refusal.Reason}";
     }
 
     /// <summary>

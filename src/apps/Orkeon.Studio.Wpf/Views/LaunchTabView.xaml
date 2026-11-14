@@ -291,6 +291,9 @@
                             Content="{Binding [Studio.Run.OpenAllowedFolders], Source={x:Static services:I18n.Instance}}"/>
                   </controls:Alert.Actions>
                 </controls:Alert>
+                <!-- #349: an agent's filesystem: scope the mounts of this run refuse; the engine would stop at start. -->
+                <controls:Alert Tone="Danger" Margin="0,14,0,0" Message="{Binding FileSystemScopeMessage}"
+                                Visibility="{Binding IsBlockedByFileSystemScope, Converter={StaticResource BooleanToVisibility}}"/>
                 <!-- STUDIO-31 (D-07): an archived team is neither launched nor tried from Studio. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding ArchivedTargetMessage}"
                                 Visibility="{Binding IsTargetArchived, Converter={StaticResource BooleanToVisibility}}">
