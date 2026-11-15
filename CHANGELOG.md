@@ -4,7 +4,7 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
-Follows Orkeon `main` after `1.0.0` (issues #348–#372): `OrkeonVersion` moves to the next Orkeon tag before release.
+On Orkeon `1.1.0` (issues #348–#379): `OrkeonVersion` moves from `1.0.0` to `1.1.0`, and CI clones the tag `v1.1.0` for the drift tests.
 
 ### Added
 
