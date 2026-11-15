@@ -1,7 +1,7 @@
+using Orkeon.Studio.Wpf.Tests.Doubles;
 using Orkeon.Studio.Wpf.ViewModels.Capture;
 using Orkeon.Studio.Wpf.ViewModels.Capture.Catalog;
 using Orkeon.Studio.Wpf.ViewModels.Capture.Worlds;
-using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 using Orkeon.Studio.Wpf.ViewModels.Shell;
 
 namespace Orkeon.Studio.Wpf.Tests.Capture;
@@ -17,6 +17,12 @@ namespace Orkeon.Studio.Wpf.Tests.Capture;
 /// <para>
 /// The walk runs IN ORDER, with the real teardowns, which is also exactly the test for state
 /// leaking from one stop into the next: a modal left open by stop 12 breaks stop 13's claim.
+/// </para>
+/// <para>
+/// Each walk runs on a <see cref="FakeUiThread"/>, shells included: the ViewModels belong to one
+/// thread, and the window's dispatcher is what keeps them there. Without it a refresh the window
+/// discards finishes on a pool thread and rebuilds the launcher's lanes while a stop is reading
+/// them — a failure of the harness, once in hundreds of runs, that no stop is guilty of.
 /// </para>
 /// </summary>
 public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
@@ -40,11 +46,11 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
     [InlineData("fr", UiModeViewModel.Novice)]
     [InlineData("fr", UiModeViewModel.Expert)]
     [InlineData("en", UiModeViewModel.Novice)]
-    public async Task Every_stop_reaches_the_state_it_claims_when_the_whole_campaign_runs_in_order(string language, string mode)
+    public Task Every_stop_reaches_the_state_it_claims_when_the_whole_campaign_runs_in_order(string language, string mode) => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance(language, IsDark: false, mode);
         var stops = CaptureCatalog.For(appearance, CaptureMatrix.Default);
-        var shells = await BuildShellsAsync(appearance);
+        var shells = await BuildShellsAsync(ui, appearance);
         var surface = new RecordingCaptureSurface();
         var failures = new List<string>();
 
@@ -84,17 +90,17 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
             failures.Count == 0,
             "A stop that no longer reaches its state still writes a PNG — of the wrong screen, "
             + "silently, on a machine nobody is watching. " + string.Join(" ; ", failures));
-    }
+    });
 
     /// <summary>
     /// No stop may leave a scrim up behind it. The next shot would carry a modal nobody asked for,
     /// and at three hundred images nobody would notice which one started it.
     /// </summary>
     [Fact]
-    public async Task No_stop_leaves_a_modal_open_behind_it()
+    public Task No_stop_leaves_a_modal_open_behind_it() => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance("fr", IsDark: false, UiModeViewModel.Expert);
-        var shells = await BuildShellsAsync(appearance);
+        var shells = await BuildShellsAsync(ui, appearance);
         var surface = new RecordingCaptureSurface();
         var offenders = new List<string>();
 
@@ -129,7 +135,7 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
         }
 
         Assert.True(offenders.Count == 0, string.Join(" ; ", offenders));
-    }
+    });
 
     /// <summary>
     /// D11: each of these stops shows a state of its own, not the picture of the stop before. A
@@ -139,10 +145,10 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
     [Theory]
     [InlineData(UiModeViewModel.Novice)]
     [InlineData(UiModeViewModel.Expert)]
-    public async Task The_D11_stops_each_bring_their_own_state_on_screen(string mode)
+    public Task The_D11_stops_each_bring_their_own_state_on_screen(string mode) => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance("fr", IsDark: false, mode);
-        var shells = await BuildShellsAsync(appearance);
+        var shells = await BuildShellsAsync(ui, appearance);
         var surface = new RecordingCaptureSurface();
         var shell = shells[CaptureWorldKind.Seeded];
         var failures = new List<string>();
@@ -196,7 +202,7 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
             failures.Add("one state for " + string.Join(", ", same.Select(entry => entry.Key)) + ": " + same.Key);
 
         Assert.True(failures.Count == 0, string.Join(" ; ", failures));
-    }
+    });
 
     /// <summary>
     /// STUDIO-69: the E-mail stops show what the engine makes of each account, and that comes
@@ -204,10 +210,10 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
     /// the one gesture of the tab that reaches a mail server: no stop ever makes it.
     /// </summary>
     [Fact]
-    public async Task The_email_stops_read_the_accounts_states_from_the_scripted_cli_and_never_test_a_connection()
+    public Task The_email_stops_read_the_accounts_states_from_the_scripted_cli_and_never_test_a_connection() => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance("fr", IsDark: false, UiModeViewModel.Expert);
-        var shells = await BuildShellsAsync(appearance);
+        var shells = await BuildShellsAsync(ui, appearance);
         var surface = new RecordingCaptureSurface();
         var world = _worlds.For(CaptureWorldKind.Seeded);
         var shell = shells[CaptureWorldKind.Seeded];
@@ -233,7 +239,7 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
         Assert.Contains(world.Cli.Requests, request =>
             request.Arguments is ["email", "accounts", "--json", "--settings", var path] && path == world.SettingsPath);
         Assert.DoesNotContain(world.Cli.Requests, request => request.Arguments is ["email", "check", ..]);
-    }
+    });
 
     /// <summary>
     /// STUDIO-70: the sign-in stop shows the panel of a device sign-in while the scripted
@@ -243,10 +249,10 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
     [Theory]
     [InlineData(UiModeViewModel.Novice)]
     [InlineData(UiModeViewModel.Expert)]
-    public async Task The_sign_in_stop_shows_the_device_code_panel_and_leaves_no_child_behind(string mode)
+    public Task The_sign_in_stop_shows_the_device_code_panel_and_leaves_no_child_behind(string mode) => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance("fr", IsDark: false, mode);
-        var shells = await BuildShellsAsync(appearance);
+        var shells = await BuildShellsAsync(ui, appearance);
         var world = _worlds.For(CaptureWorldKind.Seeded);
         var shell = shells[CaptureWorldKind.Seeded];
         var stop = Assert.Single(CaptureCatalog.For(appearance, CaptureMatrix.Default), s => s.Name == "reglages-mails-connexion");
@@ -272,10 +278,62 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
         Assert.False(shell.Config.Email.IsSigningIn);
         Assert.Equal(0, world.Cli.LiveConversations);
         Assert.Same(shell.Config.Email.Accounts[0], shell.Config.Email.SelectedAccount);
+    });
+
+    /// <summary>
+    /// What the fake UI thread is there for, said of the collections that broke without it: the
+    /// launcher's lanes and cards change on the walk's UI thread and nowhere else, from the first
+    /// load to the last teardown — the window's discarded refreshes and the scripted CLI's output
+    /// included. Under WPF a change made anywhere else throws in the bound control.
+    /// </summary>
+    [Fact]
+    public async Task The_launcher_collections_change_only_on_the_ui_thread_of_the_walk()
+    {
+        var elsewhere = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var changes = 0;
+
+        await FakeUiThread.RunAsync(async ui =>
+        {
+            var appearance = new CaptureAppearance("fr", IsDark: false, UiModeViewModel.Expert);
+            var surface = new RecordingCaptureSurface();
+            var current = "the first load";
+            var shells = await BuildShellsAsync(ui, appearance, shell =>
+            {
+                shell.Launch.AgentLanes.CollectionChanged += (_, _) => Changed("the lanes");
+                shell.Launch.AgentCards.CollectionChanged += (_, _) => Changed("the cards");
+            });
+
+            foreach (var stop in CaptureCatalog.For(appearance, CaptureMatrix.Default))
+            {
+                var context = new CaptureContext
+                {
+                    Shell = shells[stop.World],
+                    World = _worlds.For(stop.World),
+                    Surface = surface,
+                    Appearance = appearance,
+                };
+                current = stop.Name;
+
+                await surface.ShowAsync(stop.Screen);
+                await stop.Arrange(context);
+                await stop.Teardown(context);
+                await context.DrainHeldAsync();
+            }
+
+            void Changed(string what)
+            {
+                Interlocked.Increment(ref changes);
+                if (!ui.CheckAccess())
+                    elsewhere.Enqueue($"{what} during {current}");
+            }
+        });
+
+        Assert.True(changes > 0, "the walk never changed the launcher's lanes: this test watches nothing");
+        Assert.True(elsewhere.IsEmpty, string.Join(" ; ", elsewhere.Distinct()));
     }
 
     private async Task<Dictionary<CaptureWorldKind, MainWindowViewModel>> BuildShellsAsync(
-        CaptureAppearance appearance)
+        FakeUiThread ui, CaptureAppearance appearance, Action<MainWindowViewModel>? watch = null)
     {
         var shells = new Dictionary<CaptureWorldKind, MainWindowViewModel>();
 
@@ -283,10 +341,12 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
         {
             var shell = CaptureShellBuilder.Build(_worlds.For(kind), new CaptureHost
             {
-                Dispatcher = ImmediateUiDispatcher.Instance,
+                Dispatcher = ui.Dispatcher,
                 Language = appearance.Language,
                 Mode = appearance.Mode,
             });
+
+            watch?.Invoke(shell);
 
             await CaptureShellBuilder.PrepareAsync(
                 shell, _worlds.For(kind), TestContext.Current.CancellationToken);
