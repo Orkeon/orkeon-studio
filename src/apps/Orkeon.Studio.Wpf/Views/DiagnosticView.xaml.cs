@@ -11,10 +11,16 @@ public partial class DiagnosticView : UserControl
     public DiagnosticView() => InitializeComponent();
 
     // Lot 5: each problem opens the section that fixes it - Models, API keys, Allowed folders, the File -, or
-    // tests the model's connection there, or runs the checks again when the fix is not Studio's.
+    // tests the model's connection there, or says how to fix it when the fix is not Studio's.
     private void OnFixCheck(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: DoctorCheckViewModel check })
+        if (sender is not FrameworkElement { DataContext: DoctorCheckViewModel check })
+            return;
+
+        // The row's own button folds the advice back on a second click; the banner's only shows it.
+        if (check.FixKind == DoctorCheckViewModel.FixHelp)
+            check.ToggleHelp();
+        else
             Fix(check);
     }
 
@@ -52,8 +58,7 @@ public partial class DiagnosticView : UserControl
                     TestDefaultModel(settings.Profiles);
                 break;
             default:
-                if (DataContext is DiagnosticViewModel diagnostic && diagnostic.RunCommand.CanExecute(null))
-                    diagnostic.RunCommand.Execute(null);
+                check.ShowHelp();
                 break;
         }
     }

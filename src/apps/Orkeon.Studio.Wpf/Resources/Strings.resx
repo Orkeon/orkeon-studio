@@ -2342,7 +2342,11 @@
   <data name="Studio.Diagnostics.InstallGuide" xml:space="preserve"><value>How to install the engine</value></data>
   <data name="Studio.Diagnostics.FixFirst" xml:space="preserve"><value>Fix the first issue</value></data>
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Test the connection</value></data>
-  <data name="Studio.Diagnostics.CheckAgain" xml:space="preserve"><value>Check again</value></data>
+  <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>How to fix it</value></data>
+  <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>The TypeScript checker (tsc)</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>The TypeScript checker is missing: teams without a TypeScript script run without it.</value></data>
+  <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio cannot fix this point itself. Here is what the engine says, in its own words; once it is fixed, run the diagnostic again.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Settings file</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>The settings file is valid.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>The settings file has errors: Studio cannot save it.</value></data>

@@ -317,6 +317,7 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusBar = new StatusBarViewModel(new StatusBarSources
         {
             TokenMeter = tokenMeter,
+            Dispatcher = dispatcher,
             Launch = Launch,
             Test = Run.Trial,
             Atelier = CreateTeam.Progress,

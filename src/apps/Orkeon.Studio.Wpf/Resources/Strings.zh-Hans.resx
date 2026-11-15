@@ -4044,7 +4044,11 @@
   <data name="Studio.Diagnostics.InstallGuide" xml:space="preserve"><value>如何安装引擎</value></data>
   <data name="Studio.Diagnostics.FixFirst" xml:space="preserve"><value>修复第一个问题</value></data>
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>测试连接</value></data>
-  <data name="Studio.Diagnostics.CheckAgain" xml:space="preserve"><value>重新检查</value></data>
+  <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>如何修复</value></data>
+  <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>TypeScript 检查器 (tsc)</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>缺少 TypeScript 检查器：没有 TypeScript 脚本的团队无需它即可运行。</value></data>
+  <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio 无法自行修复此项。以下是引擎的原始说明；修复后，请重新运行诊断。</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>它仅用于在运行前检查团队的 TypeScript 脚本 (.ork.ts)。安装方法：先安装 Node.js，在终端中运行 « npm install -g typescript »，然后重新运行诊断。</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>设置文件</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>设置文件有效。</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>设置文件有错误：Studio 无法保存它。</value></data>

@@ -58,6 +58,14 @@ public sealed class LogLineViewModel
     /// <summary>Whether it is a closing verdict.</summary>
     public bool IsOutcome => Kind == LogLineKind.Outcome;
 
+    /// <summary>
+    /// Whether it is the CLI's « Using settings: … » line: the guards have passed and the run goes
+    /// ahead on that file. It reaches stderr without a level, where the stream alone would paint it
+    /// as a fault; the console reads it in the colour of good news. The prefix is the CLI's fixed
+    /// text, never localized.
+    /// </summary>
+    public bool IsNotice => Kind == LogLineKind.Output && _log.Level is null && CliLogLine.IsSettingsNotice(_log.Text);
+
     /// <summary>The underlying Core record.</summary>
     public ProcessOutputLine Line { get; }
 
@@ -77,14 +85,14 @@ public sealed class LogLineViewModel
     /// Whether the view colours it as an error: an error Studio reports, a <c>fail</c> or <c>crit</c>
     /// log entry, or a stderr line that follows no log entry (a fault message before any log). Never
     /// the stream alone: under <c>--events</c> every log goes to stderr, and an <c>info</c> line is
-    /// not an error.
+    /// not an error - nor is the « Using settings » line (<see cref="IsNotice"/>).
     /// </summary>
-    public bool IsError => Kind == LogLineKind.Error || Level switch
+    public bool IsError => Kind == LogLineKind.Error || (!IsNotice && Level switch
     {
         CliLogLevel.Error or CliLogLevel.Critical => true,
         null => Kind == LogLineKind.Output && Channel == ProcessOutputChannel.StandardError,
         _ => false,
-    };
+    });
 
     /// <summary>Whether it belongs to a <c>warn</c> log entry, which the view colours as a warning.</summary>
     public bool IsWarning => Level == CliLogLevel.Warning;

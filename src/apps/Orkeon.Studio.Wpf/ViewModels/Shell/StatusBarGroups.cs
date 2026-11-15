@@ -37,7 +37,8 @@ public sealed class StatusBarRunGroupViewModel : ObservableObject
         IStudioStrings strings,
         Func<bool> isExpert,
         Action<StatusBarActivity> open,
-        StudioTokenMeter? meter = null)
+        StudioTokenMeter? meter = null,
+        IUiDispatcher? dispatcher = null)
     {
         Activity = activity;
         _meter = meter ?? new StudioTokenMeter();
@@ -49,9 +50,11 @@ public sealed class StatusBarRunGroupViewModel : ObservableObject
         if (launcher is null)
             return;
 
-        _meter.Changed += (_, _) => OnPropertiesChanged(
+        // The meter speaks on the thread that applied the line (see the atelier group).
+        var ui = dispatcher ?? ImmediateUiDispatcher.Instance;
+        _meter.Changed += (_, _) => ui.Post(() => OnPropertiesChanged(
             nameof(CallModeText), nameof(TokensUp), nameof(TokensDown),
-            nameof(ShowsTokensUp), nameof(ShowsTokensDown), nameof(TokensEstimated));
+            nameof(ShowsTokensUp), nameof(ShowsTokensDown), nameof(TokensEstimated)));
 
         Watch(launcher.Progress.Model);
         launcher.PropertyChanged += OnLauncherChanged;
@@ -368,7 +371,8 @@ public sealed class StatusBarAtelierGroupViewModel : ObservableObject
         IStudioStrings strings,
         Func<bool> isExpert,
         Action<StatusBarActivity> open,
-        StudioTokenMeter? meter = null)
+        StudioTokenMeter? meter = null,
+        IUiDispatcher? dispatcher = null)
     {
         _meter = meter ?? new StudioTokenMeter();
         _progress = progress;
@@ -376,7 +380,11 @@ public sealed class StatusBarAtelierGroupViewModel : ObservableObject
         _isExpert = isExpert;
         OpenCommand = new RelayCommand(() => open(StatusBarActivity.Atelier));
 
-        _meter.Changed += (_, _) => OnMeterChanged();
+        // The meter speaks on the thread that applied the line: a rephrase is counted on the
+        // reader thread of its process and ended on a pool thread. The end of an activity makes
+        // the bar read the balances again, which rebuilds a bound collection - the UI thread's.
+        var ui = dispatcher ?? ImmediateUiDispatcher.Instance;
+        _meter.Changed += (_, _) => ui.Post(OnMeterChanged);
         if (progress is null)
             return;
 

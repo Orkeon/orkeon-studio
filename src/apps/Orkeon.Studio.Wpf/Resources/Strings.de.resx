@@ -4044,7 +4044,11 @@
   <data name="Studio.Diagnostics.InstallGuide" xml:space="preserve"><value>So installieren Sie die Engine</value></data>
   <data name="Studio.Diagnostics.FixFirst" xml:space="preserve"><value>Ersten Punkt beheben</value></data>
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Verbindung testen</value></data>
-  <data name="Studio.Diagnostics.CheckAgain" xml:space="preserve"><value>Erneut prüfen</value></data>
+  <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>So beheben</value></data>
+  <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>Der TypeScript-Prüfer (tsc)</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Der TypeScript-Prüfer fehlt: Teams ohne TypeScript-Skript laufen auch ohne ihn.</value></data>
+  <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio kann diesen Punkt nicht selbst beheben. Hier steht, was die Engine dazu sagt, in ihren eigenen Worten; ist der Punkt behoben, starten Sie die Diagnose erneut.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Er dient nur dazu, die TypeScript-Skripte (.ork.ts) eines Teams vor einem Start zu prüfen. Zur Installation: Node.js installieren, in einem Terminal « npm install -g typescript » ausführen, dann die Diagnose erneut starten.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Einstellungsdatei</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>Die Einstellungsdatei ist gültig.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>Die Einstellungsdatei enthält Fehler: Studio kann sie nicht speichern.</value></data>

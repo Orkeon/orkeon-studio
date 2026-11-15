@@ -69,6 +69,12 @@ public sealed record StatusBarSources
     /// <summary>The session meter whose current call mode the Run and Test groups show.</summary>
     public StudioTokenMeter? TokenMeter { get; init; }
 
+    /// <summary>
+    /// Where what the meter says lands: it speaks on the thread that counted the line, and the
+    /// bar's groups are bound. The immediate one when absent.
+    /// </summary>
+    public IUiDispatcher? Dispatcher { get; init; }
+
     /// <summary>The Run screen's launcher.</summary>
     public LaunchTabViewModel? Launch { get; init; }
 
@@ -170,10 +176,10 @@ public sealed class StatusBarViewModel : ObservableObject
         _persistTokenScope = wired.PersistTokenScope;
         _tokenScope = wired.InitialTokenScope == SessionScope ? SessionScope : ExecutionScope;
 
-        Launch = new StatusBarRunGroupViewModel(StatusBarActivity.Launch, wired.Launch, _strings, IsExpert, Open, wired.TokenMeter);
-        Test = new StatusBarRunGroupViewModel(StatusBarActivity.Test, wired.Test, _strings, IsExpert, Open, wired.TokenMeter);
+        Launch = new StatusBarRunGroupViewModel(StatusBarActivity.Launch, wired.Launch, _strings, IsExpert, Open, wired.TokenMeter, wired.Dispatcher);
+        Test = new StatusBarRunGroupViewModel(StatusBarActivity.Test, wired.Test, _strings, IsExpert, Open, wired.TokenMeter, wired.Dispatcher);
         Launch.SessionScope = Test.SessionScope = _tokenScope == SessionScope;
-        Atelier = new StatusBarAtelierGroupViewModel(wired.Atelier, _strings, IsExpert, Open, wired.TokenMeter);
+        Atelier = new StatusBarAtelierGroupViewModel(wired.Atelier, _strings, IsExpert, Open, wired.TokenMeter, wired.Dispatcher);
         Atelier.SessionScope = _tokenScope == SessionScope;
         Balance = new StatusBarBalanceViewModel(
             wired.Balances, Coverage, _strings, wired.ShellOpener, wired.BalanceTicker ?? NullUiTicker.Instance);

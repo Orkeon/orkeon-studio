@@ -753,6 +753,35 @@ public sealed class StatusBarViewModelTests
     }
 
     [Fact]
+    public void ShouldHearTheMeter_OnTheUiThread_WhenARephraseIsCountedElsewhere()
+    {
+        // The meter speaks on the thread that counted the line - a process reader, a pool thread -
+        // and the end of an activity rebuilds the balance entries, a bound collection.
+        var meter = new StudioTokenMeter();
+        var ui = new QueuedUiDispatcher();
+        var bar = new StatusBarViewModel(new StatusBarSources
+        {
+            Atelier = new ComposeProgressViewModel(),
+            TokenMeter = meter,
+            Dispatcher = ui,
+            Mode = Expert(),
+        });
+        var raised = new List<string?>();
+        bar.Atelier.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        var rephrase = meter.Begin(ExecutionKind.Rephrase);
+        Feed(rephrase, """{"v":2,"seq":1,"ts":"t","kind":"llm.call.started","callId":"r1","mode":"Buffer","estimatedPromptTokens":70}""");
+
+        Assert.Empty(raised);
+        Assert.False(bar.Atelier.IsActive);
+
+        ui.Drain();
+
+        Assert.True(bar.Atelier.IsActive);
+        Assert.Contains(nameof(StatusBarAtelierGroupViewModel.IsActive), raised);
+    }
+
+    [Fact]
     [Trait("BR", "BR-14")]
     public void ShouldShowTheSession_InTheAtelierGroup_WhenTheScopeIsSession()
     {

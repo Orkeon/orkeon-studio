@@ -231,6 +231,17 @@
                   <TextBlock Style="{StaticResource MonoText}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
                              Text="{Binding Detail, Mode=OneWay}"
                              Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+                  <!-- A check Studio cannot fix says how, on demand: its advice in the user's language,
+                       then the engine's own text - which the novice sees nowhere else, and which
+                       is the only advice there is for a check Studio does not know. -->
+                  <StackPanel Margin="0,6,0,2"
+                              Visibility="{Binding IsHelpShown, Converter={StaticResource BooleanToVisibility}}">
+                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource InkBrush}" Text="{Binding HowTo, Mode=OneWay}"/>
+                    <TextBlock Style="{StaticResource MonoText}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="{Binding Detail, Mode=OneWay}"
+                               Visibility="{Binding DataContext.Mode.IsNovice, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+                  </StackPanel>
                   <!-- llm-config reads the base (file + shell env); a team's named profile
                        is laid over its own launch only, so this check cannot see it. -->
                   <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" FontStyle="Italic"

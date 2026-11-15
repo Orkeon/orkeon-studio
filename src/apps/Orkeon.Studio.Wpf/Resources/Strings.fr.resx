@@ -2342,7 +2342,11 @@
   <data name="Studio.Diagnostics.InstallGuide" xml:space="preserve"><value>Comment installer le moteur</value></data>
   <data name="Studio.Diagnostics.FixFirst" xml:space="preserve"><value>Corriger le premier point</value></data>
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Tester la connexion</value></data>
-  <data name="Studio.Diagnostics.CheckAgain" xml:space="preserve"><value>Vérifier à nouveau</value></data>
+  <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>Comment corriger</value></data>
+  <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>Le vérificateur TypeScript (tsc)</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Le vérificateur TypeScript est absent : les équipes sans script TypeScript fonctionnent sans lui.</value></data>
+  <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio ne peut pas corriger ce point lui-même. Voici ce qu'en dit le moteur, dans ses propres mots ; une fois le point corrigé, relancez le diagnostic.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Il ne sert qu'à vérifier les scripts TypeScript (.ork.ts) d'une équipe avant un lancement. Pour l'installer : installez Node.js, lancez « npm install -g typescript » dans un terminal, puis relancez le diagnostic.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Fichier de réglages</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>Le fichier de réglages est valide.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>Le fichier de réglages contient des erreurs : Studio ne peut pas l'enregistrer.</value></data>
