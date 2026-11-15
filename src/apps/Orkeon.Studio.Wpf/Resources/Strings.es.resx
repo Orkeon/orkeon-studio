@@ -4044,7 +4044,11 @@
   <data name="Studio.Diagnostics.InstallGuide" xml:space="preserve"><value>Cómo instalar el motor</value></data>
   <data name="Studio.Diagnostics.FixFirst" xml:space="preserve"><value>Corregir el primer punto</value></data>
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Probar la conexión</value></data>
-  <data name="Studio.Diagnostics.CheckAgain" xml:space="preserve"><value>Comprobar de nuevo</value></data>
+  <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>Cómo corregirlo</value></data>
+  <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>El verificador de TypeScript (tsc)</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Falta el verificador de TypeScript: los equipos sin script TypeScript funcionan sin él.</value></data>
+  <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio no puede corregir este punto por sí mismo. Esto es lo que dice el motor, con sus propias palabras; una vez corregido, vuelva a ejecutar el diagnóstico.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Solo sirve para comprobar los scripts TypeScript (.ork.ts) de un equipo antes de un lanzamiento. Para instalarlo: instale Node.js, ejecute « npm install -g typescript » en un terminal y vuelva a ejecutar el diagnóstico.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Archivo de configuración</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>El archivo de configuración es válido.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>El archivo de configuración tiene errores: Studio no puede guardarlo.</value></data>

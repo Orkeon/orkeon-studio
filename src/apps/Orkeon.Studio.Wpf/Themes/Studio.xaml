@@ -1365,6 +1365,10 @@
       <DataTrigger Binding="{Binding IsOutcome}" Value="True">
         <Setter Property="Foreground" Value="{DynamicResource ConsoleOkBrush}"/>
       </DataTrigger>
+      <!-- « Using settings: … »: the run goes ahead on that file - good news, though on stderr. -->
+      <DataTrigger Binding="{Binding IsNotice}" Value="True">
+        <Setter Property="Foreground" Value="{DynamicResource ConsoleOkBrush}"/>
+      </DataTrigger>
       <DataTrigger Binding="{Binding IsWarning}" Value="True">
         <Setter Property="Foreground" Value="{DynamicResource ConsoleWarnBrush}"/>
       </DataTrigger>

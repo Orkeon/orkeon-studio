@@ -35,6 +35,24 @@ public enum CliLogLevel
 /// <param name="Text">The line without the logger's timestamp; the line unchanged when it is not a log line.</param>
 public sealed partial record CliLogLine(CliLogLevel? Level, string Text)
 {
+    /// <summary>
+    /// What leads the line a verb prints once its guards have passed, naming the settings file it
+    /// runs on: <c>Using settings: &lt;path&gt;</c>. The CLI writes it as is, never localized, and to
+    /// stderr, where it carries no level.
+    /// </summary>
+    public const string SettingsNoticePrefix = "Using settings:";
+
+    /// <summary>
+    /// Whether <paramref name="text"/> is that line: good news on stderr - the run is going ahead,
+    /// on this file -, not a fault message.
+    /// </summary>
+    public static bool IsSettingsNotice(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        return text.StartsWith(SettingsNoticePrefix, StringComparison.Ordinal);
+    }
+
     /// <summary>Reads one line: an optional <c>HH:mm:ss.fff </c> timestamp, then a level token and <c>: </c>.</summary>
     public static CliLogLine Parse(string text)
     {

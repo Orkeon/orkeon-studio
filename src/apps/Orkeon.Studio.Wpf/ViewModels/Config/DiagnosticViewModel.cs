@@ -8,9 +8,10 @@ using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 namespace Orkeon.Studio.Wpf.ViewModels.Config;
 
 /// <summary>One line of the <c>orkeon doctor --json</c> report.</summary>
-public sealed class DoctorCheckViewModel
+public sealed class DoctorCheckViewModel : ObservableObject
 {
     private readonly IStudioStrings _strings;
+    private bool _isHelpShown;
 
     /// <summary>Wraps a parsed check.</summary>
     public DoctorCheckViewModel(DoctorCheck check, IStudioStrings? strings = null)
@@ -98,7 +99,8 @@ public sealed class DoctorCheckViewModel
     /// <summary>
     /// What fixes this check (lot 5, one action per problem): <see cref="FixModels"/>,
     /// <see cref="FixKeys"/> (lot 11), <see cref="FixFolders"/>, <see cref="FixFile"/>, <see cref="FixTest"/>, or
-    /// <see cref="FixAgain"/> when the fix is outside Studio (a runtime, a tool to install).
+    /// <see cref="FixHelp"/> when the fix is outside Studio (a runtime, a tool to install): Studio
+    /// then says how, since it cannot do it.
     /// </summary>
     public string FixKind => Name switch
     {
@@ -107,7 +109,7 @@ public sealed class DoctorCheckViewModel
         "llm-reachability" => FixTest,
         "workspace-write" => FixFolders,
         "appsettings" or "runner-settings" => FixFile,
-        _ => FixAgain,
+        _ => FixHelp,
     };
 
     /// <summary>The label of the check's action: « Open Models », « Test the connection »…</summary>
@@ -118,7 +120,7 @@ public sealed class DoctorCheckViewModel
         FixTest => StudioStringKeys.DiagTestConnection,
         FixFolders => StudioStringKeys.DiagOpenFolders,
         FixFile => StudioStringKeys.DiagOpenFile,
-        _ => StudioStringKeys.DiagCheckAgain,
+        _ => StudioStringKeys.DiagHowToFix,
     }];
 
     /// <summary>A check that is not green carries its action.</summary>
@@ -139,8 +141,42 @@ public sealed class DoctorCheckViewModel
     /// <summary>Opens Models and tests the connection of the selected model.</summary>
     public const string FixTest = "test";
 
-    /// <summary>Runs the diagnostic again.</summary>
-    public const string FixAgain = "again";
+    /// <summary>
+    /// Says how to fix it, under the check: nothing in Studio fixes it. It used to run the
+    /// diagnostic again, which showed the same list and read as a button that did nothing.
+    /// </summary>
+    public const string FixHelp = "help";
+
+    /// <summary>Namespace of the per-check advice, e.g. <c>Studio.Diagnostics.HowTo.tsc</c>.</summary>
+    public const string HowToKeyPrefix = "Studio.Diagnostics.HowTo.";
+
+    /// <summary>
+    /// How to fix a check Studio cannot fix, in the user's language: the check's own advice when
+    /// Studio knows one, else a sentence that hands over to the engine's text - the detail the view
+    /// then shows in both modes, being the only advice there is.
+    /// </summary>
+    public string HowTo
+    {
+        get
+        {
+            var key = HowToKeyPrefix + Name;
+            var localized = _strings[key];
+            return localized == key ? _strings[StudioStringKeys.DiagHowToUnknown] : localized;
+        }
+    }
+
+    /// <summary>Whether the advice shows under the check.</summary>
+    public bool IsHelpShown
+    {
+        get => _isHelpShown;
+        private set => SetProperty(ref _isHelpShown, value);
+    }
+
+    /// <summary>Shows the advice: what « Fix the first issue » does for such a check.</summary>
+    public void ShowHelp() => IsHelpShown = true;
+
+    /// <summary>Shows the advice, or folds it back: what the check's own button does.</summary>
+    public void ToggleHelp() => IsHelpShown = !IsHelpShown;
 
     /// <summary>A short status glyph, so the view needs no converter.</summary>
     public string Glyph => Status switch

@@ -453,6 +453,34 @@ public sealed class RunLogViewModelTests
     }
 
     [Fact]
+    public void Should_ReadTheSettingsLine_AsGoodNews_When_ItCameFromStderr()
+    {
+        // « Using settings: … » is printed to stderr without a level once the guards have passed.
+        var log = new RunLogViewModel();
+
+        log.AppendCommand("orkeon run ./crew");
+        log.Append(ProcessOutputLine.Now(ProcessOutputChannel.StandardError, @"Using settings: C:\Users\me\AppData\Roaming\Orkeon\appsettings.json"));
+        log.Append(ProcessOutputLine.Now(ProcessOutputChannel.StandardError, "orkeon run: the crew folder holds no crew"));
+
+        Assert.True(log.Lines[1].IsNotice);
+        Assert.False(log.Lines[1].IsError);
+        Assert.False(log.Lines[2].IsNotice);
+        Assert.True(log.Lines[2].IsError);
+    }
+
+    [Fact]
+    public void Should_NotReadAStudioError_AsTheSettingsLine()
+    {
+        var log = new RunLogViewModel();
+
+        log.AppendError("Using settings: nothing of the CLI's");
+
+        var line = Assert.Single(log.Lines);
+        Assert.False(line.IsNotice);
+        Assert.True(line.IsError);
+    }
+
+    [Fact]
     public void Should_StartAfresh_When_ANewCommandIsEchoed()
     {
         var log = new RunLogViewModel();

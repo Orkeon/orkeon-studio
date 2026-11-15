@@ -22,9 +22,10 @@ public sealed class DiagnosticActionsTests
     [InlineData("workspace-write", DoctorCheckViewModel.FixFolders)]
     [InlineData("appsettings", DoctorCheckViewModel.FixFile)]
     [InlineData("runner-settings", DoctorCheckViewModel.FixFile)]
-    [InlineData("install-channel", DoctorCheckViewModel.FixAgain)]
-    [InlineData("esbuild", DoctorCheckViewModel.FixAgain)]
-    [InlineData("a-future-check", DoctorCheckViewModel.FixAgain)]
+    [InlineData("install-channel", DoctorCheckViewModel.FixHelp)]
+    [InlineData("esbuild", DoctorCheckViewModel.FixHelp)]
+    [InlineData("tsc", DoctorCheckViewModel.FixHelp)]
+    [InlineData("a-future-check", DoctorCheckViewModel.FixHelp)]
     public void Each_problem_carries_the_action_that_fixes_it(string name, string kind)
     {
         var check = Check(name, DoctorStatus.Failure);
@@ -44,6 +45,47 @@ public sealed class DiagnosticActionsTests
         Assert.Equal(Check("llm-config", DoctorStatus.Ok).StatusSentence, Check("llm-config", DoctorStatus.Ok).Sentence);
         var unknown = Check("a-future-check", DoctorStatus.Warning);
         Assert.Equal(unknown.StatusSentence, unknown.Sentence);
+    }
+
+    [Fact]
+    public void A_check_Studio_cannot_fix_says_how_instead_of_running_the_diagnostic_again()
+    {
+        var strings = EnglishStudioStrings.Instance;
+        var check = Check("tsc", DoctorStatus.Warning);
+        var raised = new List<string?>();
+        check.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        Assert.False(check.IsHelpShown);
+        Assert.Equal(strings[StudioStringKeys.DiagHowToFix], check.FixLabel);
+        Assert.Equal(strings["Studio.Diagnostics.HowTo.tsc"], check.HowTo);
+
+        check.ShowHelp();
+        check.ShowHelp();
+
+        Assert.True(check.IsHelpShown);
+        Assert.Equal([nameof(DoctorCheckViewModel.IsHelpShown)], raised);
+
+        check.ToggleHelp();
+
+        Assert.False(check.IsHelpShown);
+    }
+
+    [Fact]
+    public void A_check_Studio_does_not_know_hands_over_to_the_engines_own_text()
+    {
+        var unknown = Check("a-future-check", DoctorStatus.Warning);
+
+        Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.DiagHowToUnknown], unknown.HowTo);
+    }
+
+    [Fact]
+    public void The_type_checker_has_a_name_and_a_sentence_of_its_own()
+    {
+        var strings = EnglishStudioStrings.Instance;
+        var check = Check("tsc", DoctorStatus.Warning);
+
+        Assert.Equal(strings["Studio.Diagnostics.Check.tsc"], check.FriendlyName);
+        Assert.Equal(strings["Studio.Diagnostics.Problem.tsc"], check.Sentence);
     }
 
     [Fact]

@@ -478,7 +478,8 @@ public static class StudioStringKeys
     public const string DiagTestConnection = "Studio.Diagnostics.TestConnection";
 
     /// <summary>A check's action when Studio has no fix of its own: "Check again".</summary>
-    public const string DiagCheckAgain = "Studio.Diagnostics.CheckAgain";
+    public const string DiagHowToFix = "Studio.Diagnostics.HowToFix";
+    public const string DiagHowToUnknown = "Studio.Diagnostics.HowTo.Unknown";
 
     /// <summary>A check the engine reports under a name Studio has no label for: "Engine check".</summary>
     public const string DiagCheckUnknown = "Studio.Diagnostics.Check.Unknown";
@@ -3060,7 +3061,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DiagOpenFile] = "Open the settings file",
         [StudioStringKeys.DiagEngineMissingHow] = "Install the Orkeon engine, then run the diagnostic again.",
         [StudioStringKeys.DiagTestConnection] = "Test the connection",
-        [StudioStringKeys.DiagCheckAgain] = "Check again",
+        [StudioStringKeys.DiagHowToFix] = "How to fix it",
+        [StudioStringKeys.DiagHowToUnknown] = "Studio cannot fix this point itself. Here is what the engine says, in its own words; once it is fixed, run the diagnostic again.",
+        ["Studio.Diagnostics.HowTo.tsc"] = "It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again.",
         [StudioStringKeys.DiagSettingsFile] = "Settings file",
         [StudioStringKeys.DiagSettingsFileOk] = "The settings file is valid.",
         [StudioStringKeys.DiagSettingsFileInvalid] = "The settings file has errors: Studio cannot save it.",
@@ -3171,6 +3174,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Check.onnx-reranker"] = "The ONNX reranker",
         ["Studio.Diagnostics.Check.runner-settings"] = "Runner settings",
         ["Studio.Diagnostics.Check.tree-sitter"] = "The code parser (tree-sitter)",
+        ["Studio.Diagnostics.Check.tsc"] = "The TypeScript checker (tsc)",
         ["Studio.Diagnostics.Check.workspace-write"] = "Write access to the workspace",
         [StudioStringKeys.DiagCheckUnknown] = "Engine check",
         ["Studio.Diagnostics.Problem.appsettings"] = "Studio cannot read the settings file.",
@@ -3185,6 +3189,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Problem.onnx-reranker"] = "The ONNX reranker is not available on this machine.",
         ["Studio.Diagnostics.Problem.runner-settings"] = "The runner settings hold a value the engine refuses: in Expert mode, open Settings → File tab.",
         ["Studio.Diagnostics.Problem.tree-sitter"] = "The code parser is not available on this machine.",
+        ["Studio.Diagnostics.Problem.tsc"] = "The TypeScript checker is missing: teams without a TypeScript script run without it.",
         ["Studio.Diagnostics.Problem.workspace-write"] = "The engine cannot write to its working folder.",
         [StudioStringKeys.ImportRecognizedAgents] = "{0} — {1} agent(s)",
         [StudioStringKeys.ImportSecretsClean] = "No secret in the files",

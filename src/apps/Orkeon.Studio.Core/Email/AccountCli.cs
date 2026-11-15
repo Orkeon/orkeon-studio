@@ -55,8 +55,6 @@ internal sealed record AccountCliProtocol(
 /// </summary>
 internal sealed class AccountCli
 {
-    private const string SettingsLinePrefix = "Using settings:";
-
     private readonly OrkeonProcessRunner _runner;
     private readonly AccountCliProtocol _protocol;
 
@@ -271,7 +269,7 @@ internal sealed class AccountCli
         var prefix = $"orkeon {_protocol.Verb} {verb}: ";
         var lines = stderr
             .Select(line => line.Trim())
-            .Where(line => line.Length > 0 && !line.StartsWith(SettingsLinePrefix, StringComparison.Ordinal))
+            .Where(line => line.Length > 0 && !CliLogLine.IsSettingsNotice(line))
             .ToList();
 
         if (lines.LastOrDefault(line => line.StartsWith(prefix, StringComparison.Ordinal)) is { } message
