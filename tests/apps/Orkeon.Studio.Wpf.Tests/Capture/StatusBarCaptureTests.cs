@@ -1,7 +1,7 @@
+using Orkeon.Studio.Wpf.Tests.Doubles;
 using Orkeon.Studio.Wpf.ViewModels.Capture;
 using Orkeon.Studio.Wpf.ViewModels.Capture.Catalog;
 using Orkeon.Studio.Wpf.ViewModels.Capture.Worlds;
-using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 using Orkeon.Studio.Wpf.ViewModels.Shell;
 
 namespace Orkeon.Studio.Wpf.Tests.Capture;
@@ -24,12 +24,12 @@ public sealed class StatusBarCaptureTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_in_flight_run_shot_shows_a_run_in_flight_on_the_bar_two_minutes_in()
+    public Task The_in_flight_run_shot_shows_a_run_in_flight_on_the_bar_two_minutes_in() => FakeUiThread.RunAsync(async ui =>
     {
         var appearance = new CaptureAppearance("fr", IsDark: false, UiModeViewModel.Expert);
         var shell = CaptureShellBuilder.Build(_worlds.Seeded, new CaptureHost
         {
-            Dispatcher = ImmediateUiDispatcher.Instance,
+            Dispatcher = ui.Dispatcher,
             Language = appearance.Language,
             Mode = appearance.Mode,
         });
@@ -53,5 +53,5 @@ public sealed class StatusBarCaptureTests : IAsyncLifetime
         Assert.Equal("running", tone);
         Assert.Equal("2 min 0 s", duration);
         Assert.True(shell.StatusBar.IsAtRest);
-    }
+    });
 }
