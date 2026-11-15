@@ -76,6 +76,9 @@ internal sealed class LlmForm : ISettingsForm
 
     private const string BaseUrlPath = "Llm:BaseUrl";
 
+    // The document last loaded: this form edits none of Llm:ModelCapabilities, the probe reads it there.
+    private AppSettingsDocument? _document;
+
     /// <summary>
     /// The named profiles of <c>Llm:Profiles</c>, one line each — <c>profile: &lt;id&gt; — model ·
     /// endpoint — key: &lt;variable&gt;</c>, what a crew writes, what it gets and where a run reads its
@@ -157,6 +160,10 @@ internal sealed class LlmForm : ISettingsForm
             ThinkingEnabled = thinking,
             CheckCompletion = true,
             Timeout = LlmProbeRequest.TimeoutFor(timeout),
+            // Read when the request is made: the overrides of the document as it stands now.
+            ModelThinkingOverrides = _document is { } document
+                ? LlmModelCapabilityOverrides.ThinkingOf(document)
+                : LlmModelCapabilityOverrides.None,
         };
     }
 
@@ -175,6 +182,7 @@ internal sealed class LlmForm : ISettingsForm
     /// <inheritdoc />
     public void LoadFrom(AppSettingsDocument document)
     {
+        _document = document;
         var section = document.Llm;
         Model = FieldText.FromString(section.Model);
         BaseUrl = FieldText.FromString(section.BaseUrl);

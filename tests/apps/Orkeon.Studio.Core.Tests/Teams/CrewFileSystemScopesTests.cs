@@ -1,4 +1,9 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Orkeon.Domain.FileSystem;
+using Orkeon.Infrastructure.Configuration;
+using Orkeon.Infrastructure.FileSystem;
+using Orkeon.Infrastructure.Security;
+using Orkeon.Infrastructure.Serialization;
 using Orkeon.Studio.Core.Targets;
 using Orkeon.Studio.Core.Teams;
 
@@ -115,6 +120,46 @@ public sealed class CrewFileSystemScopesTests : IDisposable
     }
 
     [Fact]
+    public async Task An_entity_file_counts_whatever_the_case_of_its_extension()
+    {
+        // The loader matches *.yaml and *.yml ignoring case on every platform: spare.YAML is an agent,
+        // so the writer is not the crew's only one and the round-robin may pick the other.
+        Write("crew.yaml", "name: team\ngoal: publish\n");
+        Write("agents/writer.yaml", "role: Writer\ngoal: write\nbackstory: writes\nfilesystem: [/output]\n");
+        var spare = Write("agents/spare.YAML", "role: Spare\ngoal: spare\nbackstory: spares\nfilesystem: [/spare]\n");
+        Write("tasks/draft.YML", "description: draft\nexpected_output: a draft\n");
+
+        Assert.Equal([("spare", false), ("writer", false)], Starts(Folder()));
+        Assert.Equal(["Spare", "Writer"], await EngineAgentRoles());
+
+        // Alone, the writer runs the task that names nobody; the task file counts under .YML too.
+        File.Delete(spare);
+        Assert.Equal([("writer", true)], Starts(Folder()));
+        Assert.Equal(["Writer"], await EngineAgentRoles());
+    }
+
+    [Fact]
+    public async Task A_stem_written_under_two_spellings_of_the_extensions_is_refused_at_load()
+    {
+        Write("crew.yaml", "name: team\ngoal: publish\n");
+        Write("agents/writer.yaml", "role: Writer\ngoal: write\nbackstory: writes\nfilesystem: [/output]\n");
+        Write("agents/writer.YML", "role: Writer\ngoal: write\nbackstory: writes\n");
+        Write("tasks/draft.yaml", "description: draft\nexpected_output: a draft\n");
+
+        Assert.Empty(Folder());
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(EngineAgentRoles);
+        Assert.Contains("under both extensions", refusal.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The roles of the agents the engine's own loader reads from the crew folder, mounted as it is for a run.</summary>
+    private async Task<List<string>> EngineAgentRoles()
+    {
+        using var registry = new FileSystemRegistry([FileSystemMount.Parse($"{_root}:/crew:ro")]);
+        var crew = await EngineLoader(registry, _root).LoadFromDirectoryAsync("/crew", TestContext.Current.CancellationToken);
+        return crew.Agents!.Select(agent => agent.Role).ToList();
+    }
+
+    [Fact]
     public void A_crew_file_starts_the_agents_its_tasks_name()
     {
         var path = Write("team.yaml", """
@@ -132,28 +177,282 @@ public sealed class CrewFileSystemScopesTests : IDisposable
 
         var agents = CrewFileSystemScopes.Of(Target(RunTargetKind.YamlFile, path));
 
-        Assert.Equal([("writer", true), ("spare", false)], agents.Select(a => (a.Key, a.StartsForSure)));
+        Assert.Equal([("writer", true), ("spare", false)], Starts(agents));
+    }
+
+    private static IEnumerable<(string Key, bool StartsForSure)> Starts(IEnumerable<CrewAgentFileSystem> agents) =>
+        agents.Select(agent => (agent.Key, agent.StartsForSure));
+
+    /// <summary>A crew file: its settings lines, agents that each declare a scope, and its tasks block.</summary>
+    private static IEnumerable<(string Key, bool StartsForSure)> StartsOf(string settings, string[] agents, string tasks)
+    {
+        var yaml = settings
+            + "agents:\n" + string.Concat(agents.Select(agent => $"  {agent}:\n    role: {agent}\n    filesystem: [/output]\n"))
+            + tasks;
+        return Starts(CrewFileSystemScopes.OfCrewFile(yaml));
+    }
+
+    private const string OneTaskForWriter = "tasks:\n  draft:\n    agent: writer\n";
+    private const string OneTaskForNobody = "tasks:\n  draft:\n    description: draft\n";
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("process: sequential\n")]
+    [InlineData("process: parallel\n")]
+    [InlineData("process: graph\n")]
+    [InlineData("process: '  Parallel  '\n")]
+    [InlineData("process: SEQUENTIAL\n")]
+    public void A_process_that_honours_the_tasks_agent_starts_it(string settings)
+    {
+        Assert.Equal(
+            [("writer", true), ("spare", false)],
+            StartsOf(settings, ["writer", "spare"], OneTaskForWriter));
     }
 
     [Fact]
-    public void A_manager_starts_for_sure_and_its_crew_picks_the_rest()
+    public void An_unknown_process_starts_nobody_for_the_crew_does_not_load()
     {
-        var agents = CrewFileSystemScopes.OfCrewFile("""
-            process: hierarchical
-            managerAgent: boss
+        Assert.Equal([("writer", false)], StartsOf("process: graf\n", ["writer"], OneTaskForWriter));
+    }
+
+    [Fact]
+    public void A_task_a_condition_may_skip_does_not_start_its_agent()
+    {
+        var tasks = """
+            tasks:
+              triage:
+                decision:
+                  questions:
+                    urgent:
+                      noul: It is urgent
+              escalate:
+                agent: writer
+                dependencies: [triage]
+                when:
+                  triage.urgent: yes
+              report:
+                agent: editor
+                dependencies: [escalate]
+              archive:
+                agent: clerk
+                dependencies: [triage, escalate]
+
+            """;
+
+        // escalate hangs on the decision; report joins skipped dependencies only, so it is skipped with
+        // them (ConditionGate); archive also depends on the decision task, which always runs.
+        Assert.Equal(
+            [("writer", false), ("editor", false), ("clerk", true)],
+            StartsOf("", ["writer", "editor", "clerk"], tasks));
+    }
+
+    [Fact]
+    public void A_decision_task_starts_no_agent()
+    {
+        // The decision runner answers it: the round-robin gives it nobody, even in a one-agent crew.
+        var tasks = "tasks:\n  triage:\n    decision:\n      questions:\n        urgent:\n          noul: It is urgent\n";
+
+        Assert.Equal([("writer", false)], StartsOf("", ["writer"], tasks));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("process: parallel\n")]
+    [InlineData("process: graph\n")]
+    public void The_only_agent_of_a_crew_runs_the_tasks_that_name_nobody(string settings)
+    {
+        // The round-robin over one agent always picks it (TaskAgentSelection).
+        Assert.Equal([("writer", true)], StartsOf(settings, ["writer"], OneTaskForNobody));
+        // Among several, the pick is the selector's: nobody for sure.
+        Assert.Equal(
+            [("writer", false), ("spare", false)],
+            StartsOf(settings, ["writer", "spare"], OneTaskForNobody));
+    }
+
+    [Fact]
+    public void A_crew_without_a_task_starts_nobody()
+    {
+        Assert.Equal([("writer", false)], StartsOf("", ["writer"], ""));
+        Assert.Equal([("writer", false)], StartsOf("process: consensual\n", ["writer"], ""));
+        Assert.Equal([("writer", false)], StartsOf("process: autonomous\n", ["writer"], ""));
+    }
+
+    [Fact]
+    public async Task A_described_graph_starts_only_the_agent_of_its_start_node()
+    {
+        (string, bool)[] reviewFirst = [("writer", false), ("editor", true)];
+        (string, bool)[] draftFirst = [("writer", true), ("editor", false)];
+        (string, bool)[] nobody = [("writer", false), ("editor", false)];
+        const string Nodes = "  nodes:\n    - id: a\n      task: draft\n    - id: b\n      task: review\n";
+
+        // Each graph is one the engine loads (GraphTopologyValidator): every node has a way out, is
+        // reached from START and reaches END. start: names the node; without it the first node starts.
+        Assert.Equal(reviewFirst, await StartsOfLoadedGraph("  start: b\n" + Nodes + Edges(("b", "a"), ("a", "END"))));
+        Assert.Equal(draftFirst, await StartsOfLoadedGraph(Nodes + Edges(("a", "b"), ("b", "END"))));
+        // Edges alone: each task is its own node, and a written start: tells which is first.
+        Assert.Equal(reviewFirst, await StartsOfLoadedGraph("  start: review\n" + Edges(("review", "draft"), ("draft", "END"))));
+        // Without start: the engine starts at the first task of its own map, an order Studio does
+        // not assume: nobody for sure, a refusal there being a warning.
+        Assert.Equal(nobody, await StartsOfLoadedGraph(Edges(("draft", "review"), ("review", "END"))));
+        // A graph block that describes neither nodes nor edges runs the tasks in a line.
+        Assert.Equal([("writer", true), ("editor", true)], await StartsOfLoadedGraph("  maxVisits: 3\n"));
+    }
+
+    private static string Edges(params (string From, string To)[] edges) =>
+        "  edges:\n" + string.Concat(edges.Select(edge => $"    - from: {edge.From}\n      to: {edge.To}\n"));
+
+    /// <summary>
+    /// What Studio says of a graph crew of two agents (writer drafts, editor reviews) whose
+    /// <c>graph:</c> block is <paramref name="graph"/>, once the engine's own loader has taken the
+    /// crew: a fixture the engine refuses at load would prove nothing of a run.
+    /// </summary>
+    private static async Task<IEnumerable<(string Key, bool StartsForSure)>> StartsOfLoadedGraph(string graph)
+    {
+        var yaml = "name: team\ngoal: publish\nprocess: graph\ngraph:\n" + graph + """
             agents:
-              boss:
-                role: Boss
-                filesystem: [/workspace]
               writer:
-                role: Writer
+                role: writer
+                goal: write
+                backstory: writes
+                filesystem: [/output]
+              editor:
+                role: editor
+                goal: edit
+                backstory: edits
                 filesystem: [/output]
             tasks:
               draft:
+                description: draft
+                expected_output: a draft
                 agent: writer
+              review:
+                description: review
+                expected_output: a review
+                agent: editor
+
+            """;
+
+        using var registry = new FileSystemRegistry([]);
+        var loader = EngineLoader(registry);
+        var crew = await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken);
+        Assert.Empty(loader.Validate(crew).Errors);
+
+        return Starts(CrewFileSystemScopes.OfCrewFile(yaml));
+    }
+
+    /// <summary>The engine's crew loader over <paramref name="registry"/>'s mounts, its workspace at <paramref name="workspace"/>.</summary>
+    private static YamlCrewDefinitionLoader EngineLoader(FileSystemRegistry registry, string? workspace = null) =>
+        new(
+            new YamlDotNetSerializer(),
+            new FileSystemService(
+                registry,
+                new PathValidator(new PathSecurityOptions { DefaultWorkspaceRoot = workspace }, NullLogger<PathValidator>.Instance),
+                NullLogger<FileSystemService>.Instance),
+            NullLogger<YamlCrewDefinitionLoader>.Instance);
+
+    [Fact]
+    public void A_manager_never_starts_and_its_only_worker_always_does()
+    {
+        // HierarchicalProcessStrategy removes the manager from the workers and never runs it as an
+        // agent; the task's agent: is ignored, but one worker leaves the manager no choice.
+        Assert.Equal(
+            [("boss", false), ("writer", true)],
+            StartsOf("process: hierarchical\nmanagerAgent: boss\n", ["boss", "writer"], OneTaskForNobody));
+        Assert.Equal(
+            [("boss", false), ("writer", true)],
+            StartsOf("process: Hierarchical\nmanager_agent: boss\n", ["boss", "writer"], OneTaskForNobody));
+    }
+
+    [Fact]
+    public void A_manager_with_several_workers_picks_whom_it_wants_whatever_the_task_names()
+    {
+        Assert.Equal(
+            [("boss", false), ("writer", false), ("spare", false)],
+            StartsOf("process: hierarchical\nmanagerAgent: boss\n", ["boss", "writer", "spare"], OneTaskForWriter));
+    }
+
+    [Fact]
+    public void An_autonomous_crew_starts_its_only_agent_and_ignores_the_tasks_agent_among_several()
+    {
+        Assert.Equal([("writer", true)], StartsOf("process: autonomous\n", ["writer"], OneTaskForNobody));
+        Assert.Equal(
+            [("writer", false), ("spare", false)],
+            StartsOf("process: autonomous\n", ["writer", "spare"], OneTaskForWriter));
+    }
+
+    [Fact]
+    public void A_consensual_crew_starts_every_agent_but_its_manager()
+    {
+        // Every voter answers the first task, whatever its agent:, and a refused one fails the run
+        // (ConsensualProcessStrategy); the manager at most casts a deciding ballot, a refusal there
+        // being an abstention.
+        Assert.Equal(
+            [("boss", false), ("writer", true), ("editor", true)],
+            StartsOf("process: consensual\nmanagerAgent: boss\n", ["boss", "writer", "editor"], OneTaskForWriter));
+        Assert.Equal(
+            [("writer", true), ("editor", true)],
+            StartsOf("process: Consensual\n", ["writer", "editor"], OneTaskForNobody));
+    }
+
+    [Fact]
+    public void A_voter_that_declares_nothing_leaves_the_other_voters_started()
+    {
+        var agents = CrewFileSystemScopes.OfCrewFile("""
+            process: consensual
+            agents:
+              writer:
+                role: Writer
+                filesystem: [/output]
+              free:
+                role: Free
+            tasks:
+              draft:
+                description: draft
             """);
 
-        Assert.Equal([("boss", true), ("writer", false)], agents.Select(a => (a.Key, a.StartsForSure)));
+        Assert.Equal([("writer", true)], Starts(agents));
+    }
+
+    [Fact]
+    public void A_task_behind_a_decision_whose_state_may_be_skipped_does_not_start_its_agent()
+    {
+        // The engine adds a decision's state: to its dependencies (YamlCrewMapper.MapTasks): gate is
+        // skipped with check, its only one, and publish with gate (ConditionGate's join rule).
+        var tasks = """
+            tasks:
+              triage:
+                decision:
+                  questions:
+                    urgent:
+                      noul: It is urgent
+              check:
+                agent: writer
+                dependencies: [triage]
+                when:
+                  triage.urgent: yes
+              gate:
+                decision:
+                  state: [check]
+                  questions:
+                    ready:
+                      noul: It is ready
+              publish:
+                agent: editor
+                dependencies: [gate]
+              archive:
+                agent: clerk
+                dependencies: [gate, triage]
+
+            """;
+
+        Assert.Equal(
+            [("writer", false), ("editor", false), ("clerk", true)],
+            StartsOf("", ["writer", "editor", "clerk"], tasks));
+
+        // A state: that is no list is refused at load: nobody for sure behind it.
+        Assert.Equal(
+            [("writer", false)],
+            StartsOf("", ["writer"], "tasks:\n  gate:\n    decision:\n      state: draft\n  publish:\n    agent: writer\n    dependencies: [gate]\n"));
     }
 
     [Fact]

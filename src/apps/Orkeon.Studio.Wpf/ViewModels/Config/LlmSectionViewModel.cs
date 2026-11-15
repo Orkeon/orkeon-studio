@@ -1,4 +1,5 @@
 using Orkeon.Studio.Core.Configuration;
+using Orkeon.Studio.Core.Llm;
 using Orkeon.Studio.Core.Profiles;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Config;
@@ -74,6 +75,13 @@ public sealed class LlmSectionViewModel : DocumentSectionViewModel
 
     /// <summary>The entries of <c>Llm:Profiles</c> no setting of <paramref name="set"/> owns: written by hand, shown read-only.</summary>
     public IReadOnlyList<LlmProfileEntry> HandWrittenProfiles(ModelProfileSet set) => HostLlmProfiles.HandWritten(Document, set);
+
+    /// <summary>
+    /// The entries of <c>Llm:ModelCapabilities</c> by model id, each with the thinking support it names,
+    /// read from the document on every call: no form edits them, the connection test follows them.
+    /// </summary>
+    public IReadOnlyDictionary<string, Orkeon.Domain.SharedKernel.ValueObjects.ThinkingSupport?> ModelThinkingOverrides =>
+        LlmModelCapabilityOverrides.ThinkingOf(Document);
 
     /// <summary>The standing a name typed in the profile editor would have, against this document's entries.</summary>
     public HostProfileCheck CheckHostProfile(string name, string? previousName, bool describesProvider, ModelProfileSet set) =>

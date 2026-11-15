@@ -53,6 +53,32 @@ public sealed class FileSystemScopePreflightTests
     }
 
     [Fact]
+    public void An_agent_started_for_sure_is_refused_at_start_whatever_its_neighbours()
+    {
+        // The check knows nothing of processes: an agent told to start for sure is refused at start,
+        // an agent granted or left without a verdict (/sandbox, a root the runner may mount unseen)
+        // beside it changing nothing. Who starts for sure is CrewFileSystemScopes' to tell.
+        var refused = Agent("Writer", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite));
+        var granted = Agent("Reader", null, new FileSystemScopeEntry("/output"));
+        var unseen = Agent("Runner", null, new FileSystemScopeEntry("/sandbox/work"));
+
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([refused, granted, unseen], [Mount("/output", "ro")]));
+
+        Assert.Equal(("Writer", FileSystemScopeRefusalKind.AtStart), (refusal.Agent, refusal.Kind));
+    }
+
+    [Fact]
+    public void An_agent_that_may_not_start_is_refused_only_if_started_beside_one_started_for_sure()
+    {
+        var boss = Agent("Boss", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite)) with { StartsForSure = false };
+        var granted = Agent("Reader", null, new FileSystemScopeEntry("/output"));
+
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([boss, granted], [Mount("/output", "ro")]));
+
+        Assert.Equal(("Boss", FileSystemScopeRefusalKind.IfStarted), (refusal.Agent, refusal.Kind));
+    }
+
+    [Fact]
     public void An_entry_under_no_mount_is_refused()
     {
         var refusal = Assert.Single(FileSystemScopePreflight.Check(

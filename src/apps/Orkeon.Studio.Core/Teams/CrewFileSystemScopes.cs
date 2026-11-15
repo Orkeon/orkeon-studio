@@ -17,9 +17,10 @@ namespace Orkeon.Studio.Core.Teams;
 /// <param name="WorkingRoot">The agent's <c>workingRoot</c>, or <see langword="null"/>.</param>
 /// <param name="Refusal">Why the runtime refuses the declaration as written, whatever the mounts; <see langword="null"/> when it is well formed.</param>
 /// <param name="StartsForSure">
-/// Whether the run starts the agent whatever its course: the <c>managerAgent:</c>, or the agent a task
-/// names under a process that gives each task its own agent (sequential, parallel, graph). An agent a
-/// manager or a planner may pick, or none, is started only if it is picked.
+/// Whether the run starts the agent whatever its course, as the engine's process strategies decide
+/// it: a refusal of its scope then stops the run. False where the crew alone does not tell (an agent
+/// a manager, a planner or the round-robin may pick, one whose task a condition may skip), and for
+/// the <c>managerAgent:</c>, whose refusal never stops a run.
 /// </param>
 public sealed record CrewAgentFileSystem(
     string Key,
@@ -36,9 +37,9 @@ public sealed record CrewAgentFileSystem(
 /// <para>
 /// The crew is read where the engine's loader (<c>YamlCrewDefinitionLoader</c>) reads it, from the
 /// run target's run path: a single file whose <c>agents:</c> map names each agent; a per-entity
-/// folder (<c>agents/</c> or <c>tasks/</c>) whose <c>agents/*.yaml</c> and <c>*.yml</c> files are
-/// one agent each, keyed by file stem, beside <c>config.yaml</c> (else <c>crew.yaml</c>), which holds
-/// settings only; or the flat triplet, whose <c>agents.yaml</c> and <c>tasks.yaml</c> are the agent
+/// folder (<c>agents/</c> or <c>tasks/</c>) whose <c>agents/*.yaml</c> and <c>*.yml</c> files (the
+/// extension in any case) are one agent each, keyed by file stem, beside <c>config.yaml</c> (else
+/// <c>crew.yaml</c>), which holds settings only; or the flat triplet, whose <c>agents.yaml</c> and <c>tasks.yaml</c> are the agent
 /// and task maps themselves. The keys are the loader's (<c>filesystem</c>, <c>role</c>,
 /// <c>workingRoot</c> or <c>working_root</c>), and the entries' shape is judged with its rules
 /// (<c>YamlCrewMapper.MapFileSystemScope</c>).
@@ -46,7 +47,7 @@ public sealed record CrewAgentFileSystem(
 /// <para>
 /// It never throws, and declares nothing where the engine refuses the crew at load with its own
 /// message: a file that cannot be read or parsed, a missing settings file, a mixed layout, an entity
-/// written under both extensions, a <c>&lt;&lt;</c> merge key. A <c>.ork.ts</c> crew is not read.
+/// written twice, a <c>&lt;&lt;</c> merge key. A <c>.ork.ts</c> crew is not read.
 /// </para>
 /// </summary>
 [SuppressVfsCompliance(
@@ -90,9 +91,7 @@ public static class CrewFileSystemScopes
         if (!TryRoot(yaml, out var root) || root is not YamlMappingNode crew)
             return [];
 
-        var agents = Value(crew, "agents") as YamlMappingNode;
-        var tasks = (Value(crew, "tasks") as YamlMappingNode)?.Children.Values ?? [];
-        return Collect(Entries(agents), tasks, crew);
+        return Collect(Entries(Value(crew, "agents") as YamlMappingNode), Entries(Value(crew, "tasks") as YamlMappingNode), crew);
     }
 
     /// <summary>The agents of a crew folder, per-entity or flat, as the loader picks the layout.</summary>
@@ -114,7 +113,7 @@ public static class CrewFileSystemScopes
 
             return Collect(
                 Entries(agentMap as YamlMappingNode),
-                (taskMap as YamlMappingNode)?.Children.Values ?? [],
+                Entries(taskMap as YamlMappingNode),
                 flatSettings as YamlMappingNode);
         }
 
@@ -141,85 +140,230 @@ public static class CrewFileSystemScopes
             agents.Add(new(stem, agent));
         }
 
-        var tasks = new List<YamlNode>(taskFiles.Count);
-        foreach (var (_, path) in taskFiles)
+        var tasks = new List<KeyValuePair<string, YamlNode?>>(taskFiles.Count);
+        foreach (var (stem, path) in taskFiles)
         {
             if (!TryReadRoot(path, out var task))
                 return [];
-            if (task is not null)
-                tasks.Add(task);
+            tasks.Add(new(stem, task));
         }
 
         return Collect(agents, tasks, settings as YamlMappingNode);
     }
 
+    /// <summary>The extensions of an entity file, which the loader matches whatever their case.</summary>
+    private static readonly string[] EntityExtensions = [".yaml", ".yml"];
+
+    /// <summary>
+    /// The engine's own enumeration of an entity folder (<c>FileSystemService.EnumerateFilesAsync</c>):
+    /// the folder alone, a symbolic link left out, an entry the disk withholds passed over.
+    /// </summary>
+    private static readonly EnumerationOptions EntityEnumeration = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+        ReturnSpecialDirectories = false,
+    };
+
     /// <summary>
     /// The <c>*.yaml</c> and <c>*.yml</c> files of an entity folder, sorted ordinally, with their stems;
-    /// empty when the folder is absent, null when a stem is written under both extensions.
+    /// empty when the folder is absent, null when a stem is written twice (under both extensions, or
+    /// under two spellings of one). The extension is matched whatever its case, on every platform, as
+    /// the loader matches it: <c>spare.YAML</c> is the agent <c>spare</c> under Linux too. The stem
+    /// keeps its case.
     /// </summary>
     private static List<(string Stem, string Path)>? EntityFiles(string folder)
     {
         if (!Directory.Exists(folder))
             return [];
 
-        var paths = Directory.EnumerateFiles(folder, "*.yaml")
-            .Concat(Directory.EnumerateFiles(folder, "*.yml"))
-            .Where(path => path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+        // Every file, filtered here: a search pattern follows the platform's case rule, the loader does not.
+        var paths = Directory.EnumerateFiles(folder, "*", EntityEnumeration)
+            .Where(path => EntityExtensions.Any(extension => path.EndsWith(extension, StringComparison.OrdinalIgnoreCase)))
             .Order(StringComparer.Ordinal)
             .ToList();
         var files = paths.Select(path => (Stem: Path.GetFileNameWithoutExtension(path), Path: path)).ToList();
         return files.DistinctBy(file => file.Stem, StringComparer.Ordinal).Count() == files.Count ? files : null;
     }
 
-    /// <summary>The entries of an <c>agents:</c> map, in its order.</summary>
-    private static IEnumerable<KeyValuePair<string, YamlNode?>> Entries(YamlMappingNode? agents) =>
-        agents is null
+    /// <summary>The entries of an <c>agents:</c> or a <c>tasks:</c> map, in its order.</summary>
+    private static IEnumerable<KeyValuePair<string, YamlNode?>> Entries(YamlMappingNode? map) =>
+        map is null
             ? []
-            : agents.Children
+            : map.Children
                 .Where(child => child.Key is YamlScalarNode { Value.Length: > 0 })
                 .Select(child => new KeyValuePair<string, YamlNode?>(((YamlScalarNode)child.Key).Value!, child.Value));
 
     /// <summary>
-    /// The declarations of <paramref name="agents"/>, each told whether the run starts it for sure:
-    /// the crew's manager, or an agent a task names under a process that honours the task's agent.
+    /// The declarations of <paramref name="agents"/>, each told whether the run starts it for sure
+    /// (<see cref="StartsOf"/>).
     /// </summary>
     private static List<CrewAgentFileSystem> Collect(
-        IEnumerable<KeyValuePair<string, YamlNode?>> agents, IEnumerable<YamlNode> tasks, YamlMappingNode? settings)
+        IEnumerable<KeyValuePair<string, YamlNode?>> agents, IEnumerable<KeyValuePair<string, YamlNode?>> tasks, YamlMappingNode? settings)
     {
-        var starting = new HashSet<string>(StringComparer.Ordinal);
-        if (settings is not null && Text(Value(settings, "managerAgent") ?? Value(settings, "manager_agent")) is { } manager)
-            starting.Add(manager);
-
-        if (HonoursTaskAgents(settings is null ? null : Text(Value(settings, "process"))))
-        {
-            foreach (var task in tasks.OfType<YamlMappingNode>())
-            {
-                if (Text(Value(task, "agent")) is { } assigned)
-                    starting.Add(assigned);
-            }
-        }
+        var all = agents.ToList();
+        var starts = StartsOf(
+            all.Select(agent => agent.Key).ToList(),
+            tasks.Where(task => task.Value is YamlMappingNode).Select(task => (task.Key, Task: (YamlMappingNode)task.Value!)).ToList(),
+            settings);
 
         var result = new List<CrewAgentFileSystem>();
-        foreach (var (key, node) in agents)
+        foreach (var (key, node) in all)
         {
             if (node is YamlMappingNode agent && Read(key, agent) is { } declared)
-                result.Add(declared with { StartsForSure = starting.Contains(key) });
+                result.Add(declared with { StartsForSure = starts.Contains(key) });
         }
 
         return result;
     }
 
     /// <summary>
-    /// Whether the process gives each task the agent it names (sequential, the default, parallel and
-    /// graph); a hierarchical manager or an autonomous planner picks its own, a consensual crew deliberates.
+    /// The agents the run starts for sure, by key, as the engine's process strategies choose who runs a task
+    /// (Orkeon.Infrastructure, <c>Crew/Strategies</c> and <c>Consensus</c>). Where the crew alone does
+    /// not tell, the agent is left out: a refusal of its scope is then a warning, never a wrongful block.
+    /// <list type="bullet">
+    /// <item>Sequential (the default), parallel, graph: a task runs on the agent its <c>agent:</c>
+    /// names, else on the round-robin's pick, which is known only for a one-agent crew
+    /// (<c>TaskAgentSelector</c>, <c>TaskAgentSelection</c>). Only a task that runs for sure counts
+    /// (<see cref="RunsAnAgentForSure"/>); under a graph that describes its nodes or edges, only the
+    /// start node's task (<see cref="StartTaskOf"/>), the others hanging on the routing.</item>
+    /// <item>Hierarchical, autonomous: the manager or the planner hands out every task, whatever its
+    /// <c>agent:</c>. With one worker there is no one else to pick: the worker runs, or the run fails
+    /// on an assignment to nobody (<c>HierarchicalProcessStrategy</c>, <c>AutonomousProcessStrategy</c>).</item>
+    /// <item>Consensual: every agent but the manager answers the first task, and a refused one fails
+    /// the run: the answers are awaited together, outside the guard that turns one agent's failure
+    /// into a lost voice (<c>ConsensualProcessStrategy.ExecuteWithAllAgentsAsync</c>).</item>
+    /// <item>The <c>managerAgent:</c> never counts, its refusal never stopping a run. Two processes
+    /// take one (<c>ProcessType.AcceptsManagerAgent</c>): the hierarchical manager runs no task; the
+    /// consensual one may cast a deciding ballot under a host fallback setting, where a refusal is
+    /// caught as an abstention. The four others (sequential, parallel, graph, autonomous) refuse a
+    /// crew that names one at load (<c>CrewDefinitionValidator</c>): what is said of it then is moot.</item>
+    /// </list>
     /// </summary>
-    private static bool HonoursTaskAgents(string? process)
+    private static HashSet<string> StartsOf(
+        List<string> agents, List<(string Key, YamlMappingNode Task)> tasks, YamlMappingNode? settings)
     {
-        if (process is null)
+        var starts = new HashSet<string>(StringComparer.Ordinal);
+
+        // Absent is sequential; the value is trimmed and read whatever its case, and an unknown one is
+        // refused at load (YamlCrewMapper.ParseProcessType). A crew without a task starts no agent.
+        var process = ProcessType.Sequential;
+        if (settings is not null && Text(Value(settings, "process")) is { } written && !ProcessType.TryFrom(written, out process))
+            return starts;
+        if (tasks.Count == 0)
+            return starts;
+
+        var manager = settings is null ? null : Text(Value(settings, "managerAgent") ?? Value(settings, "manager_agent"));
+        var workers = agents.Where(agent => agent != manager).ToList();
+
+        if (process == ProcessType.Consensual)
+        {
+            starts.UnionWith(workers);
+        }
+        else if (process == ProcessType.Hierarchical || process == ProcessType.Autonomous)
+        {
+            // Hierarchical: the workers are the agents but the manager. Autonomous has no manager (one
+            // named is refused at load): the workers are all the agents.
+            if (workers.Count == 1)
+                starts.Add(workers[0]);
+        }
+        else
+        {
+            // Sequential, parallel, graph: no manager there (a managerAgent: is refused at load), so
+            // every agent works.
+            var byKey = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
+            foreach (var (key, task) in tasks)
+                byKey.TryAdd(key, task);
+
+            var topology = process == ProcessType.Graph ? Topology(settings) : null;
+            IEnumerable<YamlMappingNode> sure = topology is null
+                ? tasks.Select(task => task.Task).Where(task => RunsAnAgentForSure(task, byKey))
+                : StartTaskOf(topology, byKey) is { } start && RunsAnAgentForSure(start, byKey) && IsNull(Value(start, "dependencies"))
+                    ? [start]
+                    : [];
+
+            foreach (var task in sure)
+            {
+                if ((Text(Value(task, "agent")) ?? (agents.Count == 1 ? agents[0] : null)) is { } runner)
+                    starts.Add(runner);
+            }
+        }
+
+        return starts;
+    }
+
+    /// <summary>
+    /// Whether the run reaches <paramref name="task"/> and gives it to an agent whatever the answers
+    /// of the crew's decisions: it is no decision task (the decision runner answers those, no agent
+    /// does) and no condition can skip it (<see cref="MayBeSkipped"/>). A task an earlier failure
+    /// blocks still counts: the run it belongs to has failed already.
+    /// </summary>
+    private static bool RunsAnAgentForSure(YamlMappingNode task, Dictionary<string, YamlMappingNode> tasks) =>
+        IsNull(Value(task, "decision")) && !MayBeSkipped(task, tasks, []);
+
+    /// <summary>
+    /// Whether a condition may skip the task, as <c>ConditionGate</c> decides it: its own <c>when:</c>,
+    /// or the join rule, a task whose every dependency was condition-skipped being skipped too. The
+    /// dependencies are the engine's (<c>YamlCrewMapper.MapTasks</c>): the task's <c>dependencies:</c>
+    /// and, for a decision task, its <c>decision.state:</c> (the decision a <c>when:</c> names is a
+    /// third, but a conditioned task is skippable already). A dependency that names no task is refused
+    /// at load; a cycle is refused by the parallel process only, the sequential one keeping the
+    /// declared order: both read as "may be skipped".
+    /// <paramref name="seen"/> holds the tasks already walked: one met again was found skippable, or
+    /// closes a cycle (a task found safe ends the whole walk, so it is never met twice).
+    /// </summary>
+    private static bool MayBeSkipped(YamlMappingNode task, Dictionary<string, YamlMappingNode> tasks, HashSet<YamlMappingNode> seen)
+    {
+        if (!IsNull(Value(task, "when")) || !seen.Add(task))
             return true;
 
-        return ProcessType.TryFrom(process, out var type)
-            && (type == ProcessType.Sequential || type == ProcessType.Parallel || type == ProcessType.Graph);
+        var all = new List<YamlNode>();
+        var state = Value(task, "decision") is YamlMappingNode decision ? Value(decision, "state") : null;
+        foreach (var dependencies in new[] { Value(task, "dependencies"), state })
+        {
+            if (IsNull(dependencies))
+                continue;
+            if (dependencies is not YamlSequenceNode list)
+                return true;
+            all.AddRange(list.Children);
+        }
+
+        return all.Count > 0 && all.TrueForAll(dependency =>
+            Text(dependency) is not { } key || !tasks.TryGetValue(key, out var named) || MayBeSkipped(named, tasks, seen));
+    }
+
+    /// <summary>
+    /// The <c>graph:</c> block when it describes its nodes or its edges; null when the graph runs the
+    /// tasks in a line, each gated like a sequential one (<c>GraphProcessStrategy.BuildCrewGraph</c>).
+    /// </summary>
+    private static YamlMappingNode? Topology(YamlMappingNode? settings) =>
+        settings is not null && Value(settings, "graph") is YamlMappingNode graph
+        && (!IsNull(Value(graph, "nodes")) || Value(graph, "edges") is YamlSequenceNode { Children.Count: > 0 })
+            ? graph
+            : null;
+
+    /// <summary>
+    /// The task of the node a described graph starts at (<c>GraphProcessStrategy.BuildDescribedGraph</c>):
+    /// the node <c>start:</c> names, else the first of <c>nodes:</c>; without <c>nodes:</c> each task is
+    /// its own node, and only a written <c>start:</c> is taken: the engine then starts at the first
+    /// task of its own map, an order this reading does not assume. Null when it is not that plain.
+    /// </summary>
+    private static YamlMappingNode? StartTaskOf(YamlMappingNode graph, Dictionary<string, YamlMappingNode> tasks)
+    {
+        var start = Text(Value(graph, "start"));
+        var taskKey = start;
+        if (!IsNull(Value(graph, "nodes")))
+        {
+            if (Value(graph, "nodes") is not YamlSequenceNode nodes)
+                return null;
+
+            var declared = nodes.Children.OfType<YamlMappingNode>().ToList();
+            var node = start is null ? declared.FirstOrDefault() : declared.Find(candidate => Text(Value(candidate, "id")) == start);
+            taskKey = node is null ? null : Text(Value(node, "task"));
+        }
+
+        return taskKey is not null && tasks.TryGetValue(taskKey, out var task) ? task : null;
     }
 
     /// <summary>

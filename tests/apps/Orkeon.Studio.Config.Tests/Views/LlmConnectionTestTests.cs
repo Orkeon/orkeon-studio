@@ -108,6 +108,24 @@ public sealed class LlmConnectionTestTests
     }
 
     [Fact]
+    public void The_probe_carries_the_model_capability_overrides_of_the_document_as_it_stands_now()
+    {
+        // The form edits none of Llm:ModelCapabilities: the probe reads them where a run does.
+        var document = Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse(
+            """{ "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3", "ModelCapabilities": { "qwen3": { "Thinking": "None" } } } }""");
+        var form = new LlmForm();
+        Assert.Empty(form.ToProbeRequest(Environment()).ModelThinkingOverrides);
+
+        form.LoadFrom(document);
+        var loaded = form.ToProbeRequest(Environment());
+        document.SetNode("Llm:ModelCapabilities:qwen3:Thinking", System.Text.Json.JsonSerializer.SerializeToNode("Toggle"));
+        var changed = form.ToProbeRequest(Environment());
+
+        Assert.Equal(Orkeon.Domain.SharedKernel.ValueObjects.ThinkingSupport.None, loaded.ModelThinkingOverrides["qwen3"]);
+        Assert.Equal(Orkeon.Domain.SharedKernel.ValueObjects.ThinkingSupport.Toggle, changed.ModelThinkingOverrides["qwen3"]);
+    }
+
+    [Fact]
     public void The_probed_key_falls_back_to_the_environment_variable()
     {
         // Studio tells users to keep the key in ORKEON_Llm__ApiKey, so the probe has to

@@ -59,16 +59,23 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private string? _runLlmProfile;
     /// <summary>How many agents and tasks of the target's crew name their own model.</summary>
     private int _crewLlmDeclarations;
-    /// <summary>The <c>filesystem:</c> declarations of the target's crew (#349), read once per target.</summary>
+    /// <summary>The <c>filesystem:</c> declarations of the target's crew (#349), read when the target changes and again at each launch.</summary>
     private IReadOnlyList<CrewAgentFileSystem> _crewFileSystems = [];
-    /// <summary>The refusals the engine will make with the mounts of this run, judged once per change of the target or the mounts.</summary>
+    /// <summary>The refusals the engine will make with the mounts of this run, judged at each change of the target or the mounts, and again at each launch.</summary>
     private IReadOnlyList<FileSystemScopeRefusal> _fileSystemScopeRefusals = [];
     /// <summary>
-    /// Whether the panel's settings mounts are those of the file the run will read: false while a pinned
-    /// file is loading, when it is missing or unreadable — the CLI then mounts what Studio does not see.
+    /// Whether the panel's settings mounts are those of the file the run will read: true only when the
+    /// run carries <c>--settings</c> (the Expert pin, else the team's file) and Studio read that very
+    /// file. False while it is loading, when it is missing or unreadable, and in automatic mode
+    /// without a team file: the CLI then resolves the file itself, a file beside the crew or above it
+    /// winning over the per-user one the panel shows (<c>RunnerSettings.ResolveSettingsPath</c>), and
+    /// may mount what Studio does not see.
     /// </summary>
-    private bool _settingsMountsKnown = true;
-    /// <summary>The pinned settings file the panel's settings mounts were read from; null for the live declared list.</summary>
+    private bool _settingsMountsKnown;
+    /// <summary>
+    /// The settings file (pinned, or the team's) the panel's settings mounts were read from; null for
+    /// the live declared list, and once the target is read again, so the file is too.
+    /// </summary>
     private string? _settingsMountsSource;
     private string? _commandLinePreview;
     private bool _commandLineCopied;
@@ -404,12 +411,14 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// effective-mount table shows what the <c>--mount</c> arguments actually replace and a
     /// team folder the settings already hold is not laid a second time (STUDIO-15 D-05).
     /// <para>
-    /// A pinned <c>--settings</c> file is read as is. In automatic mode the CLI walks its own
-    /// resolution chain, whose last step is the per-user file <c>orkeon init</c> writes — the
-    /// very file « Settings › Authorized folders » edits, read live through the same seam
-    /// the launch refusal uses. An adopted team lives under the teams root, where no closer
-    /// file exists, so that list is what the run will find; a crew kept next to its own
-    /// appsettings.json is the expert's arrangement, and pinning that file shows exactly it.
+    /// A pinned <c>--settings</c> file, or the team's, is read as is, at each call: those mounts are
+    /// the run's. In automatic mode the CLI walks its own resolution chain, whose last step is the
+    /// per-user file <c>orkeon init</c> writes — the very file « Settings › Authorized folders »
+    /// edits, read live through the same seam the launch refusal uses. An adopted team lives under
+    /// the teams root, where no closer file usually exists, so that list is shown; but a crew kept
+    /// next to its own appsettings.json, or under an <c>appsettings/</c> folder, runs on that file
+    /// instead, so the list is not known to be the run's (#349: a scope refusal it predicts is a
+    /// warning). Pinning the file shows exactly it.
     /// </para>
     /// </summary>
     public async Task RefreshSettingsMountsAsync(CancellationToken cancellationToken = default)
@@ -418,7 +427,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         // mount table is then the one in force — else the machine's declared list.
         if (ResolvedSettingsPath is not { Length: > 0 } path)
         {
-            PublishSettingsMounts(_declaredMounts(), known: true);
+            PublishSettingsMounts(_declaredMounts(), known: false);
             return;
         }
 
@@ -429,6 +438,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         }
 
         var (document, _) = await _settingsStore.TryLoadAsync(path, cancellationToken);
+        // The pin or the target moved while the file was read: its mounts are not those of the run.
+        if (!string.Equals(path, ResolvedSettingsPath, StringComparison.Ordinal))
+            return;
+
         PublishSettingsMounts(document?.Mounts.RawEntries ?? [], known: document is not null);
     }
 
@@ -448,8 +461,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
     /// <summary>
     /// Keeps the panel's settings mounts current before the command line is rebuilt: the
-    /// declared list is cheap and read every time; a pinned file is read once per pin
-    /// (<see cref="_settingsMountsSource"/>), not on every keystroke of every other field.
+    /// declared list is cheap and read every time; a pinned or team file is read once per path
+    /// (<see cref="_settingsMountsSource"/>), not on every keystroke of every other field, then
+    /// again whenever the target is read again and at each launch.
     /// </summary>
     private void PublishSettingsMounts()
     {
@@ -457,7 +471,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         if (path is not { Length: > 0 })
         {
             _settingsMountsSource = null;
-            PublishSettingsMounts(_declaredMounts(), known: true);
+            // No --settings: the CLI picks the file, which may not be the one this list comes from.
+            PublishSettingsMounts(_declaredMounts(), known: false);
             return;
         }
 
@@ -544,6 +559,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             return null;
 
         BeginLaunch();
+
+        // The check that comes first passes whatever the scopes: the run it guards is refused before it.
+        if (Options.ValidateFirst && await RefusesFileSystemScopeAsync(validate: false, cancellationToken).ConfigureAwait(true))
+            return null;
 
         if (Options.ValidateFirst)
         {
@@ -694,6 +713,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             return null;
         }
 
+        if (await RefusesFileSystemScopeAsync(validate, cancellationToken).ConfigureAwait(true))
+            return null;
+
         var options = BuildOptions(validate);
         // The team's file counts as a pin here (STUDIO-62): a launch that reads another file
         // than the machine's saves nothing into the machine's.
@@ -731,6 +753,39 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             },
             validate,
             cancellationToken);
+    }
+
+    /// <summary>
+    /// The scope verdict, made again right before a launch (#349): the crew and the settings file the
+    /// run carries (the pin, else the team's) may have been edited on disk since the target was
+    /// picked, and a launch judges both as they are now. A check does too, and it stays offered while
+    /// a scope refusal blocks « Run »: it is how a run blocked on a mount since added to the settings
+    /// file is offered again. Refuses what the commands refuse (<see cref="CanLaunch"/>,
+    /// <see cref="CanValidate"/>): a run on any blocking refusal, a check on a malformed declaration
+    /// alone. True when the launch stops, its reason said.
+    /// </summary>
+    private async Task<bool> RefusesFileSystemScopeAsync(bool validate, CancellationToken cancellationToken)
+    {
+        _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
+        await RefreshSettingsMountsAsync(cancellationToken).ConfigureAwait(true);
+        RefreshFileSystemScopes();
+
+        if (!validate)
+        {
+            if (IsBlockedByFileSystemScope)
+                StatusMessage = FileSystemScopeMessage;
+            return IsBlockedByFileSystemScope;
+        }
+
+        // A check fails on the malformed declarations alone: the engine's own reasons, without the
+        // sentence of a blocked run, which also lists the refusals at start a check passes.
+        var malformed = _fileSystemScopeRefusals
+            .Where(refusal => refusal.Kind == FileSystemScopeRefusalKind.Load)
+            .Select(refusal => refusal.Reason)
+            .ToList();
+        if (malformed.Count > 0)
+            StatusMessage = string.Join(" ", malformed);
+        return malformed.Count > 0;
     }
 
     /// <summary>
@@ -1050,6 +1105,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
         _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
         _fileSystemScopeRefusals = JudgeFileSystemScopes();
+        // The settings file of the run is read again with the crew (RefreshPreview, below).
+        _settingsMountsSource = null;
         // A choice saved from the card replaces the run's; a choice made here for this run stays.
         if (_team.LlmChoice != saved)
             ApplyRunLlmChoice(_team.LlmChoice);
@@ -1698,6 +1755,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
         _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
         _fileSystemScopeRefusals = JudgeFileSystemScopes();
+        // The settings file of the run is read again with the crew (RefreshPreview, below).
+        _settingsMountsSource = null;
         // The run takes the team's model unless changed here (STUDIO-73); a target that is no team, the default.
         ApplyRunLlmChoice(_team.LlmChoice);
         RefreshTeamSettingsPath();

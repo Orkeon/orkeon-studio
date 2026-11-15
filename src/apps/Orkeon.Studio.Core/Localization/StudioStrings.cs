@@ -3247,7 +3247,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME"] = "A model profile is named 'default', the Llm section's own name: the engine refuses to start. Rename it.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
-        ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or stops the run when it starts that agent.",
+        ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",

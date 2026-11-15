@@ -125,7 +125,8 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         var model = request.Model.Trim();
         var completion = await RunStepAsync(
             LlmProbeStage.Completion,
-            () => LlmProbeDialect.BuildCompletion(provider, baseUri, request.ApiKey, model, request.ThinkingEnabled),
+            () => LlmProbeDialect.BuildCompletion(
+                provider, baseUri, request.ApiKey, model, request.ThinkingEnabled, request.ModelThinkingOverrides),
             context, linked.Token, cancellationToken).ConfigureAwait(false);
         if (!completion.Succeeded)
             return completion.Result!;

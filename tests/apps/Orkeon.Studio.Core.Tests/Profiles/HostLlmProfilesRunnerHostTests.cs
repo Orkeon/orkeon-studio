@@ -312,7 +312,239 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
         { "Llm:StreamIdleSeconds", "45.5" },
         { "Llm:ApiKey", "\"${OPENAI_API_KEY}\"" },
         { "Llm:Thinking:Enabled", "\"on\"" },
+        // The run does not trim an effort: a padded level is no level.
+        { "Llm:Thinking:Effort", "\" high\"" },
+        // A list or an object that holds anything, even a null or an empty one, under a single value.
+        { "Llm:Thinking:Effort", "[\"high\"]" },
+        { "Llm:Thinking:Effort", "{ \"level\": \"high\" }" },
+        { "Llm:Thinking:Effort", "[[]]" },
+        { "Llm:Thinking:Effort", "{ \"a\": {} }" },
+        { "Llm:Thinking:Effort", "[null]" },
+        { "Llm:Model", "[\"qwen3\"]" },
+        { "Llm:BaseUrl", "{ \"a\": \"http://localhost:11434\" }" },
+        { "Llm:ApiKey", "[\"k\"]" },
+        { "Llm:ApiKeyEnvVar", "[\"MY_KEY\"]" },
+        { "Llm:MaxTokens", "[4096]" },
+        { "Llm:Temperature", "{ \"a\": 0.5 }" },
+        { "Llm:Thinking:Enabled", "[true]" },
+        { "Llm:Profiles:local-gpu:Model", "{ \"a\": \"qwen3\" }" },
+        { "Llm:Profiles:local-gpu:Thinking:Effort", "[\"high\"]" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "\"Always\"" },
+        { "Llm:ModelCapabilities:gpt-4o:Vision", "\"yes\"" },
+        // A switch and Thinking are single values: a list or an object that holds anything is refused.
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "[\"Toggle\"]" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "{ \"Level\": \"Toggle\" }" },
+        { "Llm:ModelCapabilities:gpt-4o:Vision", "[true]" },
+        { "Llm:ModelCapabilities:gpt-4o:AudioInput", "[null]" },
+        { "Llm:ModelCapabilities:gpt-4o:AudioOutput", "{ \"a\": true }" },
+        // An entry carries its five keys and no other.
+        { "Llm:ModelCapabilities:gpt-4o:Thinkng", "\"Toggle\"" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinkng", "{}" },
+        { "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts", "[[\"low\"]]" },
+        { "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts", "[\"low\", { \"a\": \"high\" }]" },
     };
+
+    /// <summary>
+    /// <c>Llm:ModelCapabilities</c> written in a way the real host refuses at start, with the path
+    /// Studio reports it at: a model id holding a ':', an entry or the section written as a list.
+    /// </summary>
+    public static TheoryData<string, string> ModelCapabilitiesTheHostRefuses() => new()
+    {
+        { """{ "llama3.2:latest": { "Thinking": "None" } }""", "Llm:ModelCapabilities:llama3.2:latest" },
+        { """{ "llama3.2:latest": {} }""", "Llm:ModelCapabilities:llama3.2:latest" },
+        { """{ "gpt-4o": ["x"] }""", "Llm:ModelCapabilities:gpt-4o:0" },
+        { """{ "gpt-4o": { "Thinking:Level": "Toggle" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking" },
+        { """[ { "Thinking": "Always" } ]""", "Llm:ModelCapabilities:0:Thinking" },
+        { """[ ["x"] ]""", "Llm:ModelCapabilities:0:0" },
+        // Two keys that come to one same path, a value on both sides: the file does not load.
+        { """{ "gpt-4o": { "Vision": true, "vision": false } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+        { """{ "llama3.2:Vision": true, "llama3.2": { "Vision": false } }""", "Llm:ModelCapabilities:llama3.2:Vision" },
+        { """{ "x": { "ReasoningEfforts": ["a"], "reasoningefforts": ["b"] } }""", "Llm:ModelCapabilities:x:ReasoningEfforts:0" },
+        { """{ "gpt-4o": { "Thinking": "Toggle" }, "GPT-4O": { "thinking": "None" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking" },
+        { """{ "gpt-4o": "x", "GPT-4O": "y" }""", "Llm:ModelCapabilities:gpt-4o" },
+        // A null is a value; an empty list or object holds the key, and the value after it is refused.
+        { """{ "gpt-4o": { "Vision": null, "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+        { """{ "gpt-4o": { "Vision": true, "vision": null } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+        { """{ "gpt-4o": { "Vision": {}, "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+        { """{ "gpt-4o": { "Vision": [], "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+    };
+
+    /// <summary>
+    /// <c>Llm:ModelCapabilities</c> keyed by a blank model id, with the path Studio reports it at. The
+    /// real host does not start on it, and says so with the model table's own exception rather than a
+    /// settings refusal: it names the id, never the path.
+    /// </summary>
+    public static TheoryData<string, string> BlankModelIds() => new()
+    {
+        { """{ "": { "Vision": true } }""", "Llm:ModelCapabilities:" },
+        { """{ " ": { "Vision": true } }""", "Llm:ModelCapabilities: " },
+        { """{ "": {} }""", "Llm:ModelCapabilities:" },
+        { """{ " ": "x" }""", "Llm:ModelCapabilities: " },
+        { """{ "": null }""", "Llm:ModelCapabilities:" },
+        { """{ ":Vision": true }""", "Llm:ModelCapabilities:" },
+        { """{ "gpt-4o": { "Vision": true }, "  ": { "Thinking": "None" } }""", "Llm:ModelCapabilities:  " },
+    };
+
+    /// <summary>A blank model id stops the real host at start, and Studio's check before saving.</summary>
+    [Theory]
+    [MemberData(nameof(BlankModelIds))]
+    public async Task A_blank_model_id_stops_the_host_at_start_and_studio_refuses_it_before_saving(string json, string path)
+    {
+        var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
+
+        var refused = Assert.Throws<ArgumentException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        Assert.Equal("id", refused.ParamName);
+        var message = Assert.Single(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(path, message.Path);
+    }
+
+    /// <summary>The drift guard of <c>Llm:ModelCapabilities</c> for what a path of the document cannot write.</summary>
+    [Theory]
+    [MemberData(nameof(ModelCapabilitiesTheHostRefuses))]
+    public async Task Model_capabilities_the_host_refuses_at_start_studio_refuses_before_saving(string json, string path)
+    {
+        var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
+
+        // The refusal is the one of that key, not another the file would earn: it names the path
+        // Studio reports (keys are compared without case, and the host spells the one it met).
+        var refused = Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        Assert.Contains(path, refused.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Severity == ValidationSeverity.Error && message.Path == path);
+    }
+
+    /// <summary><c>Llm:ModelCapabilities</c> written in a way the real host starts on.</summary>
+    public static TheoryData<string> ModelCapabilitiesTheHostAccepts() => new()
+    {
+        // Left out, each in its own way: an empty list, an empty object, a null, a blank.
+        """{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""",
+        """{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""",
+        // An entry that holds nothing to judge.
+        """{ "gpt-4o": "x" }""",
+        """{ "gpt-4o": [] }""",
+        """{ "gpt-4o": {} }""",
+        """[ "x" ]""",
+        """[ { "Thinking": "Toggle" } ]""",
+        // Vendor efforts are the run's to send; a list may be written as an object, and its items left empty.
+        """{ "gpt-4o": { "ReasoningEfforts": ["none", "minimal", 3] } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": "low, high" } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": { "a": "low" } } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": [[], {}, null] } }""",
+        """{ "gpt-4o": { "ReasoningEfforts:0": "low" } }""",
+        // Keys are read without case, and a ':' that lands on a key of the entry is that key.
+        """{ "gpt-4o": { "thinking": "toggle", "VISION": true } }""",
+        """{ "llama3.2:Vision": true }""",
+        """{ "mammouth/gemini-3.7": { "Thinking": "EffortOnly" }, "llama3.2": { "Thinking": "None" } }""",
+        // Two keys that come to one same path and set no same key below: read as one entry.
+        """{ "gpt-4o": { "Vision": true }, "GPT-4O": { "AudioInput": true } }""",
+        """{ "llama3.2:Vision": true, "llama3.2": { "AudioInput": false } }""",
+        """{ "x": { "ReasoningEfforts": ["a"], "reasoningefforts": { "1": "b" } } }""",
+        // An empty list or object after a value replaces it with none, without a refusal.
+        """{ "gpt-4o": { "Vision": true, "vision": {} } }""",
+        """{ "gpt-4o": { "Vision": "yes", "vision": [] } }""",
+        """{ "gpt-4o": { "Vision": {}, "vision": [] } }""",
+        """{ "gpt-4o": { "Vision": true }, "gpt-4o:Vision": {} }""",
+    };
+
+    /// <summary>The other side of the drift guard: Studio reports nothing on what the real host starts on.</summary>
+    [Theory]
+    [MemberData(nameof(ModelCapabilitiesTheHostAccepts))]
+    public async Task Model_capabilities_the_host_starts_on_studio_does_not_refuse(string json)
+    {
+        var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
+
+        using var host = Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.DoesNotContain(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>
+    /// Keys of the <c>Llm</c> shape written as an empty list or object, which the real host reads as
+    /// left out: the <c>Llm</c> section, then the same keys in a profile.
+    /// </summary>
+    public static TheoryData<string> EmptyContainersTheHostStartsOn()
+    {
+        string[] keys =
+        [
+            """ "Model": [] """, """ "Model": {} """,
+            """ "BaseUrl": [] """, """ "BaseUrl": {} """,
+            """ "ApiKey": [] """, """ "ApiKey": {} """,
+            """ "ApiKeyEnvVar": [] """, """ "ApiKeyEnvVar": {} """,
+            """ "Thinking": { "Effort": [] } """, """ "Thinking": { "Effort": {} } """,
+            """ "Thinking": [] """, """ "Thinking": { "Enabled": [], "Effort": "high" } """,
+            """ "Temperature": [], "MaxTokens": {}, "TimeoutSeconds": [], "StreamIdleSeconds": {}, "MaxRetries": [], "Grammar": {} """,
+        ];
+        var data = new TheoryData<string>();
+        foreach (var key in keys)
+        {
+            data.Add("{" + Beside(key, "http://localhost:11434", "qwen3") + key + "}");
+            data.Add("""{ "BaseUrl": "http://localhost:11434", "Model": "qwen3", "Profiles": { "local-gpu": {"""
+                + Beside(key, "http://localhost:11500", "qwen3:32b") + key + "} } }");
+        }
+
+        return data;
+    }
+
+    /// <summary>The address and the model of a section, each left to <paramref name="key"/> when it writes that one.</summary>
+    private static string Beside(string key, string baseUrl, string model) =>
+        (key.Contains("\"BaseUrl\"", StringComparison.Ordinal) ? string.Empty : $" \"BaseUrl\": \"{baseUrl}\",")
+        + (key.Contains("\"Model\"", StringComparison.Ordinal) ? string.Empty : $" \"Model\": \"{model}\",");
+
+    /// <summary>
+    /// The other side of the drift guard of the <c>Llm</c> shape: an empty list or object under a key
+    /// the run reads as a single value is a key left out, the real host starts, and Studio reports nothing.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(EmptyContainersTheHostStartsOn))]
+    public async Task An_empty_list_or_object_under_a_key_of_the_llm_shape_starts_the_host_and_studio_does_not_refuse_it(string llm)
+    {
+        var json = """{ "Llm": """ + llm + """, "RaggableTree": { "Enabled": false } }""";
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await File.WriteAllTextAsync(settingsPath, json, TestContext.Current.CancellationToken);
+
+        using var host = Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.DoesNotContain(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(AppSettingsDocument.Parse(json)),
+            message => message.Severity == ValidationSeverity.Error);
+    }
+
+    /// <summary>An effort made of whitespace alone is unset for the real host, and for Studio's check.</summary>
+    [Fact]
+    public async Task A_whitespace_effort_starts_the_host_and_studio_does_not_refuse_it()
+    {
+        var document = AppSettingsDocument.Parse("""
+            {
+              "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3", "Thinking": { "Effort": "   " } },
+              "RaggableTree": { "Enabled": false }
+            }
+            """);
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+
+        using var host = Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.DoesNotContain(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Path == "Llm:Thinking:Effort");
+    }
+
+    private async Task<(AppSettingsDocument Document, string SettingsPath)> WriteModelCapabilitiesAsync(string json)
+    {
+        var document = AppSettingsDocument.Parse(
+            """{ "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3", "ModelCapabilities": """
+            + json
+            + """ }, "RaggableTree": { "Enabled": false } }""");
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+        return (document, settingsPath);
+    }
 
     /// <summary>
     /// STUDIO-55, the drift guard: each value of <c>Llm</c> or of an entry of <c>Llm:Profiles</c> that
@@ -336,7 +568,8 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
         var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
         await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
 
-        Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        var refused = Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        Assert.Contains(path, refused.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
             new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
             message => message.Severity == ValidationSeverity.Error && message.Path == path);

@@ -20,8 +20,9 @@ public enum FileSystemScopeRefusalKind
     AtStart,
 
     /// <summary>
-    /// The scope does not fit the mounts, but the agent is started only if a manager, a planner or
-    /// the course of the run picks it: the run may finish without the refusal.
+    /// The scope does not fit the mounts, but the run may finish all the same: nothing tells that it
+    /// starts the agent (a manager, a planner, the round-robin or a condition decides), or the agent
+    /// is the manager, whose refusal never stops a run.
     /// </summary>
     IfStarted,
 }

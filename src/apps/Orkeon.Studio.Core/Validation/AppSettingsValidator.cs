@@ -424,56 +424,118 @@ public sealed class AppSettingsValidator
     // The switches of an Llm:ModelCapabilities entry, read as true or false at start.
     private static readonly string[] ModelCapabilityBooleanKeys = ["AudioInput", "AudioOutput", "Vision"];
 
+    private const string ModelCapabilityKeyList = "AudioInput, AudioOutput, Vision, ReasoningEfforts and Thinking";
+
+    private const string SingleValue = "a single value, not a list or an object";
+
     /// <summary>
     /// <c>Llm:ModelCapabilities:&lt;model&gt;</c> (or <c>&lt;provider&gt;/&lt;model&gt;</c>), judged as the run
-    /// reads it at start (<c>LlmSettings.ReadModelCapabilities</c>, STUDIO-55): a switch that is not true
-    /// or false refuses the start, and so does a <c>Thinking</c> that names no thinking support
-    /// (<c>None</c>, <c>EffortOnly</c>, <c>Toggle</c>, <c>Budget</c>, without case; a comma or a number is
-    /// refused, #356). A blank value, an object or an array reads as left out, as the binder reads it.
-    /// <c>ReasoningEfforts</c> is not judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
+    /// reads it at start (STUDIO-55), on the tree its configuration sees (<see cref="SettingNode"/>: a key
+    /// split at <c>:</c>, an array keyed by index). The values, as <c>LlmSettings.ReadModelCapabilities</c>
+    /// reads them: a switch that is not true or false refuses the start, and so does a <c>Thinking</c>
+    /// that names no thinking support (<c>None</c>, <c>EffortOnly</c>, <c>Toggle</c>, <c>Budget</c>,
+    /// without case; a comma or a number is refused, #356). The keys, as the host's settings check walks
+    /// them (GAP-40): an entry carries its five keys and no other, so a typo refuses the start, and so does
+    /// a model id holding a <c>:</c> (<c>llama3.2:latest</c> is read as the key <c>latest</c> of the entry
+    /// <c>llama3.2</c>); a switch, <c>Thinking</c> and each item of <c>ReasoningEfforts</c> are single
+    /// values, so a list or an object that holds anything there refuses the start. A blank value, a JSON
+    /// null, <c>[]</c> and <c>{}</c> read as left out. The text of a <c>ReasoningEfforts</c> item is not
+    /// judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
+    /// An entry under a blank id - <c>""</c>, <c>" "</c>, or what a key that starts with <c>:</c> is
+    /// split into - refuses the start whatever it holds: the run's model table takes no blank id.
+    /// <para>
+    /// Before any of it, the file must load: two keys that come to one same path - equal but for the
+    /// case, or once split at <c>:</c> - and both hold a value make the JSON configuration throw on a
+    /// duplicate key (<see cref="SettingNode.WrittenTwice"/>), an error at that path. Two objects that
+    /// set no same key are read as one, without a word.
+    /// </para>
     /// </summary>
     private static void ValidateModelCapabilities(JsonObject section, List<ValidationMessage> messages)
     {
-        if (Child(section, "ModelCapabilities") is not JsonObject models)
+        if (LlmModelCapabilityOverrides.Read(section) is not { } models)
             return;
 
-        foreach (var (model, node) in models)
+        // The ids written with a ':': the unknown key such an id is split into gets a remedy.
+        var split = Child(section, LlmModelCapabilityOverrides.Key) is JsonObject written
+            ? written.Select(property => property.Key).Where(id => id.Contains(':', StringComparison.Ordinal)).ToList()
+            : [];
+
+        foreach (var entry in models.Children)
         {
-            if (node is not JsonObject entry)
-                continue;
-
-            var entryPath = $"{LlmSection.SectionPath}:ModelCapabilities:{model}";
-            foreach (var key in ModelCapabilityBooleanKeys)
-            {
-                if (ScalarText(Child(entry, key)) is { } raw && !bool.TryParse(raw, out _))
-                    messages.Add(WrongType($"{entryPath}:{key}", "true or false"));
-            }
-
-            if (ScalarText(Child(entry, "Thinking")) is { } thinking && !IsThinkingSupport(thinking))
+            if (string.IsNullOrWhiteSpace(entry.Key))
             {
                 messages.Add(ValidationMessage.Error(
                     ValidationCodes.InvalidFieldType,
-                    $"'{entryPath}:Thinking': '{thinking}' is not a thinking support; the values are None, EffortOnly, Toggle and Budget.",
-                    $"{entryPath}:Thinking"));
+                    $"'{entry.Path}' is an entry under a blank model id, which the run refuses to start on, whatever the entry holds. " +
+                    "Key the entry by a model id (or <provider>/<model>), or remove it.",
+                    entry.Path));
             }
+
+            foreach (var field in entry.Children)
+            {
+                if (ModelCapabilityBooleanKeys.Contains(field.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    if (field.HasChildren)
+                        messages.Add(WrongType(field.Path, SingleValue));
+                    else if (field.Text is { } raw && !bool.TryParse(raw, out _))
+                        messages.Add(WrongType(field.Path, "true or false"));
+                }
+                else if (string.Equals(field.Key, "Thinking", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (field.HasChildren)
+                    {
+                        messages.Add(WrongType(field.Path, SingleValue));
+                    }
+                    else if (field.Text is { } thinking && !LlmModelCapabilityOverrides.TryParseThinking(thinking, out _))
+                    {
+                        messages.Add(ValidationMessage.Error(
+                            ValidationCodes.InvalidFieldType,
+                            $"'{field.Path}': '{thinking}' is not a thinking support; the values are None, EffortOnly, Toggle and Budget.",
+                            field.Path));
+                    }
+                }
+                else if (string.Equals(field.Key, "ReasoningEfforts", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (field.Children.FirstOrDefault(item => item.HasChildren) is { } nested)
+                    {
+                        messages.Add(ValidationMessage.Error(
+                            ValidationCodes.InvalidFieldType,
+                            $"'{field.Path}' must be a list of single values: '{nested.Path}' is a list or an object.",
+                            field.Path));
+                    }
+                }
+                else
+                {
+                    // Only the key that comes from the split: a typo beside it is no colon's doing.
+                    var prefix = $"{entry.Key}:{field.Key}";
+                    messages.Add(UnknownModelCapabilityKey(entry, field, split.Find(id =>
+                        id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                        && (id.Length == prefix.Length || id[prefix.Length] == ':'))));
+                }
+            }
+        }
+
+        // Whatever the key: the configuration throws on the second value, and reads nothing of the file.
+        foreach (var twice in models.WrittenTwice)
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.InvalidFieldType,
+                $"'{twice.Path}' is written twice, under keys the run reads as one (equal but for the case, or once split at ':'): " +
+                "the configuration refuses a key written twice, so no run can read this file. Keep one.",
+                twice.Path));
         }
     }
 
-    // One name only, as the run reads it: Enum.TryParse would read "EffortOnly,Toggle" as flags, and "1" as a value.
-    private static bool IsThinkingSupport(string value) =>
-        !value.Contains(',', StringComparison.Ordinal)
-        && !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
-        && Enum.TryParse<ThinkingSupport>(value, ignoreCase: true, out var parsed)
-        && Enum.IsDefined(parsed);
-
-    /// <summary>The text the configuration binder reads from a scalar, trimmed; null when blank or not a scalar.</summary>
-    private static string? ScalarText(JsonNode? node)
+    private static ValidationMessage UnknownModelCapabilityKey(SettingNode entry, SettingNode field, string? idWithColon)
     {
-        if (node is not JsonValue value)
-            return null;
+        var message = $"'{field.Path}' is not a setting: '{entry.Path}' carries {ModelCapabilityKeyList}.";
+        if (idWithColon is not null)
+        {
+            message += $" The run splits the model id '{idWithColon}' at its ':' and reads '{field.Key}' as a key of '{entry.Key}': " +
+                       $"key the entry '{entry.Key}' instead, which covers '{idWithColon}'.";
+        }
 
-        var text = value.TryGetValue<string>(out var s) ? s : value.ToJsonString();
-        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        return ValidationMessage.Error(ValidationCodes.InvalidFieldType, message, field.Path);
     }
 
     /// <summary>
@@ -508,26 +570,30 @@ public sealed class AppSettingsValidator
     /// <summary>
     /// The keys of a section of the <c>Llm</c> shape, judged as the run reads them at start
     /// (<c>LlmSettings</c>, STUDIO-55): strings, a finite temperature, three integers, two switches, an
-    /// absolute http(s) address and a variable's name. A variable reference is judged apart, by
+    /// absolute http(s) address and a variable's name. A key written as <c>[]</c> or <c>{}</c> is
+    /// read as left out, as the run reads it; a list or an object that holds anything, even a null,
+    /// is refused under each of them. A variable reference is judged apart, by
     /// <see cref="ValidateSettingPlaceholders"/>.
     /// One error per field, at its path; never the value of <c>ApiKeyEnvVar</c> or <c>ApiKey</c>,
     /// which may be a key pasted in the wrong field.
     /// </summary>
     private static void ValidateLlmShape(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
-        foreach (var key in LlmStringKeys.Where(key => Child(section, key) is JsonObject or JsonArray))
+        // A list or an object that holds anything puts keys under a single value, which the host's
+        // settings check refuses (GAP-40). An empty one is read as left out (Written), and the run starts.
+        foreach (var key in LlmStringKeys.Where(key => Written(section, key) is JsonObject or JsonArray))
             messages.Add(WrongType($"{sectionPath}:{key}", "a string"));
 
-        if (Child(section, "Temperature") is { } temperature
+        if (Written(section, "Temperature") is { } temperature
             && !(AppSettingsDocument.ReadDouble(temperature) is { } value && double.IsFinite(value)))
         {
             messages.Add(WrongType($"{sectionPath}:Temperature", "a finite number"));
         }
 
-        foreach (var key in LlmIntegerKeys.Where(key => Child(section, key) is { } node && AppSettingsDocument.ReadInt32(node) is null))
+        foreach (var key in LlmIntegerKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadInt32(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "a whole number"));
 
-        foreach (var key in LlmBooleanKeys.Where(key => Child(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
+        foreach (var key in LlmBooleanKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "true or false"));
 
         if (Child(section, "BaseUrl") is JsonValue baseUrlNode
@@ -585,12 +651,14 @@ public sealed class AppSettingsValidator
 
     /// <summary>
     /// <c>Thinking:Effort</c> of a section of the <c>Llm</c> shape, judged by the Domain's
-    /// <see cref="LlmThinkingConfig.ValidateEffort"/>: an unknown or mis-cased level is an error.
+    /// <see cref="LlmThinkingConfig.ValidateEffort"/>: an unknown, mis-cased or padded level is an
+    /// error. A value made of whitespace alone is unset, as the run reads it.
     /// </summary>
     private static void ValidateThinkingEffort(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
         if (Child(section, "Thinking:Effort") is not JsonValue effortNode
-            || AppSettingsDocument.ReadString(effortNode) is not { Length: > 0 } effort)
+            || AppSettingsDocument.ReadString(effortNode) is not { } effort
+            || string.IsNullOrWhiteSpace(effort))
         {
             return;
         }
@@ -757,6 +825,13 @@ public sealed class AppSettingsValidator
 
         return current;
     }
+
+    /// <summary>
+    /// <see cref="Child"/>, an empty object or list read as absent: the run's configuration holds no
+    /// value under such a key, and reads the setting as left out.
+    /// </summary>
+    private static JsonNode? Written(JsonObject section, string relativePath) =>
+        Child(section, relativePath) is { } node and not (JsonObject { Count: 0 } or JsonArray { Count: 0 }) ? node : null;
 
     private static void ValidateTypes(AppSettingsDocument document, List<ValidationMessage> messages)
     {

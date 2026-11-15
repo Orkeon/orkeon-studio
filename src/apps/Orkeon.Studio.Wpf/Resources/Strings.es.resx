@@ -1560,7 +1560,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve">
     <value>Varias entradas comparten un mismo nombre interno: un equipo elige una por ejecución, y la misma carpeta dos veces sobra.</value>
   </data>
-  <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>La declaración filesystem: de un agente está mal formada, o su ámbito o su raíz de trabajo pide una carpeta que los montajes de la ejecución no conceden: el motor rechaza el equipo al cargarlo, o detiene la ejecución al iniciar ese agente.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>La declaración filesystem: de un agente está mal formada, o su ámbito o su raíz de trabajo pide una carpeta que los montajes de la ejecución no conceden: el motor rechaza el equipo al cargarlo, o rechaza a ese agente cuando la ejecución lo inicia.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Una línea de carpeta añadida empieza por «-»: el motor la leería como una opción.</value>
   </data>
