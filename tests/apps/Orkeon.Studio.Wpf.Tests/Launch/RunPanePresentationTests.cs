@@ -144,6 +144,48 @@ public sealed class RunPanePresentationTests : IDisposable
     }
 
     [Fact]
+    public async Task A_success_with_a_task_ended_on_its_iteration_cap_says_so_in_its_badge_and_on_the_task()
+    {
+        var crew = WriteCrew("analyste", "redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Completed("Analyste"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-redacteur","agentRole":"Rédacteur","success":true,"durationMs":900,"endedOnIterationCap":true}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Succeeded · 1 task cut short", tab.RunBadgeText);
+        Assert.Equal("warn", tab.RunBadgeTone);
+        Assert.Equal([false, true], tab.Progress.Tasks.Select(task => task.EndedOnIterationCap));
+        Assert.Equal(string.Empty, tab.Progress.Tasks[0].CapNote);
+        Assert.StartsWith("Cut short:", tab.Progress.Tasks[1].CapNote, StringComparison.Ordinal);
+        // The novice has no tasks' table: the agent's card is where it reads.
+        Assert.Equal(["done", "capped"], tab.AgentCards.Select(card => card.State));
+        Assert.Equal("Cut short: check its files", tab.AgentCards[1].StatusText);
+    }
+
+    [Fact]
+    public async Task An_agent_whose_earlier_task_ended_on_its_iteration_cap_stays_marked_after_a_later_plain_success()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":true,"durationMs":900,"endedOnIterationCap":true}"""));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-2","agentRole":"Rédacteur","success":true,"durationMs":900}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("capped", Assert.Single(tab.AgentCards).State);
+        Assert.Equal("Succeeded · 1 task cut short", tab.RunBadgeText);
+    }
+
+    [Fact]
     public async Task While_the_run_lives_its_announcement_and_the_ready_verdict_are_not_said()
     {
         var (tab, launcher) = Build(new FakeTargetProbe().WithFile("/crews/team.yaml"));

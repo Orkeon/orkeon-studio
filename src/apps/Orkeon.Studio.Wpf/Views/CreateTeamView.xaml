@@ -1639,6 +1639,11 @@
                               <Setter Property="Kind" Value="circle-check"/>
                               <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                             </DataTrigger>
+                            <!-- A success on the iteration cap: the sentence says «cut short». Last, so it wins. -->
+                            <DataTrigger Binding="{Binding CutShort}" Value="True">
+                              <Setter Property="Kind" Value="triangle-alert"/>
+                              <Setter Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
+                            </DataTrigger>
                           </Style.Triggers>
                         </Style>
                       </controls:LucideIcon.Style>

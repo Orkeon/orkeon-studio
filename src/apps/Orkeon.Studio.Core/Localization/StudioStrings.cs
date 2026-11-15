@@ -723,6 +723,9 @@ public static class StudioStringKeys
     public const string RunLaneDone = "Studio.Run.LaneDone";
     public const string RunLaneFailed = "Studio.Run.LaneFailed";
 
+    /// <summary>"Cut short: check its files" — an agent one of whose tasks ended on its iteration cap.</summary>
+    public const string RunLaneCapped = "Studio.Run.LaneCapped";
+
     /// <summary>"Command copied" — the same button, right after a copy.</summary>
     public const string RunCommandCopied = "Studio.Run.CommandCopied";
 
@@ -1191,6 +1194,9 @@ public static class StudioStringKeys
     /// <summary>"Succeeded · {0} {0:plural:agent not run|agents not run}" (UX lot 08).</summary>
     public const string RunBadgeDoneSkipped = "Studio.Run.BadgeDoneSkipped";
 
+    /// <summary>"Succeeded · {0} {0:plural:task|tasks} cut short" — a task ended on its iteration cap.</summary>
+    public const string RunBadgeDoneCapped = "Studio.Run.BadgeDoneCapped";
+
     /// <summary>"Task details" (UX lot 08).</summary>
     public const string RunTaskDetails = "Studio.Run.TaskDetails";
 
@@ -1284,6 +1290,9 @@ public static class StudioStringKeys
 
     /// <summary>"Skipped: {0}"</summary>
     public const string RunProgressSkipReason = "Studio.Run.SkipReason";
+
+    /// <summary>"Cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
+    public const string RunProgressCapNote = "Studio.Run.CapNote";
 
     /// <summary>"decision"</summary>
     public const string RunProgressDecision = "Studio.Run.Decision";
@@ -1843,6 +1852,9 @@ public static class StudioStringKeys
 
     /// <summary>"{0} — failed"</summary>
     public const string WizardActivityFailed = "Studio.Create.ActivityFailed";
+
+    /// <summary>"{0} — cut short: its iterations ran out, its work may be incomplete"</summary>
+    public const string WizardActivityCapped = "Studio.Create.ActivityCapped";
 
     /// <summary>"Describe the work to continue."</summary>
     public const string WizardHintDescribe = "Studio.Create.HintDescribe";
@@ -3006,6 +3018,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunLaneRunning] = "At work",
         [StudioStringKeys.RunLaneDone] = "Done",
         [StudioStringKeys.RunLaneFailed] = "Failed",
+        [StudioStringKeys.RunLaneCapped] = "Cut short: check its files",
         [StudioStringKeys.RunCommandCopied] = "Command copied",
         [StudioStringKeys.MountsOriginSelectedById] = "{0} (selected by id among {1})",
         [StudioStringKeys.MountsOriginNotSelected] = "{0} (not mounted for this run)",
@@ -3063,7 +3076,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DiagTestConnection] = "Test the connection",
         [StudioStringKeys.DiagHowToFix] = "How to fix it",
         [StudioStringKeys.DiagHowToUnknown] = "Studio cannot fix this point itself. Here is what the engine says, in its own words; once it is fixed, run the diagnostic again.",
-        ["Studio.Diagnostics.HowTo.tsc"] = "It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again.",
+        ["Studio.Diagnostics.HowTo.tsc"] = "It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again. If the settings name a path to it (Orkeon:Scripting:Toolchain:TscPath), check that path.",
         [StudioStringKeys.DiagSettingsFile] = "Settings file",
         [StudioStringKeys.DiagSettingsFileOk] = "The settings file is valid.",
         [StudioStringKeys.DiagSettingsFileInvalid] = "The settings file has errors: Studio cannot save it.",
@@ -3189,7 +3202,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Problem.onnx-reranker"] = "The ONNX reranker is not available on this machine.",
         ["Studio.Diagnostics.Problem.runner-settings"] = "The runner settings hold a value the engine refuses: in Expert mode, open Settings → File tab.",
         ["Studio.Diagnostics.Problem.tree-sitter"] = "The code parser is not available on this machine.",
-        ["Studio.Diagnostics.Problem.tsc"] = "The TypeScript checker is missing: teams without a TypeScript script run without it.",
+        ["Studio.Diagnostics.Problem.tsc"] = "The TypeScript checker is missing or does not answer: teams without a TypeScript script run without it.",
         ["Studio.Diagnostics.Problem.workspace-write"] = "The engine cannot write to its working folder.",
         [StudioStringKeys.ImportRecognizedAgents] = "{0} — {1} agent(s)",
         [StudioStringKeys.ImportSecretsClean] = "No secret in the files",
@@ -3281,6 +3294,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBadgeRunning] = "running",
         [StudioStringKeys.RunBadgeDone] = "succeeded",
         [StudioStringKeys.RunBadgeDoneSkipped] = "Succeeded · {0} {0:plural:agent not run|agents not run}",
+        [StudioStringKeys.RunBadgeDoneCapped] = "Succeeded · {0} {0:plural:task|tasks} cut short",
         [StudioStringKeys.RunTaskDetails] = "Task details",
         [StudioStringKeys.HistoryShowError] = "Show the error",
         [StudioStringKeys.RunBadgeFailed] = "failed",
@@ -3471,6 +3485,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchRunning] = "Running…",
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
+        [StudioStringKeys.RunProgressCapNote] = "Cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",
@@ -3678,6 +3693,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardActivityDone] = "{0} — done in {1} s",
         [StudioStringKeys.WizardActivityDoneUntimed] = "{0} — done",
         [StudioStringKeys.WizardActivityFailed] = "{0} — failed",
+        [StudioStringKeys.WizardActivityCapped] = "{0} — cut short: its iterations ran out, its work may be incomplete",
         [StudioStringKeys.WizardHintDescribe] = "Describe the work to continue.",
         [StudioStringKeys.WizardHintAssistant] = "Choose a model for the assistant first.",
         [StudioStringKeys.WizardHintReady] = "Ready: you can compose the team.",

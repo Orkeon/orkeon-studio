@@ -163,6 +163,20 @@ public sealed class WizardHonestyTests
         Assert.Equal("Lecteur — done", line.Text);
     }
 
+    [Fact]
+    public async Task A_task_that_ended_on_its_iteration_cap_is_not_said_plainly_done()
+    {
+        var (vm, processes) = Build();
+        processes.WhileRunning = () => processes.Emit(Out(
+            """{"v":2,"seq":7,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true,"durationMs":900,"endedOnIterationCap":true}"""));
+
+        await vm.ComposeCommand.ExecuteAsync();
+
+        var line = Assert.Single(vm.Activity);
+        Assert.Equal("Lecteur — cut short: its iterations ran out, its work may be incomplete", line.Text);
+        Assert.True(line.CutShort);
+    }
+
     /// <summary>
     /// The owner's own screenshot: score 0,70, a green «passing» badge, and four «?» beside
     /// it. Every one of those is honest — 0.70 is the deterministic fallback's constant and

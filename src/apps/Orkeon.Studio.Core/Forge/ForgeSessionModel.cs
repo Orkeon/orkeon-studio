@@ -73,7 +73,12 @@ public sealed record ForgeFolder(string Path, string Role, string? Purpose = nul
 }
 
 /// <summary>One completed task of the running try.</summary>
-public sealed record ForgeTaskProgress(string? TaskId, string? AgentRole, bool Success, long? DurationMs);
+public sealed record ForgeTaskProgress(
+    string? TaskId,
+    string? AgentRole,
+    bool Success,
+    long? DurationMs,
+    bool EndedOnIterationCap = false);
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
 /// <param name="Id">The finding's own identifier, when the judge gave one.</param>
@@ -547,7 +552,9 @@ public sealed class ForgeSessionModel
                     orkeonEvent.GetString("agentRole"),
                     orkeonEvent.GetBool("success") ?? false,
                     // No duration on the line, or a task that never ran: none, never a measured 0.
-                    orkeonEvent.GetBool("skipped") == true ? null : orkeonEvent.GetInt64("durationMs")));
+                    orkeonEvent.GetBool("skipped") == true ? null : orkeonEvent.GetInt64("durationMs"),
+                    // The trial's task ended on its iteration cap: a success whose work may be missing.
+                    orkeonEvent.GetBool("endedOnIterationCap") ?? false));
                 break;
 
             case ForgeEventKinds.CostUpdated:

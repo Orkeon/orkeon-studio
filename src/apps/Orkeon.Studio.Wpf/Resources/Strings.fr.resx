@@ -320,6 +320,10 @@
   <data name="Studio.Run.Running" xml:space="preserve"><value>En cours…</value></data>
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Rien de rapporté pour l'instant.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Ignorée : {0}</value></data>
+  <data name="Studio.Run.CapNote" xml:space="preserve"><value>Écourtée : l'agent a épuisé ses itérations avant de finir. Son travail est peut-être incomplet : vérifiez les fichiers qu'il devait écrire.</value></data>
+  <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Écourté : vérifiez ses fichiers</value></data>
+  <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Réussie · {0} {0:plural:tâche écourtée|tâches écourtées}</value></data>
+  <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — écourtée : ses itérations sont épuisées, son travail est peut-être incomplet</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>décision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>décision (par défaut)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} {0:plural:tâche terminée|tâches terminées}.</value></data>
@@ -2344,9 +2348,9 @@
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Tester la connexion</value></data>
   <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>Comment corriger</value></data>
   <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>Le vérificateur TypeScript (tsc)</value></data>
-  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Le vérificateur TypeScript est absent : les équipes sans script TypeScript fonctionnent sans lui.</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Le vérificateur TypeScript est absent ou ne répond pas : les équipes sans script TypeScript fonctionnent sans lui.</value></data>
   <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio ne peut pas corriger ce point lui-même. Voici ce qu'en dit le moteur, dans ses propres mots ; une fois le point corrigé, relancez le diagnostic.</value></data>
-  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Il ne sert qu'à vérifier les scripts TypeScript (.ork.ts) d'une équipe avant un lancement. Pour l'installer : installez Node.js, lancez « npm install -g typescript » dans un terminal, puis relancez le diagnostic.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Il ne sert qu'à vérifier les scripts TypeScript (.ork.ts) d'une équipe avant un lancement. Pour l'installer : installez Node.js, lancez « npm install -g typescript » dans un terminal, puis relancez le diagnostic. Si les réglages indiquent un chemin vers lui (Orkeon:Scripting:Toolchain:TscPath), vérifiez ce chemin.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Fichier de réglages</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>Le fichier de réglages est valide.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>Le fichier de réglages contient des erreurs : Studio ne peut pas l'enregistrer.</value></data>

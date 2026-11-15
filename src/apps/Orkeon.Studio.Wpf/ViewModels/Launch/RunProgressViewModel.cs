@@ -56,6 +56,15 @@ public sealed class RunTaskViewModel
         ? _strings.Format(StudioStringKeys.RunProgressSkipReason, Task.SkipReason)
         : string.Empty;
 
+    /// <summary>
+    /// Whether the task succeeded on the answer its agent gave once its iterations were spent:
+    /// the engine counts it a success, and the row says its work may be missing.
+    /// </summary>
+    public bool EndedOnIterationCap => Task.Success && Task.EndedOnIterationCap;
+
+    /// <summary>What a task cut short by its iteration cap leaves to check, or an empty label.</summary>
+    public string CapNote => EndedOnIterationCap ? _strings[StudioStringKeys.RunProgressCapNote] : string.Empty;
+
     /// <summary>"decision" or "decision (defaulted)" for a decision task, else an empty label.</summary>
     public string DecisionLabel
     {
