@@ -1138,6 +1138,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             ThinkingEnabled = _thinkingEnabled,
             CheckCompletion = true,
             Timeout = LlmProbeRequest.TimeoutFor(ParsedTimeoutSeconds),
+            ModelThinkingOverrides = _owner.ModelThinkingOverrides,
         };
 
         IsTestingConnection = true;
@@ -1594,6 +1595,13 @@ public sealed class ModelProfilesViewModel : ObservableObject
         foreach (var row in Profiles)
             row.RefreshBalance();
     }
+
+    /// <summary>
+    /// The <c>Llm:ModelCapabilities</c> entries of the settings document as it stands now: the
+    /// connection test narrows the thinking switch by them, as a run does.
+    /// </summary>
+    internal IReadOnlyDictionary<string, Orkeon.Domain.SharedKernel.ValueObjects.ThinkingSupport?> ModelThinkingOverrides =>
+        _llm.ModelThinkingOverrides;
 
     /// <summary>Whether <paramref name="name"/> already belongs to a profile other than the one being edited.</summary>
     internal bool IsNameTaken(string name, string? previousName) =>

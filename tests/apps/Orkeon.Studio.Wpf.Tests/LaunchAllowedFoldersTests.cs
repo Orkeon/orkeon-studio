@@ -35,7 +35,10 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     private static LaunchTabViewModel Launcher(string teamPath, params string[] declared) =>
         Launcher(teamPath, () => declared);
 
-    private static LaunchTabViewModel Launcher(string teamPath, Func<IReadOnlyList<string>> declared)
+    private static LaunchTabViewModel Launcher(string teamPath, Func<IReadOnlyList<string>> declared) =>
+        Launcher(teamPath, new FakeProcessLauncher(), declared);
+
+    private static LaunchTabViewModel Launcher(string teamPath, FakeProcessLauncher process, Func<IReadOnlyList<string>> declared)
     {
         // A promoted team resolves as a multi-file crew directory: the folder plus its agents/.
         var probe = new FakeTargetProbe()
@@ -45,7 +48,7 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         var tab = new LaunchTabViewModel(new LaunchTabDependencies
         {
             ProcessRunner = new OrkeonProcessRunner(
-                new FakeProcessLauncher(), new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
+                process, new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
             TargetProbe = probe,
             Directories = new FakeDirectoryProbe(teamPath),
             HistoryStore = new FakeLaunchHistoryStore(),
@@ -323,12 +326,18 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         Assert.False(tab.ReplayCommand.CanExecute(null));
     }
 
-    /// <summary>A per-entity crew in the team folder: a writer asking /output rw, and a task naming it or not.</summary>
+    /// <summary>
+    /// A per-entity crew in the team folder: a writer asking /output rw, and a task naming it. Not
+    /// <paramref name="assigned"/>, the task names nobody and a second agent joins the crew: the
+    /// engine's selector then picks who runs it (the only agent of a crew would always be picked).
+    /// </summary>
     private static void WriteCrew(string team, string scope = "filesystem:\n  - path: /output\n    access: rw\n", bool assigned = true)
     {
         File.WriteAllText(Path.Combine(team, "crew.yaml"), "name: veille\ngoal: watch\n");
         Directory.CreateDirectory(Path.Combine(team, "agents"));
         File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\n" + scope);
+        if (!assigned)
+            File.WriteAllText(Path.Combine(team, "agents", "spare.yaml"), "role: Spare\n");
         Directory.CreateDirectory(Path.Combine(team, "tasks"));
         File.WriteAllText(
             Path.Combine(team, "tasks", "draft.yaml"),
@@ -363,6 +372,55 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         Assert.True(tab.HasFileSystemScopeWarning);
         Assert.Contains("/output", tab.FileSystemScopeWarning, StringComparison.Ordinal);
         Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void The_only_agent_of_a_crew_is_started_whatever_its_tasks_name()
+    {
+        // The round-robin over one agent always picks it: the refusal is as sure as a named agent's.
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team, assigned: false);
+        File.Delete(Path.Combine(team, "agents", "spare.yaml"));
+        var tab = Launcher(team, "/data/out:/output:ro");
+
+        Assert.True(tab.IsBlockedByFileSystemScope);
+        Assert.False(tab.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_crew_edited_on_disk_after_the_tab_loaded_is_read_again_at_launch()
+    {
+        // The writer only reads /output when the tab loads: nothing is refused.
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team, scope: "filesystem:\n  - /output\n");
+        var process = new FakeProcessLauncher();
+        var tab = Launcher(team, process, () => ["/data/out:/output:ro"]);
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.RunCommand.CanExecute(null));
+
+        // Edited on disk, the tab still open: the writer now asks rw where the folder is read-only.
+        WriteCrew(team);
+
+        Assert.Null(await tab.RunAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(process.Requests);
+        Assert.True(tab.IsBlockedByFileSystemScope);
+        Assert.Contains("/output", tab.StatusMessage, StringComparison.Ordinal);
+        Assert.Equal(tab.FileSystemScopeMessage, tab.StatusMessage);
+        Assert.False(tab.RunCommand.CanExecute(null));
+
+        // The check that comes first does not run either: the run it guards is refused.
+        tab.Options.ValidateFirst = true;
+        Assert.Null(await tab.RunAsync(TestContext.Current.CancellationToken));
+        Assert.Empty(process.Requests);
+
+        // A check alone starts no agent: it launches, until the declaration is malformed.
+        Assert.NotNull(await tab.ValidateAsync(TestContext.Current.CancellationToken));
+        Assert.Single(process.Requests);
+
+        WriteCrew(team, scope: "filesystem: []\n");
+        Assert.Null(await tab.ValidateAsync(TestContext.Current.CancellationToken));
+        Assert.Single(process.Requests);
+        Assert.Contains("Agent 'writer' filesystem", tab.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]

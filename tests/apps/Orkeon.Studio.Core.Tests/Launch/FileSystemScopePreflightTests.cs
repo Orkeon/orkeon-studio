@@ -53,6 +53,32 @@ public sealed class FileSystemScopePreflightTests
     }
 
     [Fact]
+    public void A_refused_voter_stops_the_run_whatever_the_other_voters()
+    {
+        // ConsensualProcessStrategy awaits every voter's answer together, outside the guard that
+        // turns a failure into a lost voice: the refusal of one fails the run, a granted voter or one
+        // left without a verdict (/sandbox, a root the runner may mount unseen) changing nothing.
+        var refused = Agent("Writer", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite));
+        var granted = Agent("Reader", null, new FileSystemScopeEntry("/output"));
+        var unseen = Agent("Runner", null, new FileSystemScopeEntry("/sandbox/work"));
+
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([refused, granted, unseen], [Mount("/output", "ro")]));
+
+        Assert.Equal(("Writer", FileSystemScopeRefusalKind.AtStart), (refusal.Agent, refusal.Kind));
+    }
+
+    [Fact]
+    public void A_refused_manager_beside_its_voters_does_not_stop_the_run()
+    {
+        var boss = Agent("Boss", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite)) with { StartsForSure = false };
+        var voter = Agent("Reader", null, new FileSystemScopeEntry("/output"));
+
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([boss, voter], [Mount("/output", "ro")]));
+
+        Assert.Equal(("Boss", FileSystemScopeRefusalKind.IfStarted), (refusal.Agent, refusal.Kind));
+    }
+
+    [Fact]
     public void An_entry_under_no_mount_is_refused()
     {
         var refusal = Assert.Single(FileSystemScopePreflight.Check(

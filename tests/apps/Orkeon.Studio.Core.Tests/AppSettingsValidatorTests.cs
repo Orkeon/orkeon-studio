@@ -585,4 +585,121 @@ public sealed class AppSettingsValidatorTests
         Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error && m.Path == "Llm:ModelCapabilities:gpt-4o:AudioInput");
         Assert.DoesNotContain(messages, m => m.Path == "Llm:ModelCapabilities:gpt-4o:AudioOutput");
     }
+
+    private static IReadOnlyList<ValidationMessage> ModelCapabilityMessages(string modelCapabilitiesJson) =>
+        [.. Validator()
+            .Validate(AppSettingsDocument.Parse("{ \"Llm\": { \"Model\": \"m\", \"ModelCapabilities\": " + modelCapabilitiesJson + " } }"))
+            .Where(m => m.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true)];
+
+    [Theory]
+    // The run reads a switch and Thinking as single values: a list or an object that holds anything stops it.
+    [InlineData("""{ "gpt-4o": { "Thinking": ["Toggle"] } }""", "Llm:ModelCapabilities:gpt-4o:Thinking")]
+    [InlineData("""{ "gpt-4o": { "Thinking": { "Level": "Toggle" } } }""", "Llm:ModelCapabilities:gpt-4o:Thinking")]
+    [InlineData("""{ "gpt-4o": { "Vision": [true] } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    [InlineData("""{ "gpt-4o": { "AudioInput": { "a": true } } }""", "Llm:ModelCapabilities:gpt-4o:AudioInput")]
+    [InlineData("""{ "gpt-4o": { "AudioOutput": [null] } }""", "Llm:ModelCapabilities:gpt-4o:AudioOutput")]
+    // An item of ReasoningEfforts is a single value too.
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": [["low"]] } }""", "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts")]
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": ["low", { "a": "high" }] } }""", "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts")]
+    // An entry carries its five keys and no other.
+    [InlineData("""{ "gpt-4o": { "Thinkng": "Toggle" } }""", "Llm:ModelCapabilities:gpt-4o:Thinkng")]
+    [InlineData("""{ "gpt-4o": ["x"] }""", "Llm:ModelCapabilities:gpt-4o:0")]
+    [InlineData("""{ "gpt-4o": { "Thinking:Level": "Toggle" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking")]
+    // The section written as a list: its items are the entries 0, 1...
+    [InlineData("""[ { "Thinking": "Always" } ]""", "Llm:ModelCapabilities:0:Thinking")]
+    [InlineData("""[ ["x"] ]""", "Llm:ModelCapabilities:0:0")]
+    public void ShouldRejectSettings_WhenAModelCapabilityEntryIsNotShapedAsTheRunReadsIt(string json, string path)
+    {
+        var message = Assert.Single(ModelCapabilityMessages(json));
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(path, message.Path);
+    }
+
+    [Theory]
+    [InlineData("""{ "llama3.2:latest": { "Thinking": "None" } }""")]
+    [InlineData("""{ "llama3.2:latest": {} }""")]
+    public void ShouldRejectSettings_WhenAModelIdHoldsAColon_NamingThePrefixToKey(string json)
+    {
+        var message = Assert.Single(ModelCapabilityMessages(json));
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal("Llm:ModelCapabilities:llama3.2:latest", message.Path);
+        Assert.Contains("'llama3.2:latest'", message.Text, StringComparison.Ordinal);
+        Assert.Contains("key the entry 'llama3.2' instead", message.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ShouldNameTheColonOnlyOnTheKeyItSplits_WhenATypoSitsBesideAnIdWithAColon()
+    {
+        var messages = ModelCapabilityMessages(
+            """{ "llama3.2": { "Thinkng": "None" }, "llama3.2:latest": { "Thinking": "None" } }""");
+
+        Assert.Equal(2, messages.Count);
+        var typo = Assert.Single(messages, m => m.Path == "Llm:ModelCapabilities:llama3.2:Thinkng");
+        Assert.DoesNotContain("instead", typo.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("llama3.2:latest", typo.Text, StringComparison.Ordinal);
+        var colon = Assert.Single(messages, m => m.Path == "Llm:ModelCapabilities:llama3.2:latest");
+        Assert.Contains("key the entry 'llama3.2' instead", colon.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ShouldNotNameAColon_WhenTheUnknownKeyIsATypo()
+    {
+        var message = Assert.Single(ModelCapabilityMessages("""{ "gpt-4o": { "Thinkng": "Toggle" } }"""));
+
+        Assert.Contains("AudioInput, AudioOutput, Vision, ReasoningEfforts and Thinking", message.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("instead", message.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // Left out, each in its own way.
+    [InlineData("""{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""")]
+    [InlineData("""{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""")]
+    // An entry that holds nothing to judge.
+    [InlineData("""{ "gpt-4o": "x" }""")]
+    [InlineData("""{ "gpt-4o": [] }""")]
+    [InlineData("""{ "gpt-4o": {} }""")]
+    [InlineData("""[ "x" ]""")]
+    [InlineData("""[ { "Thinking": "Toggle" } ]""")]
+    // Scalar vendor efforts stay the run's to judge.
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": ["none", "minimal", 3] } }""")]
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": "low, high" } }""")]
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": { "a": "low" } } }""")]
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts": [[], {}, null] } }""")]
+    [InlineData("""{ "gpt-4o": { "ReasoningEfforts:0": "low" } }""")]
+    // Keys without case; a ':' that lands on a key of the entry is that key.
+    [InlineData("""{ "gpt-4o": { "thinking": "toggle", "VISION": true } }""")]
+    [InlineData("""{ "llama3.2:Vision": true }""")]
+    [InlineData("""{ "mammouth/gemini-3.7": { "Thinking": "EffortOnly" }, "llama3.2": { "Thinking": "None" } }""")]
+    public void ShouldAcceptSettings_WhenAModelCapabilityEntryIsOneTheRunStartsOn(string json)
+    {
+        Assert.Empty(ModelCapabilityMessages(json));
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("   ")]
+    [InlineData("\\t")]
+    public void ShouldAcceptSettings_WhenLlmThinkingEffortIsWhitespaceAlone(string effort)
+    {
+        var document = AppSettingsDocument.Parse(
+            "{ \"Llm\": { \"Model\": \"m\", \"Thinking\": { \"Effort\": \"" + effort + "\" } } }");
+
+        Assert.DoesNotContain(Validator().Validate(document), m => m.Path == "Llm:Thinking:Effort");
+    }
+
+    [Theory]
+    [InlineData(" high")]
+    [InlineData("high ")]
+    public void ShouldRejectSettings_WhenLlmThinkingEffortIsPadded(string effort)
+    {
+        var document = AppSettingsDocument.Parse(
+            "{ \"Llm\": { \"Model\": \"m\", \"Thinking\": { \"Effort\": \"" + effort + "\" } } }");
+
+        Assert.Contains(
+            Validator().Validate(document),
+            m => m.Severity == ValidationSeverity.Error && m.Path == "Llm:Thinking:Effort");
+    }
 }

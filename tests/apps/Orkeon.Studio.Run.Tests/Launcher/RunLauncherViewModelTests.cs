@@ -610,7 +610,7 @@ public class RunLauncherViewModelTests
             launcher.Options.UseAutomaticSettings = false;
             launcher.Options.ExplicitSettingsPath = "/etc/orkeon/appsettings.json";
             launcher.RefreshSettingsMounts();
-            Assert.Empty(launcher.FileSystemScopeRefusals);
+            Assert.Empty(launcher.DescribeFileSystemScopeRefusals());
             Assert.DoesNotContain(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
 
             launcher.Options.AddMount(new MountDefinition { PhysicalPath = "/data", VirtualPath = "/output", Rights = MountRights.ReadOnly });
@@ -623,19 +623,45 @@ public class RunLauncherViewModelTests
                 ValidationSeverity.Warning,
                 Assert.Single(launcher.Validate(dryRun: true), m => m.Code == ValidationCodes.FileSystemScopeRefused).Severity);
 
-            // No task names the writer: the run starts it only if its course picks it.
-            File.WriteAllText(crewFile, "agents:\n  writer:\n    role: Writer\n    filesystem:\n      - path: /output\n        access: rw\n");
-            var unassigned = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
-            Assert.Equal(ValidationSeverity.Warning, unassigned.Severity);
-            Assert.Contains("If the run starts agent 'Writer'", unassigned.Text, StringComparison.Ordinal);
+            // The mounts dialog says the same of the same refusal.
+            Assert.Equal(["Refused at start - agent 'Writer': " + refusal.Text[refusal.Text.IndexOf("with these mounts: ", StringComparison.Ordinal)..]["with these mounts: ".Length..]],
+                launcher.DescribeFileSystemScopeRefusals());
 
-            // Settings the CLI resolves at launch may mount what the list here lacks: a warning only.
+            // Settings the CLI resolves at launch may mount what the list here lacks: the same agent,
+            // still started for sure, is a warning only, and the mounts dialog words it as the launcher does.
             launcher.Options.UseAutomaticSettings = true;
             launcher.Options.ExplicitSettingsPath = null;
             launcher.RefreshSettingsMounts();
-            Assert.Equal(
-                ValidationSeverity.Warning,
-                Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused).Severity);
+            var unknown = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
+            Assert.Equal(ValidationSeverity.Warning, unknown.Severity);
+            Assert.StartsWith("Unless the settings the CLI reads mount it", unknown.Text, StringComparison.Ordinal);
+            Assert.StartsWith(
+                "Refused at start unless the settings the CLI reads mount it - agent 'Writer': ",
+                Assert.Single(launcher.DescribeFileSystemScopeRefusals()),
+                StringComparison.Ordinal);
+
+            // A second agent, and a task that names nobody: the engine's selector picks who runs it, so
+            // the writer is refused only if it is picked. The dialog reads the crew again, as a launch does.
+            File.WriteAllText(crewFile, """
+                agents:
+                  writer:
+                    role: Writer
+                    filesystem:
+                      - path: /output
+                        access: rw
+                  spare:
+                    role: Spare
+                tasks:
+                  draft:
+                    description: draft
+                """);
+            Assert.StartsWith(
+                "Refused if started - agent 'Writer': ",
+                Assert.Single(launcher.DescribeFileSystemScopeRefusals()),
+                StringComparison.Ordinal);
+            var unassigned = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.FileSystemScopeRefused);
+            Assert.Equal(ValidationSeverity.Warning, unassigned.Severity);
+            Assert.Contains("If the run starts agent 'Writer'", unassigned.Text, StringComparison.Ordinal);
         }
         finally
         {

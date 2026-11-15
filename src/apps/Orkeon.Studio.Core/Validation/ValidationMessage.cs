@@ -123,7 +123,7 @@ public static class ValidationCodes
 
     /// <summary>
     /// An agent's <c>filesystem:</c> scope or working root (#349) that the run's mounts refuse: the
-    /// engine stops the run when it starts the agent.
+    /// engine refuses the agent when the run starts it, which stops the run.
     /// </summary>
     public const string FileSystemScopeRefused = "STUDIO-FS-SCOPE";
 

@@ -312,7 +312,118 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
         { "Llm:StreamIdleSeconds", "45.5" },
         { "Llm:ApiKey", "\"${OPENAI_API_KEY}\"" },
         { "Llm:Thinking:Enabled", "\"on\"" },
+        // The run does not trim an effort: a padded level is no level.
+        { "Llm:Thinking:Effort", "\" high\"" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "\"Always\"" },
+        { "Llm:ModelCapabilities:gpt-4o:Vision", "\"yes\"" },
+        // A switch and Thinking are single values: a list or an object that holds anything is refused.
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "[\"Toggle\"]" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinking", "{ \"Level\": \"Toggle\" }" },
+        { "Llm:ModelCapabilities:gpt-4o:Vision", "[true]" },
+        { "Llm:ModelCapabilities:gpt-4o:AudioInput", "[null]" },
+        { "Llm:ModelCapabilities:gpt-4o:AudioOutput", "{ \"a\": true }" },
+        // An entry carries its five keys and no other.
+        { "Llm:ModelCapabilities:gpt-4o:Thinkng", "\"Toggle\"" },
+        { "Llm:ModelCapabilities:gpt-4o:Thinkng", "{}" },
+        { "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts", "[[\"low\"]]" },
+        { "Llm:ModelCapabilities:gpt-4o:ReasoningEfforts", "[\"low\", { \"a\": \"high\" }]" },
     };
+
+    /// <summary>
+    /// <c>Llm:ModelCapabilities</c> written in a way the real host refuses at start, with the path
+    /// Studio reports it at: a model id holding a ':', an entry or the section written as a list.
+    /// </summary>
+    public static TheoryData<string, string> ModelCapabilitiesTheHostRefuses() => new()
+    {
+        { """{ "llama3.2:latest": { "Thinking": "None" } }""", "Llm:ModelCapabilities:llama3.2:latest" },
+        { """{ "llama3.2:latest": {} }""", "Llm:ModelCapabilities:llama3.2:latest" },
+        { """{ "gpt-4o": ["x"] }""", "Llm:ModelCapabilities:gpt-4o:0" },
+        { """{ "gpt-4o": { "Thinking:Level": "Toggle" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking" },
+        { """[ { "Thinking": "Always" } ]""", "Llm:ModelCapabilities:0:Thinking" },
+        { """[ ["x"] ]""", "Llm:ModelCapabilities:0:0" },
+    };
+
+    /// <summary>The drift guard of <c>Llm:ModelCapabilities</c> for what a path of the document cannot write.</summary>
+    [Theory]
+    [MemberData(nameof(ModelCapabilitiesTheHostRefuses))]
+    public async Task Model_capabilities_the_host_refuses_at_start_studio_refuses_before_saving(string json, string path)
+    {
+        var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
+
+        Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        Assert.Contains(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Severity == ValidationSeverity.Error && message.Path == path);
+    }
+
+    /// <summary><c>Llm:ModelCapabilities</c> written in a way the real host starts on.</summary>
+    public static TheoryData<string> ModelCapabilitiesTheHostAccepts() => new()
+    {
+        // Left out, each in its own way: an empty list, an empty object, a null, a blank.
+        """{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""",
+        """{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""",
+        // An entry that holds nothing to judge.
+        """{ "gpt-4o": "x" }""",
+        """{ "gpt-4o": [] }""",
+        """{ "gpt-4o": {} }""",
+        """[ "x" ]""",
+        """[ { "Thinking": "Toggle" } ]""",
+        // Vendor efforts are the run's to send; a list may be written as an object, and its items left empty.
+        """{ "gpt-4o": { "ReasoningEfforts": ["none", "minimal", 3] } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": "low, high" } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": { "a": "low" } } }""",
+        """{ "gpt-4o": { "ReasoningEfforts": [[], {}, null] } }""",
+        """{ "gpt-4o": { "ReasoningEfforts:0": "low" } }""",
+        // Keys are read without case, and a ':' that lands on a key of the entry is that key.
+        """{ "gpt-4o": { "thinking": "toggle", "VISION": true } }""",
+        """{ "llama3.2:Vision": true }""",
+        """{ "mammouth/gemini-3.7": { "Thinking": "EffortOnly" }, "llama3.2": { "Thinking": "None" } }""",
+    };
+
+    /// <summary>The other side of the drift guard: Studio reports nothing on what the real host starts on.</summary>
+    [Theory]
+    [MemberData(nameof(ModelCapabilitiesTheHostAccepts))]
+    public async Task Model_capabilities_the_host_starts_on_studio_does_not_refuse(string json)
+    {
+        var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
+
+        using var host = Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.DoesNotContain(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>An effort made of whitespace alone is unset for the real host, and for Studio's check.</summary>
+    [Fact]
+    public async Task A_whitespace_effort_starts_the_host_and_studio_does_not_refuse_it()
+    {
+        var document = AppSettingsDocument.Parse("""
+            {
+              "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3", "Thinking": { "Effort": "   " } },
+              "RaggableTree": { "Enabled": false }
+            }
+            """);
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+
+        using var host = Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal));
+
+        Assert.DoesNotContain(
+            new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
+            message => message.Path == "Llm:Thinking:Effort");
+    }
+
+    private async Task<(AppSettingsDocument Document, string SettingsPath)> WriteModelCapabilitiesAsync(string json)
+    {
+        var document = AppSettingsDocument.Parse(
+            """{ "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3", "ModelCapabilities": """
+            + json
+            + """ }, "RaggableTree": { "Enabled": false } }""");
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+        return (document, settingsPath);
+    }
 
     /// <summary>
     /// STUDIO-55, the drift guard: each value of <c>Llm</c> or of an entry of <c>Llm:Profiles</c> that

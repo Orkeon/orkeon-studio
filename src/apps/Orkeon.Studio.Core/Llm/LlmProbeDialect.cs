@@ -66,8 +66,9 @@ public static class LlmProbeDialect
     /// thinking: it is copied because it is longer than a row that does, and wins over it. Matched
     /// as the table matches: <c>&lt;provider&gt;/&lt;model&gt;</c> first, then the longest id at a
     /// boundary, then the part after the model's last slash. Pinned by
-    /// <c>LlmProbeDialectDriftTests</c>; the profile's <c>Llm:ModelCapabilities</c> overrides are
-    /// not read here.
+    /// <c>LlmProbeDialectDriftTests</c>. The <c>Llm:ModelCapabilities</c> overrides of the settings
+    /// file are laid over these rows by <see cref="WithOverrides"/>, as the runtime lays them over
+    /// its table.
     /// </summary>
     private static readonly Dictionary<string, ThinkingSupport?> ModelThinking = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -100,34 +101,94 @@ public static class LlmProbeDialect
     /// The thinking control <paramref name="model"/> behind <paramref name="providerKey"/> takes, as
     /// the runtime judges it: the lower of the provider's declaration and the model's row.
     /// </summary>
-    public static ThinkingSupport ThinkingSupportOf(string providerKey, string? model)
+    public static ThinkingSupport ThinkingSupportOf(string providerKey, string? model) =>
+        ThinkingSupportOf(providerKey, model, null);
+
+    /// <summary>
+    /// The thinking control <paramref name="model"/> behind <paramref name="providerKey"/> takes on a
+    /// host whose settings carry <paramref name="overrides"/>: the lower of the provider's declaration
+    /// and the model's row, the overrides laid over the built-in rows.
+    /// </summary>
+    /// <param name="providerKey">The key the endpoint is read as.</param>
+    /// <param name="model">The model id.</param>
+    /// <param name="overrides">
+    /// The entries of <c>Llm:ModelCapabilities</c> by model id (<see cref="LlmModelCapabilityOverrides.ThinkingOf"/>),
+    /// a null value for an entry that leaves <c>Thinking</c> out; null or empty for none.
+    /// </param>
+    public static ThinkingSupport ThinkingSupportOf(
+        string providerKey, string? model, IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
     {
         var provider = ThinkingSupportOf(providerKey);
-        return ModelThinkingOf(providerKey, model) is { } narrowed && narrowed < provider ? narrowed : provider;
+        return ModelThinkingOf(providerKey, model, overrides) is { } narrowed && narrowed < provider ? narrowed : provider;
     }
 
     /// <summary>What the runtime's model table says of <paramref name="model"/>'s thinking; null when nothing.</summary>
-    public static ThinkingSupport? ModelThinkingOf(string? providerKey, string? model)
+    public static ThinkingSupport? ModelThinkingOf(string? providerKey, string? model) =>
+        ModelThinkingOf(providerKey, model, null);
+
+    /// <summary>
+    /// What the runtime's model table says of <paramref name="model"/>'s thinking once
+    /// <paramref name="overrides"/> are laid over it; null when nothing.
+    /// </summary>
+    /// <param name="providerKey">The key the endpoint is read as.</param>
+    /// <param name="model">The model id.</param>
+    /// <param name="overrides">The entries of <c>Llm:ModelCapabilities</c> by model id; null or empty for none.</param>
+    public static ThinkingSupport? ModelThinkingOf(
+        string? providerKey, string? model, IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
     {
         if (string.IsNullOrWhiteSpace(model))
             return null;
 
+        var rows = WithOverrides(overrides);
         model = model.Trim();
-        if (!string.IsNullOrWhiteSpace(providerKey) && Longest($"{providerKey.Trim()}/{model}") is { } served)
+        if (!string.IsNullOrWhiteSpace(providerKey) && Longest(rows, $"{providerKey.Trim()}/{model}") is { } served)
             return served.Value;
 
-        if (Longest(model) is { } whole)
+        return Lookup(rows, model);
+    }
+
+    /// <summary>
+    /// The built-in rows with <paramref name="overrides"/> laid over them as
+    /// <c>ModelCapabilityRegistry</c> lays them: each entry becomes a row under its own id, and one
+    /// that leaves <c>Thinking</c> out keeps what the built-in rows say of that id - looked up as a
+    /// model without a provider, whatever the other overrides say.
+    /// </summary>
+    private static Dictionary<string, ThinkingSupport?> WithOverrides(IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
+    {
+        if (overrides is null || overrides.Count == 0)
+            return ModelThinking;
+
+        var rows = new Dictionary<string, ThinkingSupport?>(ModelThinking, StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, thinking) in overrides)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                continue;
+
+            var key = id.Trim();
+            rows[key] = thinking ?? Lookup(ModelThinking, key);
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// The row for <paramref name="model"/>: the id whole first, then, for an aggregator's
+    /// <c>vendor/model</c> id, the part after its last slash.
+    /// </summary>
+    private static ThinkingSupport? Lookup(Dictionary<string, ThinkingSupport?> rows, string model)
+    {
+        if (Longest(rows, model) is { } whole)
             return whole.Value;
 
         var slash = model.LastIndexOf('/');
-        return slash >= 0 && slash < model.Length - 1 ? Longest(model[(slash + 1)..])?.Value : null;
+        return slash >= 0 && slash < model.Length - 1 ? Longest(rows, model[(slash + 1)..])?.Value : null;
     }
 
     /// <summary>The row of the longest id <paramref name="model"/> matches at a boundary; null when none.</summary>
-    private static KeyValuePair<string, ThinkingSupport?>? Longest(string model)
+    private static KeyValuePair<string, ThinkingSupport?>? Longest(Dictionary<string, ThinkingSupport?> rows, string model)
     {
         KeyValuePair<string, ThinkingSupport?>? best = null;
-        foreach (var row in ModelThinking)
+        foreach (var row in rows)
         {
             if (row.Key.Length > (best?.Key.Length ?? 0) && MatchesAtBoundary(model, row.Key))
                 best = row;
@@ -138,7 +199,17 @@ public static class LlmProbeDialect
 
     /// <summary>Builds the test completion for <paramref name="provider"/>.</summary>
     internal static HttpRequestMessage BuildCompletion(
-        string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled)
+        string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled) =>
+        BuildCompletion(provider, baseUri, apiKey, model, thinkingEnabled, null);
+
+    /// <summary>
+    /// Builds the test completion for <paramref name="provider"/> on a host whose settings carry
+    /// <paramref name="overrides"/> (<c>Llm:ModelCapabilities</c>): the thinking switch is narrowed by
+    /// them as a run narrows it.
+    /// </summary>
+    internal static HttpRequestMessage BuildCompletion(
+        string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled,
+        IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
     {
         var baseUrl = baseUri.AbsoluteUri.TrimEnd('/');
         var messages = new object[] { new Dictionary<string, object> { ["role"] = "user", ["content"] = CompletionPrompt } };
@@ -152,7 +223,7 @@ public static class LlmProbeDialect
             payload["stream"] = false;
             payload["options"] = new Dictionary<string, object> { ["num_predict"] = CompletionMaxTokens };
             // A model that always reasons gets no switch, as the runtime sends it none.
-            if (thinkingEnabled is { } think && ThinkingSupportOf(provider, model) >= ThinkingSupport.Toggle)
+            if (thinkingEnabled is { } think && ThinkingSupportOf(provider, model, overrides) >= ThinkingSupport.Toggle)
                 payload["think"] = think;
 
             return Post(url, payload);
@@ -162,7 +233,7 @@ public static class LlmProbeDialect
         {
             url = $"{baseUrl}/v1/messages";
             payload["max_tokens"] = CompletionMaxTokens;
-            if (thinkingEnabled is { } enabled && AnthropicThinking(model, enabled) is { } block)
+            if (thinkingEnabled is { } enabled && AnthropicThinking(model, enabled, overrides) is { } block)
                 payload["thinking"] = block;
 
             var anthropic = Post(url, payload);
@@ -177,7 +248,7 @@ public static class LlmProbeDialect
             ? "max_completion_tokens"   // OpenAI retired max_tokens on its current chat models
             : "max_tokens"] = CompletionMaxTokens;
         if (thinkingEnabled is { } on)
-            WriteThinkingSwitch(provider, model, payload, on);
+            WriteThinkingSwitch(provider, model, payload, on, overrides);
 
         var message = Post(url, payload);
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -195,12 +266,15 @@ public static class LlmProbeDialect
     /// <c>thinking</c> block.
     /// <para>
     /// The switch is narrowed per model as the runtime narrows it (#356): a model that always
-    /// reasons, such as GLM-5.3 or <c>MiniMax-M3.1-Flash</c>, gets none (<see cref="ModelThinking"/>).
+    /// reasons, such as GLM-5.3 or <c>MiniMax-M3.1-Flash</c>, gets none (<see cref="ModelThinking"/>,
+    /// under the overrides of the settings file).
     /// </para>
     /// </summary>
-    private static void WriteThinkingSwitch(string provider, string model, Dictionary<string, object> payload, bool enabled)
+    private static void WriteThinkingSwitch(
+        string provider, string model, Dictionary<string, object> payload, bool enabled,
+        IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
     {
-        if (ThinkingSupportOf(provider, model) < ThinkingSupport.Toggle)
+        if (ThinkingSupportOf(provider, model, overrides) < ThinkingSupport.Toggle)
             return;
 
         switch (provider)
@@ -243,12 +317,13 @@ public static class LlmProbeDialect
     /// <c>display</c>, which <c>between_tools</c> refuses, and nothing to a model that refuses every
     /// off value (<c>claude-opus-5-5</c>, <c>claude-fable-5</c>): the runtime drops it.
     /// </summary>
-    private static Dictionary<string, object>? AnthropicThinking(string model, bool enabled)
+    private static Dictionary<string, object>? AnthropicThinking(
+        string model, bool enabled, IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
     {
         if (enabled)
             return new Dictionary<string, object> { ["type"] = "adaptive", ["display"] = "summarized" };
 
-        if (ThinkingSupportOf(LlmProviderKeys.Anthropic, model) < ThinkingSupport.Toggle)
+        if (ThinkingSupportOf(LlmProviderKeys.Anthropic, model, overrides) < ThinkingSupport.Toggle)
             return null;
 
         var value = "disabled";

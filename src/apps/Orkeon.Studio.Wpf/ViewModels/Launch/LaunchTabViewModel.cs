@@ -59,7 +59,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private string? _runLlmProfile;
     /// <summary>How many agents and tasks of the target's crew name their own model.</summary>
     private int _crewLlmDeclarations;
-    /// <summary>The <c>filesystem:</c> declarations of the target's crew (#349), read once per target.</summary>
+    /// <summary>The <c>filesystem:</c> declarations of the target's crew (#349), read when the target changes and again at each launch.</summary>
     private IReadOnlyList<CrewAgentFileSystem> _crewFileSystems = [];
     /// <summary>The refusals the engine will make with the mounts of this run, judged once per change of the target or the mounts.</summary>
     private IReadOnlyList<FileSystemScopeRefusal> _fileSystemScopeRefusals = [];
@@ -545,6 +545,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         BeginLaunch();
 
+        // The check that comes first passes whatever the scopes: the run it guards is refused before it.
+        if (Options.ValidateFirst && RefusesFileSystemScope(validate: false))
+            return null;
+
         if (Options.ValidateFirst)
         {
             var validation = await LaunchAsync(validate: true, cancellationToken).ConfigureAwait(true);
@@ -694,6 +698,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             return null;
         }
 
+        if (RefusesFileSystemScope(validate))
+            return null;
+
         var options = BuildOptions(validate);
         // The team's file counts as a pin here (STUDIO-62): a launch that reads another file
         // than the machine's saves nothing into the machine's.
@@ -731,6 +738,25 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             },
             validate,
             cancellationToken);
+    }
+
+    /// <summary>
+    /// The scope verdict, made again right before a launch (#349): the crew may have been edited on
+    /// disk since the target was picked, and a launch judges the files as they are now. Refuses what
+    /// the commands refuse (<see cref="CanLaunch"/>, <see cref="CanValidate"/>): a run on any blocking
+    /// refusal, a check on a malformed declaration alone. True when the launch stops, its reason said.
+    /// </summary>
+    private bool RefusesFileSystemScope(bool validate)
+    {
+        _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
+        RefreshFileSystemScopes();
+
+        var refused = validate
+            ? _fileSystemScopeRefusals.Any(refusal => refusal.Kind == FileSystemScopeRefusalKind.Load)
+            : IsBlockedByFileSystemScope;
+        if (refused)
+            StatusMessage = FileSystemScopeMessage;
+        return refused;
     }
 
     /// <summary>

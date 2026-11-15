@@ -47,6 +47,15 @@ public sealed record LlmProbeRequest
     public bool? ThinkingEnabled { get; init; }
 
     /// <summary>
+    /// The entries of the settings file's <c>Llm:ModelCapabilities</c> by model id, each with the
+    /// thinking support it names (<see cref="LlmModelCapabilityOverrides.ThinkingOf"/>): the test
+    /// completion narrows the thinking switch by them as a run does. None by default: the run's
+    /// built-in table alone.
+    /// </summary>
+    public IReadOnlyDictionary<string, Orkeon.Domain.SharedKernel.ValueObjects.ThinkingSupport?> ModelThinkingOverrides { get; init; } =
+        LlmModelCapabilityOverrides.None;
+
+    /// <summary>
     /// When true and a <see cref="Model"/> is set, a reachable catalogue is followed by a minimal
     /// completion (16 tokens, one "ping") carrying the model and the thinking switch — the only
     /// way to learn that the model exists and that the switch is accepted. It costs a few tokens.

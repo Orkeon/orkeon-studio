@@ -175,16 +175,10 @@ internal sealed class MountsDialog : Window
                 $"{mount.ConfigurationKey} = {mount.Value}   [{origin}]{replaced}{selection}");
         }
 
-        // #349: what the engine will refuse, with these mounts, of the agents' own scopes.
-        foreach (var refusal in _launcher.FileSystemScopeRefusals)
-        {
-            yield return refusal.Kind switch
-            {
-                FileSystemScopeRefusalKind.Load => $"Refused at load - agent '{refusal.Agent}': {refusal.Reason}",
-                FileSystemScopeRefusalKind.AtStart => $"Refused at start - agent '{refusal.Agent}': {refusal.Reason}",
-                _ => $"Refused if started - agent '{refusal.Agent}': {refusal.Reason}",
-            };
-        }
+        // #349: what the engine will refuse, with these mounts, of the agents' own scopes; the crew is
+        // read again, and the wording is the launcher's (a refusal is only likely under unknown settings).
+        foreach (var line in _launcher.DescribeFileSystemScopeRefusals())
+            yield return line;
     }
 
     /// <summary>
