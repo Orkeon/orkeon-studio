@@ -130,6 +130,49 @@ public sealed class LlmModelCapabilityOverridesTests
     [InlineData("qwen3=None", LlmProviderKeys.Ollama, "qwen30")]
     [InlineData("acme=None", LlmProviderKeys.OpenRouter, "vendor/acme-1")]
     [InlineData("vendor/acme=Toggle;acme=None", LlmProviderKeys.OpenRouter, "vendor/acme-1")]
+    // A built-in row that says nothing of thinking still ranks by its length: it wins over a shorter override.
+    [InlineData("qwen3=None", LlmProviderKeys.Qwen, "qwen3.7-plus")]
+    [InlineData("qwen3=None", LlmProviderKeys.Qwen, "qwen3.7-plus-latest")]
+    [InlineData("qwen3=None", LlmProviderKeys.Qwen, "qwen3.7-max")]
+    [InlineData("claude-=None", LlmProviderKeys.Anthropic, "claude-sonnet-4-5")]
+    [InlineData("claude-=None", LlmProviderKeys.Anthropic, "claude-sonnet-5")]
+    [InlineData("gemini-=None", LlmProviderKeys.OpenRouter, "google/gemini-2.5-pro")]
+    [InlineData("gemini-=None", LlmProviderKeys.OpenRouter, "google/gemini-3.0-pro")]
+    [InlineData("gpt=EffortOnly", LlmProviderKeys.OpenAI, "gpt-5.6-mini")]
+    [InlineData("o=None", LlmProviderKeys.OpenAI, "o3-mini")]
+    [InlineData("grok=None;mistral=Toggle", LlmProviderKeys.Grok, "grok-4.7-fast")]
+    [InlineData("grok=None;mistral=Toggle", LlmProviderKeys.Mistral, "mistral-large-4-latest")]
+    [InlineData("zai-org=Toggle", LlmProviderKeys.Together, "zai-org/glm-5.3")]
+    // An override under the id of such a row replaces it, with or without a Thinking of its own.
+    [InlineData("qwen3.7-plus=None", LlmProviderKeys.Qwen, "qwen3.7-plus")]
+    [InlineData("claude-sonnet-4=None", LlmProviderKeys.Anthropic, "claude-sonnet-4-5")]
+    [InlineData("CLAUDE-=Toggle", LlmProviderKeys.Anthropic, "claude-instant")]
+    [InlineData("gpt-5=", LlmProviderKeys.OpenAI, "gpt-5-mini")]
+    [InlineData("qwen3=None;qwen3.7-plus=", LlmProviderKeys.Qwen, "qwen3.7-plus")]
+    // One longer than such a row wins over it; left empty, it keeps what the rows say of its own id.
+    [InlineData("qwen3.7-plus-latest=None", LlmProviderKeys.Qwen, "qwen3.7-plus-latest")]
+    [InlineData("qwen3.7-plus-latest=None", LlmProviderKeys.Qwen, "qwen3.7-plus")]
+    [InlineData("claude-sonnet-4-5=EffortOnly", LlmProviderKeys.Anthropic, "claude-sonnet-4-5-20250929")]
+    [InlineData("gemini-2.5-pro=None", LlmProviderKeys.OpenRouter, "google/gemini-2.5-pro")]
+    [InlineData("qwen3=None;qwen3.7-plus-latest=", LlmProviderKeys.Qwen, "qwen3.7-plus-latest")]
+    [InlineData("gpt-4o-mini=;gpt=Toggle", LlmProviderKeys.OpenAI, "gpt-4o-mini")]
+    // One shorter than a row that names a support loses to it.
+    [InlineData("gpt=Toggle", LlmProviderKeys.OpenAI, "gpt-4o")]
+    [InlineData("claude-opus=Toggle", LlmProviderKeys.Anthropic, "claude-opus-5-5")]
+    [InlineData("claude-opus=None", LlmProviderKeys.Anthropic, "claude-opus-4-1")]
+    [InlineData("glm=Toggle", LlmProviderKeys.Zai, "glm-5.3")]
+    [InlineData("gemini=Toggle", LlmProviderKeys.Mammouth, "gemini-3.7-flash")]
+    // No override: a row matched on the whole id stops the lookup before the part after the last slash.
+    [InlineData("", LlmProviderKeys.OpenRouter, "gemini-/gpt-4o")]
+    [InlineData("", LlmProviderKeys.OpenRouter, "claude-x/gpt-4o")]
+    [InlineData("", LlmProviderKeys.OpenRouter, "o3/gemini-1.5-pro")]
+    [InlineData("", LlmProviderKeys.OpenRouter, "gpt-5/gpt-4o")]
+    [InlineData("", LlmProviderKeys.OpenRouter, "openai/gpt-4o")]
+    [InlineData("", LlmProviderKeys.OpenRouter, "google/gemini-2.5-pro")]
+    [InlineData("", LlmProviderKeys.Qwen, "qwen3.7-plus")]
+    // The same with an override: a whole-id match on it, or on a row, comes before the slash.
+    [InlineData("vendor=", LlmProviderKeys.OpenRouter, "vendor/gpt-4o")]
+    [InlineData("gpt-4o=Toggle", LlmProviderKeys.OpenRouter, "claude-x/gpt-4o")]
     public void The_probe_lays_overrides_over_the_model_table_as_the_runtime_does(string written, string provider, string model)
     {
         var overrides = Overrides(written);
@@ -140,6 +183,32 @@ public sealed class LlmModelCapabilityOverridesTests
 #pragma warning restore ORKEXP005
 
         Assert.Equal(entry?.Thinking, LlmProbeDialect.ModelThinkingOf(provider, model, overrides));
+    }
+
+    [Fact]
+    public void The_shared_empty_set_cannot_be_written_to()
+    {
+        var none = LlmModelCapabilityOverrides.None;
+
+        Assert.Empty(none);
+        Assert.IsNotType<Dictionary<string, ThinkingSupport?>>(none);
+        var writable = Assert.IsType<IDictionary<string, ThinkingSupport?>>(none, exactMatch: false);
+        Assert.True(writable.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => writable["glm-5.3"] = ThinkingSupport.Toggle);
+        Assert.Same(none, LlmModelCapabilityOverrides.ThinkingOf(AppSettingsDocument.Parse("{ }")));
+    }
+
+    [Theory]
+    // A file the run cannot load (a key written twice): the reader answers all the same, the last value kept.
+    [InlineData("""{ "glm-5.3": { "Thinking": "Toggle", "thinking": "None" } }""", "glm-5.3", ThinkingSupport.None)]
+    [InlineData("""{ "llama3.2:Thinking": "None", "llama3.2": { "Thinking": "Toggle" } }""", "llama3.2", ThinkingSupport.Toggle)]
+    [InlineData("""{ "GLM-5.3": { "Thinking": "Toggle" }, "glm-5.3": { "Thinking": "Budget" } }""", "glm-5.3", ThinkingSupport.Budget)]
+    public void The_reader_does_not_throw_on_a_key_written_twice(string json, string id, ThinkingSupport expected)
+    {
+        var overrides = LlmModelCapabilityOverrides.ThinkingOf(Document(json));
+
+        Assert.Equal(expected, Assert.Single(overrides).Value);
+        Assert.True(overrides.ContainsKey(id));
     }
 
     [Fact]

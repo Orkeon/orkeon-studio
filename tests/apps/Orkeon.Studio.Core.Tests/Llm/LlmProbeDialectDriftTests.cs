@@ -77,6 +77,52 @@ public sealed class LlmProbeDialectDriftTests
         return data;
     }
 
+    /// <summary>The runtime's built-in table, as it stands in the Orkeon package the tests run on.</summary>
+    private static Dictionary<string, ThinkingSupport?> RuntimeTable()
+    {
+#pragma warning disable ORKEXP005 // The model table is experimental in Orkeon; the probe follows it.
+        var builtIn = typeof(ModelCapabilityRegistry).GetMethod("BuiltIn", BindingFlags.NonPublic | BindingFlags.Static)?
+            .Invoke(null, null) as IReadOnlyDictionary<string, ModelCapabilities>;
+        Assert.True(builtIn is { Count: > 0 }, "ModelCapabilityRegistry.BuiltIn() was not found: the drift guard reads the runtime's table through it.");
+        return builtIn!.ToDictionary(row => row.Key, row => row.Value.Thinking, StringComparer.Ordinal);
+#pragma warning restore ORKEXP005
+    }
+
+    /// <summary>The probe's copy of the table: private, so read by name.</summary>
+    private static Dictionary<string, ThinkingSupport?> ProbeTable()
+    {
+        var rows = typeof(LlmProbeDialect).GetField("ModelThinking", BindingFlags.NonPublic | BindingFlags.Static)?
+            .GetValue(null) as IReadOnlyDictionary<string, ThinkingSupport?>;
+        Assert.True(rows is { Count: > 0 }, "LlmProbeDialect.ModelThinking was not found: the drift guard reads the probe's table through it.");
+        return rows!.ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The whole table, both ways: the probe holds every id of the runtime's table - the rows that say
+    /// nothing of thinking included, which rank against an override in the longest-match lookup - and
+    /// no other, each with the runtime's value. A row the runtime adds, drops or changes fails here.
+    /// </summary>
+    [Fact]
+    public void The_probes_model_table_holds_every_row_of_the_runtimes_and_no_other()
+    {
+        var runtime = RuntimeTable();
+        var probe = ProbeTable();
+
+        var missing = runtime.Keys.Except(probe.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        var extra = probe.Keys.Except(runtime.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        var different = runtime
+            .Where(row => probe.TryGetValue(row.Key, out var copied) && copied != row.Value)
+            .Select(row => $"{row.Key}: runtime {row.Value?.ToString() ?? "null"}, probe {probe[row.Key]?.ToString() ?? "null"}")
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(
+            missing.Count == 0 && extra.Count == 0 && different.Count == 0,
+            "LlmProbeDialect.ModelThinking no longer copies ModelCapabilityRegistry.BuiltIn. "
+            + $"Missing: [{string.Join(", ", missing)}]. Extra: [{string.Join(", ", extra)}]. Different: [{string.Join("; ", different)}].");
+        Assert.Equal(runtime.Count, probe.Count);
+    }
+
     private static bool KnownProvider(string key) =>
         key is LlmProviderKeys.Mammouth or LlmProviderKeys.OpenRouter or LlmProviderKeys.Together;
 

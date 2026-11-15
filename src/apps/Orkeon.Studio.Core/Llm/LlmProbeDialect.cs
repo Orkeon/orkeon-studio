@@ -59,19 +59,24 @@ public static class LlmProbeDialect
         Thinking.TryGetValue(providerKey, out var support) ? support : Thinking[LlmProviderKeys.OpenAI];
 
     /// <summary>
-    /// The rows of the runtime's built-in model table (<c>ModelCapabilityRegistry</c>, #356) that say
-    /// how a model takes thinking: <see cref="ThinkingSupport.None"/> for a model with no reasoning
+    /// Every id of the runtime's built-in model table (<c>ModelCapabilityRegistry</c>, #356), with what
+    /// its row says of thinking: <see cref="ThinkingSupport.None"/> for a model with no reasoning
     /// pass, <see cref="ThinkingSupport.EffortOnly"/> for one that always reasons and refuses every
-    /// off value (<c>claude-opus-5-5</c>, <c>MiniMax-M3.1-Flash</c>...). A null row says nothing of
-    /// thinking: it is copied because it is longer than a row that does, and wins over it. Matched
-    /// as the table matches: <c>&lt;provider&gt;/&lt;model&gt;</c> first, then the longest id at a
-    /// boundary, then the part after the model's last slash. Pinned by
-    /// <c>LlmProbeDialectDriftTests</c>. The <c>Llm:ModelCapabilities</c> overrides of the settings
-    /// file are laid over these rows by <see cref="WithOverrides"/>, as the runtime lays them over
-    /// its table.
+    /// off value (<c>claude-opus-5-5</c>, <c>MiniMax-M3.1-Flash</c>...), null for a row that says
+    /// nothing of it. The null rows are held too: the table answers with the longest id a model
+    /// matches, so a row that says nothing wins over a shorter one that does - a built-in one
+    /// (<c>together/zai-org/glm-5.3</c> over <c>glm-5.3</c>) or an override of the settings file
+    /// (<c>qwen3.7-plus</c> over an override keyed <c>qwen3</c>) - and a row matched on the whole id
+    /// stops the lookup before the part after the last slash is tried. Matched as the table matches:
+    /// <c>&lt;provider&gt;/&lt;model&gt;</c> first, then the longest id at a boundary, then the part
+    /// after the model's last slash. <c>LlmProbeDialectDriftTests</c> holds the ids and their values
+    /// to the runtime's table, both ways: a row added, removed or changed there fails it. The
+    /// <c>Llm:ModelCapabilities</c> overrides of the settings file are laid over these rows by
+    /// <see cref="WithOverrides"/>, as the runtime lays them over its table.
     /// </summary>
     private static readonly Dictionary<string, ThinkingSupport?> ModelThinking = new(StringComparer.OrdinalIgnoreCase)
     {
+        // OpenAI chat and audio models: no reasoning pass.
         ["gpt-3.5"] = ThinkingSupport.None,
         ["gpt-4"] = ThinkingSupport.None,
         ["gpt-4-turbo"] = ThinkingSupport.None,
@@ -80,16 +85,47 @@ public static class LlmProbeDialect
         ["gpt-4o-audio"] = ThinkingSupport.None,
         ["gpt-4o-mini-audio"] = ThinkingSupport.None,
         ["gpt-audio"] = ThinkingSupport.None,
+        // OpenAI reasoning models: the provider's level.
+        ["o1"] = null,
+        ["o1-mini"] = null,
+        ["o1-preview"] = null,
+        ["o3"] = null,
+        ["o3-mini"] = null,
+        ["o4-mini"] = null,
+        ["gpt-5"] = null,
         ["gpt-5-chat"] = ThinkingSupport.None,
+        ["gpt-5-pro"] = null,
+        ["gpt-5.6"] = null,
+        ["gpt-6"] = null,
+        ["gpt-6-astra"] = null,
+        ["gpt-6.1"] = null,
+        ["gpt-6.1-sol"] = null,
+        // Gemini.
+        ["gemini-"] = null,
         ["gemini-1.5"] = ThinkingSupport.None,
         ["gemini-2.0"] = ThinkingSupport.None,
+        ["gemini-2.5"] = null,
         ["gemini-3.7"] = ThinkingSupport.EffortOnly,
         ["gemini-3.8"] = ThinkingSupport.EffortOnly,
+        ["gemini-4"] = null,
+        // Anthropic.
+        ["claude-"] = null,
+        ["claude-opus-4"] = null,
+        ["claude-sonnet-4"] = null,
+        ["claude-haiku-4"] = null,
         ["claude-opus-5-5"] = ThinkingSupport.EffortOnly,
         ["claude-fable-5"] = ThinkingSupport.EffortOnly,
+        // Grok, Mistral, Qwen, Kimi, GLM, MiniMax.
+        ["grok-4.6"] = null,
+        ["grok-4.7"] = null,
+        ["mistral-large-4"] = null,
+        ["mistral-medium-2604"] = null,
+        ["mistral-small-2603"] = null,
+        ["qwen3.7-plus"] = null,
         ["kimi-k2.7-code"] = ThinkingSupport.EffortOnly,
         ["glm-5.3"] = ThinkingSupport.EffortOnly,
         ["MiniMax-M3.1-Flash"] = ThinkingSupport.EffortOnly,
+        // A gateway's own row, <provider>/<model>, read before the vendor's.
         ["mammouth/gemini-3.7"] = ThinkingSupport.EffortOnly,
         ["mammouth/gemini-3.8"] = ThinkingSupport.EffortOnly,
         ["openrouter/google/gemini-3.7"] = ThinkingSupport.EffortOnly,

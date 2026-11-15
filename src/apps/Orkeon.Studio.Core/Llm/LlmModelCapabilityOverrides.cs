@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Orkeon.Domain.SharedKernel.ValueObjects;
@@ -19,9 +20,9 @@ public static class LlmModelCapabilityOverrides
     /// <summary>The colon-separated path of the overrides.</summary>
     internal const string Path = LlmSection.SectionPath + ":" + Key;
 
-    /// <summary>No override: the run's built-in table alone.</summary>
+    /// <summary>No override: the run's built-in table alone. Shared, so it can never hold an entry.</summary>
     public static IReadOnlyDictionary<string, ThinkingSupport?> None { get; } =
-        new Dictionary<string, ThinkingSupport?>(StringComparer.OrdinalIgnoreCase);
+        FrozenDictionary<string, ThinkingSupport?>.Empty;
 
     /// <summary>
     /// Every entry of <paramref name="document"/>'s overrides by model id, with the thinking support it

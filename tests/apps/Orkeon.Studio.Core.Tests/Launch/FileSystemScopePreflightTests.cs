@@ -53,11 +53,11 @@ public sealed class FileSystemScopePreflightTests
     }
 
     [Fact]
-    public void A_refused_voter_stops_the_run_whatever_the_other_voters()
+    public void An_agent_started_for_sure_is_refused_at_start_whatever_its_neighbours()
     {
-        // ConsensualProcessStrategy awaits every voter's answer together, outside the guard that
-        // turns a failure into a lost voice: the refusal of one fails the run, a granted voter or one
-        // left without a verdict (/sandbox, a root the runner may mount unseen) changing nothing.
+        // The check knows nothing of processes: an agent told to start for sure is refused at start,
+        // an agent granted or left without a verdict (/sandbox, a root the runner may mount unseen)
+        // beside it changing nothing. Who starts for sure is CrewFileSystemScopes' to tell.
         var refused = Agent("Writer", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite));
         var granted = Agent("Reader", null, new FileSystemScopeEntry("/output"));
         var unseen = Agent("Runner", null, new FileSystemScopeEntry("/sandbox/work"));
@@ -68,12 +68,12 @@ public sealed class FileSystemScopePreflightTests
     }
 
     [Fact]
-    public void A_refused_manager_beside_its_voters_does_not_stop_the_run()
+    public void An_agent_that_may_not_start_is_refused_only_if_started_beside_one_started_for_sure()
     {
         var boss = Agent("Boss", null, new FileSystemScopeEntry("/output", FileAccessRights.ReadWrite)) with { StartsForSure = false };
-        var voter = Agent("Reader", null, new FileSystemScopeEntry("/output"));
+        var granted = Agent("Reader", null, new FileSystemScopeEntry("/output"));
 
-        var refusal = Assert.Single(FileSystemScopePreflight.Check([boss, voter], [Mount("/output", "ro")]));
+        var refusal = Assert.Single(FileSystemScopePreflight.Check([boss, granted], [Mount("/output", "ro")]));
 
         Assert.Equal(("Boss", FileSystemScopeRefusalKind.IfStarted), (refusal.Agent, refusal.Kind));
     }

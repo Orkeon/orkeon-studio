@@ -37,9 +37,9 @@ public sealed record CrewAgentFileSystem(
 /// <para>
 /// The crew is read where the engine's loader (<c>YamlCrewDefinitionLoader</c>) reads it, from the
 /// run target's run path: a single file whose <c>agents:</c> map names each agent; a per-entity
-/// folder (<c>agents/</c> or <c>tasks/</c>) whose <c>agents/*.yaml</c> and <c>*.yml</c> files are
-/// one agent each, keyed by file stem, beside <c>config.yaml</c> (else <c>crew.yaml</c>), which holds
-/// settings only; or the flat triplet, whose <c>agents.yaml</c> and <c>tasks.yaml</c> are the agent
+/// folder (<c>agents/</c> or <c>tasks/</c>) whose <c>agents/*.yaml</c> and <c>*.yml</c> files (the
+/// extension in any case) are one agent each, keyed by file stem, beside <c>config.yaml</c> (else
+/// <c>crew.yaml</c>), which holds settings only; or the flat triplet, whose <c>agents.yaml</c> and <c>tasks.yaml</c> are the agent
 /// and task maps themselves. The keys are the loader's (<c>filesystem</c>, <c>role</c>,
 /// <c>workingRoot</c> or <c>working_root</c>), and the entries' shape is judged with its rules
 /// (<c>YamlCrewMapper.MapFileSystemScope</c>).
@@ -47,7 +47,7 @@ public sealed record CrewAgentFileSystem(
 /// <para>
 /// It never throws, and declares nothing where the engine refuses the crew at load with its own
 /// message: a file that cannot be read or parsed, a missing settings file, a mixed layout, an entity
-/// written under both extensions, a <c>&lt;&lt;</c> merge key. A <c>.ork.ts</c> crew is not read.
+/// written twice, a <c>&lt;&lt;</c> merge key. A <c>.ork.ts</c> crew is not read.
 /// </para>
 /// </summary>
 [SuppressVfsCompliance(
@@ -151,18 +151,36 @@ public static class CrewFileSystemScopes
         return Collect(agents, tasks, settings as YamlMappingNode);
     }
 
+    /// <summary>The extensions of an entity file, which the loader matches whatever their case.</summary>
+    private static readonly string[] EntityExtensions = [".yaml", ".yml"];
+
+    /// <summary>
+    /// The engine's own enumeration of an entity folder (<c>FileSystemService.EnumerateFilesAsync</c>):
+    /// the folder alone, a symbolic link left out, an entry the disk withholds passed over.
+    /// </summary>
+    private static readonly EnumerationOptions EntityEnumeration = new()
+    {
+        RecurseSubdirectories = false,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+        ReturnSpecialDirectories = false,
+    };
+
     /// <summary>
     /// The <c>*.yaml</c> and <c>*.yml</c> files of an entity folder, sorted ordinally, with their stems;
-    /// empty when the folder is absent, null when a stem is written under both extensions.
+    /// empty when the folder is absent, null when a stem is written twice (under both extensions, or
+    /// under two spellings of one). The extension is matched whatever its case, on every platform, as
+    /// the loader matches it: <c>spare.YAML</c> is the agent <c>spare</c> under Linux too. The stem
+    /// keeps its case.
     /// </summary>
     private static List<(string Stem, string Path)>? EntityFiles(string folder)
     {
         if (!Directory.Exists(folder))
             return [];
 
-        var paths = Directory.EnumerateFiles(folder, "*.yaml")
-            .Concat(Directory.EnumerateFiles(folder, "*.yml"))
-            .Where(path => path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+        // Every file, filtered here: a search pattern follows the platform's case rule, the loader does not.
+        var paths = Directory.EnumerateFiles(folder, "*", EntityEnumeration)
+            .Where(path => EntityExtensions.Any(extension => path.EndsWith(extension, StringComparison.OrdinalIgnoreCase)))
             .Order(StringComparer.Ordinal)
             .ToList();
         var files = paths.Select(path => (Stem: Path.GetFileNameWithoutExtension(path), Path: path)).ToList();
@@ -216,9 +234,11 @@ public static class CrewFileSystemScopes
     /// <item>Consensual: every agent but the manager answers the first task, and a refused one fails
     /// the run: the answers are awaited together, outside the guard that turns one agent's failure
     /// into a lost voice (<c>ConsensualProcessStrategy.ExecuteWithAllAgentsAsync</c>).</item>
-    /// <item>The <c>managerAgent:</c> never counts, its refusal never stopping a run: a hierarchical
-    /// manager runs no task; a consensual one may cast a deciding ballot under a host fallback
-    /// setting, where a refusal is caught as an abstention.</item>
+    /// <item>The <c>managerAgent:</c> never counts, its refusal never stopping a run. Two processes
+    /// take one (<c>ProcessType.AcceptsManagerAgent</c>): the hierarchical manager runs no task; the
+    /// consensual one may cast a deciding ballot under a host fallback setting, where a refusal is
+    /// caught as an abstention. The four others (sequential, parallel, graph, autonomous) refuse a
+    /// crew that names one at load (<c>CrewDefinitionValidator</c>): what is said of it then is moot.</item>
     /// </list>
     /// </summary>
     private static HashSet<string> StartsOf(
@@ -243,12 +263,15 @@ public static class CrewFileSystemScopes
         }
         else if (process == ProcessType.Hierarchical || process == ProcessType.Autonomous)
         {
+            // Hierarchical: the workers are the agents but the manager. Autonomous has no manager (one
+            // named is refused at load): the workers are all the agents.
             if (workers.Count == 1)
                 starts.Add(workers[0]);
         }
         else
         {
-            // Sequential, parallel, graph. A manager is refused at load there, so every agent works.
+            // Sequential, parallel, graph: no manager there (a managerAgent: is refused at load), so
+            // every agent works.
             var byKey = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
             foreach (var (key, task) in tasks)
                 byKey.TryAdd(key, task);
@@ -323,8 +346,8 @@ public static class CrewFileSystemScopes
     /// <summary>
     /// The task of the node a described graph starts at (<c>GraphProcessStrategy.BuildDescribedGraph</c>):
     /// the node <c>start:</c> names, else the first of <c>nodes:</c>; without <c>nodes:</c> each task is
-    /// its own node, and only a written <c>start:</c> tells which one is first. Null when it is not
-    /// that plain.
+    /// its own node, and only a written <c>start:</c> is taken: the engine then starts at the first
+    /// task of its own map, an order this reading does not assume. Null when it is not that plain.
     /// </summary>
     private static YamlMappingNode? StartTaskOf(YamlMappingNode graph, Dictionary<string, YamlMappingNode> tasks)
     {

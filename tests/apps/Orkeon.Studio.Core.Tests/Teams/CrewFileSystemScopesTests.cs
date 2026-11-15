@@ -1,4 +1,9 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Orkeon.Domain.FileSystem;
+using Orkeon.Infrastructure.Configuration;
+using Orkeon.Infrastructure.FileSystem;
+using Orkeon.Infrastructure.Security;
+using Orkeon.Infrastructure.Serialization;
 using Orkeon.Studio.Core.Targets;
 using Orkeon.Studio.Core.Teams;
 
@@ -112,6 +117,46 @@ public sealed class CrewFileSystemScopesTests : IDisposable
         Assert.Equal([new FileSystemScopeEntry("/workspace")], agents[0].Entries);
         // No task names it: only the course of the run may start it.
         Assert.Equal(("spare", false), (agents[1].Key, agents[1].StartsForSure));
+    }
+
+    [Fact]
+    public async Task An_entity_file_counts_whatever_the_case_of_its_extension()
+    {
+        // The loader matches *.yaml and *.yml ignoring case on every platform: spare.YAML is an agent,
+        // so the writer is not the crew's only one and the round-robin may pick the other.
+        Write("crew.yaml", "name: team\ngoal: publish\n");
+        Write("agents/writer.yaml", "role: Writer\ngoal: write\nbackstory: writes\nfilesystem: [/output]\n");
+        var spare = Write("agents/spare.YAML", "role: Spare\ngoal: spare\nbackstory: spares\nfilesystem: [/spare]\n");
+        Write("tasks/draft.YML", "description: draft\nexpected_output: a draft\n");
+
+        Assert.Equal([("spare", false), ("writer", false)], Starts(Folder()));
+        Assert.Equal(["Spare", "Writer"], await EngineAgentRoles());
+
+        // Alone, the writer runs the task that names nobody; the task file counts under .YML too.
+        File.Delete(spare);
+        Assert.Equal([("writer", true)], Starts(Folder()));
+        Assert.Equal(["Writer"], await EngineAgentRoles());
+    }
+
+    [Fact]
+    public async Task A_stem_written_under_two_spellings_of_the_extensions_is_refused_at_load()
+    {
+        Write("crew.yaml", "name: team\ngoal: publish\n");
+        Write("agents/writer.yaml", "role: Writer\ngoal: write\nbackstory: writes\nfilesystem: [/output]\n");
+        Write("agents/writer.YML", "role: Writer\ngoal: write\nbackstory: writes\n");
+        Write("tasks/draft.yaml", "description: draft\nexpected_output: a draft\n");
+
+        Assert.Empty(Folder());
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(EngineAgentRoles);
+        Assert.Contains("under both extensions", refusal.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The roles of the agents the engine's own loader reads from the crew folder, mounted as it is for a run.</summary>
+    private async Task<List<string>> EngineAgentRoles()
+    {
+        using var registry = new FileSystemRegistry([FileSystemMount.Parse($"{_root}:/crew:ro")]);
+        var crew = await EngineLoader(registry, _root).LoadFromDirectoryAsync("/crew", TestContext.Current.CancellationToken);
+        return crew.Agents!.Select(agent => agent.Role).ToList();
     }
 
     [Fact]
@@ -233,26 +278,77 @@ public sealed class CrewFileSystemScopesTests : IDisposable
     }
 
     [Fact]
-    public void A_described_graph_starts_only_the_agent_of_its_start_node()
+    public async Task A_described_graph_starts_only_the_agent_of_its_start_node()
     {
-        const string Tasks = "tasks:\n  draft:\n    agent: writer\n  review:\n    agent: editor\n";
         (string, bool)[] reviewFirst = [("writer", false), ("editor", true)];
         (string, bool)[] draftFirst = [("writer", true), ("editor", false)];
         (string, bool)[] nobody = [("writer", false), ("editor", false)];
         const string Nodes = "  nodes:\n    - id: a\n      task: draft\n    - id: b\n      task: review\n";
 
-        // start: names the node; without it the first node starts.
-        Assert.Equal(reviewFirst, StartsOf("process: graph\ngraph:\n  start: b\n" + Nodes, ["writer", "editor"], Tasks));
-        Assert.Equal(draftFirst, StartsOf("process: graph\ngraph:\n" + Nodes, ["writer", "editor"], Tasks));
-        // Edges alone: each task is its own node, and only start: tells which is first.
-        const string Edges = "  edges:\n    - from: review\n      to: draft\n";
-        Assert.Equal(reviewFirst, StartsOf("process: graph\ngraph:\n  start: review\n" + Edges, ["writer", "editor"], Tasks));
-        Assert.Equal(nobody, StartsOf("process: graph\ngraph:\n" + Edges, ["writer", "editor"], Tasks));
+        // Each graph is one the engine loads (GraphTopologyValidator): every node has a way out, is
+        // reached from START and reaches END. start: names the node; without it the first node starts.
+        Assert.Equal(reviewFirst, await StartsOfLoadedGraph("  start: b\n" + Nodes + Edges(("b", "a"), ("a", "END"))));
+        Assert.Equal(draftFirst, await StartsOfLoadedGraph(Nodes + Edges(("a", "b"), ("b", "END"))));
+        // Edges alone: each task is its own node, and a written start: tells which is first.
+        Assert.Equal(reviewFirst, await StartsOfLoadedGraph("  start: review\n" + Edges(("review", "draft"), ("draft", "END"))));
+        // Without start: the engine starts at the first task of its own map, an order Studio does
+        // not assume: nobody for sure, a refusal there being a warning.
+        Assert.Equal(nobody, await StartsOfLoadedGraph(Edges(("draft", "review"), ("review", "END"))));
         // A graph block that describes neither nodes nor edges runs the tasks in a line.
-        Assert.Equal(
-            [("writer", true), ("editor", true)],
-            StartsOf("process: graph\ngraph:\n  maxVisits: 3\n", ["writer", "editor"], Tasks));
+        Assert.Equal([("writer", true), ("editor", true)], await StartsOfLoadedGraph("  maxVisits: 3\n"));
     }
+
+    private static string Edges(params (string From, string To)[] edges) =>
+        "  edges:\n" + string.Concat(edges.Select(edge => $"    - from: {edge.From}\n      to: {edge.To}\n"));
+
+    /// <summary>
+    /// What Studio says of a graph crew of two agents (writer drafts, editor reviews) whose
+    /// <c>graph:</c> block is <paramref name="graph"/>, once the engine's own loader has taken the
+    /// crew: a fixture the engine refuses at load would prove nothing of a run.
+    /// </summary>
+    private static async Task<IEnumerable<(string Key, bool StartsForSure)>> StartsOfLoadedGraph(string graph)
+    {
+        var yaml = "name: team\ngoal: publish\nprocess: graph\ngraph:\n" + graph + """
+            agents:
+              writer:
+                role: writer
+                goal: write
+                backstory: writes
+                filesystem: [/output]
+              editor:
+                role: editor
+                goal: edit
+                backstory: edits
+                filesystem: [/output]
+            tasks:
+              draft:
+                description: draft
+                expected_output: a draft
+                agent: writer
+              review:
+                description: review
+                expected_output: a review
+                agent: editor
+
+            """;
+
+        using var registry = new FileSystemRegistry([]);
+        var loader = EngineLoader(registry);
+        var crew = await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken);
+        Assert.Empty(loader.Validate(crew).Errors);
+
+        return Starts(CrewFileSystemScopes.OfCrewFile(yaml));
+    }
+
+    /// <summary>The engine's crew loader over <paramref name="registry"/>'s mounts, its workspace at <paramref name="workspace"/>.</summary>
+    private static YamlCrewDefinitionLoader EngineLoader(FileSystemRegistry registry, string? workspace = null) =>
+        new(
+            new YamlDotNetSerializer(),
+            new FileSystemService(
+                registry,
+                new PathValidator(new PathSecurityOptions { DefaultWorkspaceRoot = workspace }, NullLogger<PathValidator>.Instance),
+                NullLogger<FileSystemService>.Instance),
+            NullLogger<YamlCrewDefinitionLoader>.Instance);
 
     [Fact]
     public void A_manager_never_starts_and_its_only_worker_always_does()

@@ -441,6 +441,14 @@ public sealed class AppSettingsValidator
     /// values, so a list or an object that holds anything there refuses the start. A blank value, a JSON
     /// null, <c>[]</c> and <c>{}</c> read as left out. The text of a <c>ReasoningEfforts</c> item is not
     /// judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
+    /// An entry under a blank id - <c>""</c>, <c>" "</c>, or what a key that starts with <c>:</c> is
+    /// split into - refuses the start whatever it holds: the run's model table takes no blank id.
+    /// <para>
+    /// Before any of it, the file must load: two keys that come to one same path - equal but for the
+    /// case, or once split at <c>:</c> - and both hold a value make the JSON configuration throw on a
+    /// duplicate key (<see cref="SettingNode.WrittenTwice"/>), an error at that path. Two objects that
+    /// set no same key are read as one, without a word.
+    /// </para>
     /// </summary>
     private static void ValidateModelCapabilities(JsonObject section, List<ValidationMessage> messages)
     {
@@ -454,6 +462,15 @@ public sealed class AppSettingsValidator
 
         foreach (var entry in models.Children)
         {
+            if (string.IsNullOrWhiteSpace(entry.Key))
+            {
+                messages.Add(ValidationMessage.Error(
+                    ValidationCodes.InvalidFieldType,
+                    $"'{entry.Path}' is an entry under a blank model id, which the run refuses to start on, whatever the entry holds. " +
+                    "Key the entry by a model id (or <provider>/<model>), or remove it.",
+                    entry.Path));
+            }
+
             foreach (var field in entry.Children)
             {
                 if (ModelCapabilityBooleanKeys.Contains(field.Key, StringComparer.OrdinalIgnoreCase))
@@ -496,6 +513,16 @@ public sealed class AppSettingsValidator
                         && (id.Length == prefix.Length || id[prefix.Length] == ':'))));
                 }
             }
+        }
+
+        // Whatever the key: the configuration throws on the second value, and reads nothing of the file.
+        foreach (var twice in models.WrittenTwice)
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.InvalidFieldType,
+                $"'{twice.Path}' is written twice, under keys the run reads as one (equal but for the case, or once split at ':'): " +
+                "the configuration refuses a key written twice, so no run can read this file. Keep one.",
+                twice.Path));
         }
     }
 
@@ -543,26 +570,30 @@ public sealed class AppSettingsValidator
     /// <summary>
     /// The keys of a section of the <c>Llm</c> shape, judged as the run reads them at start
     /// (<c>LlmSettings</c>, STUDIO-55): strings, a finite temperature, three integers, two switches, an
-    /// absolute http(s) address and a variable's name. A variable reference is judged apart, by
+    /// absolute http(s) address and a variable's name. A key written as <c>[]</c> or <c>{}</c> is
+    /// read as left out, as the run reads it; a list or an object that holds anything, even a null,
+    /// is refused under each of them. A variable reference is judged apart, by
     /// <see cref="ValidateSettingPlaceholders"/>.
     /// One error per field, at its path; never the value of <c>ApiKeyEnvVar</c> or <c>ApiKey</c>,
     /// which may be a key pasted in the wrong field.
     /// </summary>
     private static void ValidateLlmShape(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
-        foreach (var key in LlmStringKeys.Where(key => Child(section, key) is JsonObject or JsonArray))
+        // A list or an object that holds anything puts keys under a single value, which the host's
+        // settings check refuses (GAP-40). An empty one is read as left out (Written), and the run starts.
+        foreach (var key in LlmStringKeys.Where(key => Written(section, key) is JsonObject or JsonArray))
             messages.Add(WrongType($"{sectionPath}:{key}", "a string"));
 
-        if (Child(section, "Temperature") is { } temperature
+        if (Written(section, "Temperature") is { } temperature
             && !(AppSettingsDocument.ReadDouble(temperature) is { } value && double.IsFinite(value)))
         {
             messages.Add(WrongType($"{sectionPath}:Temperature", "a finite number"));
         }
 
-        foreach (var key in LlmIntegerKeys.Where(key => Child(section, key) is { } node && AppSettingsDocument.ReadInt32(node) is null))
+        foreach (var key in LlmIntegerKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadInt32(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "a whole number"));
 
-        foreach (var key in LlmBooleanKeys.Where(key => Child(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
+        foreach (var key in LlmBooleanKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "true or false"));
 
         if (Child(section, "BaseUrl") is JsonValue baseUrlNode
@@ -794,6 +825,13 @@ public sealed class AppSettingsValidator
 
         return current;
     }
+
+    /// <summary>
+    /// <see cref="Child"/>, an empty object or list read as absent: the run's configuration holds no
+    /// value under such a key, and reads the setting as left out.
+    /// </summary>
+    private static JsonNode? Written(JsonObject section, string relativePath) =>
+        Child(section, relativePath) is { } node and not (JsonObject { Count: 0 } or JsonArray { Count: 0 }) ? node : null;
 
     private static void ValidateTypes(AppSettingsDocument document, List<ValidationMessage> messages)
     {

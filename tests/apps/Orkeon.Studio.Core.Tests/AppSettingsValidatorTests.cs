@@ -654,6 +654,137 @@ public sealed class AppSettingsValidatorTests
     }
 
     [Theory]
+    // Equal but for the case, a value on both sides.
+    [InlineData("""{ "gpt-4o": { "Vision": true, "vision": false } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    [InlineData("""{ "gpt-4o": { "Thinking": "Toggle" }, "GPT-4O": { "thinking": "None" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking")]
+    [InlineData("""{ "gpt-4o": "x", "GPT-4O": "y" }""", "Llm:ModelCapabilities:gpt-4o")]
+    // The same path once a key is split at its ':'.
+    [InlineData("""{ "llama3.2:Vision": true, "llama3.2": { "Vision": false } }""", "Llm:ModelCapabilities:llama3.2:Vision")]
+    // An item of a list is a value too, and so is a null.
+    [InlineData("""{ "x": { "ReasoningEfforts": ["a"], "reasoningefforts": ["b"] } }""", "Llm:ModelCapabilities:x:ReasoningEfforts:0")]
+    [InlineData("""{ "x": { "ReasoningEfforts": ["a"], "reasoningefforts": { "0": "b" } } }""", "Llm:ModelCapabilities:x:ReasoningEfforts:0")]
+    [InlineData("""{ "gpt-4o": { "Vision": null, "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    [InlineData("""{ "gpt-4o": { "Vision": true, "vision": null } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    // An empty list or object holds its key: the value written after it is refused.
+    [InlineData("""{ "gpt-4o": { "Vision": {}, "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    [InlineData("""{ "gpt-4o": { "Vision": [], "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    // Three spellings: one finding at the path.
+    [InlineData("""{ "gpt-4o": { "Vision": true, "vision": false, "VISION": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
+    public void ShouldRejectSettings_WhenTwoModelCapabilityKeysSetOneSameValue(string json, string path)
+    {
+        var message = Assert.Single(ModelCapabilityMessages(json));
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(path, message.Path);
+        Assert.Contains("the configuration refuses a key written twice", message.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // Two objects that set no same key are read as one.
+    [InlineData("""{ "gpt-4o": { "Vision": true }, "GPT-4O": { "AudioInput": true } }""")]
+    [InlineData("""{ "llama3.2:Vision": true, "llama3.2": { "AudioInput": false } }""")]
+    [InlineData("""{ "x": { "ReasoningEfforts": ["a"], "reasoningefforts": { "1": "b" } } }""")]
+    // An empty list or object after a value replaces it with none: even a value the run would refuse.
+    [InlineData("""{ "gpt-4o": { "Vision": true, "vision": {} } }""")]
+    [InlineData("""{ "gpt-4o": { "Vision": "yes", "vision": [] } }""")]
+    [InlineData("""{ "gpt-4o": { "Thinking": "Always", "thinking": {} } }""")]
+    [InlineData("""{ "gpt-4o": { "Vision": {}, "vision": [] } }""")]
+    [InlineData("""{ "gpt-4o": { "Vision": true }, "gpt-4o:Vision": {} }""")]
+    public void ShouldAcceptSettings_WhenTwoModelCapabilityKeysSetNoSameValue(string json)
+    {
+        Assert.Empty(ModelCapabilityMessages(json));
+    }
+
+    [Fact]
+    public void ShouldReportTheSecondValueAndTheValueItself_WhenAKeyWrittenTwiceAlsoHoldsAValueTheRunRefuses()
+    {
+        var messages = ModelCapabilityMessages("""{ "gpt-4o": { "Vision": true, "vision": "yes" } }""");
+
+        Assert.Equal(2, messages.Count);
+        Assert.All(messages, message => Assert.Equal("Llm:ModelCapabilities:gpt-4o:Vision", message.Path));
+        Assert.Contains(messages, message => message.Text.Contains("written twice", StringComparison.Ordinal));
+        Assert.Contains(messages, message => message.Text.Contains("true or false", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("""{ "": { "Vision": true } }""", "Llm:ModelCapabilities:")]
+    [InlineData("""{ " ": { "Vision": true } }""", "Llm:ModelCapabilities: ")]
+    [InlineData("""{ "": {} }""", "Llm:ModelCapabilities:")]
+    [InlineData("""{ " ": "x" }""", "Llm:ModelCapabilities: ")]
+    [InlineData("""{ "": null }""", "Llm:ModelCapabilities:")]
+    // A key that starts with ':' is split into a blank id.
+    [InlineData("""{ ":Vision": true }""", "Llm:ModelCapabilities:")]
+    public void ShouldRejectSettings_WhenAModelCapabilityEntryIsKeyedByABlankId(string json, string path)
+    {
+        var message = Assert.Single(ModelCapabilityMessages(json));
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(path, message.Path);
+        Assert.Contains("blank model id", message.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Model")]
+    [InlineData("BaseUrl")]
+    [InlineData("ApiKey")]
+    [InlineData("ApiKeyEnvVar")]
+    [InlineData("Thinking:Effort")]
+    public void ShouldAcceptAnEmptyListOrObject_AndRejectOneThatHoldsAnything_UnderAStringOfTheLlmShape(string key)
+    {
+        foreach (var section in new[] { "Llm", "Llm:Profiles:local-gpu" })
+        {
+            var path = $"{section}:{key}";
+            foreach (var empty in new[] { "[]", "{}" })
+            {
+                var document = AppSettingsDocument.Parse("""{ "Llm": { "Model": "m", "Profiles": { "local-gpu": { "Model": "m" } } } }""");
+                document.SetNode(path, System.Text.Json.Nodes.JsonNode.Parse(empty));
+
+                Assert.DoesNotContain(Validator().Validate(document), m => m.Severity == ValidationSeverity.Error);
+            }
+
+            foreach (var holding in new[] { "[\"x\"]", "{ \"a\": \"x\" }", "[[]]", "{ \"a\": {} }", "[null]" })
+            {
+                var document = AppSettingsDocument.Parse("""{ "Llm": { "Model": "m", "Profiles": { "local-gpu": { "Model": "m" } } } }""");
+                document.SetNode(path, System.Text.Json.Nodes.JsonNode.Parse(holding));
+
+                var message = Assert.Single(Validator().Validate(document), m => m.Path == path);
+                Assert.Equal(ValidationSeverity.Error, message.Severity);
+                Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("Temperature")]
+    [InlineData("MaxTokens")]
+    [InlineData("TimeoutSeconds")]
+    [InlineData("StreamIdleSeconds")]
+    [InlineData("MaxRetries")]
+    [InlineData("Thinking:Enabled")]
+    [InlineData("Grammar")]
+    public void ShouldAcceptAnEmptyListOrObject_AndRejectOneThatHoldsAnything_UnderANumberOrASwitchOfTheLlmShape(string key)
+    {
+        foreach (var empty in new[] { "[]", "{}" })
+        {
+            var document = AppSettingsDocument.Parse("""{ "Llm": { "Model": "m" } }""");
+            document.SetNode($"Llm:{key}", System.Text.Json.Nodes.JsonNode.Parse(empty));
+
+            Assert.DoesNotContain(Validator().Validate(document), m => m.Severity == ValidationSeverity.Error);
+        }
+
+        foreach (var holding in new[] { "[1]", "{ \"a\": true }", "[[]]" })
+        {
+            var document = AppSettingsDocument.Parse("""{ "Llm": { "Model": "m" } }""");
+            document.SetNode($"Llm:{key}", System.Text.Json.Nodes.JsonNode.Parse(holding));
+
+            var message = Assert.Single(Validator().Validate(document), m => m.Path == $"Llm:{key}");
+            Assert.Equal(ValidationSeverity.Error, message.Severity);
+        }
+    }
+
+    [Theory]
     // Left out, each in its own way.
     [InlineData("""{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""")]
     [InlineData("""{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""")]

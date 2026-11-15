@@ -122,8 +122,12 @@ public static class ValidationCodes
     public const string MountSharedRoot = "STUDIO-MOUNT-SHARED";
 
     /// <summary>
-    /// An agent's <c>filesystem:</c> scope or working root (#349) that the run's mounts refuse: the
-    /// engine refuses the agent when the run starts it, which stops the run.
+    /// An agent's <c>filesystem:</c> declaration or working root (#349) the engine will refuse. An
+    /// error when the refusal stops the launch for sure: a malformed declaration, refused as the crew
+    /// loads, or a scope the run's mounts do not grant to an agent the run starts whatever its course.
+    /// A warning otherwise: the run may never start the agent, the agent is a manager whose refusal
+    /// stops no run, the mounts the CLI will read are not known, or the launch is a check, which
+    /// starts no agent.
     /// </summary>
     public const string FileSystemScopeRefused = "STUDIO-FS-SCOPE";
 

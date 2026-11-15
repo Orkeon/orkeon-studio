@@ -96,7 +96,8 @@ public sealed class AppSettingsValidatorRunRulesTests
         { "ApiKeyEnvVar", "\"MY KEY\"" },
         { "Grammar", "\"yes\"" },
         { "Thinking:Enabled", "1" },
-        { "Model", "{ }" },
+        // An object that holds anything: an empty one is a key left out, and the run starts.
+        { "Model", "{ \"name\": \"qwen3\" }" },
     };
 
     [Theory]

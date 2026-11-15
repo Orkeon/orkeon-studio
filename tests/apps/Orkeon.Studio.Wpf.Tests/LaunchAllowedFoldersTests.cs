@@ -38,7 +38,8 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     private static LaunchTabViewModel Launcher(string teamPath, Func<IReadOnlyList<string>> declared) =>
         Launcher(teamPath, new FakeProcessLauncher(), declared);
 
-    private static LaunchTabViewModel Launcher(string teamPath, FakeProcessLauncher process, Func<IReadOnlyList<string>> declared)
+    private static LaunchTabViewModel Launcher(
+        string teamPath, FakeProcessLauncher process, Func<IReadOnlyList<string>> declared, FakeAppSettingsStore? settings = null)
     {
         // A promoted team resolves as a multi-file crew directory: the folder plus its agents/.
         var probe = new FakeTargetProbe()
@@ -52,7 +53,7 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
             TargetProbe = probe,
             Directories = new FakeDirectoryProbe(teamPath),
             HistoryStore = new FakeLaunchHistoryStore(),
-            SettingsStore = new FakeAppSettingsStore(),
+            SettingsStore = settings ?? new FakeAppSettingsStore(),
             DeclaredMounts = declared,
         });
 
@@ -344,13 +345,36 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
             "description: draft\nexpected_output: a draft\n" + (assigned ? "agent: writer\n" : ""));
     }
 
+    private const string PinnedSettings = "/etc/veille/appsettings.json";
+
+    private static string SettingsJson(params string[] mounts) =>
+        """{"Orkeon":{"FileSystem":{"Mounts":[""" + string.Join(",", mounts.Select(mount => $"\"{mount}\"")) + "]}}}";
+
+    /// <summary>
+    /// A launcher whose run carries <c>--settings</c>: the pinned file holds <paramref name="mounts"/>,
+    /// and it is the very file the CLI will read, so its mounts are known (#349). The machine's list
+    /// declares them too, as the team's folders must be.
+    /// </summary>
+    private static LaunchTabViewModel PinnedLauncher(
+        string team, FakeAppSettingsStore settings, FakeProcessLauncher process, params string[] mounts)
+    {
+        settings.Files[PinnedSettings] = SettingsJson(mounts);
+        var tab = Launcher(team, process, () => mounts, settings);
+        tab.Options.SettingsPath = PinnedSettings;
+        tab.Options.SettingsMode = SettingsSelectionMode.ExplicitPath;
+        return tab;
+    }
+
+    private static LaunchTabViewModel PinnedLauncher(string team, params string[] mounts) =>
+        PinnedLauncher(team, new FakeAppSettingsStore(), new FakeProcessLauncher(), mounts);
+
     [Fact]
     public void An_agent_scope_the_teams_folders_do_not_grant_refuses_the_launch_before_the_engine_does()
     {
         // #349: the engine stops the run when it starts this agent; the screen says so first.
         var team = NewTeam("veille", "/data/out:/output:ro");
         WriteCrew(team);
-        var tab = Launcher(team, "/data/out:/output:ro");
+        var tab = PinnedLauncher(team, "/data/out:/output:ro");
 
         Assert.True(tab.IsBlockedByFileSystemScope);
         Assert.Equal("Writer", Assert.Single(tab.FileSystemScopeRefusals).Agent);
@@ -366,7 +390,7 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     {
         var team = NewTeam("veille", "/data/out:/output:ro");
         WriteCrew(team, assigned: false);
-        var tab = Launcher(team, "/data/out:/output:ro");
+        var tab = PinnedLauncher(team, "/data/out:/output:ro");
 
         Assert.False(tab.IsBlockedByFileSystemScope);
         Assert.True(tab.HasFileSystemScopeWarning);
@@ -375,13 +399,13 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     }
 
     [Fact]
-    public void The_only_agent_of_a_crew_is_started_whatever_its_tasks_name()
+    public void The_only_agent_of_a_crew_is_started_by_a_task_that_names_nobody()
     {
         // The round-robin over one agent always picks it: the refusal is as sure as a named agent's.
         var team = NewTeam("veille", "/data/out:/output:ro");
         WriteCrew(team, assigned: false);
         File.Delete(Path.Combine(team, "agents", "spare.yaml"));
-        var tab = Launcher(team, "/data/out:/output:ro");
+        var tab = PinnedLauncher(team, "/data/out:/output:ro");
 
         Assert.True(tab.IsBlockedByFileSystemScope);
         Assert.False(tab.RunCommand.CanExecute(null));
@@ -394,7 +418,7 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         var team = NewTeam("veille", "/data/out:/output:ro");
         WriteCrew(team, scope: "filesystem:\n  - /output\n");
         var process = new FakeProcessLauncher();
-        var tab = Launcher(team, process, () => ["/data/out:/output:ro"]);
+        var tab = PinnedLauncher(team, new FakeAppSettingsStore(), process, "/data/out:/output:ro");
         Assert.False(tab.IsBlockedByFileSystemScope);
         Assert.True(tab.RunCommand.CanExecute(null));
 
@@ -420,12 +444,36 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         WriteCrew(team, scope: "filesystem: []\n");
         Assert.Null(await tab.ValidateAsync(TestContext.Current.CancellationToken));
         Assert.Single(process.Requests);
-        Assert.Contains("Agent 'writer' filesystem", tab.StatusMessage, StringComparison.Ordinal);
+        // The engine's own reason, without the sentence of a blocked run.
+        Assert.StartsWith("Agent 'writer' filesystem: ", tab.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_refused_check_names_the_malformed_declaration_alone()
+    {
+        // Two agents: one malformed, one whose scope the mounts refuse at start. A check fails on the
+        // first alone, and its line does not list the second, which a check passes.
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team);
+        await File.WriteAllTextAsync(
+            Path.Combine(team, "agents", "broken.yaml"), "role: Broken\nfilesystem: []\n", TestContext.Current.CancellationToken);
+        var process = new FakeProcessLauncher();
+        var tab = PinnedLauncher(team, new FakeAppSettingsStore(), process, "/data/out:/output:ro");
+        Assert.Equal(2, tab.FileSystemScopeRefusals.Count);
+
+        Assert.Null(await tab.ValidateAsync(TestContext.Current.CancellationToken));
+
+        Assert.Empty(process.Requests);
+        Assert.StartsWith("Agent 'broken' filesystem: ", tab.StatusMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("/output", tab.StatusMessage, StringComparison.Ordinal);
+        // The alert of the blocked run still lists both.
+        Assert.Contains("/output", tab.FileSystemScopeMessage, StringComparison.Ordinal);
     }
 
     [Fact]
     public void A_malformed_scope_refuses_the_check_too()
     {
+        // Refused as the crew loads, whatever the mounts: it blocks in automatic mode too.
         var team = NewTeam("veille", "/data/out:/output:rw");
         WriteCrew(team, scope: "filesystem: []\n");
         var tab = Launcher(team, "/data/out:/output:rw");
@@ -441,12 +489,11 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     {
         var team = NewTeam("veille", "/data/out:/output:ro");
         WriteCrew(team);
-        var tab = Launcher(team, "/data/out:/output:ro");
+        var tab = PinnedLauncher(team, "/data/out:/output:ro");
         Assert.True(tab.IsBlockedByFileSystemScope);
 
         // A pinned file this machine does not have: the CLI may mount what the panel cannot show.
         tab.Options.SettingsPath = Path.Combine(team, "missing-appsettings.json");
-        tab.Options.SettingsMode = SettingsSelectionMode.ExplicitPath;
 
         Assert.False(tab.IsBlockedByFileSystemScope);
         Assert.True(tab.HasFileSystemScopeWarning);
@@ -454,11 +501,76 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     }
 
     [Fact]
+    public async Task Settings_the_cli_resolves_itself_turn_the_refusal_into_a_warning()
+    {
+        // No --settings: the CLI takes an appsettings.json beside the crew, or one above it, before
+        // the per-user file the panel lists. That file may mount /output rw: the run is not blocked.
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team);
+        var process = new FakeProcessLauncher();
+        var tab = Launcher(team, process, () => ["/data/out:/output:ro"]);
+
+        Assert.Null(tab.ResolvedSettingsPath);
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.HasFileSystemScopeWarning);
+        Assert.Contains("/output", tab.FileSystemScopeWarning, StringComparison.Ordinal);
+        Assert.True(tab.RunCommand.CanExecute(null));
+
+        Assert.NotNull(await tab.RunAsync(TestContext.Current.CancellationToken));
+        var request = Assert.Single(process.Requests);
+        Assert.DoesNotContain("--settings", request.Arguments);
+    }
+
+    [Fact]
+    public async Task A_mount_added_to_the_settings_file_offers_the_run_again_at_the_next_check()
+    {
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team);
+        var settings = new FakeAppSettingsStore();
+        var process = new FakeProcessLauncher();
+        var tab = PinnedLauncher(team, settings, process, "/data/out:/output:ro");
+        Assert.False(tab.RunCommand.CanExecute(null));
+
+        // Edited in an editor, the tab still open: the file now grants what the writer asks.
+        settings.Files[PinnedSettings] = SettingsJson("/data/out:/output:rw");
+        Assert.False(tab.RunCommand.CanExecute(null));
+
+        // « Validate » stays offered while a scope blocks « Run », and reads the file again.
+        Assert.True(tab.ValidateCommand.CanExecute(null));
+        Assert.NotNull(await tab.ValidateAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(["/data/out:/output:rw"], tab.Mounts.SettingsMounts);
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void A_mount_added_to_the_settings_file_is_read_when_the_target_is_read_again()
+    {
+        var team = NewTeam("veille", "/data/out:/output:ro");
+        WriteCrew(team);
+        var settings = new FakeAppSettingsStore();
+        var tab = PinnedLauncher(team, settings, new FakeProcessLauncher(), "/data/out:/output:ro");
+        Assert.True(tab.IsBlockedByFileSystemScope);
+
+        // The target detected again (its « detect » button, the team picked again).
+        settings.Files[PinnedSettings] = SettingsJson("/data/out:/output:rw");
+        tab.Target.DetectCommand.Execute(null);
+        Assert.False(tab.IsBlockedByFileSystemScope);
+        Assert.True(tab.RunCommand.CanExecute(null));
+
+        // The shell's refresh of the team (a save of the settings, a change of its folders).
+        settings.Files[PinnedSettings] = SettingsJson("/data/out:/output:ro");
+        tab.RefreshTeamDescription();
+        Assert.True(tab.IsBlockedByFileSystemScope);
+    }
+
+    [Fact]
     public void An_agent_scope_inside_the_teams_folders_launches()
     {
         var team = NewTeam("veille", "/data/out:/output:rw");
         WriteCrew(team);
-        var tab = Launcher(team, "/data/out:/output:rw");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
 
         Assert.False(tab.IsBlockedByFileSystemScope);
         Assert.False(tab.HasFileSystemScopeWarning);
