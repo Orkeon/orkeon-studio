@@ -418,6 +418,62 @@ public sealed class AppSettingsValidator
         ValidateLlmShape(section, LlmSection.SectionPath, messages);
         ValidateInlineKey(document, section, messages);
         ValidateProfiles(section, messages);
+        ValidateModelCapabilities(section, messages);
+    }
+
+    // The switches of an Llm:ModelCapabilities entry, read as true or false at start.
+    private static readonly string[] ModelCapabilityBooleanKeys = ["AudioInput", "AudioOutput", "Vision"];
+
+    /// <summary>
+    /// <c>Llm:ModelCapabilities:&lt;model&gt;</c> (or <c>&lt;provider&gt;/&lt;model&gt;</c>), judged as the run
+    /// reads it at start (<c>LlmSettings.ReadModelCapabilities</c>, STUDIO-55): a switch that is not true
+    /// or false refuses the start, and so does a <c>Thinking</c> that names no thinking support
+    /// (<c>None</c>, <c>EffortOnly</c>, <c>Toggle</c>, <c>Budget</c>, without case; a comma or a number is
+    /// refused, #356). A blank value, an object or an array reads as left out, as the binder reads it.
+    /// <c>ReasoningEfforts</c> is not judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
+    /// </summary>
+    private static void ValidateModelCapabilities(JsonObject section, List<ValidationMessage> messages)
+    {
+        if (Child(section, "ModelCapabilities") is not JsonObject models)
+            return;
+
+        foreach (var (model, node) in models)
+        {
+            if (node is not JsonObject entry)
+                continue;
+
+            var entryPath = $"{LlmSection.SectionPath}:ModelCapabilities:{model}";
+            foreach (var key in ModelCapabilityBooleanKeys)
+            {
+                if (ScalarText(Child(entry, key)) is { } raw && !bool.TryParse(raw, out _))
+                    messages.Add(WrongType($"{entryPath}:{key}", "true or false"));
+            }
+
+            if (ScalarText(Child(entry, "Thinking")) is { } thinking && !IsThinkingSupport(thinking))
+            {
+                messages.Add(ValidationMessage.Error(
+                    ValidationCodes.InvalidFieldType,
+                    $"'{entryPath}:Thinking': '{thinking}' is not a thinking support; the values are None, EffortOnly, Toggle and Budget.",
+                    $"{entryPath}:Thinking"));
+            }
+        }
+    }
+
+    // One name only, as the run reads it: Enum.TryParse would read "EffortOnly,Toggle" as flags, and "1" as a value.
+    private static bool IsThinkingSupport(string value) =>
+        !value.Contains(',', StringComparison.Ordinal)
+        && !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)
+        && Enum.TryParse<ThinkingSupport>(value, ignoreCase: true, out var parsed)
+        && Enum.IsDefined(parsed);
+
+    /// <summary>The text the configuration binder reads from a scalar, trimmed; null when blank or not a scalar.</summary>
+    private static string? ScalarText(JsonNode? node)
+    {
+        if (node is not JsonValue value)
+            return null;
+
+        var text = value.TryGetValue<string>(out var s) ? s : value.ToJsonString();
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
     }
 
     /// <summary>

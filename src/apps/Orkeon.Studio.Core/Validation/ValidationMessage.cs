@@ -121,6 +121,12 @@ public static class ValidationCodes
     /// </summary>
     public const string MountSharedRoot = "STUDIO-MOUNT-SHARED";
 
+    /// <summary>
+    /// An agent's <c>filesystem:</c> scope or working root (#349) that the run's mounts refuse: the
+    /// engine stops the run when it starts the agent.
+    /// </summary>
+    public const string FileSystemScopeRefused = "STUDIO-FS-SCOPE";
+
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";
 

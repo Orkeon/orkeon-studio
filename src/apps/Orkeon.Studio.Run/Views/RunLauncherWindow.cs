@@ -373,7 +373,8 @@ internal sealed class RunLauncherWindow : Window
 
         CollectForm();
 
-        var errors = _launcher.Validate(dryRun)
+        var messages = _launcher.Validate(dryRun);
+        var errors = messages
             .Where(message => message.Severity == ValidationSeverity.Error)
             .ToList();
 
@@ -383,7 +384,7 @@ internal sealed class RunLauncherWindow : Window
             return;
         }
 
-        foreach (var warning in _launcher.Validate(dryRun).Where(m => m.Severity == ValidationSeverity.Warning))
+        foreach (var warning in messages.Where(m => m.Severity == ValidationSeverity.Warning))
             _logs.Append("! " + Describe(warning));
 
         _logs.Append("$ " + _launcher.DescribeCommandLine(dryRun));

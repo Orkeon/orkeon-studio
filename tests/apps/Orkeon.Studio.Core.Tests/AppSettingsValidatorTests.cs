@@ -541,4 +541,48 @@ public sealed class AppSettingsValidatorTests
             """{ "Llm": { "Model": "m", "Thinking": { "Effort": "high" } } }""");
         Assert.DoesNotContain(Validator().Validate(valid), m => m.Path == "Llm:Thinking:Effort");
     }
+    [Theory]
+    // #356: the run refuses at start a Thinking that names no support - a comma, a number, a typo.
+    [InlineData("EffortOnly,Toggle")]
+    [InlineData("1")]
+    [InlineData("Always")]
+    public void ShouldRejectSettings_WhenModelCapabilityThinkingIsNoSupport(string thinking)
+    {
+        var document = AppSettingsDocument.Parse(
+            "{ \"Llm\": { \"Model\": \"m\", \"ModelCapabilities\": { \"openrouter/google/gemini-3.7\": { \"Thinking\": \"" + thinking + "\" } } } }");
+
+        var messages = Validator().Validate(document);
+
+        Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error
+            && m.Path == "Llm:ModelCapabilities:openrouter/google/gemini-3.7:Thinking");
+    }
+
+    [Theory]
+    [InlineData("None")]
+    [InlineData("effortonly")]
+    [InlineData("Toggle")]
+    [InlineData("Budget")]
+    [InlineData("  ")]
+    public void ShouldAcceptSettings_WhenModelCapabilityThinkingNamesASupportOrIsBlank(string thinking)
+    {
+        var document = AppSettingsDocument.Parse(
+            "{ \"Llm\": { \"Model\": \"m\", \"ModelCapabilities\": { \"glm-5.3\": { \"Thinking\": \"" + thinking + "\", \"ReasoningEfforts\": [\"low\", \"none\"] } } } }");
+
+        var messages = Validator().Validate(document);
+
+        Assert.DoesNotContain(messages, m => m.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public void ShouldRejectSettings_WhenAModelCapabilitySwitchIsNotABoolean()
+    {
+        var document = AppSettingsDocument.Parse(
+            """{ "Llm": { "Model": "m", "ModelCapabilities": { "gpt-4o": { "Vision": "yes", "AudioInput": 1, "AudioOutput": "true" } } } }""");
+
+        var messages = Validator().Validate(document);
+
+        Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error && m.Path == "Llm:ModelCapabilities:gpt-4o:Vision");
+        Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error && m.Path == "Llm:ModelCapabilities:gpt-4o:AudioInput");
+        Assert.DoesNotContain(messages, m => m.Path == "Llm:ModelCapabilities:gpt-4o:AudioOutput");
+    }
 }

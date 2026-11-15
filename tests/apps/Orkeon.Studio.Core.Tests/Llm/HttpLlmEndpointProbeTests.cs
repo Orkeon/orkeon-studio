@@ -439,6 +439,9 @@ public sealed class HttpLlmEndpointProbeTests
     [InlineData(LlmProviderEndpoints.Qwen, "enable_thinking")]
     [InlineData(LlmProviderEndpoints.OpenRouter, "reasoning")]
     [InlineData(LlmProviderEndpoints.DeepSeek, "thinking")]
+    [InlineData(LlmProviderEndpoints.Together, "reasoning")]
+    [InlineData(LlmProviderEndpoints.HuggingFace, "chat_template_kwargs")]
+    [InlineData(LlmProviderEndpoints.MiniMax, "thinking")]
     public async Task Each_dialect_carries_the_thinking_switch_in_its_own_field(string endpoint, string field)
     {
         using var handler = new StubHttpMessageHandler { Body = "{}" };
@@ -447,6 +450,107 @@ public sealed class HttpLlmEndpointProbeTests
 
         using var body = JsonDocument.Parse(handler.Requests[1].Body!);
         Assert.True(body.RootElement.TryGetProperty(field, out _), handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task MiniMax_gets_the_off_value_alone_and_nothing_to_switch_thinking_on()
+    {
+        using var off = new StubHttpMessageHandler { Body = "{}" };
+        await ProbeAsync(off, ZaiProfile(thinking: false) with { BaseUrl = LlmProviderEndpoints.MiniMax });
+        using (var body = JsonDocument.Parse(off.Requests[1].Body!))
+            Assert.Equal("disabled", body.RootElement.GetProperty("thinking").GetProperty("type").GetString());
+
+        // MiniMax-M3 answers an explicit "enabled" with a 400: the runtime sends nothing.
+        using var on = new StubHttpMessageHandler { Body = "{}" };
+        await ProbeAsync(on, ZaiProfile(thinking: true) with { BaseUrl = LlmProviderEndpoints.MiniMax });
+        using (var body = JsonDocument.Parse(on.Requests[1].Body!))
+            Assert.False(body.RootElement.TryGetProperty("thinking", out _), on.Requests[1].Body);
+    }
+
+    [Theory]
+    [InlineData(LlmProviderEndpoints.Together, "reasoning", "enabled")]
+    [InlineData(LlmProviderEndpoints.HuggingFace, "chat_template_kwargs", "enable_thinking")]
+    public async Task The_object_switches_carry_the_asked_value(string endpoint, string field, string member)
+    {
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: true) with { BaseUrl = endpoint });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        Assert.True(body.RootElement.GetProperty(field).GetProperty(member).GetBoolean(), handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task Mammouth_always_reasons_and_gets_no_switch()
+    {
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: false) with { BaseUrl = LlmProviderEndpoints.Mammouth });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        Assert.False(body.RootElement.TryGetProperty("thinking", out _), handler.Requests[1].Body);
+        Assert.False(body.RootElement.TryGetProperty("reasoning", out _), handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task Anthropic_on_asks_the_summarized_adaptive_thinking()
+    {
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: true) with { BaseUrl = LlmProviderEndpoints.Anthropic, Model = "claude-opus-5-5" });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        var thinking = body.RootElement.GetProperty("thinking");
+        Assert.Equal("adaptive", thinking.GetProperty("type").GetString());
+        Assert.Equal("summarized", thinking.GetProperty("display").GetString());
+    }
+
+    [Theory]
+    // Each Claude model's own off value, matched at a separator like the runtime's table.
+    [InlineData("claude-sonnet-5-5", "between_tools")]
+    [InlineData("claude-sonnet-5-5-20261001", "between_tools")]
+    [InlineData("claude-sonnet-5", "disabled")]
+    [InlineData("claude-sonnet-50", "disabled")]
+    [InlineData("claude-opus-5", "disabled")]
+    public async Task Anthropic_off_sends_the_models_own_value_without_display(string model, string expected)
+    {
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: false) with { BaseUrl = LlmProviderEndpoints.Anthropic, Model = model });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        var thinking = body.RootElement.GetProperty("thinking");
+        Assert.Equal(expected, thinking.GetProperty("type").GetString());
+        Assert.False(thinking.TryGetProperty("display", out _));
+    }
+
+    [Theory]
+    // The runtime's model table: these models always reason and refuse every off value (#356).
+    [InlineData(LlmProviderEndpoints.Anthropic, "claude-opus-5-5")]
+    [InlineData(LlmProviderEndpoints.Anthropic, "claude-fable-5-1")]
+    [InlineData(LlmProviderEndpoints.MiniMax, "MiniMax-M3.1-Flash")]
+    [InlineData(LlmProviderEndpoints.Zai, "glm-5.3")]
+    [InlineData(LlmProviderEndpoints.Kimi, "kimi-k2.7-code")]
+    public async Task A_model_that_always_reasons_gets_no_off_switch(string endpoint, string model)
+    {
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: false) with { BaseUrl = endpoint, Model = model });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        Assert.False(body.RootElement.TryGetProperty("thinking", out _), handler.Requests[1].Body);
+    }
+
+    [Fact]
+    public async Task A_gateway_row_wins_over_the_vendors_row()
+    {
+        // Together serves GLM-5.3 with both switches, where Z.AI's GLM-5.3 always reasons.
+        using var handler = new StubHttpMessageHandler { Body = "{}" };
+
+        await ProbeAsync(handler, ZaiProfile(thinking: false) with { BaseUrl = LlmProviderEndpoints.Together, Model = "zai-org/glm-5.3" });
+
+        using var body = JsonDocument.Parse(handler.Requests[1].Body!);
+        Assert.False(body.RootElement.GetProperty("reasoning").GetProperty("enabled").GetBoolean());
     }
 
     [Fact]
