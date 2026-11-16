@@ -1197,6 +1197,9 @@ public static class StudioStringKeys
     /// <summary>"Succeeded · {0} {0:plural:task|tasks} cut short" — a task ended on its iteration cap.</summary>
     public const string RunBadgeDoneCapped = "Studio.Run.BadgeDoneCapped";
 
+    /// <summary>Both at once: {0} agents not run, {1} tasks ended on their iteration cap.</summary>
+    public const string RunBadgeDoneSkippedCapped = "Studio.Run.BadgeDoneSkippedCapped";
+
     /// <summary>"Task details" (UX lot 08).</summary>
     public const string RunTaskDetails = "Studio.Run.TaskDetails";
 
@@ -1291,7 +1294,7 @@ public static class StudioStringKeys
     /// <summary>"Skipped: {0}"</summary>
     public const string RunProgressSkipReason = "Studio.Run.SkipReason";
 
-    /// <summary>"Cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
+    /// <summary>"Task cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
     public const string RunProgressCapNote = "Studio.Run.CapNote";
 
     /// <summary>"decision"</summary>
@@ -3076,7 +3079,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DiagTestConnection] = "Test the connection",
         [StudioStringKeys.DiagHowToFix] = "How to fix it",
         [StudioStringKeys.DiagHowToUnknown] = "Studio cannot fix this point itself. Here is what the engine says, in its own words; once it is fixed, run the diagnostic again.",
-        ["Studio.Diagnostics.HowTo.tsc"] = "It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again. If the settings name a path to it (Orkeon:Scripting:Toolchain:TscPath), check that path.",
+        ["Studio.Diagnostics.HowTo.tsc"] = "It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again. If the settings name a path to it (Orkeon:Scripting:Toolchain:TscPath), check that path. Where the settings make the type check always on (Orkeon:Scripting:Toolchain:TypeCheck), a team with such a script does not start without it: install it, or set that setting to Validate or Off.",
         [StudioStringKeys.DiagSettingsFile] = "Settings file",
         [StudioStringKeys.DiagSettingsFileOk] = "The settings file is valid.",
         [StudioStringKeys.DiagSettingsFileInvalid] = "The settings file has errors: Studio cannot save it.",
@@ -3295,6 +3298,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBadgeDone] = "succeeded",
         [StudioStringKeys.RunBadgeDoneSkipped] = "Succeeded · {0} {0:plural:agent not run|agents not run}",
         [StudioStringKeys.RunBadgeDoneCapped] = "Succeeded · {0} {0:plural:task|tasks} cut short",
+        [StudioStringKeys.RunBadgeDoneSkippedCapped] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task|tasks} cut short",
         [StudioStringKeys.RunTaskDetails] = "Task details",
         [StudioStringKeys.HistoryShowError] = "Show the error",
         [StudioStringKeys.RunBadgeFailed] = "failed",
@@ -3485,7 +3489,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchRunning] = "Running…",
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
-        [StudioStringKeys.RunProgressCapNote] = "Cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
+        [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",

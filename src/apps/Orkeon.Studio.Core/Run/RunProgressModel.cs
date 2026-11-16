@@ -383,6 +383,45 @@ public sealed class RunProgressModel
     /// </summary>
     public long? FinalEstimatedTokens { get; private set; }
 
+    /// <summary>
+    /// How many tasks ended on their iteration cap, as the run's <c>run.finished</c> counted
+    /// them (<c>cappedTasks</c>); null while the run lives, and for a CLI that sends no count.
+    /// </summary>
+    public int? ReportedCappedTasks { get; private set; }
+
+    /// <summary>
+    /// How many tasks ended on their iteration cap: the run's own count once it gave one, else
+    /// the count of <see cref="LastCompletions"/>, read the way the run counts - a task whose
+    /// last attempt went through without the cap is not one.
+    /// </summary>
+    public int CappedTaskCount =>
+        ReportedCappedTasks ?? LastCompletions().Count(task => task.EndedOnIterationCap);
+
+    /// <summary>
+    /// The last <c>task.completed</c> of each task, in the order the run reported them. A task
+    /// the run completes twice under one id (a retry, a loop of a graph) is read by its last
+    /// line, as the run's own count does; a line that names no task stands for itself.
+    /// </summary>
+    public IReadOnlyList<RunTaskProgress> LastCompletions()
+    {
+        var last = new List<RunTaskProgress>(_tasks.Count);
+        var indexOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var task in _tasks)
+        {
+            if (task.TaskId is { Length: > 0 } id && indexOf.TryGetValue(id, out var index))
+            {
+                last[index] = task;
+                continue;
+            }
+
+            if (task.TaskId is { Length: > 0 } named)
+                indexOf[named] = last.Count;
+            last.Add(task);
+        }
+
+        return last;
+    }
+
     /// <summary>Generated text accumulated from <c>llm.delta</c>, empty without <c>--stream</c>.</summary>
     public string GeneratedText => _generated.ToString();
 
@@ -627,6 +666,8 @@ public sealed class RunProgressModel
         FinalCacheHitTokens = orkeonEvent.GetInt64("cacheHitTokens");
         FinalCacheMissTokens = orkeonEvent.GetInt64("cacheMissTokens");
         FinalEstimatedTokens = orkeonEvent.GetInt64("estimatedTokens");
+        // Absent from a CLI older than the count: null, and the lines read so far are counted.
+        ReportedCappedTasks = (int?)orkeonEvent.GetInt64("cappedTasks");
         _finishedAt = ReadTimestamp(orkeonEvent);
         _questions.Clear();       // nobody is left to answer them
         _agentRequests.Clear();   // the asking agents are gone with the run

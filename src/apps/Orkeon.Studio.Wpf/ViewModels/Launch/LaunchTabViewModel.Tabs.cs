@@ -600,9 +600,12 @@ public sealed partial class LaunchTabViewModel
                 return new(name, "failed", _strings[StudioStringKeys.RunLaneFailed], detail);
 
             // Any of its tasks, not the last alone: an agent whose first task ran out of
-            // iterations and whose second went well still left work to check. The card is the
-            // one place the novice reads it, the tasks' table being the expert's.
-            return Progress.Tasks.Any(t => t.EndedOnIterationCap && string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase))
+            // iterations and whose second went well still left work to check. Each task is read
+            // by its last completion, as the run counts them: a retry that went through clears
+            // it. The card is the one place the novice reads it, the tasks' table being the
+            // expert's.
+            return Progress.Model.LastCompletions().Any(t => t.Success && t.EndedOnIterationCap
+                    && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
                 ? new(name, "capped", _strings[StudioStringKeys.RunLaneCapped], detail)
                 : new(name, "done", _strings[StudioStringKeys.RunLaneDone], detail);
         }

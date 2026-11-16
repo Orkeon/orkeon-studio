@@ -397,7 +397,11 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
         // 1.1.0 ones and on those of Orkeon #385.
         var refused = Assert.ThrowsAny<Exception>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
         if (refused is RunnerSettingsException)
+        {
+            // The refusal of the blank id, not another one the key could earn.
             Assert.Contains("Llm:ModelCapabilities", refused.Message, StringComparison.Ordinal);
+            Assert.Contains("model id", refused.Message, StringComparison.Ordinal);
+        }
         else
             Assert.Equal("id", Assert.IsType<ArgumentException>(refused).ParamName);
         var message = Assert.Single(

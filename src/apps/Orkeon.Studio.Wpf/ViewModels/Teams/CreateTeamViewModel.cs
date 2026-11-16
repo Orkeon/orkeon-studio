@@ -3479,8 +3479,20 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     {
         Activity.Clear();
         var fallback = _strings[StudioStringKeys.WizardAgentFallback];
-        foreach (var task in _model.Activity)
+        // A task the trial completes twice under one id is read by its last line, as the run's
+        // own count of capped tasks does: a pass that went through clears an earlier "cut short".
+        var lastOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var index = 0; index < _model.Activity.Count; index++)
         {
+            if (_model.Activity[index].TaskId is { Length: > 0 } id)
+                lastOf[id] = index;
+        }
+
+        for (var index = 0; index < _model.Activity.Count; index++)
+        {
+            var task = _model.Activity[index];
+            var cutShort = task.Success && task.EndedOnIterationCap
+                && (task.TaskId is not { Length: > 0 } key || lastOf[key] == index);
             // The task id joins the role rather than replacing it: a crew where one agent
             // owns two tasks rendered the same sentence twice, with nothing to tell the
             // reader which of the two had just finished.
@@ -3488,7 +3500,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             var text = (task.Success, task.DurationMs) switch
             {
                 // A success on the iteration cap is not a plain "done": the trial's file may be missing.
-                (true, _) when task.EndedOnIterationCap => _strings.Format(StudioStringKeys.WizardActivityCapped, role),
+                (true, _) when cutShort => _strings.Format(StudioStringKeys.WizardActivityCapped, role),
                 (true, { } durationMs) => _strings.Format(
                     StudioStringKeys.WizardActivityDone, role, Math.Round(durationMs / 1000.0, 1)),
                 // The run did not say how long it took: no "done in 0 s" it never measured.
@@ -3497,7 +3509,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             };
 
             var detail = task.AgentRole is not null && task.TaskId is { Length: > 0 } id ? id : "";
-            Activity.Add(new WizardActivityLine(text, detail, task.Success, task.Success && task.EndedOnIterationCap));
+            Activity.Add(new WizardActivityLine(text, detail, task.Success, cutShort));
         }
     }
 

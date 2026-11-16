@@ -789,6 +789,41 @@ public class RunProgressModelTests
     }
 
     [Fact]
+    public void ShouldCountATaskByItsLastCompletion_WhenTheRunGaveNoCount()
+    {
+        var model = Fold(
+            // The same task twice: its last attempt went through without the cap.
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"endedOnIterationCap":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"endedOnIterationCap":false}""",
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"endedOnIterationCap":true}""",
+            // Lines that name no task stand each for itself.
+            """{"v":2,"seq":4,"ts":"t","kind":"task.completed","agentRole":"sender","success":true,"endedOnIterationCap":true}""",
+            """{"v":2,"seq":5,"ts":"t","kind":"task.completed","agentRole":"sender","success":true,"endedOnIterationCap":true}""");
+
+        Assert.Null(model.ReportedCappedTasks);
+        Assert.Equal(["rapport", "relecture", null, null], model.LastCompletions().Select(task => task.TaskId));
+        Assert.Equal(3, model.CappedTaskCount);
+    }
+
+    [Fact]
+    public void ShouldTakeTheRunsOwnCount_WhenRunFinishedCarriesCappedTasks()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"endedOnIterationCap":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":0}""");
+
+        Assert.Equal(0, model.ReportedCappedTasks);
+        Assert.Equal(0, model.CappedTaskCount);
+
+        // And over a line the model never saw flagged: the run knows its last attempts.
+        var counted = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":2}""");
+
+        Assert.Equal(2, counted.CappedTaskCount);
+    }
+
+    [Fact]
     [Trait("BR", "UC-03")]
     public void ShouldShowSkipReason_WhenTaskCompletedSkipped()
     {
