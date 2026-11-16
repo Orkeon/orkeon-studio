@@ -256,6 +256,18 @@ public class ForgeSessionModelTests
     }
 
     [Fact]
+    public void A_try_task_that_ended_on_its_iteration_cap_is_marked()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Event(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"collecte","agentRole":"Web Researcher","success":true,"durationMs":1200,"endedOnIterationCap":true}"""));
+        model.Feed(Event(
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"resume","agentRole":"Writer","success":true,"durationMs":1200}"""));
+
+        Assert.Equal([true, false], model.Activity.Select(task => task.EndedOnIterationCap));
+    }
+
+    [Fact]
     public void Before_any_brief_nothing_is_known_about_inputs_or_output()
     {
         var model = new ForgeSessionModel();

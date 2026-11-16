@@ -154,7 +154,11 @@ public sealed record WizardChecklistLine(string Statement, bool? Passed, string?
 /// <param name="Text">What happened, in the user's words.</param>
 /// <param name="Detail">The task id, when the role alone cannot tell two tasks apart.</param>
 /// <param name="Success">Whether it went well — the icon and its colour follow.</param>
-public sealed record WizardActivityLine(string Text, string Detail, bool Success)
+/// <param name="CutShort">
+/// Whether the task succeeded on its iteration cap: the sentence says «cut short», so the icon
+/// is a warning, never the tick of a plain success.
+/// </param>
+public sealed record WizardActivityLine(string Text, string Detail, bool Success, bool CutShort = false)
 {
     /// <summary>Whether the task id is worth showing beside the role.</summary>
     public bool HasDetail => Detail.Length > 0;
@@ -3483,6 +3487,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             var role = task.AgentRole ?? task.TaskId ?? fallback;
             var text = (task.Success, task.DurationMs) switch
             {
+                // A success on the iteration cap is not a plain "done": the trial's file may be missing.
+                (true, _) when task.EndedOnIterationCap => _strings.Format(StudioStringKeys.WizardActivityCapped, role),
                 (true, { } durationMs) => _strings.Format(
                     StudioStringKeys.WizardActivityDone, role, Math.Round(durationMs / 1000.0, 1)),
                 // The run did not say how long it took: no "done in 0 s" it never measured.
@@ -3491,7 +3497,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             };
 
             var detail = task.AgentRole is not null && task.TaskId is { Length: > 0 } id ? id : "";
-            Activity.Add(new WizardActivityLine(text, detail, task.Success));
+            Activity.Add(new WizardActivityLine(text, detail, task.Success, task.Success && task.EndedOnIterationCap));
         }
     }
 

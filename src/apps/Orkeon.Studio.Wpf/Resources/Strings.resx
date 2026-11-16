@@ -320,6 +320,10 @@
   <data name="Studio.Run.Running" xml:space="preserve"><value>Running…</value></data>
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Nothing reported yet.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Skipped: {0}</value></data>
+  <data name="Studio.Run.CapNote" xml:space="preserve"><value>Cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.</value></data>
+  <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Cut short: check its files</value></data>
+  <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Succeeded · {0} {0:plural:task|tasks} cut short</value></data>
+  <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — cut short: its iterations ran out, its work may be incomplete</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decision (defaulted)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} task(s) finished.</value></data>
@@ -2344,9 +2348,9 @@
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Test the connection</value></data>
   <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>How to fix it</value></data>
   <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>The TypeScript checker (tsc)</value></data>
-  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>The TypeScript checker is missing: teams without a TypeScript script run without it.</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>The TypeScript checker is missing or does not answer: teams without a TypeScript script run without it.</value></data>
   <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio cannot fix this point itself. Here is what the engine says, in its own words; once it is fixed, run the diagnostic again.</value></data>
-  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>It only serves to check the TypeScript scripts (.ork.ts) of a team before a run. To install it: install Node.js, run « npm install -g typescript » in a terminal, then run the diagnostic again. If the settings name a path to it (Orkeon:Scripting:Toolchain:TscPath), check that path.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Settings file</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>The settings file is valid.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>The settings file has errors: Studio cannot save it.</value></data>

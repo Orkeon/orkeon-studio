@@ -819,6 +819,10 @@
     <value>Bisher nichts gemeldet.</value>
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Übersprungen: {0}</value></data>
+  <data name="Studio.Run.CapNote" xml:space="preserve"><value>Abgekürzt: Der Agent hat seine Iterationen aufgebraucht, bevor er fertig war. Seine Arbeit ist möglicherweise unvollständig: Prüfen Sie die Dateien, die er schreiben sollte.</value></data>
+  <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Abgekürzt: Dateien prüfen</value></data>
+  <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Aufgabe abgekürzt|Aufgaben abgekürzt}</value></data>
+  <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — abgekürzt: Iterationen aufgebraucht, die Arbeit ist möglicherweise unvollständig</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">
@@ -4046,9 +4050,9 @@
   <data name="Studio.Diagnostics.TestConnection" xml:space="preserve"><value>Verbindung testen</value></data>
   <data name="Studio.Diagnostics.HowToFix" xml:space="preserve"><value>So beheben</value></data>
   <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>Der TypeScript-Prüfer (tsc)</value></data>
-  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Der TypeScript-Prüfer fehlt: Teams ohne TypeScript-Skript laufen auch ohne ihn.</value></data>
+  <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Der TypeScript-Prüfer fehlt oder antwortet nicht: Teams ohne TypeScript-Skript laufen auch ohne ihn.</value></data>
   <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio kann diesen Punkt nicht selbst beheben. Hier steht, was die Engine dazu sagt, in ihren eigenen Worten; ist der Punkt behoben, starten Sie die Diagnose erneut.</value></data>
-  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Er dient nur dazu, die TypeScript-Skripte (.ork.ts) eines Teams vor einem Start zu prüfen. Zur Installation: Node.js installieren, in einem Terminal « npm install -g typescript » ausführen, dann die Diagnose erneut starten.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Er dient nur dazu, die TypeScript-Skripte (.ork.ts) eines Teams vor einem Start zu prüfen. Zur Installation: Node.js installieren, in einem Terminal « npm install -g typescript » ausführen, dann die Diagnose erneut starten. Wenn die Einstellungen einen Pfad zu ihm nennen (Orkeon:Scripting:Toolchain:TscPath), prüfen Sie diesen Pfad.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Einstellungsdatei</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>Die Einstellungsdatei ist gültig.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>Die Einstellungsdatei enthält Fehler: Studio kann sie nicht speichern.</value></data>

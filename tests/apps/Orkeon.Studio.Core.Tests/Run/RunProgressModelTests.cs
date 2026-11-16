@@ -777,6 +777,18 @@ public class RunProgressModelTests
     }
 
     [Fact]
+    public void ShouldMarkTheTask_WhenItEndedOnItsIterationCap()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"durationMs":900,"tokens":12,"toolCalls":25,"endedOnIterationCap":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"durationMs":900,"endedOnIterationCap":false}""",
+            // A CLI older than the flag sends no such key: the task reads as it always did.
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"sender","success":true,"durationMs":900}""");
+
+        Assert.Equal([true, false, false], model.Tasks.Select(task => task.EndedOnIterationCap));
+    }
+
+    [Fact]
     [Trait("BR", "UC-03")]
     public void ShouldShowSkipReason_WhenTaskCompletedSkipped()
     {

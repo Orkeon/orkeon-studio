@@ -867,6 +867,14 @@
                       <Setter TargetName="Mark" Property="Kind" Value="circle-check"/>
                       <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                     </DataTrigger>
+                    <!-- A success one of whose tasks ended on its iteration cap: its files are to check. -->
+                    <DataTrigger Binding="{Binding State}" Value="capped">
+                      <Setter TargetName="Bar" Property="Background" Value="{DynamicResource WarningIconBrush}"/>
+                      <Setter TargetName="Mark" Property="Kind" Value="triangle-alert"/>
+                      <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
+                      <Setter TargetName="Status" Property="ToolTip"
+                              Value="{Binding [Studio.Run.CapNote], Source={x:Static services:I18n.Instance}}"/>
+                    </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="failed">
                       <Setter TargetName="Bar" Property="Background" Value="{DynamicResource DangerBrush}"/>
                       <Setter TargetName="Mark" Property="Kind" Value="ban"/>
@@ -970,6 +978,11 @@
                                     <Setter Property="Kind" Value="circle-check"/>
                                     <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                   </DataTrigger>
+                                  <!-- A success on the iteration cap: the work may be missing. Last, so it wins. -->
+                                  <DataTrigger Binding="{Binding EndedOnIterationCap}" Value="True">
+                                    <Setter Property="Kind" Value="triangle-alert"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
+                                  </DataTrigger>
                                 </Style.Triggers>
                               </Style>
                             </controls:LucideIcon.Style>
@@ -994,6 +1007,17 @@
                               <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
                                 <Style.Triggers>
                                   <DataTrigger Binding="{Binding SkipReason}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <TextBlock Margin="33,2,0,0" Text="{Binding CapNote}" TextWrapping="Wrap">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding CapNote}" Value="">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                   </DataTrigger>
                                 </Style.Triggers>

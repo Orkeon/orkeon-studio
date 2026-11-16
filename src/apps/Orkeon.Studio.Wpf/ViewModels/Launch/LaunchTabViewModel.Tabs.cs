@@ -29,7 +29,7 @@ public sealed record RunFolderRow(string VirtualPath, string RightsLabel, bool I
 /// files, and filled by the run's own events — the task it is on, then how it ended.
 /// </summary>
 /// <param name="Name">The agent's role.</param>
-/// <param name="State">waiting | running | done | failed — the tone the view maps to its bar and its mark.</param>
+/// <param name="State">waiting | running | done | capped | failed — the tone the view maps to its bar and its mark.</param>
 /// <param name="StatusText">The state in words.</param>
 /// <param name="Detail">Tool calls · tokens · duration of its last task; empty before it ends one.</param>
 public sealed record RunAgentLane(string Name, string State, string StatusText, string Detail);
@@ -596,9 +596,15 @@ public sealed partial class LaunchTabViewModel
         if (Progress.Tasks.LastOrDefault(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)) is { } last)
         {
             var detail = string.Join(" · ", new[] { last.ToolCalls, last.Tokens, last.Duration }.Where(part => part.Length > 0));
-            return last.Success
-                ? new(name, "done", _strings[StudioStringKeys.RunLaneDone], detail)
-                : new(name, "failed", _strings[StudioStringKeys.RunLaneFailed], detail);
+            if (!last.Success)
+                return new(name, "failed", _strings[StudioStringKeys.RunLaneFailed], detail);
+
+            // Any of its tasks, not the last alone: an agent whose first task ran out of
+            // iterations and whose second went well still left work to check. The card is the
+            // one place the novice reads it, the tasks' table being the expert's.
+            return Progress.Tasks.Any(t => t.EndedOnIterationCap && string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase))
+                ? new(name, "capped", _strings[StudioStringKeys.RunLaneCapped], detail)
+                : new(name, "done", _strings[StudioStringKeys.RunLaneDone], detail);
         }
 
         return new(name, "waiting", _strings[StudioStringKeys.RunLaneWaiting], string.Empty);

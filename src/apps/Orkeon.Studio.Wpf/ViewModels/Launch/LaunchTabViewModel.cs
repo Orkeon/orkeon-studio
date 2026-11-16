@@ -1576,6 +1576,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public string RunBadgeText =>
         CardState == RunCardState.Succeeded && AgentCards.Count(card => card.State == "notrun") is > 0 and var skipped
             ? _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped)
+            : CardState == RunCardState.Succeeded && CappedTaskCount is > 0 and var capped
+            ? _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped)
             : _strings[CardState switch
         {
             RunCardState.Running => StudioStringKeys.RunBadgeRunning,
@@ -1585,6 +1587,13 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             _ => StudioStringKeys.RunBadgeFailed,
         }];
 
+    /// <summary>
+    /// How many tasks the engine counted as succeeded on the tool-free answer given once the
+    /// agent's iterations were spent. The run still exits 0, so the badge is the one place that
+    /// keeps "succeeded" from reading as "everything was written".
+    /// </summary>
+    private int CappedTaskCount => Progress.Tasks.Count(task => task.EndedOnIterationCap);
+
     /// <summary>Whether the run's badge pulses: while the process lives (STUDIO-17).</summary>
     public bool IsRunBadgePulsing => CardState == RunCardState.Running;
 
@@ -1593,7 +1602,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     {
         RunCardState.Running => "running",
         RunCardState.Idle => "idle",
-        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") ? "warn" : "ok",
+        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 ? "warn" : "ok",
         RunCardState.Cancelled => "warn",
         _ => "fail",
     };
@@ -2038,7 +2047,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 /// One agent card of the run pane (hrm:L08, D05): the <paramref name="DisplayName"/> on the card,
 /// the <paramref name="Identifier"/> the crew's files give in mono under it — shown only when it
 /// differs from the name (<see cref="HasIdentifier"/>) —, and the lane's state:
-/// waiting | running | done | failed | notrun.
+/// waiting | running | done | capped | failed | notrun. <c>capped</c> is a success one of whose
+/// tasks ended on its iteration cap: the card says so, in the warning tone.
 /// </summary>
 public sealed record RunAgentCard(string DisplayName, string Identifier, string State, string StatusText, string Detail)
 {

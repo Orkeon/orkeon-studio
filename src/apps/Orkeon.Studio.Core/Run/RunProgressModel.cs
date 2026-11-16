@@ -36,6 +36,9 @@ public sealed record RunSpawnedAgent(string? Role, string? Reason, DateTimeOffse
 /// One task the run has finished. <see cref="DurationMs"/> is null when the run did not say how
 /// long the task took — its line carried no <c>durationMs</c> — or when the task never ran
 /// (skipped): a screen shows "—" then, never a duration of zero it did not measure.
+/// <see cref="EndedOnIterationCap"/> marks a task that succeeded on the tool-free answer its
+/// agent gave once its iterations were spent: the engine keeps it a success, and a screen says
+/// that its work, a file it had to write above all, may be missing.
 /// </summary>
 public sealed record RunTaskProgress(
     string? TaskId,
@@ -48,7 +51,8 @@ public sealed record RunTaskProgress(
     string? SkipReason = null,
     bool IsDecision = false,
     bool Defaulted = false,
-    string? DecisionAnswers = null);
+    string? DecisionAnswers = null,
+    bool EndedOnIterationCap = false);
 
 /// <summary>
 /// What the run has spent so far, as its latest <c>cost.updated</c> said it — every figure
@@ -467,7 +471,9 @@ public sealed class RunProgressModel
             orkeonEvent.GetString("skipReason"),
             orkeonEvent.GetBool("isDecision") ?? false,
             orkeonEvent.GetBool("defaulted") ?? false,
-            orkeonEvent.GetString("decision"));
+            orkeonEvent.GetString("decision"),
+            // Absent from a CLI older than the flag: read as false, the task as it always was.
+            orkeonEvent.GetBool("endedOnIterationCap") ?? false);
         _tasks.Add(finished);
         Settle(finished.TaskId, finished.AgentRole);
         return true;

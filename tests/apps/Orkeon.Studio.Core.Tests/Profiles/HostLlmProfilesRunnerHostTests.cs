@@ -371,8 +371,9 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
 
     /// <summary>
     /// <c>Llm:ModelCapabilities</c> keyed by a blank model id, with the path Studio reports it at. The
-    /// real host does not start on it, and says so with the model table's own exception rather than a
-    /// settings refusal: it names the id, never the path.
+    /// real host does not start on it. Orkeon 1.1.0 says so with the model table's own exception,
+    /// which names the id and never the path; from Orkeon #385 on it is a settings refusal that
+    /// names <c>Llm:ModelCapabilities</c>.
     /// </summary>
     public static TheoryData<string, string> BlankModelIds() => new()
     {
@@ -392,8 +393,13 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
     {
         var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
 
-        var refused = Assert.Throws<ArgumentException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
-        Assert.Equal("id", refused.ParamName);
+        // Either refusal of the host, by the version of the packages: the test holds on the
+        // 1.1.0 ones and on those of Orkeon #385.
+        var refused = Assert.ThrowsAny<Exception>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        if (refused is RunnerSettingsException)
+            Assert.Contains("Llm:ModelCapabilities", refused.Message, StringComparison.Ordinal);
+        else
+            Assert.Equal("id", Assert.IsType<ArgumentException>(refused).ParamName);
         var message = Assert.Single(
             new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
             message => message.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);
