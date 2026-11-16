@@ -872,6 +872,9 @@
                       <Setter TargetName="Bar" Property="Background" Value="{DynamicResource WarningIconBrush}"/>
                       <Setter TargetName="Mark" Property="Kind" Value="triangle-alert"/>
                       <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
+                      <!-- The advice is the point of this state: it wraps instead of ending in «…». -->
+                      <Setter TargetName="Status" Property="TextTrimming" Value="None"/>
+                      <Setter TargetName="Status" Property="TextWrapping" Value="Wrap"/>
                       <Setter TargetName="Status" Property="ToolTip"
                               Value="{Binding [Studio.Run.CapNote], Source={x:Static services:I18n.Instance}}"/>
                     </DataTrigger>

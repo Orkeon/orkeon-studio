@@ -177,6 +177,24 @@ public sealed class WizardHonestyTests
         Assert.True(line.CutShort);
     }
 
+    [Fact]
+    public async Task A_trial_task_whose_later_pass_went_through_is_no_longer_said_cut_short()
+    {
+        var (vm, processes) = Build();
+        processes.WhileRunning = () =>
+        {
+            processes.Emit(Out(
+                """{"v":2,"seq":7,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true,"endedOnIterationCap":true}"""));
+            processes.Emit(Out(
+                """{"v":2,"seq":8,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true}"""));
+        };
+
+        await vm.ComposeCommand.ExecuteAsync();
+
+        Assert.Equal([false, false], vm.Activity.Select(line => line.CutShort));
+        Assert.All(vm.Activity, line => Assert.Equal("Lecteur — done", line.Text));
+    }
+
     /// <summary>
     /// The owner's own screenshot: score 0,70, a green «passing» badge, and four «?» beside
     /// it. Every one of those is honest — 0.70 is the deterministic fallback's constant and

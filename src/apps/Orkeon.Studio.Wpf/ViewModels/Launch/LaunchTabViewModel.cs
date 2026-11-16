@@ -1573,26 +1573,38 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     }
 
     /// <summary>The state badge next to the title.</summary>
-    public string RunBadgeText =>
-        CardState == RunCardState.Succeeded && AgentCards.Count(card => card.State == "notrun") is > 0 and var skipped
-            ? _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped)
-            : CardState == RunCardState.Succeeded && CappedTaskCount is > 0 and var capped
-            ? _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped)
-            : _strings[CardState switch
+    public string RunBadgeText
+    {
+        get
         {
-            RunCardState.Running => StudioStringKeys.RunBadgeRunning,
-            RunCardState.Idle => StudioStringKeys.RunBadgeIdle,
-            RunCardState.Succeeded => StudioStringKeys.RunBadgeDone,
-            RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
-            _ => StudioStringKeys.RunBadgeFailed,
-        }];
+            // What a success leaves to check, both said when both hold: agents that never ran,
+            // and tasks that ended on their iteration cap.
+            var skipped = CardState == RunCardState.Succeeded ? AgentCards.Count(card => card.State == "notrun") : 0;
+            var capped = CardState == RunCardState.Succeeded ? CappedTaskCount : 0;
+            return (skipped > 0, capped > 0) switch
+            {
+                (true, true) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedCapped, skipped, capped),
+                (true, false) => _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped),
+                (false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped),
+                _ => _strings[CardState switch
+                {
+                    RunCardState.Running => StudioStringKeys.RunBadgeRunning,
+                    RunCardState.Idle => StudioStringKeys.RunBadgeIdle,
+                    RunCardState.Succeeded => StudioStringKeys.RunBadgeDone,
+                    RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
+                    _ => StudioStringKeys.RunBadgeFailed,
+                }],
+            };
+        }
+    }
 
     /// <summary>
     /// How many tasks the engine counted as succeeded on the tool-free answer given once the
-    /// agent's iterations were spent. The run still exits 0, so the badge is the one place that
-    /// keeps "succeeded" from reading as "everything was written".
+    /// agent's iterations were spent: its own <c>cappedTasks</c> when the run gave one, else
+    /// the lines read, each task by its last. The run still exits 0, so the badge keeps
+    /// "succeeded" from reading as "everything was written".
     /// </summary>
-    private int CappedTaskCount => Progress.Tasks.Count(task => task.EndedOnIterationCap);
+    private int CappedTaskCount => Progress.Model.CappedTaskCount;
 
     /// <summary>Whether the run's badge pulses: while the process lives (STUDIO-17).</summary>
     public bool IsRunBadgePulsing => CardState == RunCardState.Running;
@@ -2012,7 +2024,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             var reported = lane.State == "waiting" && first.State is not ("waiting" or "notrun")
                 ? first with { DisplayName = DisplayNameOf(lane.Name) }
                 : CardOf(lane, first.Identifier, finished) with { DisplayName = DisplayNameOf(lane.Name) };
-            cards[index] = reported;
+
+            // Two spellings the run itself gave for one agent: a plain success under the second
+            // does not clear the work to check that the first left.
+            cards[index] = first.State == "capped" && reported.State == "done"
+                ? reported with { State = first.State, StatusText = first.StatusText }
+                : reported;
         }
 
         AgentCards.Clear();

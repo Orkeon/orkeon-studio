@@ -819,10 +819,11 @@
     <value>Nada reportado por ahora.</value>
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Omitida: {0}</value></data>
-  <data name="Studio.Run.CapNote" xml:space="preserve"><value>Interrumpida: el agente agotó sus iteraciones antes de terminar. Su trabajo puede estar incompleto: compruebe los archivos que debía escribir.</value></data>
-  <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Interrumpido: compruebe sus archivos</value></data>
-  <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Exitosa · {0} {0:plural:tarea interrumpida|tareas interrumpidas}</value></data>
-  <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — interrumpida: sus iteraciones se agotaron, su trabajo puede estar incompleto</value></data>
+  <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tarea sin terminar: el agente agotó sus iteraciones antes de terminar. Su trabajo puede estar incompleto: compruebe los archivos que debía escribir.</value></data>
+  <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Sin terminar: compruebe sus archivos</value></data>
+  <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Exitosa · {0} {0:plural:tarea|tareas} sin terminar</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Exitosa · {0} {0:plural:agente no ejecutado|agentes no ejecutados} · {1} {1:plural:tarea|tareas} sin terminar</value></data>
+  <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — sin terminar: sus iteraciones se agotaron, su trabajo puede estar incompleto</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decisión</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decisión (por defecto)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">
@@ -4052,7 +4053,7 @@
   <data name="Studio.Diagnostics.Check.tsc" xml:space="preserve"><value>El verificador de TypeScript (tsc)</value></data>
   <data name="Studio.Diagnostics.Problem.tsc" xml:space="preserve"><value>Falta el verificador de TypeScript o no responde: los equipos sin script TypeScript funcionan sin él.</value></data>
   <data name="Studio.Diagnostics.HowTo.Unknown" xml:space="preserve"><value>Studio no puede corregir este punto por sí mismo. Esto es lo que dice el motor, con sus propias palabras; una vez corregido, vuelva a ejecutar el diagnóstico.</value></data>
-  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Solo sirve para comprobar los scripts TypeScript (.ork.ts) de un equipo antes de un lanzamiento. Para instalarlo: instale Node.js, ejecute « npm install -g typescript » en un terminal y vuelva a ejecutar el diagnóstico. Si los ajustes indican una ruta hacia él (Orkeon:Scripting:Toolchain:TscPath), compruebe esa ruta.</value></data>
+  <data name="Studio.Diagnostics.HowTo.tsc" xml:space="preserve"><value>Solo sirve para comprobar los scripts TypeScript (.ork.ts) de un equipo antes de un lanzamiento. Para instalarlo: instale Node.js, ejecute « npm install -g typescript » en un terminal y vuelva a ejecutar el diagnóstico. Si los ajustes indican una ruta hacia él (Orkeon:Scripting:Toolchain:TscPath), compruebe esa ruta. Cuando los ajustes hacen la comprobación sistemática (Orkeon:Scripting:Toolchain:TypeCheck), un equipo con un script así no arranca sin él: instálelo, o ponga ese ajuste en Validate u Off.</value></data>
   <data name="Studio.Diagnostics.SettingsFile" xml:space="preserve"><value>Archivo de configuración</value></data>
   <data name="Studio.Diagnostics.SettingsFileOk" xml:space="preserve"><value>El archivo de configuración es válido.</value></data>
   <data name="Studio.Diagnostics.SettingsFileInvalid" xml:space="preserve"><value>El archivo de configuración tiene errores: Studio no puede guardarlo.</value></data>

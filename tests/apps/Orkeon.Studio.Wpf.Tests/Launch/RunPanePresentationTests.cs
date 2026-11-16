@@ -47,6 +47,10 @@ public sealed class RunPanePresentationTests : IDisposable
         ProcessOutputChannel.StandardOutput,
         $$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-{{role}}","agentRole":"{{role}}","success":true,"durationMs":900}""");
 
+    private static ProcessOutputLine Capped(string taskId, string role) => ProcessOutputLine.Now(
+        ProcessOutputChannel.StandardOutput,
+        $$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"{{taskId}}","agentRole":"{{role}}","success":true,"durationMs":900,"endedOnIterationCap":true}""");
+
     [Fact]
     public void The_command_breaks_only_between_two_options()
     {
@@ -160,7 +164,7 @@ public sealed class RunPanePresentationTests : IDisposable
         Assert.Equal("warn", tab.RunBadgeTone);
         Assert.Equal([false, true], tab.Progress.Tasks.Select(task => task.EndedOnIterationCap));
         Assert.Equal(string.Empty, tab.Progress.Tasks[0].CapNote);
-        Assert.StartsWith("Cut short:", tab.Progress.Tasks[1].CapNote, StringComparison.Ordinal);
+        Assert.StartsWith("Task cut short:", tab.Progress.Tasks[1].CapNote, StringComparison.Ordinal);
         // The novice has no tasks' table: the agent's card is where it reads.
         Assert.Equal(["done", "capped"], tab.AgentCards.Select(card => card.State));
         Assert.Equal("Cut short: check its files", tab.AgentCards[1].StatusText);
@@ -183,6 +187,96 @@ public sealed class RunPanePresentationTests : IDisposable
 
         Assert.Equal("capped", Assert.Single(tab.AgentCards).State);
         Assert.Equal("Succeeded · 1 task cut short", tab.RunBadgeText);
+    }
+
+    [Fact]
+    public async Task The_badge_says_both_an_agent_not_run_and_a_task_cut_short()
+    {
+        var crew = WriteCrew("analyste", "redacteur", "relecteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Completed("Analyste"));
+        launcher.OutputToEmit.Add(Capped("t-redacteur", "Rédacteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["done", "capped", "notrun"], tab.AgentCards.Select(card => card.State));
+        Assert.Equal("Succeeded · 1 agent not run · 1 task cut short", tab.RunBadgeText);
+        Assert.Equal("warn", tab.RunBadgeTone);
+    }
+
+    [Fact]
+    public async Task The_runs_own_count_of_capped_tasks_is_the_badges_even_over_the_lines_read()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Completed("Rédacteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":3,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":2}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Succeeded · 2 tasks cut short", tab.RunBadgeText);
+        Assert.Equal("warn", tab.RunBadgeTone);
+    }
+
+    [Fact]
+    public async Task Without_a_count_from_the_run_a_retry_that_went_through_leaves_a_plain_success()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Capped("t-1", "Rédacteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":true,"durationMs":900}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("done", Assert.Single(tab.AgentCards).State);
+        Assert.Equal("ok", tab.RunBadgeTone);
+    }
+
+    [Fact]
+    public async Task An_agent_the_run_spells_two_ways_stays_marked_when_only_its_first_spelling_was_cut_short()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Capped("t-1", "Redacteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-2","agentRole":"Rédacteur","success":true,"durationMs":900}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var card = Assert.Single(tab.AgentCards);
+        Assert.Equal("capped", card.State);
+        Assert.Equal("Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task A_task_whose_last_attempt_went_through_is_not_said_cut_short()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":true,"durationMs":900,"endedOnIterationCap":true}"""));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":true,"durationMs":900,"endedOnIterationCap":false}"""));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":3,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":0}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("done", Assert.Single(tab.AgentCards).State);
+        Assert.Equal("ok", tab.RunBadgeTone);
     }
 
     [Fact]
