@@ -622,6 +622,12 @@ public static class StudioStringKeys
     /// <summary>"The engine may refuse these agents …" — an agent's <c>filesystem:</c> scope the run's mounts refuse, when the run may not start that agent or the settings the CLI reads are not known here (#349); {0} is the engine's own refusals.</summary>
     public const string RunWarnFileSystemScope = "Studio.Run.WarnFileSystemScope";
 
+    /// <summary>"A file may not be written. …" — the heading of the tasks whose agent must write the deliverable itself and does not hold <c>file_write</c> (Orkeon #392), with the two ways out; one <see cref="RunWarnDeliverableNoWriterItem"/> line per task follows.</summary>
+    public const string RunWarnDeliverableNoWriter = "Studio.Run.WarnDeliverableNoWriter";
+
+    /// <summary>"Task 'x' must write /output/y …" — the line of one task under <see cref="RunWarnDeliverableNoWriter"/>; {0} is the task, {1} its agent, {2} the deliverable's path.</summary>
+    public const string RunWarnDeliverableNoWriterItem = "Studio.Run.WarnDeliverableNoWriterItem";
+
     /// <summary>"Open the result" — the Launch screen's button once a run finished, one writable folder.</summary>
     public const string RunOpenResult = "Studio.Run.OpenResult";
 
@@ -2938,6 +2944,10 @@ public sealed class EnglishStudioStrings : IStudioStrings
             "The engine will refuse to start this team as its folders are mounted: {0} Give the folders the rights the agents declare, or change their filesystem: scope.",
         [StudioStringKeys.RunWarnFileSystemScope] =
             "The engine may refuse these agents if the run starts them, or unless the settings the CLI reads mount what they ask: {0} Check the folders of this run or the agents' filesystem: scope.",
+        [StudioStringKeys.RunWarnDeliverableNoWriter] =
+            "A file may not be written. In the team's YAML, give each agent named below the file_write tool, or set its task's deliverable to source: final_message.",
+        [StudioStringKeys.RunWarnDeliverableNoWriterItem] =
+            "Task '{0}' must write {2}, but its agent '{1}' does not have the file_write tool the engine asks it to use.",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
         [StudioStringKeys.RunOpenLogsNotYet] = "The logs folder does not exist yet: it is created at the first logged call.",
@@ -3269,6 +3279,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
+        ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write its deliverable with the file_write tool, and its agent does not have it: the run starts, the file may never be written and the task still counts as done.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",

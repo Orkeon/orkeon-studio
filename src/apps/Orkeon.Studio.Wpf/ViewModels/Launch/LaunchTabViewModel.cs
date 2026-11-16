@@ -63,6 +63,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private IReadOnlyList<CrewAgentFileSystem> _crewFileSystems = [];
     /// <summary>The refusals the engine will make with the mounts of this run, judged at each change of the target or the mounts, and again at each launch.</summary>
     private IReadOnlyList<FileSystemScopeRefusal> _fileSystemScopeRefusals = [];
+    private IReadOnlyList<CrewDeliverableWithoutWriter> _deliverablesWithoutWriter = [];
     /// <summary>
     /// Whether the panel's settings mounts are those of the file the run will read: true only when the
     /// run carries <c>--settings</c> (the Expert pin, else the team's file) and Studio read that very
@@ -769,6 +770,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
         await RefreshSettingsMountsAsync(cancellationToken).ConfigureAwait(true);
         RefreshFileSystemScopes();
+        // The crew may have been edited since the target was picked: the warning follows the files.
+        _deliverablesWithoutWriter = CrewDeliverableWriters.Of(Target.Target);
+        OnPropertiesChanged(nameof(HasDeliverableWriterWarning), nameof(DeliverableWriterWarning));
 
         if (!validate)
         {
@@ -1105,6 +1109,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
         _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
         _fileSystemScopeRefusals = JudgeFileSystemScopes();
+        _deliverablesWithoutWriter = CrewDeliverableWriters.Of(Target.Target);
         // The settings file of the run is read again with the crew (RefreshPreview, below).
         _settingsMountsSource = null;
         // A choice saved from the card replaces the run's; a choice made here for this run stays.
@@ -1118,6 +1123,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             nameof(UnknownTeamMountIds), nameof(IsBlockedByUnknownMountIds), nameof(UnknownMountIdsMessage),
             nameof(FileSystemScopeRefusals), nameof(IsBlockedByFileSystemScope), nameof(FileSystemScopeMessage),
             nameof(HasFileSystemScopeWarning), nameof(FileSystemScopeWarning),
+            nameof(HasDeliverableWriterWarning), nameof(DeliverableWriterWarning),
             nameof(IsTargetArchived), nameof(ArchivedTargetMessage), nameof(CrewLlmWarning));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();
@@ -1480,6 +1486,22 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             : "";
 
     /// <summary>
+    /// Whether a task must write its deliverable with <c>file_write</c> and its agent does not hold it
+    /// (Orkeon #392): the engine starts the run all the same, and the task counts as done whether or
+    /// not the file was written (<see cref="CrewDeliverableWriters"/>). A warning, never a block.
+    /// </summary>
+    public bool HasDeliverableWriterWarning => _deliverablesWithoutWriter.Count > 0;
+
+    /// <summary>The warning and the two ways out, then one line per task: the task, its agent and the file.</summary>
+    public string DeliverableWriterWarning =>
+        HasDeliverableWriterWarning
+            ? string.Join('\n', _deliverablesWithoutWriter
+                .Select(missing => "\u2022 " + _strings.Format(
+                    StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agent, missing.Path))
+                .Prepend(_strings[StudioStringKeys.RunWarnDeliverableNoWriter]))
+            : "";
+
+    /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches
     /// nor tests it — the banner offers to restore it. The CLI, the terminal launcher and the
     /// operating system run it as ever: archiving is Studio's notion.
@@ -1776,6 +1798,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _crewLlmDeclarations = CrewLlmDeclarations.CountIn(Target.SelectedPath);
         _crewFileSystems = CrewFileSystemScopes.Of(Target.Target);
         _fileSystemScopeRefusals = JudgeFileSystemScopes();
+        _deliverablesWithoutWriter = CrewDeliverableWriters.Of(Target.Target);
         // The settings file of the run is read again with the crew (RefreshPreview, below).
         _settingsMountsSource = null;
         // The run takes the team's model unless changed here (STUDIO-73); a target that is no team, the default.
@@ -1788,6 +1811,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             nameof(UnknownTeamMountIds), nameof(IsBlockedByUnknownMountIds), nameof(UnknownMountIdsMessage),
             nameof(FileSystemScopeRefusals), nameof(IsBlockedByFileSystemScope), nameof(FileSystemScopeMessage),
             nameof(HasFileSystemScopeWarning), nameof(FileSystemScopeWarning),
+            nameof(HasDeliverableWriterWarning), nameof(DeliverableWriterWarning),
             nameof(IsTargetArchived), nameof(ArchivedTargetMessage), nameof(CrewLlmWarning));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();

@@ -191,6 +191,7 @@ internal sealed class RunLauncherViewModel
 
         messages.AddRange(Options.ValidateMounts());
         messages.AddRange(ValidateFileSystemScopes(dryRun));
+        messages.AddRange(ValidateDeliverableWriters());
         return messages;
     }
 
@@ -233,6 +234,21 @@ internal sealed class RunLauncherViewModel
                 target.RunPath),
         }).ToList();
     }
+
+    /// <summary>
+    /// The tasks whose agent must write the deliverable itself and does not hold <c>file_write</c>
+    /// (Orkeon #392, <see cref="CrewDeliverableWriters"/>): the engine runs them all the same, and
+    /// the file may never be written. A warning for a run and a check alike, the crew read again.
+    /// </summary>
+    private List<ValidationMessage> ValidateDeliverableWriters() =>
+        Target.Target is not { } target
+            ? []
+            : CrewDeliverableWriters.Of(target).Select(missing => ValidationMessage.Warning(
+                ValidationCodes.DeliverableWithoutWriter,
+                $"Task '{missing.Task}' must write {missing.Path}, but its agent '{missing.Agent}' does not have the file_write tool "
+                + "the engine asks it to use: the file may not be written. In the crew's YAML, give the agent file_write, "
+                + "or set the task's deliverable to source: final_message.",
+                target.RunPath)).ToList();
 
     /// <summary>True when <see cref="Validate"/> found nothing that would break the launch.</summary>
     public bool HasBlockingErrors(bool dryRun = false) =>

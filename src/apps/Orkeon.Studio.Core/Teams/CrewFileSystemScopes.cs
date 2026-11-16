@@ -66,7 +66,14 @@ public static class CrewFileSystemScopes
     /// in the crew's order. Empty without a target, for a script, when no agent declares any, or when
     /// the engine refuses the crew at load.
     /// </summary>
-    public static IReadOnlyList<CrewAgentFileSystem> Of(RunTarget? target)
+    public static IReadOnlyList<CrewAgentFileSystem> Of(RunTarget? target) => Read(target, Collect);
+
+    /// <summary>
+    /// The agent entries, the task entries and the settings of the crew <paramref name="target"/> runs,
+    /// handed to <paramref name="collect"/> as the loader reads them, whatever the layout. Empty
+    /// without a target, for a script, or when the engine refuses the crew at load.
+    /// </summary>
+    internal static IReadOnlyList<T> Read<T>(RunTarget? target, CrewCollector<T> collect)
     {
         if (target is null || target.Dialect != RunTargetDialect.Yaml || string.IsNullOrWhiteSpace(target.RunPath))
             return [];
@@ -74,8 +81,8 @@ public static class CrewFileSystemScopes
         try
         {
             return target.Kind == RunTargetKind.MultiFileCrewDirectory
-                ? OfCrewDirectory(target.RunPath)
-                : OfCrewFile(File.ReadAllText(target.RunPath));
+                ? OfCrewDirectory(target.RunPath, collect)
+                : ReadCrewFile(File.ReadAllText(target.RunPath), collect);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
@@ -84,18 +91,21 @@ public static class CrewFileSystemScopes
     }
 
     /// <summary>The agents of a single-file crew's <c>agents:</c> map that declare a scope or a working root.</summary>
-    public static IReadOnlyList<CrewAgentFileSystem> OfCrewFile(string yaml)
+    public static IReadOnlyList<CrewAgentFileSystem> OfCrewFile(string yaml) => ReadCrewFile(yaml, Collect);
+
+    /// <summary>The <c>agents:</c> and <c>tasks:</c> maps of a single-file crew, handed to <paramref name="collect"/>.</summary>
+    internal static IReadOnlyList<T> ReadCrewFile<T>(string yaml, CrewCollector<T> collect)
     {
         ArgumentNullException.ThrowIfNull(yaml);
 
         if (!TryRoot(yaml, out var root) || root is not YamlMappingNode crew)
             return [];
 
-        return Collect(Entries(Value(crew, "agents") as YamlMappingNode), Entries(Value(crew, "tasks") as YamlMappingNode), crew);
+        return collect(Entries(Value(crew, "agents") as YamlMappingNode), Entries(Value(crew, "tasks") as YamlMappingNode), crew);
     }
 
     /// <summary>The agents of a crew folder, per-entity or flat, as the loader picks the layout.</summary>
-    private static List<CrewAgentFileSystem> OfCrewDirectory(string root)
+    private static List<T> OfCrewDirectory<T>(string root, CrewCollector<T> collect)
     {
         var agentsFolder = Path.Combine(root, AgentsFolder);
         var tasksFolder = Path.Combine(root, TasksFolder);
@@ -111,7 +121,7 @@ public static class CrewFileSystemScopes
                 return [];
             }
 
-            return Collect(
+            return collect(
                 Entries(agentMap as YamlMappingNode),
                 Entries(taskMap as YamlMappingNode),
                 flatSettings as YamlMappingNode);
@@ -148,7 +158,7 @@ public static class CrewFileSystemScopes
             tasks.Add(new(stem, task));
         }
 
-        return Collect(agents, tasks, settings as YamlMappingNode);
+        return collect(agents, tasks, settings as YamlMappingNode);
     }
 
     /// <summary>The extensions of an entity file, which the loader matches whatever their case.</summary>
@@ -510,7 +520,7 @@ public static class CrewFileSystemScopes
         key is YamlScalarNode { Value: "<<", Style: ScalarStyle.Plain or ScalarStyle.Any };
 
     /// <summary>The value at <paramref name="key"/>, compared as the loader compares it (exactly).</summary>
-    private static YamlNode? Value(YamlMappingNode map, string key)
+    internal static YamlNode? Value(YamlMappingNode map, string key)
     {
         foreach (var (keyNode, value) in map.Children)
         {
@@ -522,7 +532,7 @@ public static class CrewFileSystemScopes
     }
 
     /// <summary>A scalar's trimmed text; null when absent, null or blank.</summary>
-    private static string? Text(YamlNode? node) =>
+    internal static string? Text(YamlNode? node) =>
         node is YamlScalarNode scalar && !IsNull(scalar) && !string.IsNullOrWhiteSpace(scalar.Value)
             ? scalar.Value!.Trim()
             : null;
@@ -531,8 +541,17 @@ public static class CrewFileSystemScopes
     /// Whether the node reads as YAML null: absent, an empty plain value (<c>filesystem:</c>), <c>~</c>
     /// or <c>null</c> — no declaration, as the loader reads it.
     /// </summary>
-    private static bool IsNull(YamlNode? node) =>
+    internal static bool IsNull(YamlNode? node) =>
         node is null
         || node is YamlScalarNode { Style: ScalarStyle.Plain or ScalarStyle.Any } scalar
             && (string.IsNullOrEmpty(scalar.Value) || scalar.Value is "~" or "null" or "Null" or "NULL");
 }
+
+/// <summary>
+/// What a reading of a crew keeps of its agent entries, its task entries (each a key and its node,
+/// in the crew's order) and its settings.
+/// </summary>
+internal delegate List<T> CrewCollector<T>(
+    IEnumerable<KeyValuePair<string, YamlNode?>> agents,
+    IEnumerable<KeyValuePair<string, YamlNode?>> tasks,
+    YamlMappingNode? settings);
