@@ -578,6 +578,49 @@ public class RunLauncherViewModelTests
     }
 
     [Fact]
+    public void A_task_that_must_write_a_file_its_agent_cannot_write_is_a_warning()
+    {
+        // Orkeon #392: the engine runs the crew, the file is never written and the task still succeeds.
+        var folder = Path.Combine(Path.GetTempPath(), "orkeon-run-deliverable-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var crewFile = Path.Combine(folder, "crew.yaml");
+            File.WriteAllText(crewFile, """
+                agents:
+                  analyst:
+                    role: Analyst
+                    tools: [file_read]
+                tasks:
+                  read:
+                    agent: analyst
+                    deliverable:
+                      path: /output/notes.md
+                """);
+            var fixture = new LauncherFixture().WithInstalledCli();
+            var crew = fixture.WithYamlCrew(crewFile);
+            var launcher = fixture.Build();
+            launcher.Target.Select(crew);
+
+            var warning = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
+            Assert.Equal(ValidationSeverity.Warning, warning.Severity);
+            Assert.Contains("'read'", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("'analyst'", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("/output/notes.md", warning.Text, StringComparison.Ordinal);
+            Assert.Single(launcher.Validate(dryRun: true), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
+            // A warning: the launch stays allowed.
+            Assert.False(launcher.HasBlockingErrors());
+
+            File.WriteAllText(crewFile, File.ReadAllText(crewFile).Replace("[file_read]", "[file_read, file_write]", StringComparison.Ordinal));
+            Assert.DoesNotContain(launcher.Validate(), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
     public void An_agent_scope_a_launch_mount_lowers_blocks_the_launch_with_the_engines_reason()
     {
         // #349: the settings grant /output rw, the --mount lowers it to ro, and the writer's scope

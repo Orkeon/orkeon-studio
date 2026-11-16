@@ -1566,6 +1566,7 @@
     <value>Mehrere Einträge teilen sich einen internen Namen: Ein Team wählt einen pro Lauf, und derselbe Ordner zweimal ist einer zu viel.</value>
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>Die filesystem:-Angabe eines Agenten ist fehlerhaft, oder sein Bereich oder Arbeitsverzeichnis verlangt einen Ordner, den die Einbindungen der Ausführung nicht gewähren: Die Engine lehnt das Team beim Laden ab oder lehnt diesen Agenten ab, wenn die Ausführung ihn startet.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Eine Aufgabe muss ihr Ergebnis mit dem Werkzeug file_write schreiben, und ihr Agent hat es nicht: Die Ausführung startet, die Datei wird möglicherweise nie geschrieben und die Aufgabe gilt trotzdem als erledigt.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Eine hinzugefügte Ordnerzeile beginnt mit „-“: Die Engine würde sie als Option lesen.</value>
   </data>
@@ -2357,6 +2358,8 @@
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>Dieses Team verweist auf freigegebene Ordner, die hier fehlen: {0}. Erlauben Sie sie unter Einstellungen › Freigegebene Ordner oder ändern Sie die Ordner des Teams.</value></data>
   <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>Die Engine wird den Start dieses Teams mit diesen eingebundenen Ordnern verweigern: {0} Geben Sie den Ordnern die Rechte, die die Agenten deklarieren, oder ändern Sie ihren filesystem:-Bereich.</value></data>
   <data name="Studio.Run.WarnFileSystemScope" xml:space="preserve"><value>Die Engine kann diese Agenten verweigern, wenn die Ausführung sie startet oder die Einstellungen, die die CLI liest, nicht einbinden, was sie verlangen: {0} Prüfen Sie die Ordner dieser Ausführung oder den filesystem:-Bereich der Agenten.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Eine Datei wird möglicherweise nicht geschrieben. Geben Sie im YAML des Teams jedem unten genannten Agenten das Werkzeug file_write, oder stellen Sie das Ergebnis seiner Aufgabe auf source: final_message.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber ihr Agent „{1}“ hat das Werkzeug file_write nicht, das die Engine von ihm verlangt.</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (per Kennung ausgewählt unter {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (für diesen Lauf nicht eingehängt)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (einer von {1} Einträgen — nichts wählt ihn aus)</value></data>

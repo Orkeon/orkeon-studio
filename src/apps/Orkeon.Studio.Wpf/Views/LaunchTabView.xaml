@@ -297,6 +297,9 @@
                 <!-- #349: a scope the mounts shown refuse, for an agent the run may not start or with settings Studio does not see. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding FileSystemScopeWarning}"
                                 Visibility="{Binding HasFileSystemScopeWarning, Converter={StaticResource BooleanToVisibility}}"/>
+                <!-- Orkeon #392: a task must write a file and its agent holds no tool that writes one. -->
+                <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding DeliverableWriterWarning}"
+                                Visibility="{Binding HasDeliverableWriterWarning, Converter={StaticResource BooleanToVisibility}}"/>
                 <!-- STUDIO-31 (D-07): an archived team is neither launched nor tried from Studio. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding ArchivedTargetMessage}"
                                 Visibility="{Binding IsTargetArchived, Converter={StaticResource BooleanToVisibility}}">

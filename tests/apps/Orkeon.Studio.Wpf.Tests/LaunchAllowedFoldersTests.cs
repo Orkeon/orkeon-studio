@@ -386,6 +386,74 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     }
 
     [Fact]
+    public void A_task_that_must_write_a_file_its_agent_cannot_write_is_a_warning_before_the_run()
+    {
+        // Orkeon #392: the engine runs the crew, the file is never written and the task still succeeds.
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team);
+        File.AppendAllText(Path.Combine(team, "tasks", "draft.yaml"), "deliverable:\n  path: /output/draft.md\n");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+
+        Assert.True(tab.HasDeliverableWriterWarning);
+        Assert.Contains("'draft'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("'writer'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("/output/draft.md", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("file_write", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        // A warning: the run stays offered.
+        Assert.True(tab.RunCommand.CanExecute(null));
+
+        // The tool given, the warning goes when the team is read again, and the screen is told.
+        var raised = new List<string?>();
+        tab.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        File.AppendAllText(Path.Combine(team, "agents", "writer.yaml"), "tools: [file_write]\n");
+        tab.RefreshTeamDescription();
+        Assert.False(tab.HasDeliverableWriterWarning);
+        Assert.Equal("", tab.DeliverableWriterWarning);
+        Assert.Contains(nameof(tab.HasDeliverableWriterWarning), raised);
+        Assert.Contains(nameof(tab.DeliverableWriterWarning), raised);
+    }
+
+    [Fact]
+    public async Task A_launch_reads_the_crew_again_for_the_deliverable_warning()
+    {
+        // The crew edited on disk after the team was picked: the launch judges the files as they are.
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team);
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+        Assert.False(tab.HasDeliverableWriterWarning);
+
+        await File.AppendAllTextAsync(
+            Path.Combine(team, "tasks", "draft.yaml"),
+            "deliverable:\n  path: /output/draft.md\n",
+            TestContext.Current.CancellationToken);
+        var raised = new List<string?>();
+        tab.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(tab.HasDeliverableWriterWarning);
+        Assert.Contains(nameof(tab.HasDeliverableWriterWarning), raised);
+    }
+
+    [Fact]
+    public void Two_tasks_without_the_tool_are_both_named()
+    {
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team);
+        File.AppendAllText(Path.Combine(team, "tasks", "draft.yaml"), "deliverable:\n  path: /output/draft.md\n");
+        File.WriteAllText(
+            Path.Combine(team, "tasks", "polish.yaml"),
+            "description: polish\nexpected_output: a text\nagent: writer\ndeliverable:\n  path: /output/final.md\n");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+
+        // The heading, then one line per task.
+        var lines = tab.DeliverableWriterWarning.Split('\n');
+        Assert.Equal(3, lines.Length);
+        Assert.Contains("file_write", lines[0], StringComparison.Ordinal);
+        Assert.Contains("/output/draft.md", lines[1], StringComparison.Ordinal);
+        Assert.Contains("/output/final.md", lines[2], StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void An_agent_the_run_may_not_start_is_a_warning_not_a_refusal()
     {
         var team = NewTeam("veille", "/data/out:/output:ro");

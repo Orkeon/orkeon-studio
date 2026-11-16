@@ -131,6 +131,13 @@ public static class ValidationCodes
     /// </summary>
     public const string FileSystemScopeRefused = "STUDIO-FS-SCOPE";
 
+    /// <summary>
+    /// A task's agent must write the deliverable itself (<c>source: tool_call</c>, or no source) and
+    /// does not hold <c>file_write</c>, the tool the engine asks for (Orkeon #392). Always a warning:
+    /// the engine runs the crew, and the task counts as done whether or not the file was written.
+    /// </summary>
+    public const string DeliverableWithoutWriter = "STUDIO-DELIVERABLE-WRITER";
+
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";
 
