@@ -8,8 +8,8 @@
     licenses\**                              notices of the bundled .NET runtimes
     README.md, LICENSE.md, NOTICE.md, THIRD-PARTY-NOTICES.md, VERSION
 
-  Adapted from Orkeon's installers/msi/Package.wxs (its Studio payload and its
-  StudioShortcutComponent), trimmed to Studio: no PATH entry, no CLI. The orkeon CLI
+  Adapted from the Studio payload and the StudioShortcutComponent that Orkeon's
+  installers/msi/Package.wxs once carried, trimmed to Studio: no PATH entry, no CLI. The orkeon CLI
   is a prerequisite installed separately; Studio finds it through --cli-dir, next to itself,
   ORKEON_CLI_DIR, PATH or the Orkeon installer's folder (%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon).
 
