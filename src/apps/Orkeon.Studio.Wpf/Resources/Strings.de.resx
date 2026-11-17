@@ -1874,6 +1874,12 @@
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve">
     <value>Zusammenarbeit</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve">
+    <value>Entscheidungsmodelle</value>
+  </data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve">
+    <value>MCP-Server</value>
+  </data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve">
     <value>Ordner</value>
   </data>
@@ -1894,6 +1900,15 @@
   </data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>braucht ein Cloud-Speicher-Konto, deklariert unter Einstellungen › Cloud-Speicher</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
+    <value>durchsucht eine Sammlung, die der rag:-Block des Teams oder rag_ingest füllt</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
+    <value>erst vorhanden, wenn unter Einstellungen › MCP ein MCP-Server deklariert ist</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve">
+    <value>erst vorhanden mit {0} in der Einstellungsdatei</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} Werkzeuge, nichts einzustellen</value>

@@ -55,6 +55,10 @@ public sealed class ToolsSettingsViewModelTests
         Assert.True(webSearch.IsKey);
         var brave = Assert.Single(search.Requirements, r => r.Name == "brave_search");
         Assert.Equal("present only once the key BRAVE_API_KEY is remembered, above", brave.Text);
+        Assert.Contains(search.Tools, t => t.Name == "rag_ingest" && !t.NeedsSomething);
+        var ragSearch = Assert.Single(search.Requirements, r => r.Name == "rag_search");
+        Assert.Equal("searches a collection the team's rag: block or rag_ingest fills", ragSearch.Text);
+        Assert.False(ragSearch.IsKey);
 
         var web = Assert.Single(tools.Families, f => f.Key == ToolCatalog.WebFamily);
         var imageGeneration = Assert.Single(web.Requirements);
@@ -67,6 +71,23 @@ public sealed class ToolsSettingsViewModelTests
 
         var code = Assert.Single(tools.Families, f => f.Key == ToolCatalog.CodeFamily);
         Assert.Equal("expert setting below: Orkeon:Tools:Shell", Assert.Single(code.Requirements).Text);
+
+        var session = Assert.Single(tools.Families, f => f.Key == ToolCatalog.SessionFamily);
+        Assert.Equal(
+            "present only with Orkeon:CognitiveMemory:Enabled = true in the settings file",
+            Assert.Single(session.Requirements, r => r.Name == "memory_recall").Text);
+
+        var decision = Assert.Single(tools.Families, f => f.Key == ToolCatalog.DecisionFamily);
+        Assert.Equal("Decision models", decision.Label);
+        Assert.Equal(
+            "present only with Orkeon:Decision:Provider in the settings file",
+            Assert.Single(decision.Requirements, r => r.Name == "system_one_decide").Text);
+
+        var mcp = Assert.Single(tools.Families, f => f.Key == ToolCatalog.McpFamily);
+        Assert.Equal("MCP servers", mcp.Label);
+        var promptGet = Assert.Single(mcp.Requirements, r => r.Name == "mcp_prompt_get");
+        Assert.Equal("present only once an MCP server is declared in Settings › MCP", promptGet.Text);
+        Assert.False(promptGet.IsKey);
 
         var events = Assert.Single(tools.Families, f => f.Key == ToolCatalog.EventsFamily);
         Assert.False(events.HasRequirements);
@@ -137,6 +158,24 @@ public sealed class ToolsSettingsViewModelTests
             Assert.DoesNotContain("orkeon email", r.Text, StringComparison.Ordinal);
             Assert.DoesNotContain("{0}", r.Text, StringComparison.Ordinal);
         });
+    }
+
+    /// <summary>The mcp_prompt_get line names the MCP tab the way each language's tab strip does.</summary>
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("zh-Hans")]
+    public void The_mcp_line_names_the_tab_as_the_tab_strip_spells_it(string culture)
+    {
+        var strings = new FakeResxStudioStrings(culture);
+        var tools = new ToolsSettingsViewModel(new FakeApiKeyStore(), strings);
+
+        var mcp = Assert.Single(tools.Families, f => f.Key == ToolCatalog.McpFamily);
+        var line = Assert.Single(mcp.Requirements).Text;
+
+        Assert.Contains("› " + strings["Studio.Shell.Mcp"], line, StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", line, StringComparison.Ordinal);
     }
 
     /// <summary>The drive line names the Drive tab the way each language's tab strip does.</summary>

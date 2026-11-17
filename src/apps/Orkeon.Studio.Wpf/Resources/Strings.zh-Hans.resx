@@ -1874,6 +1874,12 @@
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve">
     <value>协作</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve">
+    <value>决策模型</value>
+  </data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve">
+    <value>MCP 服务器</value>
+  </data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve">
     <value>文件夹</value>
   </data>
@@ -1894,6 +1900,15 @@
   </data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>需要一个云盘账户，在“设置 › 云盘”中声明</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
+    <value>在由团队的 rag: 块或 rag_ingest 填充的集合中检索</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
+    <value>仅在“设置 › MCP”中声明 MCP 服务器后才会出现</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve">
+    <value>仅当设置文件中有 {0} 时才会出现</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} 个工具，无需配置</value>

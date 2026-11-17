@@ -689,6 +689,8 @@
   <data name="Studio.Settings.ToolFamilyEvents" xml:space="preserve"><value>Events</value></data>
   <data name="Studio.Settings.ToolFamilyAnalysis" xml:space="preserve"><value>Code analysis</value></data>
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve"><value>Collaboration</value></data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve"><value>Decision models</value></data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve"><value>MCP servers</value></data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve"><value>Folders</value></data>
   <data name="Studio.Settings.ToolNeedsStoredKey" xml:space="preserve"><value>needs the key {0}, above</value></data>
   <data name="Studio.Settings.ToolOnlyWithStoredKey" xml:space="preserve"><value>present only once the key {0} is remembered, above</value></data>
@@ -696,6 +698,9 @@
   <data name="Studio.Settings.ToolExpertSetting" xml:space="preserve"><value>expert setting below: {0}</value></data>
   <data name="Studio.Settings.ToolNeedsEmailAccount" xml:space="preserve"><value>needs an e-mail account, declared in Settings › E-mail</value></data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve"><value>needs a drive account, declared in Settings › Drive</value></data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve"><value>searches a collection the team's rag: block or rag_ingest fills</value></data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>present only once an MCP server is declared in Settings › MCP</value></data>
+  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve"><value>present only with {0} in the settings file</value></data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve"><value>{0} tools, nothing to configure</value></data>
   <data name="Studio.Settings.McpProblemId" xml:space="preserve"><value>An identifier is required: letters, digits, '.', '_' and '-'.</value></data>
   <data name="Studio.Settings.McpProblemCommand" xml:space="preserve"><value>A stdio server needs a command to launch.</value></data>

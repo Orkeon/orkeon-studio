@@ -107,6 +107,8 @@ public sealed class ToolFamilyViewModel : ObservableObject
         ToolCatalog.EventsFamily => StudioStringKeys.ToolFamilyEvents,
         ToolCatalog.AnalysisFamily => StudioStringKeys.ToolFamilyAnalysis,
         ToolCatalog.CollaborationFamily => StudioStringKeys.ToolFamilyCollaboration,
+        ToolCatalog.DecisionFamily => StudioStringKeys.ToolFamilyDecision,
+        ToolCatalog.McpFamily => StudioStringKeys.ToolFamilyMcp,
         ToolCatalog.MountsFamily => StudioStringKeys.ToolFamilyMounts,
         _ => _family.Key,
     }];
@@ -174,6 +176,10 @@ public sealed class ToolRequirementViewModel : ObservableObject
         ToolRequirement.EmailAccount => _strings[StudioStringKeys.ToolNeedsEmailAccount],
         // The sentence sends to the Drive tab, as the e-mail one does to the E-mail tab.
         ToolRequirement.DriveAccount => _strings[StudioStringKeys.ToolNeedsDriveAccount],
+        ToolRequirement.RagCollection => _strings[StudioStringKeys.ToolNeedsRagCollection],
+        // The sentence sends to the MCP tab, where a server is declared; the section is not said.
+        ToolRequirement.OnlyWithMcpServer => _strings[StudioStringKeys.ToolOnlyWithMcpServer],
+        ToolRequirement.OnlyWithSetting => Format(StudioStringKeys.ToolOnlyWithSetting),
         _ => "",
     };
 

@@ -116,7 +116,7 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     [InlineData("tools: [docx_writer]", "/output/notes.md")]
     [InlineData("tools: [xlsx_writer]", "/output/report.docx")]
     [InlineData("tools: [firefox]", "/output/shot.jpg")]
-    // Orkeon's own tools a run registers off the Settings screen write no file either.
+    // Orkeon's own RAG tools, and those a run registers under a setting of their own, write no file either.
     [InlineData("tools: [file_read, rag_search, rag_ingest, rag_eval]", "/output/notes.md")]
     [InlineData("tools: [system_one_decide, mcp_prompt_get, memory_recall]", "/output/notes.md")]
     public void A_tool_that_cannot_write_that_file_is_not_enough(string agentTools, string path)
@@ -521,7 +521,7 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         // CandidatesOf and IsOpaque are private to the engine: Studio's Collect copies them by hand.
         var check = File.ReadAllText(Path.Combine(
             OrkeonSources.Root(), "src/core/Orkeon.Application/Crew/DeliverableToolCheck.cs"));
-        const string Follow = " CrewDeliverableWriters.Collect (and its unlisted run tools) must follow the engine's rule.";
+        const string Follow = " CrewDeliverableWriters.Collect (and the catalogue it counts as known) must follow the engine's rule.";
         Assert.True(
             Regex.IsMatch(
                 check,

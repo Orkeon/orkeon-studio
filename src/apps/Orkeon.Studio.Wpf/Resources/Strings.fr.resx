@@ -689,6 +689,8 @@
   <data name="Studio.Settings.ToolFamilyEvents" xml:space="preserve"><value>Événements</value></data>
   <data name="Studio.Settings.ToolFamilyAnalysis" xml:space="preserve"><value>Analyse de code</value></data>
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve"><value>Collaboration</value></data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve"><value>Modèles de décision</value></data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve"><value>Serveurs MCP</value></data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve"><value>Dossiers</value></data>
   <data name="Studio.Settings.ToolNeedsStoredKey" xml:space="preserve"><value>a besoin de la clé {0}, ci-dessus</value></data>
   <data name="Studio.Settings.ToolOnlyWithStoredKey" xml:space="preserve"><value>présent seulement une fois la clé {0} mémorisée, ci-dessus</value></data>
@@ -696,6 +698,9 @@
   <data name="Studio.Settings.ToolExpertSetting" xml:space="preserve"><value>réglage expert ci-dessous : {0}</value></data>
   <data name="Studio.Settings.ToolNeedsEmailAccount" xml:space="preserve"><value>a besoin d'un compte e-mail, déclaré dans Réglages › E-mail</value></data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve"><value>a besoin d'un compte de stockage en ligne, déclaré dans Réglages › Stockage en ligne</value></data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve"><value>cherche dans une collection que remplit le bloc rag: de l'équipe ou rag_ingest</value></data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>présent seulement une fois un serveur MCP déclaré dans Réglages › MCP</value></data>
+  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve"><value>présent seulement avec {0} dans le fichier de réglages</value></data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve"><value>{0} outils, rien à régler</value></data>
   <data name="Studio.Settings.McpProblemId" xml:space="preserve"><value>Un identifiant est requis : lettres, chiffres, '.', '_' et '-'.</value></data>
   <data name="Studio.Settings.McpProblemCommand" xml:space="preserve"><value>Un serveur stdio a besoin d'une commande à lancer.</value></data>

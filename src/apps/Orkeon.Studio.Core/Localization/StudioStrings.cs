@@ -1558,6 +1558,12 @@ public static class StudioStringKeys
     /// <summary>"Collaboration"</summary>
     public const string ToolFamilyCollaboration = "Studio.Settings.ToolFamilyCollaboration";
 
+    /// <summary>"Decision models"</summary>
+    public const string ToolFamilyDecision = "Studio.Settings.ToolFamilyDecision";
+
+    /// <summary>"MCP servers"</summary>
+    public const string ToolFamilyMcp = "Studio.Settings.ToolFamilyMcp";
+
     /// <summary>"Folders"</summary>
     public const string ToolFamilyMounts = "Studio.Settings.ToolFamilyMounts";
 
@@ -1579,6 +1585,15 @@ public static class StudioStringKeys
 
     /// <summary>"needs a drive account, declared in Settings › Drive"</summary>
     public const string ToolNeedsDriveAccount = "Studio.Settings.ToolNeedsDriveAccount";
+
+    /// <summary>"searches a collection the team's rag: block or rag_ingest fills"</summary>
+    public const string ToolNeedsRagCollection = "Studio.Settings.ToolNeedsRagCollection";
+
+    /// <summary>"present only once an MCP server is declared in Settings › MCP"</summary>
+    public const string ToolOnlyWithMcpServer = "Studio.Settings.ToolOnlyWithMcpServer";
+
+    /// <summary>"present only with {0} in the settings file" — {0} is the setting, which no tab writes</summary>
+    public const string ToolOnlyWithSetting = "Studio.Settings.ToolOnlyWithSetting";
 
     /// <summary>"{0} tools, nothing to configure"</summary>
     public const string ToolFamilyQuietPattern = "Studio.Settings.ToolFamilyQuietPattern";
@@ -3627,6 +3642,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolFamilyEvents] = "Events",
         [StudioStringKeys.ToolFamilyAnalysis] = "Code analysis",
         [StudioStringKeys.ToolFamilyCollaboration] = "Collaboration",
+        [StudioStringKeys.ToolFamilyDecision] = "Decision models",
+        [StudioStringKeys.ToolFamilyMcp] = "MCP servers",
         [StudioStringKeys.ToolFamilyMounts] = "Folders",
         [StudioStringKeys.ToolNeedsStoredKey] = "needs the key {0}, above",
         [StudioStringKeys.ToolOnlyWithStoredKey] = "present only once the key {0} is remembered, above",
@@ -3634,6 +3651,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolExpertSetting] = "expert setting below: {0}",
         [StudioStringKeys.ToolNeedsEmailAccount] = "needs an e-mail account, declared in Settings › E-mail",
         [StudioStringKeys.ToolNeedsDriveAccount] = "needs a drive account, declared in Settings › Drive",
+        [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills",
+        [StudioStringKeys.ToolOnlyWithMcpServer] = "present only once an MCP server is declared in Settings › MCP",
+        [StudioStringKeys.ToolOnlyWithSetting] = "present only with {0} in the settings file",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
         [StudioStringKeys.McpProblemId] = "An identifier is required: letters, digits, '.', '_' and '-'.",
         [StudioStringKeys.McpProblemCommand] = "A stdio server needs a command to launch.",

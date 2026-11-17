@@ -12,20 +12,21 @@ namespace Orkeon.Studio.Core.Tests;
 
 /// <summary>
 /// STUDIO-21 — the tool catalogue the Settings screen lists is pinned against the documented
-/// inventory: every name it carries is a real registry name, and its families and its unlisted
-/// run tools carry exactly the tools the <c>orkeon run</c> column of the availability matrix says
-/// a run exposes.
+/// inventory: every name it carries is a real registry name, and its families carry exactly the
+/// tools the <c>orkeon run</c> column of the availability matrix says a run exposes, those a run
+/// registers only under a setting of their own included.
 /// </summary>
 public sealed partial class ToolCatalogTests
 {
     /// <summary>
-    /// The <c>orkeon run</c> column, counted by hand from the matrix: Web core 6 (firefox joined), search 5
-    /// (web_search, brave_search, cache_search, semantic_search, local_embed_text), files 6 (edit_file joined),
-    /// data 22, e-mail 13 (the twelve account tools and email_parser, which left the files
-    /// family), drive 11, shell_command, session 6, EventHub 7, Analysis 19, collaboration 3
-    /// (human_input and the two per-agent coworker tools), list_mounts.
+    /// The <c>orkeon run</c> column, counted by hand from the matrix: Web core 6 (firefox joined), search 8
+    /// (web_search, brave_search, cache_search, semantic_search, local_embed_text and the three RAG tools),
+    /// files 8, data 22, e-mail 13 (the twelve account tools and email_parser, which left the files
+    /// family), drive 11, shell_command, session 7 (the six session tools and memory_recall), EventHub 7,
+    /// Analysis 29, collaboration 4 (human_input, the two per-agent coworker tools, spawn_agent),
+    /// system_one_decide, mcp_prompt_get, list_mounts.
     /// </summary>
-    private const int ToolsARunExposes = 112;
+    private const int ToolsARunExposes = 119;
 
     /// <summary>The one e-mail tool that works on a file rather than on an account.</summary>
     private const string EmailParser = "email_parser";
@@ -61,16 +62,15 @@ public sealed partial class ToolCatalogTests
     {
         var names = ToolCatalog.All.Select(t => t.Name).ToList();
 
-        Assert.Equal(ToolsARunExposes + 1, names.Count);
+        Assert.Equal(ToolsARunExposes, names.Count);
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
         // The tools the matrix keeps out of a run never appear: Slack, the code interpreter
-        // (concrete type only). RAG is in a run, kept off the Settings screen: an unlisted run tool.
+        // (concrete type only), progress_report (the REPL's). RAG is in every run.
         Assert.Contains("structural_rewrite", names);
+        Assert.Contains("rag_search", names);
         Assert.DoesNotContain("slack_send_message", names);
         Assert.DoesNotContain("code_interpreter", names);
-        Assert.DoesNotContain("rag_search", names);
-        Assert.Contains("rag_search", ToolCatalog.UnlistedRunTools);
-        Assert.Empty(ToolCatalog.UnlistedRunTools.Intersect(names, StringComparer.Ordinal));
+        Assert.DoesNotContain("progress_report", names);
     }
 
     // A row of the availability matrix: its first cell, then the start of the orkeon run cell.
@@ -80,20 +80,26 @@ public sealed partial class ToolCatalogTests
     [GeneratedRegex(@"`([a-z][a-z0-9_]*)`")]
     private static partial Regex ToolNamePattern();
 
-    /// <summary>
-    /// Every tool the <c>orkeon run</c> column of the availability matrix names as registered
-    /// (a row that starts with a tick) is in the families or among the unlisted run tools: a name
-    /// in neither would count as a tool Orkeon does not ship, one that may write any file, in the
-    /// pre-launch deliverable check.
-    /// </summary>
-    [Fact]
-    public void Every_tool_a_run_registers_is_listed_or_an_unlisted_run_tool()
+    /// <summary>The availability matrix of the inventory, up to the next section.</summary>
+    private static string AvailabilityMatrix()
     {
         var inventory = File.ReadAllText(Path.Combine(OrkeonSources.Root(), "docs", "tools", "inventory.md"));
         var start = inventory.IndexOf("## Availability by composition root", StringComparison.Ordinal);
         Assert.True(start >= 0, "docs/tools/inventory.md has no availability matrix.");
         var matrix = inventory[start..];
-        matrix = matrix[..matrix.IndexOf("\n## ", 1, StringComparison.Ordinal)];
+        return matrix[..matrix.IndexOf("\n## ", 1, StringComparison.Ordinal)];
+    }
+
+    /// <summary>
+    /// Every tool the <c>orkeon run</c> column of the availability matrix names as registered
+    /// (a row that starts with a tick, a conditional one included) is in the families: a name
+    /// missing from them would count as a tool Orkeon does not ship, one that may write any file,
+    /// in the pre-launch deliverable check.
+    /// </summary>
+    [Fact]
+    public void Every_tool_a_run_registers_is_in_a_family()
+    {
+        var matrix = AvailabilityMatrix();
 
         var registered = MatrixRowPattern().Matches(matrix)
             .Where(row => row.Groups[2].Value.TrimStart().StartsWith('\u2705'))
@@ -102,12 +108,44 @@ public sealed partial class ToolCatalogTests
         Assert.Contains("rag_search", registered);
         Assert.Contains("memory_recall", registered);
 
-        var known = ToolCatalog.All.Select(t => t.Name).Concat(ToolCatalog.UnlistedRunTools).ToHashSet(StringComparer.Ordinal);
+        var known = ToolCatalog.All.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
         var missing = registered.Where(name => !known.Contains(name)).ToList();
         Assert.True(missing.Count == 0, "Registered by orkeon run, unknown to Studio: " + string.Join(", ", missing));
+    }
 
-        var documented = DocumentedNames();
-        Assert.All(ToolCatalog.UnlistedRunTools, name => Assert.Contains(name, documented));
+    /// <summary>
+    /// A tool a run registers only under a setting of its own says which: the matrix row of the
+    /// tool names the setting the catalogue's line names, so a condition the engine moves fails here.
+    /// </summary>
+    [Theory]
+    [InlineData("system_one_decide", ToolRequirement.OnlyWithSetting, "Orkeon:Decision:Provider")]
+    [InlineData("memory_recall", ToolRequirement.OnlyWithSetting, "Orkeon:CognitiveMemory:Enabled")]
+    [InlineData("mcp_prompt_get", ToolRequirement.OnlyWithMcpServer, "MCP:Servers")]
+    [InlineData("brave_search", ToolRequirement.OnlyWithStoredKey, "BRAVE_API_KEY")]
+    public void A_tool_registered_under_a_setting_names_the_setting_the_matrix_names(
+        string tool, ToolRequirement requirement, string setting)
+    {
+        var info = Assert.Single(ToolCatalog.All, t => t.Name == tool);
+        Assert.Equal(requirement, info.Requirement);
+        Assert.StartsWith(setting, info.Argument, StringComparison.Ordinal);
+
+        var row = MatrixRowPattern().Matches(AvailabilityMatrix()).Single(r => r.Groups[1].Value.Trim() == $"`{tool}`");
+        Assert.Contains($"`{setting}`", row.Groups[2].Value, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The RAG tools are registered by every run and need no key: the two that read a collection
+    /// say so, the one that fills it needs nothing.
+    /// </summary>
+    [Fact]
+    public void The_rag_tools_are_search_tools_and_the_readers_need_a_collection()
+    {
+        var search = Assert.Single(ToolCatalog.Families, f => f.Key == ToolCatalog.SearchFamily);
+
+        Assert.Equal(ToolRequirement.RagCollection, Assert.Single(search.Tools, t => t.Name == "rag_search").Requirement);
+        Assert.Equal(ToolRequirement.RagCollection, Assert.Single(search.Tools, t => t.Name == "rag_eval").Requirement);
+        Assert.Equal(ToolRequirement.None, Assert.Single(search.Tools, t => t.Name == "rag_ingest").Requirement);
+        Assert.Equal(2, ToolCatalog.All.Count(t => t.Requirement == ToolRequirement.RagCollection));
     }
 
     [Fact]

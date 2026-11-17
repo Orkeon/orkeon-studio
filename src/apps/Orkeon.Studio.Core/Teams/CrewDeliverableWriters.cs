@@ -57,7 +57,7 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// The launchers warn before the run; they never block, the run still ending on a result.
 /// <para>
 /// A belt (the agent's <c>tools:</c> and the task's own) can write the file when it holds a tool
-/// Orkeon does not ship, a name neither the catalogue nor its unlisted run tools carry (an MCP
+/// Orkeon does not ship, a name the catalogue does not carry (an MCP
 /// server's, a plugin's, a script's: it may write, for all Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>,
 /// read from the engine, not copied): the tool of the file's format (<c>docx_writer</c> a <c>.docx</c>,
 /// <c>xlsx_writer</c> a <c>.xlsx</c>, <c>image_generation</c> an image, <c>firefox</c> a <c>.png</c>), and
@@ -74,9 +74,9 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// Not judged, where the engine sees more than the YAML: a provider that runs its own tools, and a key
 /// the loader accepts under another spelling (<c>tools_</c>), as <see cref="CrewFileSystemScopes"/>. A
 /// <c>permissionMode:</c> that denies a tool the agent holds is judged by neither: the engine's check
-/// reads the tools the agent holds, as Studio does. The tools a run registers that the Settings screen
-/// does not list (<see cref="Tools.ToolCatalog.UnlistedRunTools"/>: the RAG tools...) are Orkeon's own,
-/// and counted as no writer, as the engine counts them.
+/// reads the tools the agent holds, as Studio does. The tools a run registers only under a setting of
+/// their own (<c>system_one_decide</c>, <c>mcp_prompt_get</c>, <c>memory_recall</c>) and the RAG tools
+/// are in the catalogue, Orkeon's own, and counted as no writer, as the engine counts them.
 /// </para>
 /// <para>
 /// The crew is read as <see cref="CrewFileSystemScopes"/> reads it, and nothing is said of a crew the
@@ -90,11 +90,11 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 public static class CrewDeliverableWriters
 {
     /// <summary>
-    /// The tools Orkeon ships that a run registers, listed on the Settings screen or not: a name outside
+    /// The tools Orkeon ships that a run registers, as the Settings screen lists them: a name outside
     /// them may write a file for all Studio can tell.
     /// </summary>
     private static readonly HashSet<string> KnownTools =
-        new(Tools.ToolCatalog.All.Select(tool => tool.Name).Concat(Tools.ToolCatalog.UnlistedRunTools), StringComparer.OrdinalIgnoreCase);
+        new(Tools.ToolCatalog.All.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the crew's order.</summary>
     public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target) =>

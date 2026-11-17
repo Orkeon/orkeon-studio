@@ -39,6 +39,28 @@ public enum ToolRequirement
     /// declared and signed in; the section stays the argument, as for <see cref="EmailAccount"/>.
     /// </summary>
     DriveAccount,
+
+    /// <summary>
+    /// A RAG collection to search: one the crew's <c>rag:</c> block declares, which the run ingests
+    /// as the crew loads, or one <c>rag_ingest</c> filled. The tool is registered by every run, with
+    /// the run's on-device embeddings and its default model; nothing is to set, but a collection
+    /// nothing filled answers nothing. The default store lives as long as the run
+    /// (<c>Orkeon:Rag:Provider</c> names one that keeps it).
+    /// </summary>
+    RagCollection,
+
+    /// <summary>
+    /// The tool is registered only once an MCP server is declared, under the section named in
+    /// <see cref="ToolInfo.Argument"/>; without one, it does not exist. The servers are declared in
+    /// Studio's MCP tab, where the sentence sends the reader.
+    /// </summary>
+    OnlyWithMcpServer,
+
+    /// <summary>
+    /// The tool is registered only once the settings file holds the setting named in
+    /// <see cref="ToolInfo.Argument"/>, which no tab of Studio writes; without it, it does not exist.
+    /// </summary>
+    OnlyWithSetting,
 }
 
 /// <summary>One tool of the catalogue: its registry name and what it needs.</summary>
@@ -62,9 +84,11 @@ public sealed record ToolSecret(string EnvName, string UsedBy, Uri ConsoleUrl);
 /// The tools <c>orkeon run</c> registers, by family, with what each one needs (STUDIO-21).
 /// Declared here rather than read from the runtime: the framework carries no "required
 /// settings" metadata, the registry lists names only and a tool absent from it (a key not
-/// set) is invisible there. The families are the <c>orkeon run</c> column of the availability
-/// matrix in <c>docs/tools/inventory.md</c> but for <see cref="UnlistedRunTools"/>, and a test
-/// pins every name against that file.
+/// set, a setting not written) is invisible there. The families are the <c>orkeon run</c>
+/// column of the availability matrix in <c>docs/tools/inventory.md</c>, the tools a run
+/// registers only under a setting of their own included (<c>brave_search</c>,
+/// <c>system_one_decide</c>, <c>mcp_prompt_get</c>, <c>memory_recall</c>), and a test pins
+/// every name against that file.
 /// <para>
 /// The e-mail family (MAIL-05) is the opposite case: its tools are registered whether or not
 /// an account is declared, so the registry lists them all the same, and only this catalogue
@@ -104,8 +128,21 @@ public static class ToolCatalog
     public const string AnalysisFamily = "analysis";
     /// <summary>Collaboration.</summary>
     public const string CollaborationFamily = "collaboration";
+    /// <summary>Decision models: <c>system_one_decide</c>.</summary>
+    public const string DecisionFamily = "decision";
+    /// <summary>MCP servers: <c>mcp_prompt_get</c>; a server's own tools carry their own names.</summary>
+    public const string McpFamily = "mcp";
     /// <summary>Folders.</summary>
     public const string MountsFamily = "mounts";
+
+    /// <summary>Where an MCP server is declared: <c>mcp_prompt_get</c> is registered once one is.</summary>
+    public const string McpServers = McpSection.SectionPath + ":Servers";
+
+    /// <summary>The setting that names a decision provider: <c>system_one_decide</c> is registered once one is configured.</summary>
+    public const string DecisionProvider = "Orkeon:Decision:Provider";
+
+    /// <summary>The switch of the cognitive memory: <c>memory_recall</c> is registered once it is on.</summary>
+    public const string CognitiveMemoryEnabled = "Orkeon:CognitiveMemory:Enabled";
 
     /// <summary>The Tavily key of <c>web_search</c>, resolved through the secret chain (<c>ORKEON_</c> + name).</summary>
     public const string TavilyKeyEnv = "ORKEON_TAVILY_API_KEY";
@@ -145,6 +182,9 @@ public static class ToolCatalog
             new("cache_search"),
             new("semantic_search"),
             new("local_embed_text"),
+            new("rag_search", ToolRequirement.RagCollection),
+            new("rag_ingest"),
+            new("rag_eval", ToolRequirement.RagCollection),
         ]),
         new(FilesFamily,
         [
@@ -225,6 +265,8 @@ public static class ToolCatalog
             new("session_cost"),
             new("token_budget"),
             new("memory_store"),
+            // Handed to every agent of a crew with memory: true; registered only once the switch is on.
+            new("memory_recall", ToolRequirement.OnlyWithSetting, CognitiveMemoryEnabled + " = true"),
         ]),
         new(EventsFamily,
         [
@@ -275,22 +317,20 @@ public static class ToolCatalog
             new("delegate_work_to_coworker"),
             new("spawn_agent"),
         ]),
+        new(DecisionFamily,
+        [
+            // Also registered when a decision provider is deduced from its section or its API key.
+            new("system_one_decide", ToolRequirement.OnlyWithSetting, DecisionProvider),
+        ]),
+        new(McpFamily,
+        [
+            new("mcp_prompt_get", ToolRequirement.OnlyWithMcpServer, McpServers),
+        ]),
         new(MountsFamily,
         [
             new("list_mounts"),
         ]),
     ];
-
-    /// <summary>
-    /// The tools a run registers that the families leave off the Settings screen: the RAG tools,
-    /// which a crew's <c>rag:</c> collections feed, and three a run registers only under a setting of
-    /// its own (<c>system_one_decide</c> with a decision provider, <c>mcp_prompt_get</c> with MCP
-    /// servers, <c>memory_recall</c> with cognitive memory). Orkeon's own tools all the same: the
-    /// engine's deliverable check counts none of them as a writer, and neither does Studio's
-    /// (<c>CrewDeliverableWriters</c>), where an unknown name may write anything.
-    /// </summary>
-    public static IReadOnlyList<string> UnlistedRunTools { get; } =
-        ["rag_search", "rag_ingest", "rag_eval", "system_one_decide", "mcp_prompt_get", "memory_recall"];
 
     /// <summary>Every tool of every family.</summary>
     public static IEnumerable<ToolInfo> All => Families.SelectMany(family => family.Tools);
