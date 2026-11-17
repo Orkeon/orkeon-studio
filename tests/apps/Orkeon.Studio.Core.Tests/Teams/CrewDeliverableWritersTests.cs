@@ -188,8 +188,8 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     // No agent: line: the round-robin may pick any agent.
     [InlineData("process: sequential", "")]
     [InlineData("process: parallel", "")]
-    // A manager, a vote or a planner hands the task out whatever its agent: line.
-    [InlineData("process: hierarchical", "agent: analyst")]
+    // A vote or a planner hands the task out whatever its agent: line (a manager too: the theory below,
+    // a hierarchical crew having one).
     [InlineData("process: consensual", "agent: analyst")]
     [InlineData("process: autonomous", "agent: analyst")]
     public void A_task_several_agents_may_run_is_said_only_when_none_of_them_can_write(string process, string task)
@@ -243,11 +243,10 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     }
 
     [Fact]
-    public void Every_agent_of_an_autonomous_crew_may_run_a_task_its_manager_key_included()
+    public void Every_agent_of_an_autonomous_crew_may_run_a_task()
     {
         Assert.Empty(CrewDeliverableWriters.OfCrewFile("""
             process: autonomous
-            managerAgent: boss
             agents:
               boss:
                 role: Boss
@@ -296,13 +295,26 @@ public sealed class CrewDeliverableWritersTests : IDisposable
                 NullLogger<FileSystemService>.Instance),
             NullLogger<YamlCrewDefinitionLoader>.Instance);
 
-    /// <summary>The engine refuses <paramref name="yaml"/> at load, saying <paramref name="reason"/>.</summary>
+    /// <summary>
+    /// The engine refuses <paramref name="yaml"/> at load, saying <paramref name="reason"/>: the loader
+    /// throws, or the validator the crew factory runs next reports it.
+    /// </summary>
     private static async Task AssertEngineRefuses(string yaml, string reason)
     {
         using var registry = new FileSystemRegistry([]);
-        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => EngineLoader(registry).LoadFromStringAsync(yaml, TestContext.Current.CancellationToken));
-        Assert.Contains(reason, refusal.Message, StringComparison.Ordinal);
+        var loader = EngineLoader(registry);
+        string said;
+        try
+        {
+            var config = await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken);
+            said = string.Join("; ", loader.Validate(config).Errors);
+        }
+        catch (InvalidOperationException refusal)
+        {
+            said = refusal.Message;
+        }
+
+        Assert.Contains(reason, said, StringComparison.Ordinal);
     }
 
     /// <summary>A crew of an analyst (no tool) and a writer (<c>file_write</c>) whose tasks are <paramref name="tasks"/>.</summary>
@@ -351,6 +363,14 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    agent: writer\n    " + Decision + "\n    deliverable: { path: /output/choice.md }\n", "both a decision and an agent" },
         { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    decision: { questions: {} }\n    deliverable: { path: /output/choice.md }\n", "at least one question" },
         { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    decision: {}\n    deliverable: { path: /output/choice.md }\n", "at least one question" },
+        // A manager agent under a process that has none, one naming no agent, a hierarchical crew without one.
+        { "managerAgent: writer", ReadTask, "has no manager" },
+        { "process: parallel\nmanagerAgent: writer", ReadTask, "has no manager" },
+        { "process: graph\nmanager_agent: writer", ReadTask, "has no manager" },
+        { "process: autonomous\nmanagerAgent: writer", ReadTask, "has no manager" },
+        { "process: hierarchical\nmanagerAgent: ghost", ReadTask, "names no agent of the crew" },
+        { "process: consensual\nmanagerAgent: ghost", ReadTask, "names no agent of the crew" },
+        { "process: hierarchical", ReadTask, "requires a manager agent" },
     };
 
     [Fact]

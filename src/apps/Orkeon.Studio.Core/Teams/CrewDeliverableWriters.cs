@@ -68,7 +68,7 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// The agents that may run a task follow the process, as the engine's: under a sequential, parallel or
 /// graph process, the agent the task's <c>agent:</c> names, else every agent (the round-robin picks);
 /// under a hierarchical or consensual one, every agent but the manager agent; under an autonomous one,
-/// every agent. The task is named only when none of them can write the file.
+/// every agent (it has no manager agent: the engine refuses one). The task is named only when none of them can write the file.
 /// </para>
 /// <para>
 /// Not judged, where the engine sees more than the YAML: a provider that runs its own tools, and a key
@@ -83,7 +83,8 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// engine refuses at load, so that the load error is the one thing the user reads: an unknown process, a
 /// task naming an agent the crew lacks (whatever the process), a deliverable with an unknown source, a
 /// decision task that names an agent, asks no question or sits under a process that runs no decision
-/// (hierarchical, consensual, autonomous). Nor is anything said of a <c>.ork.ts</c> crew, which the CLI
+/// (hierarchical, consensual, autonomous), a manager agent under a process that has none or naming no
+/// agent of the crew, a hierarchical crew without one. Nor is anything said of a <c>.ork.ts</c> crew, which the CLI
 /// judges itself.
 /// </para>
 /// </summary>
@@ -123,10 +124,11 @@ public static class CrewDeliverableWriters
         // Absent is sequential; an unknown process is refused at load.
         var process = ProcessType.Sequential;
         if (settings is not null
-            && CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(settings, "process")) is { } written
-            && !ProcessType.TryFrom(written, out process))
+            && CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(settings, "process")) is { } written)
         {
-            return result;
+            if (!ProcessType.TryFrom(written, out var parsed) || parsed is null)
+                return result;
+            process = parsed;
         }
 
         var byKey = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
@@ -147,7 +149,10 @@ public static class CrewDeliverableWriters
             ? null
             : CrewFileSystemScopes.Text(
                 CrewFileSystemScopes.Value(settings, "managerAgent") ?? CrewFileSystemScopes.Value(settings, "manager_agent"));
-        var excludesManager = process?.AcceptsManagerAgent == true;
+        if (ManagerRefusedAtLoad(process, manager, declared))
+            return result;
+
+        var excludesManager = process.AcceptsManagerAgent;
 
         foreach (var (key, node) in taskList)
         {
@@ -194,6 +199,17 @@ public static class CrewDeliverableWriters
 
         return result;
     }
+
+    /// <summary>
+    /// Whether the engine refuses the whole crew at load because of its manager agent: one under a process
+    /// that has none (<c>YamlCrewMapper.RefuseManagerTheModeHasNoneOf</c>: sequential, the default, parallel,
+    /// graph, autonomous), one that names no agent of the crew (<c>ResolveManagerAgentId</c>), or none
+    /// under a hierarchical process (<c>CrewDefinitionValidator.ValidateHierarchicalProcess</c>).
+    /// </summary>
+    private static bool ManagerRefusedAtLoad(ProcessType process, string? manager, HashSet<string> declared) =>
+        manager is null
+            ? process == ProcessType.Hierarchical
+            : !process.AcceptsManagerAgent || !declared.Contains(manager);
 
     /// <summary>
     /// Whether the engine refuses the whole crew at load because of <paramref name="task"/>: it names an
