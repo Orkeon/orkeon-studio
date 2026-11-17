@@ -1,13 +1,16 @@
+using System.Text.RegularExpressions;
+using Orkeon.Application.Crew;
 using Orkeon.Studio.Core.Targets;
 using Orkeon.Studio.Core.Teams;
+using Orkeon.Studio.Core.Tools;
 using Orkeon.Studio.Tests.Shared;
 
 namespace Orkeon.Studio.Core.Tests.Teams;
 
 /// <summary>
-/// Orkeon #392: a task whose agent must write the deliverable with <c>file_write</c>, and does not
-/// hold it nor another way to deliver, is found before the run, and only where the crew tells who
-/// runs the task.
+/// Orkeon #392: a task whose deliverable may never be written is found before the run as the engine's
+/// load check (<see cref="DeliverableToolCheck"/>, Orkeon 1.2) finds it: no agent that may run the task
+/// holds a tool that writes that file, or the task is a decision.
 /// </summary>
 public sealed class CrewDeliverableWritersTests : IDisposable
 {
@@ -16,6 +19,31 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_root, recursive: true); } catch (IOException) { /* best-effort */ }
+    }
+
+    /// <summary>A one-agent crew whose task <c>read</c> must write <paramref name="path"/>.</summary>
+    private static IReadOnlyList<CrewDeliverableWithoutWriter> OneAgent(string agentTools, string path, string taskTools = "") =>
+        CrewDeliverableWriters.OfCrewFile($$"""
+            agents:
+              analyst:
+                role: Analyst
+                {{agentTools}}
+            tasks:
+              read:
+                agent: analyst
+                {{taskTools}}
+                deliverable:
+                  path: {{path}}
+            """);
+
+    private static void AssertFinding(
+        CrewDeliverableWithoutWriter finding, string task, string[] agents, string path,
+        CrewDeliverableFindingKind kind = CrewDeliverableFindingKind.NoWriter)
+    {
+        Assert.Equal(task, finding.Task);
+        Assert.Equal(agents, finding.Agents);
+        Assert.Equal(path, finding.Path);
+        Assert.Equal(kind, finding.Kind);
     }
 
     [Fact]
@@ -42,55 +70,64 @@ public sealed class CrewDeliverableWritersTests : IDisposable
                   source: tool_call
             """);
 
-        Assert.Equal([new CrewDeliverableWithoutWriter("read", "analyst", "/output/notes.md")], missing);
+        var finding = Assert.Single(missing);
+        AssertFinding(finding, "read", ["analyst"], "/output/notes.md");
+        Assert.Equal("file_write", finding.PreferredWriter);
+        Assert.False(finding.IsBinary);
     }
 
     [Theory]
-    [InlineData("tools: [file_write]", "")]
-    [InlineData("tools: [FILE_WRITE]", "")]
-    [InlineData("tools: [file_read]", "tools: [file_write]")]
-    // Another tool that creates a file at a path the agent gives.
-    [InlineData("tools: [docx_writer]", "")]
-    [InlineData("tools: [xlsx_writer]", "")]
-    [InlineData("tools: [image_generation]", "")]
-    [InlineData("tools: [firefox]", "")]
-    [InlineData("tools: [shell_command]", "")]
-    // A tool Studio's catalogue does not know (an MCP server's) may write too.
-    [InlineData("tools: [file_read, acme_write_file]", "")]
-    public void File_write_or_another_way_to_deliver_is_enough(string agentTools, string taskTools)
+    [InlineData("tools: [file_write]", "/output/notes.md", "")]
+    [InlineData("tools: [FILE_WRITE]", "/output/notes.md", "")]
+    [InlineData("tools: [file_read]", "/output/notes.md", "tools: [file_write]")]
+    [InlineData("tools: [file_write]", "/output/data.csv", "")]
+    [InlineData("tools: [file_write]", "/output/page.html", "")]
+    // The tool of the file's format.
+    [InlineData("tools: [docx_writer]", "/output/report.docx", "")]
+    [InlineData("tools: [file_read]", "/output/report.docx", "tools: [docx_writer]")]
+    [InlineData("tools: [xlsx_writer]", "/output/figures.xlsx", "")]
+    [InlineData("tools: [image_generation]", "/output/cover.jpg", "")]
+    [InlineData("tools: [firefox]", "/output/shot.png", "")]
+    // A tool Studio's catalogue does not know (an MCP server's) may write anything, a binary file too.
+    [InlineData("tools: [file_read, acme_write_file]", "/output/notes.md", "")]
+    [InlineData("tools: [acme_pdf]", "/output/report.pdf", "")]
+    public void A_tool_that_writes_the_file_is_enough(string agentTools, string path, string taskTools)
     {
-        Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
-            agents:
-              analyst:
-                role: Analyst
-                {{agentTools}}
-            tasks:
-              read:
-                agent: analyst
-                {{taskTools}}
-                deliverable:
-                  path: /output/notes.md
-            """));
+        Assert.Empty(OneAgent(agentTools, path, taskTools));
     }
 
     [Theory]
-    // edit_file changes a file that exists and refuses one that does not.
-    [InlineData("tools: [file_read, edit_file]")]
-    [InlineData("tools: [edit_batch, grep]")]
-    [InlineData("tools: []")]
-    public void A_tool_that_cannot_create_the_file_is_not_enough(string agentTools)
+    // The editors change a file that exists; shell_command's contract names no path.
+    [InlineData("tools: [file_read, edit_file]", "/output/notes.md")]
+    [InlineData("tools: [edit_batch, grep]", "/output/notes.md")]
+    [InlineData("tools: [structural_rewrite]", "/output/notes.md")]
+    [InlineData("tools: [shell_command]", "/output/notes.md")]
+    [InlineData("tools: [drive_download, email_save_attachment]", "/output/notes.md")]
+    [InlineData("tools: []", "/output/notes.md")]
+    // file_write writes text: never a binary file.
+    [InlineData("tools: [file_write]", "/output/report.docx")]
+    // A format writer writes its own format only.
+    [InlineData("tools: [docx_writer]", "/output/notes.md")]
+    [InlineData("tools: [xlsx_writer]", "/output/report.docx")]
+    [InlineData("tools: [firefox]", "/output/shot.jpg")]
+    public void A_tool_that_cannot_write_that_file_is_not_enough(string agentTools, string path)
     {
-        Assert.Single(CrewDeliverableWriters.OfCrewFile($$"""
-            agents:
-              analyst:
-                role: Analyst
-                {{agentTools}}
-            tasks:
-              read:
-                agent: analyst
-                deliverable:
-                  path: /output/notes.md
-            """));
+        AssertFinding(Assert.Single(OneAgent(agentTools, path)), "read", ["analyst"], path);
+    }
+
+    [Theory]
+    [InlineData("/output/notes.md", "file_write", false)]
+    [InlineData("/output/report.docx", "docx_writer", true)]
+    [InlineData("/output/figures.xlsx", "xlsx_writer", true)]
+    [InlineData("/output/cover.jpg", "image_generation", true)]
+    // No built-in tool writes a PDF: the message names no tool.
+    [InlineData("/output/report.pdf", null, true)]
+    public void A_finding_names_the_tool_of_the_files_format_and_whether_it_is_binary(string path, string? writer, bool binary)
+    {
+        var finding = Assert.Single(OneAgent("tools: [file_read, shell_command]", path));
+
+        Assert.Equal(writer, finding.PreferredWriter);
+        Assert.Equal(binary, finding.IsBinary);
     }
 
     [Theory]
@@ -98,7 +135,9 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     [InlineData("Final_Message")]
     [InlineData("structured_output")]
     [InlineData("none")]
-    public void A_deliverable_the_framework_persists_or_none_needs_no_tool(string source)
+    // Refused at load.
+    [InlineData("nonsense")]
+    public void A_deliverable_the_framework_persists_none_or_one_refused_at_load_needs_no_tool(string source)
     {
         Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
             agents:
@@ -133,27 +172,20 @@ public sealed class CrewDeliverableWritersTests : IDisposable
             """);
 
         // A one-agent crew: the round-robin can only pick that agent.
-        Assert.Equal([new CrewDeliverableWithoutWriter("read", "analyst", "/output/notes.md")], missing);
+        AssertFinding(Assert.Single(missing), "read", ["analyst"], "/output/notes.md");
     }
 
     [Theory]
-    // Two agents and no agent: line: the round-robin picks.
+    // No agent: line: the round-robin may pick any agent.
     [InlineData("process: sequential", "")]
-    // Two workers: the manager or the planner hands the task out whatever its agent: line.
+    [InlineData("process: parallel", "")]
+    // A manager, a vote or a planner hands the task out whatever its agent: line.
     [InlineData("process: hierarchical", "agent: analyst")]
-    [InlineData("process: hierarchical\nmanager_agent: boss", "agent: analyst")]
-    [InlineData("process: autonomous", "agent: analyst")]
-    // Every voter answers; the engine is left to judge.
     [InlineData("process: consensual", "agent: analyst")]
-    // Refused at load.
-    [InlineData("process: nonsense", "agent: analyst")]
-    // An agent the crew does not declare is refused at load.
-    [InlineData("process: sequential", "agent: ghost")]
-    // A decision task is answered by the decision runner.
-    [InlineData("process: sequential", "agent: analyst\n    decision: { questions: {} }")]
-    public void Nothing_is_said_where_the_crew_does_not_tell_who_writes(string process, string task)
+    [InlineData("process: autonomous", "agent: analyst")]
+    public void A_task_several_agents_may_run_is_said_only_when_none_of_them_can_write(string process, string task)
     {
-        Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
+        const string Crew = """
             {{process}}
             agents:
               analyst:
@@ -161,11 +193,61 @@ public sealed class CrewDeliverableWritersTests : IDisposable
               writer:
                 role: Writer
                 tools: [file_write]
-              boss:
-                role: Boss
             tasks:
               read:
                 {{task}}
+                deliverable:
+                  path: /output/notes.md
+            """;
+        Assert.Empty(CrewDeliverableWriters.OfCrewFile(Crew.Replace("{{process}}", process).Replace("{{task}}", task)));
+
+        var none = CrewDeliverableWriters.OfCrewFile(Crew
+            .Replace("{{process}}", process).Replace("{{task}}", task).Replace("[file_write]", "[shell_command]"));
+        AssertFinding(Assert.Single(none), "read", ["analyst", "writer"], "/output/notes.md");
+    }
+
+    [Theory]
+    [InlineData("process: hierarchical\nmanagerAgent: boss")]
+    [InlineData("process: hierarchical\nmanager_agent: boss")]
+    [InlineData("process: consensual\nmanagerAgent: boss")]
+    public void The_manager_of_a_hierarchical_or_consensual_crew_runs_no_task(string process)
+    {
+        // The manager holds file_write, the workers do not: the task is said, and the manager is not named.
+        var missing = CrewDeliverableWriters.OfCrewFile($$"""
+            {{process}}
+            agents:
+              boss:
+                role: Boss
+                tools: [file_write]
+              analyst:
+                role: Analyst
+              writer:
+                role: Writer
+            tasks:
+              read:
+                agent: boss
+                deliverable:
+                  path: /output/notes.md
+            """);
+
+        AssertFinding(Assert.Single(missing), "read", ["analyst", "writer"], "/output/notes.md");
+    }
+
+    [Fact]
+    public void Every_agent_of_an_autonomous_crew_may_run_a_task_its_manager_key_included()
+    {
+        Assert.Empty(CrewDeliverableWriters.OfCrewFile("""
+            process: autonomous
+            managerAgent: boss
+            agents:
+              boss:
+                role: Boss
+                tools: [file_write]
+              analyst:
+                role: Analyst
+            tasks:
+              read:
+                agent: analyst
                 deliverable:
                   path: /output/notes.md
             """));
@@ -175,7 +257,7 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     [InlineData("process: parallel")]
     [InlineData("process: graph")]
     [InlineData("process: Sequential")]
-    public void The_agent_a_task_names_runs_it_under_a_parallel_or_a_graph_process_too(string process)
+    public void The_agent_a_task_names_runs_it_under_a_sequential_parallel_or_graph_process(string process)
     {
         var missing = CrewDeliverableWriters.OfCrewFile($$"""
             {{process}}
@@ -192,31 +274,83 @@ public sealed class CrewDeliverableWritersTests : IDisposable
                   path: /output/notes.md
             """);
 
-        Assert.Equal("analyst", Assert.Single(missing).Agent);
+        AssertFinding(Assert.Single(missing), "read", ["analyst"], "/output/notes.md");
     }
 
     [Theory]
-    [InlineData("managerAgent")]
-    [InlineData("manager_agent")]
-    public void A_hierarchical_crew_with_one_worker_is_judged_on_that_worker(string managerKey)
+    // Refused at load.
+    [InlineData("process: nonsense", "agent: analyst")]
+    // An agent the crew does not declare is refused at load.
+    [InlineData("process: sequential", "agent: ghost")]
+    public void Nothing_is_said_of_a_crew_the_engine_refuses_at_load(string process, string task)
     {
-        var missing = CrewDeliverableWriters.OfCrewFile($$"""
-            process: hierarchical
-            {{managerKey}}: boss
+        Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
+            {{process}}
             agents:
-              boss:
-                role: Boss
-                tools: [file_write]
               analyst:
                 role: Analyst
             tasks:
               read:
-                agent: boss
+                {{task}}
                 deliverable:
                   path: /output/notes.md
+            """));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("source: final_message")]
+    [InlineData("source: none")]
+    public void A_decision_task_that_declares_a_deliverable_is_a_finding_of_its_own(string source)
+    {
+        // A decision runs no agent and writes no file, whatever the source and the agents' tools.
+        var missing = CrewDeliverableWriters.OfCrewFile($$"""
+            agents:
+              writer:
+                role: Writer
+                tools: [file_write]
+            tasks:
+              pick:
+                agent: writer
+                decision: { questions: {} }
+                deliverable:
+                  path: /output/choice.md
+                  {{source}}
             """);
 
-        Assert.Equal("analyst", Assert.Single(missing).Agent);
+        var finding = Assert.Single(missing);
+        AssertFinding(finding, "pick", [], "/output/choice.md", CrewDeliverableFindingKind.DecisionTask);
+        Assert.Null(finding.PreferredWriter);
+    }
+
+    [Theory]
+    [InlineData("/output/notes.md")]
+    [InlineData("/output/data.csv")]
+    [InlineData("/output/page.html")]
+    [InlineData("/output/figure.svg")]
+    [InlineData("/output/report.docx")]
+    [InlineData("/output/REPORT.DOCX")]
+    [InlineData("/output/figures.xlsx")]
+    [InlineData("/output/report.pdf")]
+    [InlineData("/output/shot.png")]
+    [InlineData("/output/cover.jpg")]
+    [InlineData("/output/cover.webp")]
+    [InlineData("/output/anim.gif")]
+    [InlineData("/output/.docx")]
+    [InlineData("/output/README")]
+    public void Studios_verdict_on_a_built_in_belt_is_the_engines(string path)
+    {
+        string[][] belts =
+        [
+            [], ["file_write"], ["docx_writer"], ["xlsx_writer"], ["image_generation"], ["firefox"],
+            ["shell_command", "edit_file", "edit_batch", "structural_rewrite", "drive_download", "email_save_attachment"],
+            ["file_read", "file_write", "docx_writer"],
+        ];
+        foreach (var belt in belts)
+            Assert.Equal(DeliverableToolCheck.CanWrite(belt, path), CrewDeliverableWriters.CanWrite(belt, path));
+
+        // A tool Studio does not know may write anything.
+        Assert.True(CrewDeliverableWriters.CanWrite(["file_read", "acme_write_file"], path));
     }
 
     [Fact]
@@ -229,7 +363,7 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         File.WriteAllText(Path.Combine(_root, "tasks", "read.yaml"), "agent: analyst\ndeliverable:\n  path: /output/notes.md\n");
 
         var target = new RunTarget { Kind = RunTargetKind.MultiFileCrewDirectory, SelectedPath = _root, RunPath = _root };
-        Assert.Equal([new CrewDeliverableWithoutWriter("read", "analyst", "/output/notes.md")], CrewDeliverableWriters.Of(target));
+        AssertFinding(Assert.Single(CrewDeliverableWriters.Of(target)), "read", ["analyst"], "/output/notes.md");
 
         File.WriteAllText(Path.Combine(_root, "agents", "analyst.yaml"), "role: Analyst\ntools:\n  - file_write\n");
         Assert.Empty(CrewDeliverableWriters.Of(target));
@@ -248,6 +382,7 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         var target = new RunTarget { Kind = RunTargetKind.MultiFileCrewDirectory, SelectedPath = _root, RunPath = _root };
         Assert.Equal("read", Assert.Single(CrewDeliverableWriters.Of(target)).Task);
 
+        // A .ork.ts crew is the CLI's to judge: an Orkeon 1.2 CLI warns of it at load.
         var script = Path.Combine(_root, "crew.ork.ts");
         File.WriteAllText(script, "export default {};\n");
         Assert.Empty(CrewDeliverableWriters.Of(new RunTarget
@@ -256,30 +391,60 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         }));
     }
 
+    private const string WayOut =
+        " CrewDeliverableWriters warns before the launch because the engine loads such a crew and only warns of it"
+        + " (Orkeon #392). If the engine now refuses or repairs that case, block or drop the warning (launch tab, Run"
+        + " launcher, catalogues, docs), then update this guard.";
+
     [Fact]
-    public void The_engine_still_asks_for_file_write_and_still_reads_no_source_as_a_tool_call()
+    public void The_engine_still_warns_rather_than_refuses_at_load()
     {
-        // Text-level guards on the Orkeon checkout: the warning stands on these two facts.
-        const string wayOut =
-            " CrewDeliverableWriters warns because the engine loads a crew whose agent does not hold the"
-            + " file_write its prompt asks for (Orkeon #392). If the engine now refuses or repairs that case, drop or"
-            + " reword the warning (launch tab, Run launcher, catalogues, docs), then update this guard.";
+        var factory = File.ReadAllText(Path.Combine(
+            OrkeonSources.Root(), "src/core/Orkeon.Infrastructure/Configuration/CrewFactory.cs"));
+        Assert.True(
+            Regex.IsMatch(
+                factory,
+                @"if \(!_warnOnDeliverableTools\)\s*return;\s*var findings = Orkeon\.Application\.Crew\.DeliverableToolCheck\.Check\("
+                + @"[^;]*;\s*foreach \(var finding in findings\)\s*LogDeliverableWithoutWriter\(",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5)),
+            "The crew factory no longer logs DeliverableToolCheck's findings as warnings under WarnOnDeliverableTools." + WayOut);
 
-        var composer = File.ReadAllText(Path.Combine(
-            OrkeonSources.Root(), "src/core/Orkeon.Application/Crew/Execution/AgentPromptComposer.cs"));
-        Assert.True(composer.Contains("using the file_write tool", StringComparison.Ordinal),
-            "The prompt no longer tells the agent to write its deliverable with file_write." + wayOut);
+        var validate = File.ReadAllText(Path.Combine(
+            OrkeonSources.Root(), "src/hosting/Orkeon.Hosting/RunnerExecution.Diagnostics.cs"));
+        Assert.True(validate.Contains("$\"WARNING: {finding.Message}\"", StringComparison.Ordinal),
+            "orkeon run --validate no longer prints the findings as WARNING: lines." + WayOut);
+    }
 
+    [Fact]
+    public void The_engine_still_reads_no_source_as_a_tool_call()
+    {
         var mapper = File.ReadAllText(Path.Combine(
             OrkeonSources.Root(), "src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlCrewMapper.cs"));
+        Assert.True(
+            Regex.IsMatch(
+                mapper,
+                @"if \(string\.IsNullOrWhiteSpace\(raw\)\)\s*return [\w.]*DeliverableSource\.ToolCall;",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5)),
+            "A deliverable without a source no longer reads as tool_call: CrewDeliverableWriters.DeliverableOf reads it so.");
         Assert.True(mapper.Contains("\"tool_call\" or \"toolcall\" =>", StringComparison.Ordinal),
-            "The deliverable sources are no longer read as before." + wayOut);
+            "The deliverable sources are no longer spelled as CrewDeliverableWriters.DeliverableOf reads them.");
+    }
 
-        // edit_file is left out of the tools an agent may deliver with: it refuses a missing file.
-        var editFile = File.ReadAllText(Path.Combine(
-            OrkeonSources.Root(), "src/tools/Orkeon.Tools.FileSystem/EditFileTool.cs"));
-        Assert.True(editFile.Contains("FileNotFoundException", StringComparison.Ordinal),
-            "edit_file no longer refuses a file that does not exist: it may now create a deliverable,"
-            + " and belongs with the tools CrewDeliverableWriters trusts (OtherCreatingTools).");
+    [Fact]
+    public void The_engines_writers_and_finding_kinds_are_the_ones_Studio_knows()
+    {
+        Assert.Equal("file_write", DeliverableToolCheck.FileWriteToolName);
+        Assert.Equal(
+            ["docx_writer", "xlsx_writer", "image_generation", "firefox", "file_write"],
+            DeliverableToolCheck.FileWriterToolNames);
+
+        // A writer missing from Studio's catalogue would count as an opaque tool, which writes anything.
+        var known = ToolCatalog.All.Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.All(DeliverableToolCheck.FileWriterToolNames, writer => Assert.Contains(writer, known));
+
+        // A new kind of finding is one the launchers do not word yet.
+        Assert.Equal(Enum.GetNames<DeliverableFindingKind>(), Enum.GetNames<CrewDeliverableFindingKind>());
     }
 }

@@ -398,7 +398,10 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         Assert.Contains("'draft'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
         Assert.Contains("'writer'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
         Assert.Contains("/output/draft.md", tab.DeliverableWriterWarning, StringComparison.Ordinal);
-        Assert.Contains("file_write", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        // A text file: the fix names file_write, and final_message as the other way.
+        Assert.Contains("Give file_write to the agent", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("source: final_message", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.DoesNotContain("engine asks", tab.DeliverableWriterWarning, StringComparison.Ordinal);
         // A warning: the run stays offered.
         Assert.True(tab.RunCommand.CanExecute(null));
 
@@ -448,9 +451,67 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         // The heading, then one line per task.
         var lines = tab.DeliverableWriterWarning.Split('\n');
         Assert.Equal(3, lines.Length);
-        Assert.Contains("file_write", lines[0], StringComparison.Ordinal);
+        Assert.Contains("Orkeon 1.2 CLI", lines[0], StringComparison.Ordinal);
         Assert.Contains("/output/draft.md", lines[1], StringComparison.Ordinal);
         Assert.Contains("/output/final.md", lines[2], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_binary_file_names_the_tool_of_its_format_and_a_text_format_as_the_other_way()
+    {
+        // file_write writes text: it does not count for a .docx (Orkeon 1.2).
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team);
+        File.AppendAllText(Path.Combine(team, "agents", "writer.yaml"), "tools: [file_write]\n");
+        File.AppendAllText(Path.Combine(team, "tasks", "draft.yaml"), "deliverable:\n  path: /output/draft.docx\n");
+        File.WriteAllText(
+            Path.Combine(team, "tasks", "print.yaml"),
+            "description: print\nexpected_output: a pdf\nagent: writer\ndeliverable:\n  path: /output/draft.pdf\n");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+
+        var lines = tab.DeliverableWriterWarning.Split('\n');
+        Assert.Equal(3, lines.Length);
+        Assert.Contains("Give docx_writer to the agent meant to write it", lines[1], StringComparison.Ordinal);
+        Assert.Contains("deliver a text format (.md, .html, .csv)", lines[1], StringComparison.Ordinal);
+        Assert.DoesNotContain("final_message", lines[1], StringComparison.Ordinal);
+        // No built-in tool writes a PDF: the fix is a tool from elsewhere.
+        Assert.Contains("an MCP server's, a plugin's", lines[2], StringComparison.Ordinal);
+        Assert.Contains("deliver a text format", lines[2], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_task_no_agent_of_a_round_robin_can_write_names_them_all()
+    {
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team, assigned: false);
+        File.AppendAllText(Path.Combine(team, "tasks", "draft.yaml"), "deliverable:\n  path: /output/draft.md\n");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+
+        Assert.Contains("none of the agents that may run it (", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("spare", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("writer", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+
+        // One agent able to write is enough: the round-robin may pick it.
+        File.AppendAllText(Path.Combine(team, "agents", "spare.yaml"), "tools: [file_write]\n");
+        tab.RefreshTeamDescription();
+        Assert.False(tab.HasDeliverableWriterWarning);
+    }
+
+    [Fact]
+    public void A_decision_task_with_a_deliverable_is_said_to_write_no_file()
+    {
+        var team = NewTeam("veille", "/data/out:/output:rw");
+        WriteCrew(team);
+        File.AppendAllText(Path.Combine(team, "agents", "writer.yaml"), "tools: [file_write]\n");
+        File.WriteAllText(
+            Path.Combine(team, "tasks", "pick.yaml"),
+            "description: pick\nexpected_output: a choice\ndecision: { questions: {} }\ndeliverable:\n  path: /output/choice.md\n");
+        var tab = PinnedLauncher(team, "/data/out:/output:rw");
+
+        var line = Assert.Single(tab.DeliverableWriterWarning.Split('\n').Skip(1));
+        Assert.Contains("'pick' is a decision task", line, StringComparison.Ordinal);
+        Assert.Contains("/output/choice.md", line, StringComparison.Ordinal);
+        Assert.Contains("a decision writes no file", line, StringComparison.Ordinal);
     }
 
     [Fact]

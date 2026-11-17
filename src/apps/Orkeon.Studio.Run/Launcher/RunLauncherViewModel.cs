@@ -236,19 +236,42 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>
-    /// The tasks whose agent must write the deliverable itself and does not hold <c>file_write</c>
-    /// (Orkeon #392, <see cref="CrewDeliverableWriters"/>): the engine runs them all the same, and
-    /// the file may never be written. A warning for a run and a check alike, the crew read again.
+    /// The tasks whose deliverable may never be written (Orkeon #392, <see cref="CrewDeliverableWriters"/>):
+    /// none of the agents that may run one holds a tool that writes its file, or it is a decision task,
+    /// which writes no file. The engine runs them all the same, and an Orkeon 1.2 CLI warns of them at
+    /// load too. A warning for a run and a check alike, the crew read again.
     /// </summary>
     private List<ValidationMessage> ValidateDeliverableWriters() =>
         Target.Target is not { } target
             ? []
             : CrewDeliverableWriters.Of(target).Select(missing => ValidationMessage.Warning(
                 ValidationCodes.DeliverableWithoutWriter,
-                $"Task '{missing.Task}' must write {missing.Path}, but its agent '{missing.Agent}' does not have the file_write tool "
-                + "the engine asks it to use: the file may not be written. In the crew's YAML, give the agent file_write, "
-                + "or set the task's deliverable to source: final_message.",
+                DeliverableWriterText(missing),
                 target.RunPath)).ToList();
+
+    /// <summary>The warning of one task: who cannot write its file, and the fix in the crew's YAML.</summary>
+    private static string DeliverableWriterText(CrewDeliverableWithoutWriter missing)
+    {
+        const string AlsoAtLoad = " An Orkeon 1.2 CLI also warns of it when it loads the crew.";
+        if (missing.Kind == CrewDeliverableFindingKind.DecisionTask)
+        {
+            return $"Task '{missing.Task}' is a decision task and must write {missing.Path}, but a decision writes no file: "
+                + "the file will not be written. In the crew's YAML, drop the deliverable, or move it to a task an agent runs."
+                + AlsoAtLoad;
+        }
+
+        var who = missing.Agents.Count == 1
+            ? $"its agent '{missing.Agents[0]}' has no tool that writes it"
+            : $"none of the agents that may run it ({string.Join(", ", missing.Agents.Select(agent => $"'{agent}'"))}) has a tool that writes it";
+        var give = missing.PreferredWriter is { } tool
+            ? $"give {tool} to the agent meant to write it"
+            : "give the agent meant to write it a tool that writes it (an MCP server's, a plugin's)";
+        var other = missing.IsBinary
+            ? "or deliver a text format (.md, .html, .csv) instead."
+            : "or set the task's deliverable to source: final_message.";
+        return $"Task '{missing.Task}' must write {missing.Path}, but {who}: the file may not be written. "
+            + $"In the crew's YAML, {give}, {other}" + AlsoAtLoad;
+    }
 
     /// <summary>True when <see cref="Validate"/> found nothing that would break the launch.</summary>
     public bool HasBlockingErrors(bool dryRun = false) =>

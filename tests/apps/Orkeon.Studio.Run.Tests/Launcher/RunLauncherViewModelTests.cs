@@ -607,12 +607,65 @@ public class RunLauncherViewModelTests
             Assert.Contains("'read'", warning.Text, StringComparison.Ordinal);
             Assert.Contains("'analyst'", warning.Text, StringComparison.Ordinal);
             Assert.Contains("/output/notes.md", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("give file_write to the agent meant to write it, or set the task's deliverable to source: final_message.", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("Orkeon 1.2 CLI", warning.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("engine asks", warning.Text, StringComparison.Ordinal);
             Assert.Single(launcher.Validate(dryRun: true), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
             // A warning: the launch stays allowed.
             Assert.False(launcher.HasBlockingErrors());
 
             File.WriteAllText(crewFile, File.ReadAllText(crewFile).Replace("[file_read]", "[file_read, file_write]", StringComparison.Ordinal));
             Assert.DoesNotContain(launcher.Validate(), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
+
+            // file_write writes text: a .docx wants docx_writer, and final_message is no fix for it.
+            File.WriteAllText(crewFile, File.ReadAllText(crewFile).Replace("notes.md", "notes.docx", StringComparison.Ordinal));
+            var binary = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.DeliverableWithoutWriter);
+            Assert.Contains("give docx_writer to the agent meant to write it, or deliver a text format (.md, .html, .csv) instead.", binary.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("final_message", binary.Text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void A_task_no_agent_can_write_and_a_decision_with_a_deliverable_are_both_warnings()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "orkeon-run-deliverable-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var crewFile = Path.Combine(folder, "crew.yaml");
+            File.WriteAllText(crewFile, """
+                agents:
+                  analyst:
+                    role: Analyst
+                    tools: [shell_command]
+                  writer:
+                    role: Writer
+                    tools: [file_read]
+                tasks:
+                  read:
+                    deliverable:
+                      path: /output/report.pdf
+                  pick:
+                    decision: { questions: {} }
+                    deliverable:
+                      path: /output/choice.md
+                """);
+            var fixture = new LauncherFixture().WithInstalledCli();
+            var crew = fixture.WithYamlCrew(crewFile);
+            var launcher = fixture.Build();
+            launcher.Target.Select(crew);
+
+            var warnings = launcher.Validate().Where(m => m.Code == ValidationCodes.DeliverableWithoutWriter).ToList();
+            Assert.Equal(2, warnings.Count);
+            Assert.Contains("none of the agents that may run it ('analyst', 'writer') has a tool that writes it", warnings[0].Text, StringComparison.Ordinal);
+            Assert.Contains("a tool that writes it (an MCP server's, a plugin's)", warnings[0].Text, StringComparison.Ordinal);
+            Assert.Contains("'pick' is a decision task", warnings[1].Text, StringComparison.Ordinal);
+            Assert.Contains("a decision writes no file", warnings[1].Text, StringComparison.Ordinal);
+            Assert.False(launcher.HasBlockingErrors());
         }
         finally
         {

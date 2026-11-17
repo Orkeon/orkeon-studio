@@ -622,11 +622,26 @@ public static class StudioStringKeys
     /// <summary>"The engine may refuse these agents …" — an agent's <c>filesystem:</c> scope the run's mounts refuse, when the run may not start that agent or the settings the CLI reads are not known here (#349); {0} is the engine's own refusals.</summary>
     public const string RunWarnFileSystemScope = "Studio.Run.WarnFileSystemScope";
 
-    /// <summary>"A file may not be written. …" — the heading of the tasks whose agent must write the deliverable itself and does not hold <c>file_write</c> (Orkeon #392), with the two ways out; one <see cref="RunWarnDeliverableNoWriterItem"/> line per task follows.</summary>
+    /// <summary>"A file may not be written. …" — the heading of the tasks whose deliverable may never be written (Orkeon #392): no agent that may run the task has a tool that writes the file, or the task is a decision; one line per task follows (<see cref="RunWarnDeliverableNoWriterItem"/> or <see cref="RunWarnDeliverableNoWriterAgents"/> and a fix, or <see cref="RunWarnDeliverableDecision"/>).</summary>
     public const string RunWarnDeliverableNoWriter = "Studio.Run.WarnDeliverableNoWriter";
 
-    /// <summary>"Task 'x' must write /output/y …" — the line of one task under <see cref="RunWarnDeliverableNoWriter"/>; {0} is the task, {1} its agent, {2} the deliverable's path.</summary>
+    /// <summary>"Task 'x' must write /output/y, but its agent …" — a task only one agent may run, under <see cref="RunWarnDeliverableNoWriter"/>; {0} is the task, {1} its agent, {2} the deliverable's path. A fix follows.</summary>
     public const string RunWarnDeliverableNoWriterItem = "Studio.Run.WarnDeliverableNoWriterItem";
+
+    /// <summary>"Task 'x' must write /output/y, but none of the agents …" — a task several agents may run; {0} is the task, {1} the agents, {2} the deliverable's path. A fix follows.</summary>
+    public const string RunWarnDeliverableNoWriterAgents = "Studio.Run.WarnDeliverableNoWriterAgents";
+
+    /// <summary>"Give file_write to the agent meant to write it, or …" — the fix of a text file; {0} is the tool that writes it.</summary>
+    public const string RunWarnDeliverableFixText = "Studio.Run.WarnDeliverableFixText";
+
+    /// <summary>"Give docx_writer to the agent meant to write it, or deliver a text format …" — the fix of a binary file a built-in tool writes; {0} is that tool.</summary>
+    public const string RunWarnDeliverableFixBinary = "Studio.Run.WarnDeliverableFixBinary";
+
+    /// <summary>"Give the agent meant to write it a tool that writes it …" — the fix of a binary file no built-in tool writes (a <c>.pdf</c>).</summary>
+    public const string RunWarnDeliverableFixBinaryNoTool = "Studio.Run.WarnDeliverableFixBinaryNoTool";
+
+    /// <summary>"Task 'x' is a decision task and must write /output/y …" — a decision task that declares a deliverable, which nothing writes; {0} is the task, {1} the deliverable's path.</summary>
+    public const string RunWarnDeliverableDecision = "Studio.Run.WarnDeliverableDecision";
 
     /// <summary>"Open the result" — the Launch screen's button once a run finished, one writable folder.</summary>
     public const string RunOpenResult = "Studio.Run.OpenResult";
@@ -2945,9 +2960,19 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunWarnFileSystemScope] =
             "The engine may refuse these agents if the run starts them, or unless the settings the CLI reads mount what they ask: {0} Check the folders of this run or the agents' filesystem: scope.",
         [StudioStringKeys.RunWarnDeliverableNoWriter] =
-            "A file may not be written. In the team's YAML, give each agent named below the file_write tool, or set its task's deliverable to source: final_message.",
+            "A file may not be written. Fix each task below in the team's YAML; an Orkeon 1.2 CLI also warns of it when it loads the team.",
         [StudioStringKeys.RunWarnDeliverableNoWriterItem] =
-            "Task '{0}' must write {2}, but its agent '{1}' does not have the file_write tool the engine asks it to use.",
+            "Task '{0}' must write {2}, but its agent '{1}' has no tool that writes it.",
+        [StudioStringKeys.RunWarnDeliverableNoWriterAgents] =
+            "Task '{0}' must write {2}, but none of the agents that may run it ({1}) has a tool that writes it.",
+        [StudioStringKeys.RunWarnDeliverableFixText] =
+            "Give {0} to the agent meant to write it, or set the deliverable to source: final_message.",
+        [StudioStringKeys.RunWarnDeliverableFixBinary] =
+            "Give {0} to the agent meant to write it, or deliver a text format (.md, .html, .csv) instead.",
+        [StudioStringKeys.RunWarnDeliverableFixBinaryNoTool] =
+            "Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.",
+        [StudioStringKeys.RunWarnDeliverableDecision] =
+            "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
         [StudioStringKeys.RunOpenLogsNotYet] = "The logs folder does not exist yet: it is created at the first logged call.",
@@ -3279,7 +3304,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
-        ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write its deliverable with the file_write tool, and its agent does not have it: the run starts, the file may never be written and the task still counts as done.",
+        ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",

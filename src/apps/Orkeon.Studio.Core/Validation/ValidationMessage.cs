@@ -132,9 +132,12 @@ public static class ValidationCodes
     public const string FileSystemScopeRefused = "STUDIO-FS-SCOPE";
 
     /// <summary>
-    /// A task's agent must write the deliverable itself (<c>source: tool_call</c>, or no source) and
-    /// does not hold <c>file_write</c>, the tool the engine asks for (Orkeon #392). Always a warning:
-    /// the engine runs the crew, and the task counts as done whether or not the file was written.
+    /// A task's deliverable may never be written (Orkeon #392): the agent must write it itself
+    /// (<c>source: tool_call</c>, or no source) and none of the agents that may run the task holds a
+    /// tool that writes that file (<c>file_write</c> writes a text file only; a <c>.docx</c> wants
+    /// <c>docx_writer</c>), or the task is a decision, which writes no file. Always a warning, as the
+    /// engine's own at load (Orkeon 1.2): the engine runs the crew, and the task counts as done whether
+    /// or not the file was written.
     /// </summary>
     public const string DeliverableWithoutWriter = "STUDIO-DELIVERABLE-WRITER";
 

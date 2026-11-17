@@ -1486,20 +1486,42 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             : "";
 
     /// <summary>
-    /// Whether a task must write its deliverable with <c>file_write</c> and its agent does not hold it
-    /// (Orkeon #392): the engine starts the run all the same, and the task counts as done whether or
-    /// not the file was written (<see cref="CrewDeliverableWriters"/>). A warning, never a block.
+    /// Whether a task's deliverable may never be written (Orkeon #392, <see cref="CrewDeliverableWriters"/>):
+    /// none of the agents that may run it holds a tool that writes the file, or it is a decision task,
+    /// which writes no file. The engine starts the run all the same, and the task counts as done whether
+    /// or not the file was written; an Orkeon 1.2 CLI warns of it at load too. A warning, never a block.
     /// </summary>
     public bool HasDeliverableWriterWarning => _deliverablesWithoutWriter.Count > 0;
 
-    /// <summary>The warning and the two ways out, then one line per task: the task, its agent and the file.</summary>
+    /// <summary>The warning, then one line per task: the task, who cannot write the file, the file and the fix.</summary>
     public string DeliverableWriterWarning =>
         HasDeliverableWriterWarning
             ? string.Join('\n', _deliverablesWithoutWriter
-                .Select(missing => "\u2022 " + _strings.Format(
-                    StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agent, missing.Path))
+                .Select(missing => "\u2022 " + DeliverableWriterLine(missing))
                 .Prepend(_strings[StudioStringKeys.RunWarnDeliverableNoWriter]))
             : "";
+
+    /// <summary>
+    /// One task of <see cref="DeliverableWriterWarning"/>: a decision's line, or who cannot write the file
+    /// then the fix: the tool of its format when one exists, and <c>source: final_message</c> for a text
+    /// file or a text format for a binary one.
+    /// </summary>
+    private string DeliverableWriterLine(CrewDeliverableWithoutWriter missing)
+    {
+        if (missing.Kind == CrewDeliverableFindingKind.DecisionTask)
+            return _strings.Format(StudioStringKeys.RunWarnDeliverableDecision, missing.Task, missing.Path);
+
+        var who = missing.Agents.Count == 1
+            ? _strings.Format(StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agents[0], missing.Path)
+            : _strings.Format(StudioStringKeys.RunWarnDeliverableNoWriterAgents, missing.Task, string.Join(", ", missing.Agents), missing.Path);
+        var fix = (missing.IsBinary, missing.PreferredWriter) switch
+        {
+            (false, var tool) => _strings.Format(StudioStringKeys.RunWarnDeliverableFixText, tool ?? "file_write"),
+            (true, { } tool) => _strings.Format(StudioStringKeys.RunWarnDeliverableFixBinary, tool),
+            (true, null) => _strings[StudioStringKeys.RunWarnDeliverableFixBinaryNoTool],
+        };
+        return who + " " + fix;
+    }
 
     /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches
