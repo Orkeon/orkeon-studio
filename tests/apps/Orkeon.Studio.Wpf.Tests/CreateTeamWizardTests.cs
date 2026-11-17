@@ -272,6 +272,25 @@ public partial class CreateTeamWizardTests
     }
 
     [Fact]
+    public async Task The_tools_a_task_grants_show_on_the_team_and_on_the_card_of_its_agent()
+    {
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/ws/.orkeon/forge/veille","format":"yaml","resumed":false}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"blueprint.ready","blueprint":{"crew":{"name":"veille"},"agents":[{"key":"w","role":"Writer","tools":["file_write"]},{"key":"r","role":"Reviewer","tools":[]}],"tasks":[{"key":"t","description":"d","agent":"w","tools":["web_search"]}],"rationale":"r"},"iteration":1}"""),
+            Out("""{"v":2,"seq":3,"ts":"t","kind":"session.finished","status":"paused","exitCode":0}"""),
+        ]);
+
+        FillStepOne(vm);
+        await Compose(vm);
+
+        Assert.Equal(2, vm.Tools.Count);
+        Assert.Equal(vm.Tools, vm.Agents[0].Tools);
+        Assert.Empty(vm.Agents[1].Tools);
+    }
+
+    [Fact]
     public async Task Composing_pauses_at_the_dry_boundary_and_the_trial_is_an_explicit_resume()
     {
         var (vm, processes, _) = Build();

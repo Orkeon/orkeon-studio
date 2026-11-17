@@ -820,10 +820,16 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Übersprungen: {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Aufgabe vorzeitig beendet: Der Agent hat seine Iterationen aufgebraucht, bevor er fertig war. Seine Arbeit ist möglicherweise unvollständig: Prüfen Sie die Dateien, die er schreiben sollte.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Datei nicht geschrieben: Die Aufgabe war erfolgreich, hat aber die in ihrem Ergebnis genannte Datei nicht geschrieben (oder aktualisiert). Prüfen Sie, ob ihr Agent ein Werkzeug hat, das diese Datei schreibt, und ob die Aufgabe diese Datei verlangt (wurde die Aufgabe auch vorzeitig beendet, geben Sie dem Agenten mehr Iterationen), und starten Sie das Team dann erneut.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Vorzeitig beendet: Dateien prüfen</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>Hat seine Datei nicht geschrieben</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Aufgabe|Aufgaben} vorzeitig beendet</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Agent nicht ausgeführt|Agenten nicht ausgeführt} · {1} {1:plural:Aufgabe|Aufgaben} vorzeitig beendet</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Aufgabe hat ihre Datei nicht geschrieben|Aufgaben haben ihre Datei nicht geschrieben}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Agent nicht ausgeführt|Agenten nicht ausgeführt} · {1} {1:plural:Aufgabe hat ihre Datei nicht geschrieben|Aufgaben haben ihre Datei nicht geschrieben}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — vorzeitig beendet: Iterationen aufgebraucht, die Arbeit ist möglicherweise unvollständig</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben; zudem vorzeitig beendet: Iterationen aufgebraucht</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">
@@ -1566,7 +1572,7 @@
     <value>Mehrere Einträge teilen sich einen internen Namen: Ein Team wählt einen pro Lauf, und derselbe Ordner zweimal ist einer zu viel.</value>
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>Die filesystem:-Angabe eines Agenten ist fehlerhaft, oder sein Bereich oder Arbeitsverzeichnis verlangt einen Ordner, den die Einbindungen der Ausführung nicht gewähren: Die Engine lehnt das Team beim Laden ab oder lehnt diesen Agenten ab, wenn die Ausführung ihn startet.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Eine Aufgabe muss ihr Ergebnis mit dem Werkzeug file_write schreiben, und ihr Agent hat es nicht: Die Ausführung startet, die Datei wird möglicherweise nie geschrieben und die Aufgabe gilt trotzdem als erledigt.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Eine Aufgabe muss eine Datei schreiben, für die keiner der Agenten, die sie ausführen können, ein Werkzeug hat, oder eine Entscheidungsaufgabe deklariert ein Ergebnis: Die Ausführung startet, die Datei wird möglicherweise nie geschrieben und die Aufgabe gilt trotzdem als erledigt. Eine Orkeon-1.2-CLI warnt beim Laden ebenfalls davor.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Eine hinzugefügte Ordnerzeile beginnt mit „-“: Die Engine würde sie als Option lesen.</value>
   </data>
@@ -1869,6 +1875,12 @@
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve">
     <value>Zusammenarbeit</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve">
+    <value>Entscheidungsmodelle</value>
+  </data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve">
+    <value>MCP-Server</value>
+  </data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve">
     <value>Ordner</value>
   </data>
@@ -1889,6 +1901,24 @@
   </data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>braucht ein Cloud-Speicher-Konto, deklariert unter Einstellungen › Cloud-Speicher</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
+    <value>durchsucht eine Sammlung, die der rag:-Block des Teams oder rag_ingest füllt oder die der unter Einstellungen › Dokumentsuche (RAG) gewählte Speicher behält (Expertenmodus)</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
+    <value>nur vorhanden, solange Einstellungen › MCP (Expertenmodus) eingeschaltet ist und einen Server deklariert</value>
+  </data>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve">
+    <value>nur im act eines Skript-Agenten (.ork.ts) angeboten; ein YAML-Team, wie Studio es schreibt, kann es nicht aufführen</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve">
+    <value>erst vorhanden mit {0}, von Hand in die Einstellungsdatei geschrieben, und nur bei einem Team mit memory: true</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
+    <value>erst vorhanden, wenn ein Entscheidungsanbieter eingerichtet ist: der Schlüssel TYPESAFE_API_KEY oder LIQUID_API_KEY in Ihrer Umgebung oder Orkeon:Decision:Provider oder ein Abschnitt Orkeon:TypeSafe oder Orkeon:Liquid, von Hand in die Einstellungsdatei geschrieben; TypeSafe und Liquid lehnen ohne ihren Schlüssel jeden Aufruf ab</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
+    <value>braucht einen Referenzdatensatz, eine YAML-Datei in einem freigegebenen Ordner; es füllt die Sammlung selbst mit dessen Korpus</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} Werkzeuge, nichts einzustellen</value>
@@ -2358,8 +2388,14 @@
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>Dieses Team verweist auf freigegebene Ordner, die hier fehlen: {0}. Erlauben Sie sie unter Einstellungen › Freigegebene Ordner oder ändern Sie die Ordner des Teams.</value></data>
   <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>Die Engine wird den Start dieses Teams mit diesen eingebundenen Ordnern verweigern: {0} Geben Sie den Ordnern die Rechte, die die Agenten deklarieren, oder ändern Sie ihren filesystem:-Bereich.</value></data>
   <data name="Studio.Run.WarnFileSystemScope" xml:space="preserve"><value>Die Engine kann diese Agenten verweigern, wenn die Ausführung sie startet oder die Einstellungen, die die CLI liest, nicht einbinden, was sie verlangen: {0} Prüfen Sie die Ordner dieser Ausführung oder den filesystem:-Bereich der Agenten.</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Eine Datei wird möglicherweise nicht geschrieben. Geben Sie im YAML des Teams jedem unten genannten Agenten das Werkzeug file_write, oder stellen Sie das Ergebnis seiner Aufgabe auf source: final_message.</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber ihr Agent „{1}“ hat das Werkzeug file_write nicht, das die Engine von ihm verlangt.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Eine Datei wird möglicherweise nicht geschrieben. Korrigieren Sie jede unten genannte Aufgabe im YAML des Teams; eine Orkeon-1.2-CLI warnt beim Laden des Teams ebenfalls davor.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber ihr Agent „{1}“ hat kein Werkzeug, das diese Datei schreibt.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber keiner der Agenten, die sie ausführen können ({1}), hat ein Werkzeug, das diese Datei schreibt.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>„{0}“</value></data>
+  <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Geben Sie {0} dem Agenten, der die Datei schreiben soll, oder stellen Sie das Ergebnis auf source: final_message.</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Geben Sie {0} dem Agenten, der die Datei schreiben soll, oder liefern Sie stattdessen ein Textformat (.md, .html, .csv).</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Geben Sie dem Agenten, der die Datei schreiben soll, ein Werkzeug, das sie schreibt (das eines MCP-Servers, eines Plugins), oder liefern Sie stattdessen ein Textformat (.md, .html, .csv).</value></data>
+  <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>Aufgabe „{0}“ ist eine Entscheidungsaufgabe und muss {1} schreiben, aber eine Entscheidung schreibt keine Datei: Entfernen Sie das Ergebnis, oder verschieben Sie es in eine Aufgabe, die ein Agent ausführt.</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (per Kennung ausgewählt unter {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (für diesen Lauf nicht eingehängt)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (einer von {1} Einträgen — nichts wählt ihn aus)</value></data>

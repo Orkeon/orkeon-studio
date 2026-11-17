@@ -26,10 +26,8 @@
 #      Studio looks for it first, and links their launchers into <prefix>/bin.
 #
 # Studio lives inside the CLI's installation, and the CLI's install.sh replaces that
-# directory whole: after reinstalling the CLI, run this script again. With --with-orkeon,
-# the CLI's own installer also publishes the Studio copy its checkout carries, which
-# this script then replaces. Each Orkeon commit packed adds its packages to orkeon-feed/
-# and to the NuGet packages folder.
+# directory whole: after reinstalling the CLI, run this script again. Each Orkeon commit
+# packed adds its packages to orkeon-feed/ and to the NuGet packages folder.
 #
 # Usage:
 #   scripts/install-from-source.sh [--orkeon-src DIR] [--with-orkeon] [--prefix DIR]
@@ -131,8 +129,8 @@ remove_app() { # $1=app name
 }
 
 # --- Uninstall: nothing to build -------------------------------------------------
-# Only what this script wrote goes: the CLI's archives carry a Studio of their own, whose
-# launcher does not bear this script's mark. A link left dangling by a CLI reinstall goes too.
+# Only what this script wrote goes: a Studio installed by another tool has no launcher
+# bearing this script's mark. A link left dangling by a CLI reinstall goes too.
 if [[ "$UNINSTALL" -eq 1 ]]; then
   found=0
   for entry in "${APPS[@]}"; do
@@ -263,7 +261,7 @@ VERSION_PROPS=(-p:OrkeonVersion="$ORKEON_VERSION" -p:RestoreConfigFile="$RESTORE
 # StudioBuildRoot (Directory.Build.props) keeps this build's obj/ and bin/ under $STAGE:
 # restored with another OrkeonVersion, it must not leave its assets file where a plain
 # `dotnet build` of the checkout that skips the restore would pick it up. The Orkeon
-# packages may bring one file twice, as the Orkeon installers' own publish of Studio allows.
+# packages may bring one file twice.
 PUBLISH_PROPS=(-p:StudioBuildRoot="$STAGE/build" -p:PublishTrimmed=false -p:ErrorOnDuplicatePublishOutputFiles=false)
 
 if [[ "$DRY_RUN" -eq 1 ]]; then

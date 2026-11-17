@@ -824,6 +824,51 @@ public class RunProgressModelTests
     }
 
     [Fact]
+    public void ShouldMarkTheTask_WhenItDidNotWriteItsDeliverable()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"durationMs":900,"endedOnIterationCap":false,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"durationMs":900,"deliverableMissing":false}""",
+            // A CLI older than Orkeon 1.2 sends no such key: the task reads as it always did.
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"sender","success":true,"durationMs":900}""");
+
+        Assert.Equal([true, false, false], model.Tasks.Select(task => task.DeliverableMissing));
+        Assert.Null(model.ReportedMissingDeliverables);
+        Assert.Equal(1, model.MissingDeliverableCount);
+    }
+
+    [Fact]
+    public void ShouldCountAMissingFileByItsTasksLastCompletion_WhenTheRunGaveNoCount()
+    {
+        var model = Fold(
+            // The same task twice: its last attempt wrote the file.
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":false}""",
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"deliverableMissing":true}""",
+            // A failed task is never one, as the run counts: its failure says more.
+            """{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"sender","success":false,"deliverableMissing":true}""");
+
+        Assert.Equal(1, model.MissingDeliverableCount);
+    }
+
+    [Fact]
+    public void ShouldTakeTheRunsOwnCount_WhenRunFinishedCarriesMissingDeliverables()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":0,"missingDeliverables":0}""");
+
+        Assert.Equal(0, model.ReportedMissingDeliverables);
+        Assert.Equal(0, model.MissingDeliverableCount);
+
+        var counted = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"missingDeliverables":2}""");
+
+        Assert.Equal(2, counted.MissingDeliverableCount);
+    }
+
+    [Fact]
     [Trait("BR", "UC-03")]
     public void ShouldShowSkipReason_WhenTaskCompletedSkipped()
     {
@@ -862,5 +907,30 @@ public class RunProgressModelTests
     {
         Assert.True(OrkeonEventParser.TryParse(line, out var orkeonEvent), line);
         return orkeonEvent!;
+    }
+
+    /// <summary>
+    /// The flags and counts are read typed: a flag that is not a JSON boolean, or a count that is
+    /// not a number, reads as absent — no warning, and the lines counted — never as a crash. What
+    /// a guard on names cannot see (the field kept, its type changed) lands here, quietly: this
+    /// pins that quiet so a change to the readers is a decision.
+    /// </summary>
+    [Theory]
+    [InlineData("\"true\"")]
+    [InlineData("null")]
+    [InlineData("1")]
+    public void A_flag_or_count_of_another_type_reads_as_absent(string value)
+    {
+        var model = Fold(
+            $$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"A","success":true,"endedOnIterationCap":{{value}},"deliverableMissing":{{value}}}""",
+            $$"""{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"cappedTasks":{{(value == "1" ? "\"1\"" : value)}},"missingDeliverables":{{(value == "1" ? "\"1\"" : value)}}}""");
+
+        var task = Assert.Single(model.Tasks);
+        Assert.False(task.EndedOnIterationCap);
+        Assert.False(task.DeliverableMissing);
+        Assert.Null(model.ReportedCappedTasks);
+        Assert.Null(model.ReportedMissingDeliverables);
+        Assert.Equal(0, model.CappedTaskCount);
+        Assert.Equal(0, model.MissingDeliverableCount);
     }
 }

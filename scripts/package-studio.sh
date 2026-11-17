@@ -11,8 +11,9 @@
 #                                                   (`orkeon-studio-config`, `orkeon-studio-run`)
 # Every app is published self-contained (the .NET runtime is bundled, no SDK or runtime
 # needed on the target), untrimmed and not single-file, into libexec/<app>/, with a
-# launcher in bin/. The orkeon CLI is NOT bundled: Studio finds it through ORKEON_CLI_DIR,
-# PATH or, on Windows, the Orkeon installer's folder (OrkeonBinaryLocator). The win-x64 zip is also the tree scripts/build-msi.ps1
+# launcher in bin/. The orkeon CLI is NOT bundled: Studio finds it through --cli-dir (desktop
+# app), next to itself, ORKEON_CLI_DIR, PATH or, on Windows, the Orkeon installer's folder
+# (OrkeonBinaryLocator). The win-x64 zip is also the tree scripts/build-msi.ps1
 # harvests into the MSI.
 #
 # A single Linux machine publishes both RIDs: the WPF project sets EnableWindowsTargeting,
@@ -197,12 +198,19 @@ EOF
 }
 
 write_readme() { # $1=rid $2=dest
-  local launchers
+  local launchers install cli_dir
   if [[ "$1" == win-* ]]; then
     launchers='- `bin\orkeon-studio.cmd`: the desktop app (`libexec\orkeon-studio\Orkeon.Studio.exe`).'
+    cli_dir='the folder named by `--cli-dir`, '
+    install='Extract the zip anywhere and start `bin\orkeon-studio.cmd`, or add that `bin` folder
+to `PATH`. Installed by the MSI, the app lives in `%LOCALAPPDATA%\Programs\Orkeon Studio`
+and starts from the "Orkeon Studio" Start-menu shortcut; the MSI adds nothing to `PATH`.'
   else
+    cli_dir=''
     launchers='- `bin/orkeon-studio-config`: the terminal settings editor.
 - `bin/orkeon-studio-run`: the terminal crew launcher.'
+    install='Extract the archive anywhere and add its `bin` folder to `PATH`, or start a launcher
+by its full path.'
   fi
   cat > "$2" <<EOF
 # Orkeon Studio $VERSION ($1)
@@ -218,10 +226,10 @@ the bundled .NET runtime are under \`licenses/\`.
 
 Studio never runs a crew itself: it drives the \`orkeon\` CLI, installed separately with
 \`dotnet tool install -g Orkeon.Scripting.Cli\` or with the Orkeon installers
-(https://github.com/Orkeon/orkeon/releases). Studio looks for it next to itself, in the
-\`ORKEON_CLI_DIR\` environment variable, on \`PATH\`, then, on Windows, in the Orkeon
-installer's folder. On Windows it runs \`orkeon.exe\` itself: the .NET tool puts one on
-\`PATH\`; after an Orkeon installer, Studio follows its \`bin\\orkeon.cmd\` to the
+(https://github.com/Orkeon/orkeon/releases). Studio looks for it in ${cli_dir}its own
+folder, in the \`ORKEON_CLI_DIR\` environment variable, on \`PATH\`, then, on Windows, in
+the Orkeon installer's folder. On Windows it runs \`orkeon.exe\` itself: the .NET tool
+puts one on \`PATH\`; after an Orkeon installer, Studio follows its \`bin\\orkeon.cmd\` to the
 \`orkeon.exe\` in \`libexec\\orkeon\`, and looks in
 \`%LOCALAPPDATA%\\Programs\\Orkeon\\libexec\\orkeon\` even when \`PATH\` does not list it.
 Nothing to set: \`ORKEON_CLI_DIR\` is only for a CLI kept elsewhere. The launchers and
@@ -230,8 +238,7 @@ installer's \`bin\\\` there, as the installer leaves it.
 
 ## Install
 
-Extract the archive anywhere and add its \`bin\` folder to \`PATH\`, or start a launcher
-by its full path.
+$install
 EOF
 }
 

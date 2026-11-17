@@ -39,6 +39,9 @@ public sealed record RunSpawnedAgent(string? Role, string? Reason, DateTimeOffse
 /// <see cref="EndedOnIterationCap"/> marks a task that succeeded on the tool-free answer its
 /// agent gave once its iterations were spent: the engine keeps it a success, and a screen says
 /// that its work, a file it had to write above all, may be missing.
+/// <see cref="DeliverableMissing"/> marks a task that succeeded without writing (or updating) the
+/// file its deliverable names, absent at its end or unchanged since it started (Orkeon #392): the
+/// engine checked it, so a screen says it for sure.
 /// </summary>
 public sealed record RunTaskProgress(
     string? TaskId,
@@ -52,7 +55,8 @@ public sealed record RunTaskProgress(
     bool IsDecision = false,
     bool Defaulted = false,
     string? DecisionAnswers = null,
-    bool EndedOnIterationCap = false);
+    bool EndedOnIterationCap = false,
+    bool DeliverableMissing = false);
 
 /// <summary>
 /// What the run has spent so far, as its latest <c>cost.updated</c> said it — every figure
@@ -398,6 +402,21 @@ public sealed class RunProgressModel
         ReportedCappedTasks ?? LastCompletions().Count(task => task.EndedOnIterationCap);
 
     /// <summary>
+    /// How many tasks succeeded without writing their deliverable's file, as the run's
+    /// <c>run.finished</c> counted them (<c>missingDeliverables</c>); null while the run lives,
+    /// and for a CLI that sends no count.
+    /// </summary>
+    public int? ReportedMissingDeliverables { get; private set; }
+
+    /// <summary>
+    /// How many tasks succeeded without writing their deliverable's file: the run's own count
+    /// once it gave one, else the count of <see cref="LastCompletions"/>, read the way the run
+    /// counts - a task whose last attempt wrote the file, or failed, is not one.
+    /// </summary>
+    public int MissingDeliverableCount =>
+        ReportedMissingDeliverables ?? LastCompletions().Count(task => task.Success && task.DeliverableMissing);
+
+    /// <summary>
     /// The last <c>task.completed</c> of each task, in the order the run reported them. A task
     /// the run completes twice under one id (a retry, a loop of a graph) is read by its last
     /// line, as the run's own count does; a line that names no task stands for itself.
@@ -512,7 +531,9 @@ public sealed class RunProgressModel
             orkeonEvent.GetBool("defaulted") ?? false,
             orkeonEvent.GetString("decision"),
             // Absent from a CLI older than the flag: read as false, the task as it always was.
-            orkeonEvent.GetBool("endedOnIterationCap") ?? false);
+            orkeonEvent.GetBool("endedOnIterationCap") ?? false,
+            // Absent from a CLI older than Orkeon 1.2: read as false, nothing said of the file.
+            orkeonEvent.GetBool("deliverableMissing") ?? false);
         _tasks.Add(finished);
         Settle(finished.TaskId, finished.AgentRole);
         return true;
@@ -668,6 +689,7 @@ public sealed class RunProgressModel
         FinalEstimatedTokens = orkeonEvent.GetInt64("estimatedTokens");
         // Absent from a CLI older than the count: null, and the lines read so far are counted.
         ReportedCappedTasks = (int?)orkeonEvent.GetInt64("cappedTasks");
+        ReportedMissingDeliverables = (int?)orkeonEvent.GetInt64("missingDeliverables");
         _finishedAt = ReadTimestamp(orkeonEvent);
         _questions.Clear();       // nobody is left to answer them
         _agentRequests.Clear();   // the asking agents are gone with the run

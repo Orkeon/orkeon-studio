@@ -321,10 +321,16 @@
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Rien de rapporté pour l'instant.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Ignorée : {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tâche écourtée : l'agent a épuisé ses itérations avant de finir. Son travail est peut-être incomplet : vérifiez les fichiers qu'il devait écrire.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Fichier non écrit : la tâche a réussi, mais n'a pas écrit (ni mis à jour) le fichier que nomme son livrable. Vérifiez que son agent a un outil qui l'écrit et que la tâche demande bien ce fichier (si la tâche a aussi été écourtée, donnez plus d'itérations à l'agent), puis relancez l'équipe.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Écourté : vérifiez ses fichiers</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>N'a pas écrit son fichier</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Réussie · {0} {0:plural:tâche écourtée|tâches écourtées}</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Réussie · {0} {0:plural:agent non exécuté|agents non exécutés} · {1} {1:plural:tâche écourtée|tâches écourtées}</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Réussie · {0} {0:plural:tâche n'a pas écrit son fichier|tâches n'ont pas écrit leur fichier}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Réussie · {0} {0:plural:agent non exécuté|agents non exécutés} · {1} {1:plural:tâche n'a pas écrit son fichier|tâches n'ont pas écrit leur fichier}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — écourté : ses itérations sont épuisées, son travail est peut-être incomplet</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier ; écourté aussi : ses itérations sont épuisées</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>décision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>décision (par défaut)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} {0:plural:tâche terminée|tâches terminées}.</value></data>
@@ -579,7 +585,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve"><value>Deux dossiers portent le même identifiant : un identifiant nomme un seul dossier.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Plusieurs entrées partagent un même nom interne : une équipe en choisit une par exécution, et le même dossier deux fois est de trop.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>La déclaration filesystem: d'un agent est mal formée, ou sa portée ou sa racine de travail demande un dossier que les montages de l'exécution n'accordent pas : le moteur refuse l'équipe au chargement, ou refuse cet agent quand l'exécution le démarre.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Une tâche doit écrire son livrable avec l'outil file_write, et son agent ne l'a pas : l'exécution démarre, le fichier risque de ne jamais être écrit et la tâche compte quand même comme terminée.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Une tâche doit écrire un fichier pour lequel aucun des agents qui peuvent l'exécuter n'a d'outil, ou une tâche de décision déclare un livrable : l'exécution démarre, le fichier risque de ne jamais être écrit et la tâche compte quand même comme terminée. Un CLI Orkeon 1.2 en avertit aussi au chargement.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>Une ligne de dossier ajoutée commence par « - » : le moteur la lirait comme une option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>Un identifiant de dossier n'est pas valide : ce sont les 26 caractères avant « | » d'un dossier déclaré.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY" xml:space="preserve"><value>L'équipe est un dossier : le moteur l'exécute en entier.</value></data>
@@ -684,6 +690,8 @@
   <data name="Studio.Settings.ToolFamilyEvents" xml:space="preserve"><value>Événements</value></data>
   <data name="Studio.Settings.ToolFamilyAnalysis" xml:space="preserve"><value>Analyse de code</value></data>
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve"><value>Collaboration</value></data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve"><value>Modèles de décision</value></data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve"><value>Serveurs MCP</value></data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve"><value>Dossiers</value></data>
   <data name="Studio.Settings.ToolNeedsStoredKey" xml:space="preserve"><value>a besoin de la clé {0}, ci-dessus</value></data>
   <data name="Studio.Settings.ToolOnlyWithStoredKey" xml:space="preserve"><value>présent seulement une fois la clé {0} mémorisée, ci-dessus</value></data>
@@ -691,6 +699,12 @@
   <data name="Studio.Settings.ToolExpertSetting" xml:space="preserve"><value>réglage expert ci-dessous : {0}</value></data>
   <data name="Studio.Settings.ToolNeedsEmailAccount" xml:space="preserve"><value>a besoin d'un compte e-mail, déclaré dans Réglages › E-mail</value></data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve"><value>a besoin d'un compte de stockage en ligne, déclaré dans Réglages › Stockage en ligne</value></data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve"><value>cherche dans une collection que remplit le bloc rag: de l'équipe ou rag_ingest, ou que garde le magasin choisi dans Réglages › Recherche documentaire (RAG) (mode expert)</value></data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>présent seulement tant que Réglages › MCP (mode expert) est activé et déclare un serveur</value></data>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve"><value>proposé seulement dans l'act d'un agent scripté (.ork.ts) ; une équipe YAML, telle que Studio les écrit, ne peut pas le citer</value></data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve"><value>présent seulement avec {0} écrit à la main dans le fichier de réglages, et tenu seulement par une équipe avec memory: true</value></data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve"><value>présent seulement une fois un fournisseur de décision réglé : la clé TYPESAFE_API_KEY ou LIQUID_API_KEY dans votre environnement, ou Orkeon:Decision:Provider ou une section Orkeon:TypeSafe ou Orkeon:Liquid écrite à la main dans le fichier de réglages ; TypeSafe et Liquid refusent tout appel sans leur clé</value></data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve"><value>demande un jeu de référence, un fichier YAML dans un dossier autorisé ; il remplit lui-même la collection avec le corpus du jeu</value></data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve"><value>{0} outils, rien à régler</value></data>
   <data name="Studio.Settings.McpProblemId" xml:space="preserve"><value>Un identifiant est requis : lettres, chiffres, '.', '_' et '-'.</value></data>
   <data name="Studio.Settings.McpProblemCommand" xml:space="preserve"><value>Un serveur stdio a besoin d'une commande à lancer.</value></data>
@@ -861,8 +875,14 @@
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>Cette équipe désigne des dossiers autorisés absents ici : {0}. Autorisez-les dans Réglages › Dossiers autorisés ou changez les dossiers de l'équipe.</value></data>
   <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>Le moteur refusera de démarrer cette équipe avec ces dossiers montés : {0} Donnez aux dossiers les droits que déclarent les agents, ou changez leur portée filesystem:.</value></data>
   <data name="Studio.Run.WarnFileSystemScope" xml:space="preserve"><value>Le moteur peut refuser ces agents si l'exécution les démarre, ou si les réglages que lit le CLI ne montent pas ce qu'ils demandent : {0} Vérifiez les dossiers de cette exécution ou la portée filesystem: des agents.</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Un fichier risque de ne pas être écrit. Dans le YAML de l'équipe, donnez l'outil file_write à chaque agent cité ci-dessous, ou passez le livrable de sa tâche en source: final_message.</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>La tâche « {0} » doit écrire {2}, mais son agent « {1} » n'a pas l'outil file_write que le moteur lui demande d'utiliser.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Un fichier risque de ne pas être écrit. Corrigez chaque tâche ci-dessous dans le YAML de l'équipe ; un CLI Orkeon 1.2 en avertit aussi au chargement de l'équipe.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>La tâche « {0} » doit écrire {2}, mais son agent « {1} » n'a aucun outil qui l'écrive.</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>La tâche « {0} » doit écrire {2}, mais aucun des agents qui peuvent l'exécuter ({1}) n'a d'outil qui l'écrive.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>« {0} »</value></data>
+  <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Donnez {0} à l'agent chargé de l'écrire, ou passez le livrable en source: final_message.</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Donnez {0} à l'agent chargé de l'écrire, ou livrez plutôt un format texte (.md, .html, .csv).</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Donnez à l'agent chargé de l'écrire un outil qui l'écrive (celui d'un serveur MCP, d'un plugin), ou livrez plutôt un format texte (.md, .html, .csv).</value></data>
+  <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>La tâche « {0} » est une tâche de décision et doit écrire {1}, mais une décision n'écrit aucun fichier : retirez le livrable, ou déplacez-le vers une tâche qu'un agent exécute.</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (sélectionné par identifiant parmi {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (non autorisé pour cette exécution)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (l'une de {1} entrées — rien ne la sélectionne)</value></data>

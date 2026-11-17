@@ -11,12 +11,12 @@ bind their own presentation onto it.
 ## Distribution
 
 `IsPackable=false`: this assembly is on no NuGet feed. It reaches users inside the Studio
-applications of the release archives and the Windows MSI — see the
-[publication matrix](https://github.com/Orkeon/orkeon/blob/main/docs/reference/publication-matrix.md).
+applications of the release archives and the Windows MSI — see
+[Release](../../../docs/reference/release.md).
 
 ## Documentation
 
-- [Studio architecture](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/studio.md)
+- [Studio architecture](../../../docs/architecture/studio.md)
 - [Repository & getting started](https://github.com/Orkeon/orkeon)
 
 MIT © Orkeon Contributors

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Orkeon Studio is the family of front-ends over the Orkeon agent framework (.NET 10): a WPF desktop app (`Orkeon.Studio.Wpf`), two Terminal.Gui apps (`Orkeon.Studio.Config`, `Orkeon.Studio.Run`) and their UI-agnostic core (`Orkeon.Studio.Core`). Studio never runs a crew in-process: it drives the `orkeon` CLI, which must be installed (next to Studio, in `ORKEON_CLI_DIR`, or on `PATH`). The version lives in `src/Directory.Build.props` alone: never state it in prose. `git tag` is the authority on what is tagged.
+Orkeon Studio is the family of front-ends over the Orkeon agent framework (.NET 10): a WPF desktop app (`Orkeon.Studio.Wpf`), two Terminal.Gui apps (`Orkeon.Studio.Config`, `Orkeon.Studio.Run`) and their UI-agnostic core (`Orkeon.Studio.Core`). Studio never runs a crew in-process: it drives the `orkeon` CLI, which must be installed (`OrkeonBinaryLocator` looks in the WPF app's `--cli-dir`, next to Studio, in `ORKEON_CLI_DIR`, on `PATH`, on Windows in the Orkeon installer's `libexec\orkeon`, then in an Orkeon checkout's build). The version lives in `src/Directory.Build.props` alone: never state it in prose. `git tag` is the authority on what is tagged.
 Start from `docs/INDEX.md` (`docs/fr/` is its French mirror); the architecture is `docs/architecture/studio.md`. Breaking changes go in `CHANGELOG.md`. The framework, the CLI and the installers live in https://github.com/Orkeon/orkeon.
 
 ## Orkeon as packages
@@ -60,7 +60,7 @@ Native xUnit assertions only: no mocking framework and no fluent assertion libra
 
 - `src/apps/Orkeon.Studio.Core`: settings model (`AppSettingsDocument`), presets, mounts, validation, run-target detection, launching and reading the `orkeon` CLI (`OrkeonBinaryLocator`, `OrkeonProcessRunner`, the JSONL event parser).
 - `src/apps/Orkeon.Studio.Config`, `src/apps/Orkeon.Studio.Run`: Terminal.Gui renderings over Core.
-- `src/apps/Orkeon.Studio.Wpf`: the WPF app; `net10.0-windows`, built by the Linux job too (`EnableWindowsTargeting`), and by the Windows jobs.
+- `src/apps/Orkeon.Studio.Wpf`: the WPF app; `net10.0-windows`, built by the Linux jobs too (`EnableWindowsTargeting`; the release's `package` job publishes it), and by the Windows job `build-wpf` of `ci.yml`.
 - `tests/apps/Orkeon.Studio.*.Tests`: one suite per project; `tests/shared/Orkeon.Studio.Tests.Shared`: shared fixtures (namespaces `Orkeon.Tests.Shared.*`) and `OrkeonSources`.
 - `scripts/`: `check-comment-accents.py`, `check-console-urls.py` (manual: lists or checks the API-key console links of the provider catalogue), `install-from-source.sh`/`.ps1` (installs Studio from a clone next to the CLI: packs Orkeon into the git-ignored `orkeon-feed/` at a dated version and restores through a `nuget.config` it writes, builds under `StudioBuildRoot`), `resolve-version.sh`/`.ps1` (copied from Orkeon: keep them in step).
 - Release: `.github/workflows/release.yml` on a `v*` tag; `scripts/package-studio.sh` (win-x64 zip, linux-x64 tar.gz), `scripts/build-msi.ps1` + `installers/msi/Package.wxs` (WiX v5, `.config/dotnet-tools.json`), `scripts/smoke-studio-{linux.sh,windows.ps1}`. See `docs/reference/release.md`.

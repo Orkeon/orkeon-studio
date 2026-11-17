@@ -1,3 +1,4 @@
+using Orkeon.Domain.SharedKernel.ValueObjects;
 using Orkeon.Studio.Core.Events;
 using Orkeon.Studio.Core.FileSystem;
 using System.Text.Json;
@@ -26,7 +27,15 @@ public sealed record ForgeAgentView(
     string Role,
     string? Goal,
     string? Backstory,
-    IReadOnlyList<string> Tools);
+    IReadOnlyList<string> Tools)
+{
+    /// <summary>
+    /// The tools its tasks grant it beyond its own (a task's <c>tools</c>, Orkeon #392), in plan
+    /// order: the agent holds them while it runs those tasks, so its card shows them, while
+    /// <see cref="Tools"/> stays what the agent editor amends.
+    /// </summary>
+    public IReadOnlyList<string> TaskTools { get; init; } = [];
+}
 
 /// <summary>The proposal card: steps, the plain-words rationale, the agents, and what the team may touch.</summary>
 public sealed record ForgeProposal(
@@ -72,13 +81,18 @@ public sealed record ForgeFolder(string Path, string Role, string? Purpose = nul
     public bool IsInput => string.Equals(Role, InputRole, StringComparison.Ordinal);
 }
 
-/// <summary>One completed task of the running try.</summary>
+/// <summary>
+/// One completed task of the running try. <see cref="EndedOnIterationCap"/> marks a success on
+/// the tool-free answer given once the agent's iterations were spent; <see cref="DeliverableMissing"/>
+/// a success that did not write (or update) its deliverable's file (Orkeon #392), absent from an older CLI.
+/// </summary>
 public sealed record ForgeTaskProgress(
     string? TaskId,
     string? AgentRole,
     bool Success,
     long? DurationMs,
-    bool EndedOnIterationCap = false);
+    bool EndedOnIterationCap = false,
+    bool DeliverableMissing = false);
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
 /// <param name="Id">The finding's own identifier, when the judge gave one.</param>
@@ -554,7 +568,9 @@ public sealed class ForgeSessionModel
                     // No duration on the line, or a task that never ran: none, never a measured 0.
                     orkeonEvent.GetBool("skipped") == true ? null : orkeonEvent.GetInt64("durationMs"),
                     // The trial's task ended on its iteration cap: a success whose work may be missing.
-                    orkeonEvent.GetBool("endedOnIterationCap") ?? false));
+                    orkeonEvent.GetBool("endedOnIterationCap") ?? false,
+                    // The trial's task succeeded without writing its file (Orkeon #392).
+                    orkeonEvent.GetBool("deliverableMissing") ?? false));
                 break;
 
             case ForgeEventKinds.CostUpdated:
@@ -835,7 +851,7 @@ public sealed class ForgeSessionModel
         // view feeds the Composer cards and the agent editor.
         var roles = new Dictionary<string, string>(StringComparer.Ordinal);
         var tools = new List<string>();
-        var agentViews = ReadAgents(blueprint, roles, tools);
+        var agentViews = WithTaskTools(ReadAgents(blueprint, roles, tools), blueprint, tools);
 
         Proposal = new ForgeProposal(
             ReadSteps(blueprint, roles), ReadString(blueprint, "rationale"), tools, agentViews);
@@ -886,6 +902,38 @@ public sealed class ForgeSessionModel
         return agentViews;
     }
 
+    /// <summary>
+    /// The tools the plan's tasks grant (Orkeon #392) folded into the crew-wide
+    /// <paramref name="crewTools"/> after the agents' own, as the CLI's trial bench counts the
+    /// crew's tools, and into the <see cref="ForgeAgentView.TaskTools"/> of every agent that may
+    /// run the task (<see cref="CandidateKeys"/>).
+    /// </summary>
+    private static List<ForgeAgentView> WithTaskTools(
+        List<ForgeAgentView> agentViews, JsonElement blueprint, List<string> crewTools)
+    {
+        var granted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var task in TasksOf(blueprint))
+        {
+            var candidates = CandidateKeys(blueprint, task)
+                .Select(key => agentViews.Find(view => view.Key == key))
+                .OfType<ForgeAgentView>()
+                .ToList();
+            foreach (var tool in ToolsOf(task))
+            {
+                if (!crewTools.Contains(tool, StringComparer.Ordinal))
+                    crewTools.Add(tool);
+                foreach (var agent in candidates.Where(agent => !agent.Tools.Contains(tool, StringComparer.Ordinal)))
+                {
+                    var own = granted.TryGetValue(agent.Key, out var list) ? list : granted[agent.Key] = [];
+                    if (!own.Contains(tool, StringComparer.Ordinal))
+                        own.Add(tool);
+                }
+            }
+        }
+
+        return [.. agentViews.Select(view => granted.TryGetValue(view.Key, out var tools) ? view with { TaskTools = tools } : view)];
+    }
+
     /// <summary>One agent's own tools, deduplicated, and folded into the crew-wide <paramref name="crewTools"/>.</summary>
     private static List<string> ReadAgentTools(JsonElement agent, List<string> crewTools)
     {
@@ -932,11 +980,12 @@ public sealed class ForgeSessionModel
 
     /// <summary>
     /// The rule that they come from the agents, made literal: any reading tool implies the sandbox's
-    /// read mount (<c>/workspace</c>); each task deliverable implies its root as a write
+    /// read mount (<c>/workspace</c>), whether an agent holds it or a task grants it through its own
+    /// <c>tools</c> (Orkeon #392); each task deliverable implies its root as a write
     /// mount (<c>/output/x.md</c> → <c>/output</c>). Nothing is invented beyond what the
     /// trial bench itself mounts.
     /// <para>
-    /// The same derivation as <c>ForgePromoter.DeliverableMounts</c> on the CLI side, and it
+    /// The same derivation as <c>ForgePromoter.DerivedMounts</c> on the CLI side, and it
     /// has to stay the same: these mounts are not only chips — <c>SidecarMounts</c>
     /// writes them into an adopted team's sidecar, so a root refused by the CLI's copy and
     /// accepted here produces a team Studio can launch and the runner refuses. The guards
@@ -949,11 +998,15 @@ public sealed class ForgeSessionModel
         JsonElement blueprint)
     {
         // Per agent, not over the union: the union answered «somebody reads» and the screen
-        // could only repeat it. Named, it answers «who», which is the question asked.
+        // could only repeat it. Named, it answers «who», which is the question asked. A task's
+        // own tools are those of every agent that may run it (Orkeon #392), so a task granting
+        // a reading tool names each of them a reader too.
         var readers = agents
-            .Where(a => a.Tools.Contains("file_read", StringComparer.Ordinal)
-                     || a.Tools.Contains("directory_read", StringComparer.Ordinal))
+            .Where(a => HoldsReadingTool(a.Tools))
             .Select(a => a.Role)
+            .Concat(TasksOf(blueprint)
+                .Where(task => HoldsReadingTool(ToolsOf(task)))
+                .SelectMany(task => CandidateRoles(blueprint, task, roles)))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -965,7 +1018,10 @@ public sealed class ForgeSessionModel
 
         var mounts = new List<ForgeDerivedMount>();
 
-        if (readers.Count > 0)
+        // The CLI mounts the read root when any agent or any task of the plan holds a reading
+        // tool, whoever runs it (ForgePromoter.DerivedMounts): a task naming no declared agent,
+        // or an agent missing its key or role, still mounts it, with no role to show.
+        if (readers.Count > 0 || PlanReads(blueprint))
             mounts.Add(new ForgeDerivedMount("/workspace", IsReadWrite: false, readers));
 
         if (!blueprint.TryGetProperty("tasks", out var tasks) || tasks.ValueKind != JsonValueKind.Array)
@@ -976,9 +1032,10 @@ public sealed class ForgeSessionModel
             if (task.ValueKind != JsonValueKind.Object || DeliverableRoot(task) is not { } root)
                 continue;
 
-            // The task's own agent — sitting in the same JsonElement as the deliverable
-            // and, until W-04, never read.
-            AddWriteMount(mounts, root, WriterRole(task, roles));
+            // The agents that may run the task — read from the same JsonElement as the
+            // deliverable (W-04), as the engine picks them.
+            foreach (var writer in WritersOf(blueprint, task, roles))
+                AddWriteMount(mounts, root, writer);
         }
 
         return mounts;
@@ -991,7 +1048,8 @@ public sealed class ForgeSessionModel
     /// nested or backslashed path — is refused rather than trusted to be absent: anything
     /// else would put the team's own files outside its folder. A root the runner keeps for
     /// itself is refused too, since the very --mount Studio spells would then be rejected at
-    /// start (ADR-008, decision 5), making the adopted team unlaunchable.
+    /// start (ADR-008, decision 5), making the adopted team unlaunchable; so is one carrying
+    /// ':' or ';', the mount grammar's own separators, as the CLI's <c>MountableRoot</c> does.
     /// </summary>
     private static string? DeliverableRoot(JsonElement task)
     {
@@ -1006,6 +1064,7 @@ public sealed class ForgeSessionModel
         var folder = root[1..];
         if (folder.Contains('/', StringComparison.Ordinal)
             || folder.Contains('\\', StringComparison.Ordinal)
+            || folder.AsSpan().ContainsAny(':', ';')
             || folder is "." or "..")
         {
             return null;
@@ -1026,7 +1085,8 @@ public sealed class ForgeSessionModel
                 if (task.ValueKind != JsonValueKind.Object || DeliverableRoot(task) is not { } root)
                     continue;
 
-                writers[root] = Merge(writers.GetValueOrDefault(root), WriterRole(task, roles));
+                foreach (var writer in WritersOf(blueprint, task, roles))
+                    writers[root] = Merge(writers.GetValueOrDefault(root), writer);
             }
         }
 
@@ -1038,9 +1098,66 @@ public sealed class ForgeSessionModel
         ];
     }
 
-    /// <summary>The role writing a task's deliverable, when the blueprint declares that agent.</summary>
-    private static string? WriterRole(JsonElement task, Dictionary<string, string> roles) =>
-        ReadString(task, "agent") is { } key && roles.TryGetValue(key, out var role) ? role : null;
+    /// <summary>
+    /// The keys of the agents that may run <paramref name="task"/>, as the CLI's
+    /// <c>ForgeBlueprintCompiler.CandidatesOf</c> reads them (Orkeon #392): the agent it names in a
+    /// sequential, parallel or graph crew (every agent when it names none the plan declares);
+    /// every agent but the manager in a crew that takes one (hierarchical, consensual); every
+    /// agent otherwise (autonomous).
+    /// </summary>
+    private static List<string> CandidateKeys(JsonElement blueprint, JsonElement task)
+    {
+        var keys = ArrayOf(blueprint, "agents").Select(agent => ReadString(agent, "key")).OfType<string>().ToList();
+        var crew = blueprint.TryGetProperty("crew", out var node) && node.ValueKind == JsonValueKind.Object ? node : default;
+        var process = crew.ValueKind == JsonValueKind.Object && ReadString(crew, "process") is { } named && !string.IsNullOrWhiteSpace(named)
+            ? named.Trim()
+            : ProcessType.Sequential.Value;
+        var known = ProcessType.All.FirstOrDefault(p => string.Equals(p.Value, process, StringComparison.OrdinalIgnoreCase));
+        if (known is null || known == ProcessType.Sequential || known == ProcessType.Parallel || known == ProcessType.Graph)
+        {
+            var declared = keys.Where(key => string.Equals(key, ReadString(task, "agent"), StringComparison.Ordinal)).ToList();
+            return declared.Count > 0 ? declared : keys;
+        }
+
+        return known.AcceptsManagerAgent && ReadString(blueprint, "manager") is { } manager && !string.IsNullOrWhiteSpace(manager)
+            ? [.. keys.Where(key => !string.Equals(key, manager, StringComparison.Ordinal))]
+            : keys;
+    }
+
+    /// <summary>The roles of the agents that may run <paramref name="task"/>, those the plan declares with a role.</summary>
+    private static IEnumerable<string> CandidateRoles(JsonElement blueprint, JsonElement task, Dictionary<string, string> roles) =>
+        CandidateKeys(blueprint, task).Select(key => roles.GetValueOrDefault(key)).OfType<string>();
+
+    /// <summary>Who writes a task's deliverable: each agent that may run it; none when no such agent has a role.</summary>
+    private static List<string?> WritersOf(JsonElement blueprint, JsonElement task, Dictionary<string, string> roles)
+    {
+        List<string?> writers = [.. CandidateRoles(blueprint, task, roles)];
+        return writers.Count > 0 ? writers : [null];
+    }
+
+    /// <summary>The tools whose presence means the team expects something to read, as the CLI's <c>ReadingTools</c>.</summary>
+    private static readonly string[] ReadingTools = ["file_read", "directory_read"];
+
+    private static bool HoldsReadingTool(IEnumerable<string> tools) =>
+        tools.Intersect(ReadingTools, StringComparer.Ordinal).Any();
+
+    /// <summary>Whether any agent or any task of the plan holds a reading tool, read off the plan itself.</summary>
+    private static bool PlanReads(JsonElement blueprint) =>
+        ArrayOf(blueprint, "agents").Concat(TasksOf(blueprint)).Any(entry => HoldsReadingTool(ToolsOf(entry)));
+
+    /// <summary>The plan's task objects; none when it holds no list.</summary>
+    private static IEnumerable<JsonElement> TasksOf(JsonElement blueprint) => ArrayOf(blueprint, "tasks");
+
+    private static IEnumerable<JsonElement> ArrayOf(JsonElement blueprint, string name) =>
+        blueprint.TryGetProperty(name, out var list) && list.ValueKind == JsonValueKind.Array
+            ? list.EnumerateArray().Where(entry => entry.ValueKind == JsonValueKind.Object)
+            : [];
+
+    /// <summary>The names an agent's or a task's <c>tools</c> list holds; none without one.</summary>
+    private static IEnumerable<string> ToolsOf(JsonElement entry) =>
+        entry.TryGetProperty("tools", out var tools) && tools.ValueKind == JsonValueKind.Array
+            ? tools.EnumerateArray().Where(tool => tool.ValueKind == JsonValueKind.String).Select(tool => tool.GetString()!)
+            : [];
 
     /// <summary>
     /// One root, one mount, write wins. Deduping only against read-WRITE entries let a

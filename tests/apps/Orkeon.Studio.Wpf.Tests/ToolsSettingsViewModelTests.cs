@@ -55,6 +55,13 @@ public sealed class ToolsSettingsViewModelTests
         Assert.True(webSearch.IsKey);
         var brave = Assert.Single(search.Requirements, r => r.Name == "brave_search");
         Assert.Equal("present only once the key BRAVE_API_KEY is remembered, above", brave.Text);
+        Assert.Contains(search.Tools, t => t.Name == "rag_ingest" && !t.NeedsSomething);
+        var ragSearch = Assert.Single(search.Requirements, r => r.Name == "rag_search");
+        Assert.Equal("searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)", ragSearch.Text);
+        Assert.False(ragSearch.IsKey);
+        Assert.Equal(
+            "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
+            Assert.Single(search.Requirements, r => r.Name == "rag_eval").Text);
 
         var web = Assert.Single(tools.Families, f => f.Key == ToolCatalog.WebFamily);
         var imageGeneration = Assert.Single(web.Requirements);
@@ -67,6 +74,30 @@ public sealed class ToolsSettingsViewModelTests
 
         var code = Assert.Single(tools.Families, f => f.Key == ToolCatalog.CodeFamily);
         Assert.Equal("expert setting below: Orkeon:Tools:Shell", Assert.Single(code.Requirements).Text);
+
+        var session = Assert.Single(tools.Families, f => f.Key == ToolCatalog.SessionFamily);
+        Assert.Equal(
+            "present only with Orkeon:CognitiveMemory:Enabled = true written by hand in the settings file, and held only by a team with memory: true",
+            Assert.Single(session.Requirements, r => r.Name == "memory_recall").Text);
+
+        var decision = Assert.Single(tools.Families, f => f.Key == ToolCatalog.DecisionFamily);
+        Assert.Equal("Decision models", decision.Label);
+        Assert.Equal(
+            "present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, "
+                + "or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; "
+                + "TypeSafe and Liquid refuse every call without their key",
+            Assert.Single(decision.Requirements, r => r.Name == "system_one_decide").Text);
+
+        var mcp = Assert.Single(tools.Families, f => f.Key == ToolCatalog.McpFamily);
+        Assert.Equal("MCP servers", mcp.Label);
+        var promptGet = Assert.Single(mcp.Requirements, r => r.Name == "mcp_prompt_get");
+        Assert.Equal("present only while Settings › MCP (expert mode) is on and declares a server", promptGet.Text);
+        Assert.False(promptGet.IsKey);
+
+        var collaboration = Assert.Single(tools.Families, f => f.Key == ToolCatalog.CollaborationFamily);
+        Assert.Equal(
+            "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
+            Assert.Single(collaboration.Requirements).Text);
 
         var events = Assert.Single(tools.Families, f => f.Key == ToolCatalog.EventsFamily);
         Assert.False(events.HasRequirements);
@@ -137,6 +168,52 @@ public sealed class ToolsSettingsViewModelTests
             Assert.DoesNotContain("orkeon email", r.Text, StringComparison.Ordinal);
             Assert.DoesNotContain("{0}", r.Text, StringComparison.Ordinal);
         });
+    }
+
+    /// <summary>The mcp_prompt_get line names the MCP tab the way each language's tab strip does.</summary>
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("zh-Hans")]
+    public void The_mcp_line_names_the_tab_as_the_tab_strip_spells_it(string culture)
+    {
+        var strings = new FakeResxStudioStrings(culture);
+        var tools = new ToolsSettingsViewModel(new FakeApiKeyStore(), strings);
+
+        var mcp = Assert.Single(tools.Families, f => f.Key == ToolCatalog.McpFamily);
+        var line = Assert.Single(mcp.Requirements).Text;
+
+        Assert.Contains("› " + strings["Studio.Shell.Mcp"], line, StringComparison.Ordinal);
+        Assert.Contains(strings["Studio.Shell.Expert"].ToLowerInvariant(), line.ToLowerInvariant(), StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The lines that point past the novice's tabs say so in every language: the RAG tab is an
+    /// expert one, and the decision and memory settings are written by hand. The decision line
+    /// names each setting, section and key the engine resolves a provider from.
+    /// </summary>
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("zh-Hans")]
+    public void The_lines_past_the_novice_tabs_say_where_and_name_what_the_engine_reads(string culture)
+    {
+        var strings = new FakeResxStudioStrings(culture);
+        var tools = new ToolsSettingsViewModel(new FakeApiKeyStore(), strings);
+        var lines = tools.Families.SelectMany(f => f.Requirements).ToDictionary(r => r.Name, r => r.Text);
+
+        var rag = lines["rag_search"];
+        Assert.Contains(strings["Studio.Settings.RagTab"], rag, StringComparison.Ordinal);
+        Assert.Contains(strings["Studio.Shell.Expert"].ToLowerInvariant(), rag.ToLowerInvariant(), StringComparison.Ordinal);
+        foreach (var name in new[] { "Orkeon:Decision:Provider", "Orkeon:TypeSafe", "Orkeon:Liquid", "TYPESAFE_API_KEY", "LIQUID_API_KEY" })
+            Assert.Contains(name, lines["system_one_decide"], StringComparison.Ordinal);
+        Assert.Contains("Orkeon:CognitiveMemory:Enabled = true", lines["memory_recall"], StringComparison.Ordinal);
+        Assert.Contains("memory: true", lines["memory_recall"], StringComparison.Ordinal);
+        Assert.Contains(".ork.ts", lines["spawn_agent"], StringComparison.Ordinal);
+        Assert.All(lines.Values, line => Assert.DoesNotContain("{0}", line, StringComparison.Ordinal));
     }
 
     /// <summary>The drive line names the Drive tab the way each language's tab strip does.</summary>

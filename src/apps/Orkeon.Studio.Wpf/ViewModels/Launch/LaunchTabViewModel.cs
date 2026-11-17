@@ -1486,20 +1486,46 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             : "";
 
     /// <summary>
-    /// Whether a task must write its deliverable with <c>file_write</c> and its agent does not hold it
-    /// (Orkeon #392): the engine starts the run all the same, and the task counts as done whether or
-    /// not the file was written (<see cref="CrewDeliverableWriters"/>). A warning, never a block.
+    /// Whether a task's deliverable may never be written (Orkeon #392, <see cref="CrewDeliverableWriters"/>):
+    /// none of the agents that may run it holds a tool that writes the file, or it is a decision task,
+    /// which writes no file. The engine starts the run all the same, and the task counts as done whether
+    /// or not the file was written; an Orkeon 1.2 CLI warns of it at load too. A warning, never a block.
     /// </summary>
     public bool HasDeliverableWriterWarning => _deliverablesWithoutWriter.Count > 0;
 
-    /// <summary>The warning and the two ways out, then one line per task: the task, its agent and the file.</summary>
+    /// <summary>The warning, then one line per task: the task, who cannot write the file, the file and the fix.</summary>
     public string DeliverableWriterWarning =>
         HasDeliverableWriterWarning
             ? string.Join('\n', _deliverablesWithoutWriter
-                .Select(missing => "\u2022 " + _strings.Format(
-                    StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agent, missing.Path))
+                .Select(missing => "\u2022 " + DeliverableWriterLine(missing))
                 .Prepend(_strings[StudioStringKeys.RunWarnDeliverableNoWriter]))
             : "";
+
+    /// <summary>
+    /// One task of <see cref="DeliverableWriterWarning"/>: a decision's line, or who cannot write the file
+    /// then the fix: the tool of its format when one exists, and <c>source: final_message</c> for a text
+    /// file or a text format for a binary one.
+    /// </summary>
+    private string DeliverableWriterLine(CrewDeliverableWithoutWriter missing)
+    {
+        if (missing.Kind == CrewDeliverableFindingKind.DecisionTask)
+            return _strings.Format(StudioStringKeys.RunWarnDeliverableDecision, missing.Task, missing.Path);
+
+        var who = missing.Agents.Count == 1
+            ? _strings.Format(StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agents[0], missing.Path)
+            : _strings.Format(
+                StudioStringKeys.RunWarnDeliverableNoWriterAgents,
+                missing.Task,
+                string.Join(", ", missing.Agents.Select(agent => _strings.Format(StudioStringKeys.RunWarnDeliverableQuotedAgent, agent))),
+                missing.Path);
+        var fix = (missing.IsBinary, missing.PreferredWriter) switch
+        {
+            (false, var tool) => _strings.Format(StudioStringKeys.RunWarnDeliverableFixText, tool ?? "file_write"),
+            (true, { } tool) => _strings.Format(StudioStringKeys.RunWarnDeliverableFixBinary, tool),
+            (true, null) => _strings[StudioStringKeys.RunWarnDeliverableFixBinaryNoTool],
+        };
+        return who + " " + fix;
+    }
 
     /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches
@@ -1600,14 +1626,21 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         get
         {
             // What a success leaves to check, both said when both hold: agents that never ran,
-            // and tasks that ended on their iteration cap.
+            // and the tasks' finding. Of the two task findings the badge says one: files the
+            // engine found not written (Orkeon #392) when there are any, a fact, else tasks that
+            // ended on their iteration cap, a suspicion. A task cut short that did not write its
+            // file is one task with one file to see to, not two findings; the agents' cards and
+            // the tasks' table still say every task cut short.
             var skipped = CardState == RunCardState.Succeeded ? AgentCards.Count(card => card.State == "notrun") : 0;
-            var capped = CardState == RunCardState.Succeeded ? CappedTaskCount : 0;
-            return (skipped > 0, capped > 0) switch
+            var missing = CardState == RunCardState.Succeeded ? MissingDeliverableCount : 0;
+            var capped = CardState == RunCardState.Succeeded && missing == 0 ? CappedTaskCount : 0;
+            return (skipped > 0, missing > 0, capped > 0) switch
             {
-                (true, true) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedCapped, skipped, capped),
-                (true, false) => _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped),
-                (false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped),
+                (true, true, _) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedMissing, skipped, missing),
+                (false, true, _) => _strings.Format(StudioStringKeys.RunBadgeDoneMissing, missing),
+                (true, false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedCapped, skipped, capped),
+                (true, false, false) => _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped),
+                (false, false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped),
                 _ => _strings[CardState switch
                 {
                     RunCardState.Running => StudioStringKeys.RunBadgeRunning,
@@ -1628,6 +1661,13 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// </summary>
     private int CappedTaskCount => Progress.Model.CappedTaskCount;
 
+    /// <summary>
+    /// How many tasks the engine counted as succeeded without writing (or updating) the file their
+    /// deliverable names (Orkeon #392): its own <c>missingDeliverables</c> when the run gave one, else the lines read,
+    /// each task by its last. Zero with a CLI older than Orkeon 1.2, which sends neither.
+    /// </summary>
+    private int MissingDeliverableCount => Progress.Model.MissingDeliverableCount;
+
     /// <summary>Whether the run's badge pulses: while the process lives (STUDIO-17).</summary>
     public bool IsRunBadgePulsing => CardState == RunCardState.Running;
 
@@ -1636,7 +1676,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     {
         RunCardState.Running => "running",
         RunCardState.Idle => "idle",
-        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 ? "warn" : "ok",
+        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 || MissingDeliverableCount > 0
+            ? "warn"
+            : "ok",
         RunCardState.Cancelled => "warn",
         _ => "fail",
     };
@@ -2050,17 +2092,56 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 : CardOf(lane, first.Identifier, finished) with { DisplayName = DisplayNameOf(lane.Name) };
 
             // Two spellings the run itself gave for one agent: a plain success under the second
-            // does not clear the work to check that the first left.
-            cards[index] = first.State == "capped" && reported.State == "done"
-                ? reported with { State = first.State, StatusText = first.StatusText }
-                : reported;
+            // does not clear the work to check that the first left, nor does a cut-short one
+            // clear a file the first did not write; a file not written and a task cut short,
+            // one under each spelling, are both said, as they are under one.
+            if (WarnRank(first.State) > WarnRank(reported.State) && reported.State is "done" or "capped")
+            {
+                cards[index] = reported with
+                {
+                    State = first.State,
+                    StatusText = first.State == "missing" && reported.State == "capped" ? MissingAndCappedText : first.StatusText,
+                };
+            }
+            else
+            {
+                // The first spelling's cap holds whether it was the card's state or said beside
+                // a file not written.
+                var firstCapped = first.State == "capped" || first.StatusText == MissingAndCappedText;
+                cards[index] = reported.State == "missing" && firstCapped
+                    ? reported with { StatusText = MissingAndCappedText }
+                    : reported;
+            }
         }
 
         AgentCards.Clear();
         foreach (var card in cards)
-            AgentCards.Add(card);
+            AgentCards.Add(card with { Note = NoteOf(card) });
         OnPropertiesChanged(nameof(RunBadgeText), nameof(RunBadgeTone), nameof(IsRunBadgePulsing));
     }
+
+    // What the card's status advises, as its tooltip: the file note, the cap note, or both when
+    // the card says both.
+    private string NoteOf(RunAgentCard card) => card.State switch
+    {
+        "capped" => _strings[StudioStringKeys.RunProgressCapNote],
+        "missing" when card.StatusText == MissingAndCappedText =>
+            _strings[StudioStringKeys.RunProgressDeliverableNote] + "\n\n" + _strings[StudioStringKeys.RunProgressCapNote],
+        "missing" => _strings[StudioStringKeys.RunProgressDeliverableNote],
+        _ => string.Empty,
+    };
+
+    // The card of an agent that did not write a file and was also cut short: it says both.
+    private string MissingAndCappedText =>
+        _strings[StudioStringKeys.RunLaneMissing] + " · " + _strings[StudioStringKeys.RunLaneCapped];
+
+    // How much a success leaves to check: a file not written over a task cut short over a plain success.
+    private static int WarnRank(string state) => state switch
+    {
+        "missing" => 2,
+        "capped" => 1,
+        _ => 0,
+    };
 
     private static RunAgentCard CardOf(RunAgentLane lane, string identifier, bool finished) => new(
         DisplayNameOf(lane.Name),
@@ -2088,11 +2169,15 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 /// One agent card of the run pane (hrm:L08, D05): the <paramref name="DisplayName"/> on the card,
 /// the <paramref name="Identifier"/> the crew's files give in mono under it — shown only when it
 /// differs from the name (<see cref="HasIdentifier"/>) —, and the lane's state:
-/// waiting | running | done | capped | failed | notrun. <c>capped</c> is a success one of whose
-/// tasks ended on its iteration cap: the card says so, in the warning tone.
+/// waiting | running | done | capped | missing | failed | notrun. <c>capped</c> is a success one of
+/// whose tasks ended on its iteration cap, <c>missing</c> one of whose tasks did not write the file
+/// its deliverable names (Orkeon #392): the card says so, in the warning tone.
 /// </summary>
 public sealed record RunAgentCard(string DisplayName, string Identifier, string State, string StatusText, string Detail)
 {
+    /// <summary>The advice behind the status, as its tooltip: empty unless the card has work to check.</summary>
+    public string Note { get; init; } = string.Empty;
+
     /// <summary>Whether the identifier says something the name does not.</summary>
     public bool HasIdentifier => !string.Equals(Identifier, DisplayName, StringComparison.Ordinal);
 }

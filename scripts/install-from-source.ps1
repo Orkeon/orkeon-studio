@@ -28,9 +28,7 @@
        installer put on the user PATH; adds an "Orkeon Studio" Start menu shortcut.
 
   Studio lives inside the CLI's installation, and the CLI's install.ps1 replaces that
-  directory whole: after reinstalling the CLI, run this script again. With -WithOrkeon,
-  the CLI's own installer also publishes the Studio copy its checkout carries, which
-  this script then replaces. The CLI's
+  directory whole: after reinstalling the CLI, run this script again. The CLI's
   uninstall does not know Studio: run this script with -Uninstall first, or the Start
   menu shortcut is left pointing at nothing. A CLI installed by the MSI is refused:
   its files belong to Windows Installer.
@@ -171,8 +169,8 @@ if ($InstallDir.TrimEnd('\') -ieq $msiDir -and (Test-MsiChannelInstalled)) {
 
 # --- Uninstall: nothing to build ------------------------------------------------------
 if ($Uninstall) {
-    # Only what this script wrote goes: the CLI's archives carry a Studio of their own,
-    # whose launcher does not bear this script's mark.
+    # Only what this script wrote goes: a Studio installed by another tool has no launcher
+    # bearing this script's mark.
     $found = @($apps | Where-Object {
         $cmd = Join-Path $binDir "$($_.Name).cmd"
         (Test-Path -LiteralPath $cmd) -and (Select-String -LiteralPath $cmd -SimpleMatch $launcherMark -Quiet)
@@ -313,8 +311,7 @@ $restoreConfig = Join-Path $stage 'nuget.config'
 $versionProps = @("-p:OrkeonVersion=$orkeonVersion", "-p:RestoreConfigFile=$restoreConfig", '-p:NuGetAudit=false', '-warnaserror:NU1603')
 # StudioBuildRoot (Directory.Build.props) keeps this build's obj\ and bin\ under the stage,
 # which is emptied first: restored with another OrkeonVersion, it must not leave its assets
-# file in the projects. The Orkeon packages may bring one file twice, as the Orkeon
-# installers' own publish of Studio allows.
+# file in the projects. The Orkeon packages may bring one file twice.
 $publishProps = @("-p:StudioBuildRoot=$(Join-Path $stage 'build')", '-p:PublishTrimmed=false', '-p:ErrorOnDuplicatePublishOutputFiles=false')
 $selfContainedArg = if ($SelfContained) { 'true' } else { 'false' }
 

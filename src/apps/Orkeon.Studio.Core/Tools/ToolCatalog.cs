@@ -39,6 +39,50 @@ public enum ToolRequirement
     /// declared and signed in; the section stays the argument, as for <see cref="EmailAccount"/>.
     /// </summary>
     DriveAccount,
+
+    /// <summary>
+    /// A RAG collection to search: one the crew's <c>rag:</c> block declares, which the run ingests
+    /// as the crew loads, one <c>rag_ingest</c> filled, or one a store that outlives the run keeps
+    /// (<c>Orkeon:Rag:Provider</c>, chosen in the expert RAG tab). The tool is registered by every
+    /// run, with the run's on-device embeddings and its default model; nothing is to set, but a
+    /// collection nothing filled answers nothing.
+    /// </summary>
+    RagCollection,
+
+    /// <summary>
+    /// A golden dataset: <c>rag_eval</c> takes the virtual path of a YAML dataset as a required
+    /// argument and ingests the dataset's corpus into the collection itself. Registered by every run.
+    /// </summary>
+    RagDataset,
+
+    /// <summary>
+    /// The tool is registered only while MCP is on (<c>MCP:Enabled</c> not false) and declares a
+    /// server, under the section named in <see cref="ToolInfo.Argument"/>; otherwise it does not
+    /// exist. Both are set in Studio's MCP tab (expert mode), where the sentence sends the reader.
+    /// </summary>
+    OnlyWithMcpServer,
+
+    /// <summary>
+    /// The tool is registered only once a decision provider resolves: named by the setting in
+    /// <see cref="ToolInfo.Argument"/>, or deduced from an <c>Orkeon:TypeSafe</c> or
+    /// <c>Orkeon:Liquid</c> section, else from the <c>TYPESAFE_API_KEY</c> or <c>LIQUID_API_KEY</c>
+    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). TypeSafe and Liquid
+    /// refuse every call without their key. No tab of Studio writes the settings.
+    /// </summary>
+    OnlyWithDecisionProvider,
+
+    /// <summary>
+    /// The tool is registered only with the cognitive memory switch named in
+    /// <see cref="ToolInfo.Argument"/>, which no tab of Studio writes, and handed only to the agents
+    /// of a crew with <c>memory: true</c>.
+    /// </summary>
+    OnlyWithCognitiveMemory,
+
+    /// <summary>
+    /// The tool is never in a run's registry: the script host offers it only in the
+    /// <c>ctx.llm.act</c> of a <c>.ork.ts</c> agent, so a YAML agent that lists it fails to load.
+    /// </summary>
+    ScriptOnly,
 }
 
 /// <summary>One tool of the catalogue: its registry name and what it needs.</summary>
@@ -62,8 +106,11 @@ public sealed record ToolSecret(string EnvName, string UsedBy, Uri ConsoleUrl);
 /// The tools <c>orkeon run</c> registers, by family, with what each one needs (STUDIO-21).
 /// Declared here rather than read from the runtime: the framework carries no "required
 /// settings" metadata, the registry lists names only and a tool absent from it (a key not
-/// set) is invisible there. The list is the <c>orkeon run</c> column of the availability
-/// matrix in <c>docs/tools/inventory.md</c>, and a test pins every name against that file.
+/// set, a setting not written) is invisible there. The families are the <c>orkeon run</c>
+/// column of the availability matrix in <c>docs/tools/inventory.md</c>, the tools a run
+/// registers only under a setting of their own included (<c>brave_search</c>,
+/// <c>system_one_decide</c>, <c>mcp_prompt_get</c>, <c>memory_recall</c>), and a test pins
+/// every name against that file.
 /// <para>
 /// The e-mail family (MAIL-05) is the opposite case: its tools are registered whether or not
 /// an account is declared, so the registry lists them all the same, and only this catalogue
@@ -103,8 +150,21 @@ public static class ToolCatalog
     public const string AnalysisFamily = "analysis";
     /// <summary>Collaboration.</summary>
     public const string CollaborationFamily = "collaboration";
+    /// <summary>Decision models: <c>system_one_decide</c>.</summary>
+    public const string DecisionFamily = "decision";
+    /// <summary>MCP servers: <c>mcp_prompt_get</c>; a server's own tools carry their own names.</summary>
+    public const string McpFamily = "mcp";
     /// <summary>Folders.</summary>
     public const string MountsFamily = "mounts";
+
+    /// <summary>Where an MCP server is declared: <c>mcp_prompt_get</c> is registered once one is.</summary>
+    public const string McpServers = McpSection.ServersPath;
+
+    /// <summary>The setting that names a decision provider: <c>system_one_decide</c> is registered once one is configured.</summary>
+    public const string DecisionProvider = "Orkeon:Decision:Provider";
+
+    /// <summary>The switch of the cognitive memory: <c>memory_recall</c> is registered once it is on.</summary>
+    public const string CognitiveMemoryEnabled = "Orkeon:CognitiveMemory:Enabled";
 
     /// <summary>The Tavily key of <c>web_search</c>, resolved through the secret chain (<c>ORKEON_</c> + name).</summary>
     public const string TavilyKeyEnv = "ORKEON_TAVILY_API_KEY";
@@ -144,6 +204,9 @@ public static class ToolCatalog
             new("cache_search"),
             new("semantic_search"),
             new("local_embed_text"),
+            new("rag_search", ToolRequirement.RagCollection),
+            new("rag_ingest"),
+            new("rag_eval", ToolRequirement.RagDataset),
         ]),
         new(FilesFamily,
         [
@@ -224,6 +287,8 @@ public static class ToolCatalog
             new("session_cost"),
             new("token_budget"),
             new("memory_store"),
+            // Handed to every agent of a crew with memory: true; registered only once the switch is on.
+            new("memory_recall", ToolRequirement.OnlyWithCognitiveMemory, CognitiveMemoryEnabled + " = true"),
         ]),
         new(EventsFamily,
         [
@@ -272,7 +337,17 @@ public static class ToolCatalog
             new("human_input"),
             new("ask_question_to_coworker"),
             new("delegate_work_to_coworker"),
-            new("spawn_agent"),
+            // The script host's tool: offered in a .ork.ts agent's act, never in a YAML crew's registry.
+            new("spawn_agent", ToolRequirement.ScriptOnly),
+        ]),
+        new(DecisionFamily,
+        [
+            // Also registered when a decision provider is deduced from its section or its API key.
+            new("system_one_decide", ToolRequirement.OnlyWithDecisionProvider, DecisionProvider),
+        ]),
+        new(McpFamily,
+        [
+            new("mcp_prompt_get", ToolRequirement.OnlyWithMcpServer, McpServers),
         ]),
         new(MountsFamily,
         [

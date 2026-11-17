@@ -622,11 +622,29 @@ public static class StudioStringKeys
     /// <summary>"The engine may refuse these agents …" — an agent's <c>filesystem:</c> scope the run's mounts refuse, when the run may not start that agent or the settings the CLI reads are not known here (#349); {0} is the engine's own refusals.</summary>
     public const string RunWarnFileSystemScope = "Studio.Run.WarnFileSystemScope";
 
-    /// <summary>"A file may not be written. …" — the heading of the tasks whose agent must write the deliverable itself and does not hold <c>file_write</c> (Orkeon #392), with the two ways out; one <see cref="RunWarnDeliverableNoWriterItem"/> line per task follows.</summary>
+    /// <summary>"A file may not be written. …" — the heading of the tasks whose deliverable may never be written (Orkeon #392): no agent that may run the task has a tool that writes the file, or the task is a decision; one line per task follows (<see cref="RunWarnDeliverableNoWriterItem"/> or <see cref="RunWarnDeliverableNoWriterAgents"/> and a fix, or <see cref="RunWarnDeliverableDecision"/>).</summary>
     public const string RunWarnDeliverableNoWriter = "Studio.Run.WarnDeliverableNoWriter";
 
-    /// <summary>"Task 'x' must write /output/y …" — the line of one task under <see cref="RunWarnDeliverableNoWriter"/>; {0} is the task, {1} its agent, {2} the deliverable's path.</summary>
+    /// <summary>"Task 'x' must write /output/y, but its agent …" — a task only one agent may run, under <see cref="RunWarnDeliverableNoWriter"/>; {0} is the task, {1} its agent, {2} the deliverable's path. A fix follows.</summary>
     public const string RunWarnDeliverableNoWriterItem = "Studio.Run.WarnDeliverableNoWriterItem";
+
+    /// <summary>"Task 'x' must write /output/y, but none of the agents …" — a task several agents may run; {0} is the task, {1} the agents, {2} the deliverable's path. A fix follows.</summary>
+    public const string RunWarnDeliverableNoWriterAgents = "Studio.Run.WarnDeliverableNoWriterAgents";
+
+    /// <summary>"'x'" — one agent of the list {1} of <see cref="RunWarnDeliverableNoWriterAgents"/>, quoted as the language quotes a name; {0} is the agent.</summary>
+    public const string RunWarnDeliverableQuotedAgent = "Studio.Run.WarnDeliverableQuotedAgent";
+
+    /// <summary>"Give file_write to the agent meant to write it, or …" — the fix of a text file; {0} is the tool that writes it.</summary>
+    public const string RunWarnDeliverableFixText = "Studio.Run.WarnDeliverableFixText";
+
+    /// <summary>"Give docx_writer to the agent meant to write it, or deliver a text format …" — the fix of a binary file a built-in tool writes; {0} is that tool.</summary>
+    public const string RunWarnDeliverableFixBinary = "Studio.Run.WarnDeliverableFixBinary";
+
+    /// <summary>"Give the agent meant to write it a tool that writes it …" — the fix of a binary file no built-in tool writes (a <c>.pdf</c>).</summary>
+    public const string RunWarnDeliverableFixBinaryNoTool = "Studio.Run.WarnDeliverableFixBinaryNoTool";
+
+    /// <summary>"Task 'x' is a decision task and must write /output/y …" — a decision task that declares a deliverable, which nothing writes; {0} is the task, {1} the deliverable's path.</summary>
+    public const string RunWarnDeliverableDecision = "Studio.Run.WarnDeliverableDecision";
 
     /// <summary>"Open the result" — the Launch screen's button once a run finished, one writable folder.</summary>
     public const string RunOpenResult = "Studio.Run.OpenResult";
@@ -731,6 +749,9 @@ public static class StudioStringKeys
 
     /// <summary>"Cut short: check its files" — an agent one of whose tasks ended on its iteration cap.</summary>
     public const string RunLaneCapped = "Studio.Run.LaneCapped";
+
+    /// <summary>"Did not write its file" — an agent one of whose tasks succeeded without writing its deliverable (Orkeon #392).</summary>
+    public const string RunLaneMissing = "Studio.Run.LaneMissing";
 
     /// <summary>"Command copied" — the same button, right after a copy.</summary>
     public const string RunCommandCopied = "Studio.Run.CommandCopied";
@@ -1206,6 +1227,15 @@ public static class StudioStringKeys
     /// <summary>Both at once: {0} agents not run, {1} tasks ended on their iteration cap.</summary>
     public const string RunBadgeDoneSkippedCapped = "Studio.Run.BadgeDoneSkippedCapped";
 
+    /// <summary>
+    /// "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their files}" — a task
+    /// succeeded without writing its deliverable (Orkeon #392). It takes the place of the cut-short count.
+    /// </summary>
+    public const string RunBadgeDoneMissing = "Studio.Run.BadgeDoneMissing";
+
+    /// <summary>Both at once: {0} agents not run, {1} tasks that did not write their files.</summary>
+    public const string RunBadgeDoneSkippedMissing = "Studio.Run.BadgeDoneSkippedMissing";
+
     /// <summary>"Task details" (UX lot 08).</summary>
     public const string RunTaskDetails = "Studio.Run.TaskDetails";
 
@@ -1302,6 +1332,9 @@ public static class StudioStringKeys
 
     /// <summary>"Task cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
     public const string RunProgressCapNote = "Studio.Run.CapNote";
+
+    /// <summary>"File not written: the task succeeded, but ..." — under a task that did not write its deliverable (Orkeon #392).</summary>
+    public const string RunProgressDeliverableNote = "Studio.Run.DeliverableNote";
 
     /// <summary>"decision"</summary>
     public const string RunProgressDecision = "Studio.Run.Decision";
@@ -1525,6 +1558,12 @@ public static class StudioStringKeys
     /// <summary>"Collaboration"</summary>
     public const string ToolFamilyCollaboration = "Studio.Settings.ToolFamilyCollaboration";
 
+    /// <summary>"Decision models"</summary>
+    public const string ToolFamilyDecision = "Studio.Settings.ToolFamilyDecision";
+
+    /// <summary>"MCP servers"</summary>
+    public const string ToolFamilyMcp = "Studio.Settings.ToolFamilyMcp";
+
     /// <summary>"Folders"</summary>
     public const string ToolFamilyMounts = "Studio.Settings.ToolFamilyMounts";
 
@@ -1546,6 +1585,24 @@ public static class StudioStringKeys
 
     /// <summary>"needs a drive account, declared in Settings › Drive"</summary>
     public const string ToolNeedsDriveAccount = "Studio.Settings.ToolNeedsDriveAccount";
+
+    /// <summary>"searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)"</summary>
+    public const string ToolNeedsRagCollection = "Studio.Settings.ToolNeedsRagCollection";
+
+    /// <summary>"present only while Settings › MCP (expert mode) is on and declares a server"</summary>
+    public const string ToolOnlyWithMcpServer = "Studio.Settings.ToolOnlyWithMcpServer";
+
+    /// <summary>"needs a golden dataset, a YAML file in an authorized folder; ..."</summary>
+    public const string ToolNeedsRagDataset = "Studio.Settings.ToolNeedsRagDataset";
+
+    /// <summary>"present only once a decision provider is set: ..." — names the setting, the sections and the keys the engine resolves</summary>
+    public const string ToolOnlyWithDecisionProvider = "Studio.Settings.ToolOnlyWithDecisionProvider";
+
+    /// <summary>"present only with {0} written by hand in the settings file, and held only by a team with memory: true" — {0} is the switch, which no tab writes</summary>
+    public const string ToolOnlyWithCognitiveMemory = "Studio.Settings.ToolOnlyWithCognitiveMemory";
+
+    /// <summary>"offered only in the act of a script agent (.ork.ts); ..."</summary>
+    public const string ToolScriptOnly = "Studio.Settings.ToolScriptOnly";
 
     /// <summary>"{0} tools, nothing to configure"</summary>
     public const string ToolFamilyQuietPattern = "Studio.Settings.ToolFamilyQuietPattern";
@@ -1864,6 +1921,12 @@ public static class StudioStringKeys
 
     /// <summary>"{0} — cut short: its iterations ran out, its work may be incomplete"</summary>
     public const string WizardActivityCapped = "Studio.Create.ActivityCapped";
+
+    /// <summary>"{0} — done, but did not write its file" — a trial task that did not write its deliverable (Orkeon #392).</summary>
+    public const string WizardActivityMissing = "Studio.Create.ActivityMissing";
+
+    /// <summary>"{0} — done, but did not write its file; cut short too: its iterations ran out" — a trial task both.</summary>
+    public const string WizardActivityMissingCapped = "Studio.Create.ActivityMissingCapped";
 
     /// <summary>"Describe the work to continue."</summary>
     public const string WizardHintDescribe = "Studio.Create.HintDescribe";
@@ -2945,9 +3008,20 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunWarnFileSystemScope] =
             "The engine may refuse these agents if the run starts them, or unless the settings the CLI reads mount what they ask: {0} Check the folders of this run or the agents' filesystem: scope.",
         [StudioStringKeys.RunWarnDeliverableNoWriter] =
-            "A file may not be written. In the team's YAML, give each agent named below the file_write tool, or set its task's deliverable to source: final_message.",
+            "A file may not be written. Fix each task below in the team's YAML; an Orkeon 1.2 CLI also warns of it when it loads the team.",
         [StudioStringKeys.RunWarnDeliverableNoWriterItem] =
-            "Task '{0}' must write {2}, but its agent '{1}' does not have the file_write tool the engine asks it to use.",
+            "Task '{0}' must write {2}, but its agent '{1}' has no tool that writes it.",
+        [StudioStringKeys.RunWarnDeliverableNoWriterAgents] =
+            "Task '{0}' must write {2}, but none of the agents that may run it ({1}) has a tool that writes it.",
+        [StudioStringKeys.RunWarnDeliverableQuotedAgent] = "'{0}'",
+        [StudioStringKeys.RunWarnDeliverableFixText] =
+            "Give {0} to the agent meant to write it, or set the deliverable to source: final_message.",
+        [StudioStringKeys.RunWarnDeliverableFixBinary] =
+            "Give {0} to the agent meant to write it, or deliver a text format (.md, .html, .csv) instead.",
+        [StudioStringKeys.RunWarnDeliverableFixBinaryNoTool] =
+            "Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.",
+        [StudioStringKeys.RunWarnDeliverableDecision] =
+            "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
         [StudioStringKeys.RunOpenLogsNotYet] = "The logs folder does not exist yet: it is created at the first logged call.",
@@ -3032,6 +3106,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunLaneDone] = "Done",
         [StudioStringKeys.RunLaneFailed] = "Failed",
         [StudioStringKeys.RunLaneCapped] = "Cut short: check its files",
+        [StudioStringKeys.RunLaneMissing] = "Did not write its file",
         [StudioStringKeys.RunCommandCopied] = "Command copied",
         [StudioStringKeys.MountsOriginSelectedById] = "{0} (selected by id among {1})",
         [StudioStringKeys.MountsOriginNotSelected] = "{0} (not mounted for this run)",
@@ -3279,7 +3354,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
-        ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write its deliverable with the file_write tool, and its agent does not have it: the run starts, the file may never be written and the task still counts as done.",
+        ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",
@@ -3310,6 +3385,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBadgeDoneSkipped] = "Succeeded · {0} {0:plural:agent not run|agents not run}",
         [StudioStringKeys.RunBadgeDoneCapped] = "Succeeded · {0} {0:plural:task|tasks} cut short",
         [StudioStringKeys.RunBadgeDoneSkippedCapped] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task|tasks} cut short",
+        [StudioStringKeys.RunBadgeDoneMissing] = "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their files}",
+        [StudioStringKeys.RunBadgeDoneSkippedMissing] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their files}",
         [StudioStringKeys.RunTaskDetails] = "Task details",
         [StudioStringKeys.HistoryShowError] = "Show the error",
         [StudioStringKeys.RunBadgeFailed] = "failed",
@@ -3501,6 +3578,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
         [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
+        [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",
@@ -3576,6 +3654,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolFamilyEvents] = "Events",
         [StudioStringKeys.ToolFamilyAnalysis] = "Code analysis",
         [StudioStringKeys.ToolFamilyCollaboration] = "Collaboration",
+        [StudioStringKeys.ToolFamilyDecision] = "Decision models",
+        [StudioStringKeys.ToolFamilyMcp] = "MCP servers",
         [StudioStringKeys.ToolFamilyMounts] = "Folders",
         [StudioStringKeys.ToolNeedsStoredKey] = "needs the key {0}, above",
         [StudioStringKeys.ToolOnlyWithStoredKey] = "present only once the key {0} is remembered, above",
@@ -3583,6 +3663,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolExpertSetting] = "expert setting below: {0}",
         [StudioStringKeys.ToolNeedsEmailAccount] = "needs an e-mail account, declared in Settings › E-mail",
         [StudioStringKeys.ToolNeedsDriveAccount] = "needs a drive account, declared in Settings › Drive",
+        [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
+        [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
+        [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
+        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; TypeSafe and Liquid refuse every call without their key",
+        [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
+        [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
         [StudioStringKeys.McpProblemId] = "An identifier is required: letters, digits, '.', '_' and '-'.",
         [StudioStringKeys.McpProblemCommand] = "A stdio server needs a command to launch.",
@@ -3709,6 +3795,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardActivityDoneUntimed] = "{0} — done",
         [StudioStringKeys.WizardActivityFailed] = "{0} — failed",
         [StudioStringKeys.WizardActivityCapped] = "{0} — cut short: its iterations ran out, its work may be incomplete",
+        [StudioStringKeys.WizardActivityMissing] = "{0} — done, but did not write its file",
+        [StudioStringKeys.WizardActivityMissingCapped] = "{0} — done, but did not write its file; cut short too: its iterations ran out",
         [StudioStringKeys.WizardHintDescribe] = "Describe the work to continue.",
         [StudioStringKeys.WizardHintAssistant] = "Choose a model for the assistant first.",
         [StudioStringKeys.WizardHintReady] = "Ready: you can compose the team.",

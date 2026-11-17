@@ -268,6 +268,21 @@ public class ForgeSessionModelTests
     }
 
     [Fact]
+    public void A_try_task_that_did_not_write_its_file_is_marked()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Event(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"collecte","agentRole":"Web Researcher","success":true,"durationMs":1200,"endedOnIterationCap":false,"deliverableMissing":true}"""));
+        model.Feed(Event(
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"resume","agentRole":"Writer","success":true,"durationMs":1200,"deliverableMissing":false}"""));
+        // A CLI older than Orkeon 1.2 sends no such key: the task reads as it always did.
+        model.Feed(Event(
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"Writer","success":true,"durationMs":1200}"""));
+
+        Assert.Equal([true, false, false], model.Activity.Select(task => task.DeliverableMissing));
+    }
+
+    [Fact]
     public void Before_any_brief_nothing_is_known_about_inputs_or_output()
     {
         var model = new ForgeSessionModel();

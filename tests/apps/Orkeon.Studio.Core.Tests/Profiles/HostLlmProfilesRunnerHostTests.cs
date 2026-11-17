@@ -371,9 +371,9 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
 
     /// <summary>
     /// <c>Llm:ModelCapabilities</c> keyed by a blank model id, with the path Studio reports it at. The
-    /// real host does not start on it. Orkeon 1.1.0 says so with the model table's own exception,
-    /// which names the id and never the path; from Orkeon #385 on it is a settings refusal that
-    /// names <c>Llm:ModelCapabilities</c>.
+    /// real host does not start on it: since Orkeon 1.2.0 (#385) the settings reader refuses the entry
+    /// (<c>LlmSettings.ReadModelCapabilities</c>) and the host reports it as a settings refusal that
+    /// names <c>Llm:ModelCapabilities</c>, where 1.1.0 threw the model table's own exception.
     /// </summary>
     public static TheoryData<string, string> BlankModelIds() => new()
     {
@@ -393,17 +393,11 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
     {
         var (document, settingsPath) = await WriteModelCapabilitiesAsync(json);
 
-        // Either refusal of the host, by the version of the packages: the test holds on the
-        // 1.1.0 ones and on those of Orkeon #385.
-        var refused = Assert.ThrowsAny<Exception>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
-        if (refused is RunnerSettingsException)
-        {
-            // The refusal of the blank id, not another one the key could earn.
-            Assert.Contains("Llm:ModelCapabilities", refused.Message, StringComparison.Ordinal);
-            Assert.Contains("model id", refused.Message, StringComparison.Ordinal);
-        }
-        else
-            Assert.Equal("id", Assert.IsType<ArgumentException>(refused).ParamName);
+        // A settings refusal of the host (Orkeon #385, from 1.2.0 on), never another exception.
+        var refused = Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        // The refusal of the blank id, not another one the key could earn.
+        Assert.Contains("Llm:ModelCapabilities", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("model id", refused.Message, StringComparison.Ordinal);
         var message = Assert.Single(
             new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document),
             message => message.Path?.StartsWith("Llm:ModelCapabilities", StringComparison.Ordinal) == true);

@@ -53,10 +53,23 @@ public sealed partial record CliLogLine(CliLogLevel? Level, string Text)
         return text.StartsWith(SettingsNoticePrefix, StringComparison.Ordinal);
     }
 
-    /// <summary>Reads one line: an optional <c>HH:mm:ss.fff </c> timestamp, then a level token and <c>: </c>.</summary>
+    /// <summary>
+    /// What leads a warning the CLI writes straight to stderr, without its logger: <c>WARNING: </c>,
+    /// never localized. <c>--validate</c> says that way, exit code 0, a task whose file no agent that
+    /// may run it can write (Orkeon #392) and the other findings of a load that does not refuse.
+    /// </summary>
+    public const string WarningPrefix = "WARNING: ";
+
+    /// <summary>
+    /// Reads one line: an optional <c>HH:mm:ss.fff </c> timestamp, then a level token and <c>: </c>;
+    /// or a line led by <see cref="WarningPrefix"/>, a warning as it stands.
+    /// </summary>
     public static CliLogLine Parse(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
+
+        if (text.StartsWith(WarningPrefix, StringComparison.Ordinal))
+            return new CliLogLine(CliLogLevel.Warning, text);
 
         var match = LogLine().Match(text);
         if (!match.Success)

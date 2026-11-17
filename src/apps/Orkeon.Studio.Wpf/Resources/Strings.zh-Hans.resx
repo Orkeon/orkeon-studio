@@ -820,10 +820,16 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>已跳过：{0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>任务提前结束：智能体在完成前用尽了迭代次数。其工作可能不完整：请检查它应写入的文件。</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但未写入（或更新）其交付物指定的文件。请检查其智能体是否有能写入该文件的工具，以及任务是否要求写入该文件（如果任务也提前结束，请给智能体更多迭代次数），然后重新运行团队。</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>提前结束：请检查其文件</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>未写入其文件</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>成功 · {0} 个任务提前结束</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>成功 · {0} 个智能体未执行 · {1} 个任务提前结束</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>成功 · {0} 个任务未写入其文件</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>成功 · {0} 个智能体未执行 · {1} 个任务未写入其文件</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — 提前结束：迭代次数已用尽，其工作可能不完整</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — 已完成，但未写入其文件</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — 已完成，但未写入其文件；且提前结束：迭代次数已用尽</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>决策（默认）</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">
@@ -1566,7 +1572,7 @@
     <value>多个条目共用同一个内部名称：团队每次运行选择其中一个；同一个文件夹出现两次则多余。</value>
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>某个智能体的 filesystem: 声明格式错误，或其范围或工作根目录要求的文件夹未被此次运行的挂载授予：引擎会在加载时拒绝该团队，或在运行启动该智能体时拒绝它。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>某个任务需要用 file_write 工具写入其交付物，但其智能体没有该工具：运行会启动，文件可能不会被写入，而任务仍会计为完成。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>某个任务需要写入一个文件，但可能运行它的智能体都没有能写入它的工具，或某个决策任务声明了交付物：运行会启动，文件可能永远不会被写入，而任务仍会计为完成。Orkeon 1.2 CLI 在加载时也会发出此警告。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
   </data>
@@ -1869,6 +1875,12 @@
   <data name="Studio.Settings.ToolFamilyCollaboration" xml:space="preserve">
     <value>协作</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyDecision" xml:space="preserve">
+    <value>决策模型</value>
+  </data>
+  <data name="Studio.Settings.ToolFamilyMcp" xml:space="preserve">
+    <value>MCP 服务器</value>
+  </data>
   <data name="Studio.Settings.ToolFamilyMounts" xml:space="preserve">
     <value>文件夹</value>
   </data>
@@ -1889,6 +1901,24 @@
   </data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>需要一个云盘账户，在“设置 › 云盘”中声明</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
+    <value>在由团队的 rag: 块或 rag_ingest 填充的集合中检索，或在“设置 › 文档检索 (RAG)”（专家模式）所选存储保留的集合中检索</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
+    <value>仅当“设置 › MCP”（专家模式）已开启并声明了服务器时才会出现</value>
+  </data>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve">
+    <value>仅在脚本智能体（.ork.ts）的 act 中提供；Studio 编写的 YAML 团队无法列出它</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve">
+    <value>仅当设置文件中手动写入 {0} 时才会出现，且只有设置了 memory: true 的团队才持有它</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
+    <value>仅在配置了决策提供方后才会出现：环境中的密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或在设置文件中手动写入的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有密钥时，TypeSafe 和 Liquid 会拒绝所有调用</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
+    <value>需要一个标准数据集，即已授权文件夹中的一个 YAML 文件；它会自行用该数据集的语料填充集合</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} 个工具，无需配置</value>
@@ -2358,8 +2388,14 @@
   <data name="Studio.Run.BlockedUnknownMountId" xml:space="preserve"><value>该团队引用了此处缺少的已授权文件夹：{0}。请在“设置 › 已授权文件夹”中授权它们，或更改团队的文件夹。</value></data>
   <data name="Studio.Run.BlockedFileSystemScope" xml:space="preserve"><value>按当前挂载的文件夹，引擎将拒绝启动此团队：{0} 请为文件夹授予智能体声明的权限，或更改其 filesystem: 范围。</value></data>
   <data name="Studio.Run.WarnFileSystemScope" xml:space="preserve"><value>如果运行启动这些智能体，或 CLI 读取的设置未挂载它们所需的内容，引擎可能会拒绝它们：{0} 请检查此次运行的文件夹或智能体的 filesystem: 范围。</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>有文件可能不会被写入。请在团队的 YAML 中为下列智能体添加 file_write 工具，或将相应任务的交付物设为 source: final_message。</value></data>
-  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>任务“{0}”需要写入 {2}，但其智能体“{1}”没有引擎要求它使用的 file_write 工具。</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>有文件可能不会被写入。请在团队的 YAML 中按提示修正下列每个任务；Orkeon 1.2 CLI 在加载团队时也会发出此警告。</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>任务“{0}”需要写入 {2}，但其智能体“{1}”没有能写入该文件的工具。</value></data>
+  <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>任务“{0}”需要写入 {2}，但可能运行它的智能体（{1}）都没有能写入该文件的工具。</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>“{0}”</value></data>
+  <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>请将 {0} 交给负责写入该文件的智能体，或将交付物设为 source: final_message。</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>请将 {0} 交给负责写入该文件的智能体，或改为交付文本格式（.md、.html、.csv）。</value></data>
+  <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>请为负责写入该文件的智能体提供能写入它的工具（MCP 服务器或插件提供的工具），或改为交付文本格式（.md、.html、.csv）。</value></data>
+  <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>任务“{0}”是决策任务，需要写入 {1}，但决策不会写入任何文件：请删除该交付物，或将其移到由智能体运行的任务中。</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0}（在 {1} 个条目中按标识选中）</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0}（本次运行未挂载）</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0}（{1} 个条目之一 — 没有任何选择）</value></data>
