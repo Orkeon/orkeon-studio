@@ -4,7 +4,7 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
-On Orkeon `1.1.0` (issues #348–#379): `OrkeonVersion` moves from `1.0.0` to `1.1.0`, and CI clones the tag `v1.1.0` for the drift tests. The entries that cite Orkeon #387 and #388 follow Orkeon `main` after `1.1.0`: they take effect with a CLI of the next Orkeon release. The entry that cites Orkeon #392 needs no particular CLI: Studio reads the crew itself. No breaking change in Studio since its 1.0.0.
+On Orkeon `1.2.0`: `OrkeonVersion` moves from `1.0.0` to `1.2.0` (through `1.1.0`, issues #348–#379, and `1.2.0`, issues #376–#392), and CI clones the tag `v1.2.0` for the drift tests. The entries that cite Orkeon #387, #388 and the run-time half of #392 take effect with a CLI of Orkeon `1.2.0` or later; with an older CLI they change nothing. The pre-launch check of #392 needs no particular CLI: Studio reads the crew itself. No breaking change in Studio since its 1.0.0.
 
 ### Added
 
@@ -30,7 +30,7 @@ On Orkeon `1.1.0` (issues #348–#379): `OrkeonVersion` moves from `1.0.0` to `1
 
 ### Changed
 
-- **No build downloads the local embeddings model** (Orkeon [#368](https://github.com/Orkeon/orkeon/issues/368)). `Orkeon.Scripting`, which `Orkeon.Studio.Core.Tests` references, now lets the `SmartComponents.LocalEmbeddings` build target reach its consumers: that target downloads the BGE-micro-v2 weights (~17 MB) from huggingface.co on a first build, and fails an offline one. No Studio project embeds anything, so `Directory.Build.targets` replaces those targets with empty ones: nothing is downloaded or copied to `LocalEmbeddingsModel/`.
+- **No build downloads the local embeddings model** (Orkeon [#368](https://github.com/Orkeon/orkeon/issues/368)). `Orkeon.Scripting`, which `Orkeon.Studio.Core.Tests` references, lets the `SmartComponents.LocalEmbeddings` build target reach its consumers: that target downloads the BGE-micro-v2 weights (~17 MB) from huggingface.co on a first build, and fails an offline one. No Studio project embeds anything, so `Orkeon.Studio.Core.Tests` references `Orkeon.Scripting` with `ExcludeAssets="build"`, the opt-out Orkeon `1.2.0` supports ([#376](https://github.com/Orkeon/orkeon/issues/376)): nothing is downloaded or copied to `LocalEmbeddingsModel/`.
 - On a Windows machine that also has an Orkeon install, a Studio started from a development checkout now drives the installed CLI rather than the one built in the Orkeon checkout (`ORKEON_SOURCE_ROOT` or `../orkeon`), as a CLI on `PATH` (the .NET tool, or Linux packages) already did. To drive the checkout's build, name its directory with `--cli-dir` (WPF app) or `ORKEON_CLI_DIR`.
 
 ## [1.0.0] - 2026-11-12

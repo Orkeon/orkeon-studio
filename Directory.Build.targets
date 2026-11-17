@@ -32,20 +32,4 @@
                    and '%(RuntimeTargetsCopyLocalItems.RuntimeIdentifier)' != 'any'" />
     </ItemGroup>
   </Target>
-
-  <!-- No embeddings model in Studio's builds (Orkeon #368, 2026-11-14).
-
-       Orkeon.Scripting, which Orkeon.Studio.Core.Tests references for Orkeon.Hosting.dll,
-       lets the build target of SmartComponents.LocalEmbeddings reach its consumers: that
-       target downloads the BGE-micro-v2 weights (~17 MB) from huggingface.co on a first
-       build, fails an offline one, and copies them to LocalEmbeddingsModel/default/ for
-       AddOrkeonLocalEmbeddings(). No Studio project embeds anything: the CLI loads its own
-       copy. These empty targets replace the upstream ones by name (this file is imported
-       after the packages' targets), so nothing is downloaded or copied. Orkeon #376 gives the
-       supported opt-out, ExcludeAssets="build" on every reference that reaches the package,
-       in the release after 1.1.0: once OrkeonVersion moves past 1.1.0, use it and drop
-       these targets. -->
-  <Target Name="AcquireLocalEmbeddingsModel" />
-  <Target Name="AcquireLocalEmbeddingsVocab" />
-  <Target Name="AttachEmbeddingsContentFiles" />
 </Project>
