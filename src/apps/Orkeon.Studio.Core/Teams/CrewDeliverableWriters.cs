@@ -1,6 +1,16 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Orkeon.Compliance.Vfs;
+using Orkeon.Domain.Configuration;
+using Orkeon.Domain.Exceptions;
+using Orkeon.Domain.FileSystem;
 using Orkeon.Domain.SharedKernel.ValueObjects;
+using Orkeon.Domain.Task.ValueObjects;
+using Orkeon.Infrastructure.Configuration;
+using Orkeon.Infrastructure.FileSystem;
+using Orkeon.Infrastructure.Security;
+using Orkeon.Infrastructure.Serialization;
 using Orkeon.Studio.Core.Targets;
-using YamlDotNet.RepresentationModel;
+using YamlDotNet.Core;
 using DeliverableToolCheck = Orkeon.Application.Crew.DeliverableToolCheck;
 
 namespace Orkeon.Studio.Core.Teams;
@@ -49,47 +59,49 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 
 /// <summary>
 /// The tasks of a YAML crew whose deliverable may never be written (Orkeon #392), judged as the
-/// engine's own load check (<c>DeliverableToolCheck</c>, Orkeon 1.2) judges them, as far as the YAML
-/// tells: a task that declares a <c>deliverable:</c> its agent writes with a tool (<c>source:
-/// tool_call</c>, also what an absent source means) while none of the agents that may run it holds a
-/// tool that writes that file, and a decision task that declares a deliverable at all. The engine loads
-/// such a crew and counts the task a success without the file; an Orkeon 1.2 CLI warns of it at load.
-/// The launchers warn before the run; they never block, the run still ending on a result.
+/// engine's own load check (<c>DeliverableToolCheck</c>, Orkeon 1.2) judges them: a task that declares
+/// a <c>deliverable:</c> its agent writes with a tool (<c>source: tool_call</c>, also what an absent
+/// source means) while none of the agents that may run it holds a tool that writes that file, and a
+/// decision task that declares a deliverable at all. The engine loads such a crew and counts the task a
+/// success without the file; an Orkeon 1.2 CLI warns of it at load. The launchers warn before the run;
+/// they never block, the run still ending on a result.
 /// <para>
-/// A belt (the agent's <c>tools:</c> and the task's own) can write the file when it holds a tool
-/// Orkeon does not ship, a name the catalogue does not carry (an MCP
-/// server's, a plugin's, a script's: it may write, for all Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>,
-/// read from the engine, not copied): the tool of the file's format (<c>docx_writer</c> a <c>.docx</c>,
+/// The crew is read by the engine's own loader, in process (<c>YamlCrewDefinitionLoader</c> over a
+/// read-only mount of the crew's folder, as <c>orkeon run</c> reads it): its keys, its spellings, its
+/// <c>anchors:</c> and its values are the engine's. Nothing is said of a crew that loader refuses, nor of
+/// one the validator the crew factory runs next refuses (<c>CrewDefinitionValidator</c>), so that the load
+/// error is the one thing the user reads. What the factory judges only against the run's own host is not
+/// judged here, and its error is what the launch reports: a tool name the run does not register (the
+/// strict tool check), an <c>llm.profile</c> the settings do not offer, the ingestion of a <c>rag:</c>
+/// block. Nor is anything said of a <c>.ork.ts</c> crew, which the CLI judges itself.
+/// </para>
+/// <para>
+/// A belt (the agent's <c>tools:</c> and the task's own) can write the file when it holds a tool name
+/// Studio's catalogue does not carry (an MCP server's, a plugin's, a script's: it may write, for all
+/// Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>, read
+/// from the engine, not copied): the tool of the file's format (<c>docx_writer</c> a <c>.docx</c>,
 /// <c>xlsx_writer</c> a <c>.xlsx</c>, <c>image_generation</c> an image, <c>firefox</c> a <c>.png</c>), and
 /// <c>file_write</c> for a text file only. The editors (<c>edit_file</c>, <c>edit_batch</c>,
-/// <c>structural_rewrite</c>), the downloaders and <c>shell_command</c> do not count.
+/// <c>structural_rewrite</c>), the downloaders and <c>shell_command</c> do not count. The engine judges a
+/// tool by its assembly, which the YAML does not tell: a plugin whose assembly is named <c>Orkeon.*</c>
+/// is judged by its name there, as no writer, where Studio counts it as one that may write.
 /// </para>
 /// <para>
 /// The agents that may run a task follow the process, as the engine's: under a sequential, parallel or
 /// graph process, the agent the task's <c>agent:</c> names, else every agent (the round-robin picks);
 /// under a hierarchical or consensual one, every agent but the manager agent; under an autonomous one,
-/// every agent (it has no manager agent: the engine refuses one). The task is named only when none of them can write the file.
-/// </para>
-/// <para>
-/// Not judged, where the engine sees more than the YAML: a provider that runs its own tools, and a key
-/// the loader accepts under another spelling (<c>tools_</c>), as <see cref="CrewFileSystemScopes"/>. A
-/// <c>permissionMode:</c> that denies a tool the agent holds is judged by neither: the engine's check
-/// reads the tools the agent holds, as Studio does. The tools a run registers only under a setting of
-/// their own (<c>system_one_decide</c>, <c>mcp_prompt_get</c>, <c>memory_recall</c>) and the RAG tools
-/// are in the catalogue, Orkeon's own, and counted as no writer, as the engine counts them.
-/// </para>
-/// <para>
-/// The crew is read as <see cref="CrewFileSystemScopes"/> reads it, and nothing is said of a crew the
-/// engine refuses at load, so that the load error is the one thing the user reads: an unknown process, a
-/// task naming an agent the crew lacks (whatever the process), a deliverable with an unknown source, a
-/// decision task that names an agent, asks no question or sits under a process that runs no decision
-/// (hierarchical, consensual, autonomous), a manager agent under a process that has none or naming no
-/// agent of the crew, a hierarchical crew without one. Nor is anything said of a <c>.ork.ts</c> crew, which the CLI
-/// judges itself.
+/// every agent. The task is named only when none of them can write the file. A <c>permissionMode:</c>
+/// that denies a tool the agent holds is judged by neither: the engine's check reads the tools the agent
+/// holds, as Studio does. The tools a run registers only under a setting of their own
+/// (<c>system_one_decide</c>, <c>mcp_prompt_get</c>, <c>memory_recall</c>) and the RAG tools are in the
+/// catalogue, Orkeon's own, and counted as no writer, as the engine counts them.
 /// </para>
 /// </summary>
 public static class CrewDeliverableWriters
 {
+    /// <summary>Where the crew's folder is mounted for the engine's loader, as <c>orkeon run</c> mounts it.</summary>
+    private const string CrewMount = "/crew";
+
     /// <summary>
     /// The tools Orkeon ships that a run registers, as the Settings screen lists them: a name outside
     /// them may write a file for all Studio can tell.
@@ -97,13 +109,60 @@ public static class CrewDeliverableWriters
     private static readonly HashSet<string> KnownTools =
         new(Tools.ToolCatalog.All.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the crew's order.</summary>
-    public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target) =>
-        CrewFileSystemScopes.Read<CrewDeliverableWithoutWriter>(target, Collect);
+    /// <summary>
+    /// The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the
+    /// crew's order. Empty without a target, for a script, and for a crew the engine refuses at load.
+    /// </summary>
+    [SuppressVfsCompliance(
+        "EXCEPTION-BOOTSTRAP: Studio is a host application; the crew's folder is user-owned storage on the " +
+        "physical disk, mounted for the engine's loader as orkeon run mounts it.")]
+    public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target)
+    {
+        if (target is null || target.Dialect != RunTargetDialect.Yaml || string.IsNullOrWhiteSpace(target.RunPath))
+            return [];
+
+        var directory = target.Kind == RunTargetKind.MultiFileCrewDirectory;
+        var folder = directory ? target.RunPath : Path.GetDirectoryName(Path.GetFullPath(target.RunPath));
+        if (string.IsNullOrEmpty(folder))
+            return [];
+
+        // The engine's file system is async; nothing here awaits the caller's context.
+        return Task.Run(async () =>
+        {
+            try
+            {
+                using var registry = new FileSystemRegistry(
+                    [FileSystemMount.Parse($"{FileSystemMount.Quote(folder)}:{CrewMount}:ro")]);
+                var loader = Loader(registry, folder);
+                var config = directory
+                    ? await loader.LoadFromDirectoryAsync(CrewMount).ConfigureAwait(false)
+                    : await loader.LoadFromFileAsync($"{CrewMount}/{Path.GetFileName(target.RunPath)}").ConfigureAwait(false);
+                return Judge(loader, config);
+            }
+            catch (Exception ex) when (IsRefusal(ex))
+            {
+                return [];
+            }
+        }).GetAwaiter().GetResult();
+    }
 
     /// <summary>The same, of a single-file crew's text.</summary>
-    public static IReadOnlyList<CrewDeliverableWithoutWriter> OfCrewFile(string yaml) =>
-        CrewFileSystemScopes.ReadCrewFile<CrewDeliverableWithoutWriter>(yaml, Collect);
+    public static IReadOnlyList<CrewDeliverableWithoutWriter> OfCrewFile(string yaml)
+    {
+        ArgumentNullException.ThrowIfNull(yaml);
+
+        try
+        {
+            using var registry = new FileSystemRegistry([]);
+            var loader = Loader(registry, workspace: null);
+            // A string is loaded at once: the task is complete when it returns.
+            return Judge(loader, loader.LoadFromStringAsync(yaml).GetAwaiter().GetResult());
+        }
+        catch (Exception ex) when (IsRefusal(ex))
+        {
+            return [];
+        }
+    }
 
     /// <summary>
     /// Whether a belt can write <paramref name="path"/>: a tool Studio does not know, or a built-in
@@ -114,157 +173,99 @@ public static class CrewDeliverableWriters
     public static bool CanWrite(IReadOnlyCollection<string> belt, string path) =>
         belt.Any(tool => !KnownTools.Contains(tool)) || DeliverableToolCheck.CanWrite(belt, path);
 
-    private static List<CrewDeliverableWithoutWriter> Collect(
-        IEnumerable<KeyValuePair<string, YamlNode?>> agents,
-        IEnumerable<KeyValuePair<string, YamlNode?>> tasks,
-        YamlMappingNode? settings)
+    /// <summary>
+    /// The engine's crew loader over <paramref name="registry"/>, its paths checked by the engine's own
+    /// validator against the crew's folder (<paramref name="workspace"/>), the one root it reads.
+    /// </summary>
+    private static YamlCrewDefinitionLoader Loader(FileSystemRegistry registry, string? workspace) =>
+        new(
+            new YamlDotNetSerializer(),
+            new FileSystemService(
+                registry,
+                new PathValidator(new PathSecurityOptions { DefaultWorkspaceRoot = workspace }, NullLogger<PathValidator>.Instance),
+                NullLogger<FileSystemService>.Instance),
+            NullLogger<YamlCrewDefinitionLoader>.Instance);
+
+    /// <summary>
+    /// Whether <paramref name="ex"/> is how the engine's loader or its file system refuses a crew: what the
+    /// launch would report as the load error.
+    /// </summary>
+    private static bool IsRefusal(Exception ex) =>
+        ex is InvalidOperationException or ArgumentException or FormatException or InvalidCastException
+            or NotSupportedException or IOException or UnauthorizedAccessException or YamlException
+            or FileAccessDeniedException or DomainException;
+
+    /// <summary>
+    /// The findings of a loaded crew, as <c>DeliverableToolCheck.Check</c> finds them over the crew the
+    /// factory builds from it; none when the factory's validator refuses the crew.
+    /// </summary>
+    private static List<CrewDeliverableWithoutWriter> Judge(YamlCrewDefinitionLoader loader, CrewConfiguration crew)
     {
         var result = new List<CrewDeliverableWithoutWriter>();
-
-        // Absent is sequential; an unknown process is refused at load.
-        var process = ProcessType.Sequential;
-        if (settings is not null
-            && CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(settings, "process")) is { } written)
-        {
-            if (!ProcessType.TryFrom(written, out var parsed) || parsed is null)
-                return result;
-            process = parsed;
-        }
-
-        var byKey = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
-        var declared = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (key, node) in agents)
-        {
-            declared.Add(key);
-            if (node is YamlMappingNode agent)
-                byKey.TryAdd(key, agent);
-        }
-
-        var bindsDeclaredAgent = process == ProcessType.Sequential || process == ProcessType.Parallel || process == ProcessType.Graph;
-        var taskList = tasks.ToList();
-        if (taskList.Exists(entry => entry.Value is YamlMappingNode task && RefusedAtLoad(task, declared, bindsDeclaredAgent)))
+        if (!loader.Validate(crew).IsValid)
             return result;
 
-        var manager = settings is null
-            ? null
-            : CrewFileSystemScopes.Text(
-                CrewFileSystemScopes.Value(settings, "managerAgent") ?? CrewFileSystemScopes.Value(settings, "manager_agent"));
-        if (ManagerRefusedAtLoad(process, manager, declared))
-            return result;
-
-        var excludesManager = process.AcceptsManagerAgent;
-
-        foreach (var (key, node) in taskList)
+        foreach (var task in crew.Tasks)
         {
-            if (node is not YamlMappingNode task || DeliverableOf(task) is not { } deliverable)
+            if (task.Deliverable is not { } deliverable || string.IsNullOrWhiteSpace(deliverable.Path))
                 continue;
 
             var path = deliverable.Path;
 
-            // A decision runs no agent and writes no file, whatever the deliverable's source; one the
-            // engine refuses never gets here.
-            if (!CrewFileSystemScopes.IsNull(CrewFileSystemScopes.Value(task, "decision")))
+            // A decision runs no agent and writes no file, whatever the deliverable's source.
+            if (task.Decision is not null)
             {
-                result.Add(new CrewDeliverableWithoutWriter(key, [], path) { Kind = CrewDeliverableFindingKind.DecisionTask });
+                result.Add(new CrewDeliverableWithoutWriter(NameOf(task), [], path) { Kind = CrewDeliverableFindingKind.DecisionTask });
                 continue;
             }
 
-            if (!deliverable.ToolCall)
+            if (deliverable.Source != DeliverableSource.ToolCall)
                 continue;
 
-            var named = CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(task, "agent"));
-            List<string> candidates;
-            if (bindsDeclaredAgent && named is not null)
-            {
-                // An agent entry that is no map is the loader's to refuse.
-                if (!byKey.ContainsKey(named))
-                    continue;
-                candidates = [named];
-            }
-            else
-            {
-                // The manager agent of a hierarchical or consensual crew coordinates; it runs no task.
-                candidates = [.. byKey.Keys.Where(agent => !excludesManager || agent != manager)];
-            }
-
-            var taskTools = ToolsOf(task).ToList();
+            var candidates = CandidatesOf(task, crew);
             if (candidates.Count == 0
-                || candidates.Exists(agent => CanWrite([.. ToolsOf(byKey[agent]), .. taskTools], path)))
+                || candidates.Exists(agent => CanWrite([.. agent.Tools, .. task.Tools], path)))
             {
                 continue;
             }
 
-            result.Add(new CrewDeliverableWithoutWriter(key, candidates, path));
+            result.Add(new CrewDeliverableWithoutWriter(NameOf(task), [.. candidates.Select(KeyOf)], path));
         }
 
         return result;
     }
 
     /// <summary>
-    /// Whether the engine refuses the whole crew at load because of its manager agent: one under a process
-    /// that has none (<c>YamlCrewMapper.RefuseManagerTheModeHasNoneOf</c>: sequential, the default, parallel,
-    /// graph, autonomous), one that names no agent of the crew (<c>ResolveManagerAgentId</c>), or none
-    /// under a hierarchical process (<c>CrewDefinitionValidator.ValidateHierarchicalProcess</c>).
+    /// The agents that may run <paramref name="task"/>, in the crew's order, as the engine's
+    /// <c>DeliverableToolCheck.CandidatesOf</c> picks them.
     /// </summary>
-    private static bool ManagerRefusedAtLoad(ProcessType process, string? manager, HashSet<string> declared) =>
-        manager is null
-            ? process == ProcessType.Hierarchical
-            : !process.AcceptsManagerAgent || !declared.Contains(manager);
-
-    /// <summary>
-    /// Whether the engine refuses the whole crew at load because of <paramref name="task"/>: it names an
-    /// agent the crew does not declare (<c>YamlCrewMapper.ResolveAgent</c>, whatever the process), its
-    /// deliverable has a path and a source the loader does not know (<c>ParseDeliverableSource</c>), or it
-    /// declares a decision the engine refuses: one that names an agent or sits under a process that runs
-    /// no decision (<c>DecisionTaskRules.Check</c>), or one that asks no question (<c>TaskDecision.Create</c>).
-    /// </summary>
-    private static bool RefusedAtLoad(YamlMappingNode task, HashSet<string> declared, bool runsDecisions)
+    private static List<AgentConfiguration> CandidatesOf(TaskConfiguration task, CrewConfiguration crew)
     {
-        var named = CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(task, "agent"));
-        if (named is not null && !declared.Contains(named))
-            return true;
-
-        if (CrewFileSystemScopes.Value(task, "deliverable") is YamlMappingNode deliverable
-            && CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(deliverable, "path")) is not null
-            && DeliverableOf(task) is null)
+        var process = crew.Process;
+        if (process == ProcessType.Sequential || process == ProcessType.Parallel || process == ProcessType.Graph)
         {
-            return true;
+            return task.AssignedAgentId is { } assigned && crew.Agents.FirstOrDefault(agent => agent.Id == assigned) is { } declared
+                ? [declared]
+                : [.. crew.Agents];
         }
 
-        var decision = CrewFileSystemScopes.Value(task, "decision");
-        if (CrewFileSystemScopes.IsNull(decision))
-            return false;
-
-        return named is not null
-            || !runsDecisions
-            || decision is not YamlMappingNode block
-            || CrewFileSystemScopes.Value(block, "questions") is not YamlMappingNode { Children.Count: > 0 };
+        // The manager agent of a hierarchical or consensual crew coordinates; it runs no task.
+        return process.AcceptsManagerAgent && crew.ManagerAgentId is { } manager
+            ? [.. crew.Agents.Where(agent => agent.Id != manager)]
+            : [.. crew.Agents];
     }
 
-    /// <summary>
-    /// The deliverable block as the loader reads it (<c>YamlCrewMapper.MapDeliverable</c>): its path and
-    /// whether the agent writes it with a tool (<c>tool_call</c>, or no source); null without a block or
-    /// a path, and for a source the loader refuses.
-    /// </summary>
-    private static (string Path, bool ToolCall)? DeliverableOf(YamlMappingNode task)
+    /// <summary>An agent by its key, what the user edits; its role when it has none.</summary>
+    private static string KeyOf(AgentConfiguration agent) =>
+        string.IsNullOrWhiteSpace(agent.Key) ? agent.Role : agent.Key;
+
+    /// <summary>A task by its key, else the start of its description, as the engine names it (<c>NameOf</c>).</summary>
+    private static string NameOf(TaskConfiguration task)
     {
-        if (CrewFileSystemScopes.Value(task, "deliverable") is not YamlMappingNode deliverable
-            || CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(deliverable, "path")) is not { } path)
-        {
-            return null;
-        }
+        if (!string.IsNullOrWhiteSpace(task.Key))
+            return task.Key;
 
-        return CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(deliverable, "source"))?.ToUpperInvariant() switch
-        {
-            null or "TOOL_CALL" or "TOOLCALL" => (path, true),
-            "NONE" or "FINAL_MESSAGE" or "FINALMESSAGE" or "STRUCTURED_OUTPUT" or "STRUCTUREDOUTPUT" => (path, false),
-            _ => null,
-        };
+        var description = task.Description;
+        return description.Length <= 60 ? description : string.Concat(description.AsSpan(0, 57), "...");
     }
-
-    /// <summary>The names of a <c>tools:</c> list; empty when absent, as the loader reads it.</summary>
-    private static IEnumerable<string> ToolsOf(YamlMappingNode owner) =>
-        CrewFileSystemScopes.Value(owner, "tools") is YamlSequenceNode tools
-            ? tools.Children.Select(CrewFileSystemScopes.Text).OfType<string>()
-            : [];
 }

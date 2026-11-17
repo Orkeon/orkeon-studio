@@ -587,12 +587,17 @@ public class RunLauncherViewModelTests
         {
             var crewFile = Path.Combine(folder, "crew.yaml");
             File.WriteAllText(crewFile, """
+                name: report
+                goal: report
                 agents:
                   analyst:
                     role: Analyst
+                    goal: read
                     tools: [file_read]
                 tasks:
                   read:
+                    description: read
+                    expected_output: notes
                     agent: analyst
                     deliverable:
                       path: /output/notes.md
@@ -638,18 +643,26 @@ public class RunLauncherViewModelTests
         {
             var crewFile = Path.Combine(folder, "crew.yaml");
             File.WriteAllText(crewFile, """
+                name: report
+                goal: report
                 agents:
                   analyst:
                     role: Analyst
+                    goal: read
                     tools: [shell_command]
                   writer:
                     role: Writer
+                    goal: write
                     tools: [file_read]
                 tasks:
                   read:
+                    description: read
+                    expected_output: a report
                     deliverable:
                       path: /output/report.pdf
                   pick:
+                    description: pick
+                    expected_output: a choice
                     decision: { questions: { go: { noul: the work is ready } } }
                     deliverable:
                       path: /output/choice.md

@@ -336,9 +336,9 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
     {
         File.WriteAllText(Path.Combine(team, "crew.yaml"), "name: veille\ngoal: watch\n");
         Directory.CreateDirectory(Path.Combine(team, "agents"));
-        File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\n" + scope);
+        File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\ngoal: write\n" + scope);
         if (!assigned)
-            File.WriteAllText(Path.Combine(team, "agents", "spare.yaml"), "role: Spare\n");
+            File.WriteAllText(Path.Combine(team, "agents", "spare.yaml"), "role: Spare\ngoal: help\n");
         Directory.CreateDirectory(Path.Combine(team, "tasks"));
         File.WriteAllText(
             Path.Combine(team, "tasks", "draft.yaml"),

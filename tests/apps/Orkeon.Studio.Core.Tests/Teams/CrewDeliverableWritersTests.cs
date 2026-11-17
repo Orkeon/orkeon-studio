@@ -16,7 +16,9 @@ namespace Orkeon.Studio.Core.Tests.Teams;
 /// <summary>
 /// Orkeon #392: a task whose deliverable may never be written is found before the run as the engine's
 /// load check (<see cref="DeliverableToolCheck"/>, Orkeon 1.2) finds it: no agent that may run the task
-/// holds a tool that writes that file, or the task is a decision.
+/// holds a tool that writes that file, or the task is a decision. The crew is read by the engine's own
+/// loader, so every fixture is a crew it accepts (a name, a goal, agents with a goal, tasks with a
+/// description and an expected output), but the ones it must refuse.
 /// </summary>
 public sealed class CrewDeliverableWritersTests : IDisposable
 {
@@ -30,12 +32,17 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     /// <summary>A one-agent crew whose task <c>read</c> must write <paramref name="path"/>.</summary>
     private static IReadOnlyList<CrewDeliverableWithoutWriter> OneAgent(string agentTools, string path, string taskTools = "") =>
         CrewDeliverableWriters.OfCrewFile($$"""
+            name: report
+            goal: report
             agents:
               analyst:
                 role: Analyst
+                goal: read
                 {{agentTools}}
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: analyst
                 {{taskTools}}
                 deliverable:
@@ -57,19 +64,27 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     {
         // The crew of the report: the reader holds reading tools only, the writer holds file_write.
         var missing = CrewDeliverableWriters.OfCrewFile("""
+            name: report
+            goal: report
             agents:
               analyst:
                 role: Analyst
+                goal: read
                 tools: [directory_read, file_read, grep]
               writer:
                 role: Writer
+                goal: write
                 tools: [file_read, file_write]
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: analyst
                 deliverable:
                   path: /output/notes.md
               report:
+                description: write
+                expected_output: report
                 agent: writer
                 deliverable:
                   path: /output/report.md
@@ -149,11 +164,16 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void A_deliverable_the_framework_persists_none_or_one_refused_at_load_needs_no_tool(string source)
     {
         Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
+            name: report
+            goal: report
             agents:
               analyst:
                 role: Analyst
+                goal: read
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: analyst
                 deliverable:
                   path: /output/notes.md
@@ -165,19 +185,22 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void An_agent_without_a_tools_list_holds_no_tool_and_a_task_without_a_path_delivers_nothing()
     {
         var missing = CrewDeliverableWriters.OfCrewFile("""
+            name: report
+            goal: report
             agents:
               analyst:
                 role: Analyst
+                goal: read
             tasks:
               read:
+                description: read
+                expected_output: notes
                 deliverable:
                   path: /output/notes.md
                   source: ToolCall
-              idle:
-                deliverable:
-                  format: markdown
               plain:
                 description: no deliverable
+                expected_output: notes
             """);
 
         // A one-agent crew: the round-robin can only pick that agent.
@@ -195,15 +218,21 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void A_task_several_agents_may_run_is_said_only_when_none_of_them_can_write(string process, string task)
     {
         const string Crew = """
+            name: report
+            goal: report
             {{process}}
             agents:
               analyst:
                 role: Analyst
+                goal: read
               writer:
                 role: Writer
+                goal: write
                 tools: [file_write]
             tasks:
               read:
+                description: read
+                expected_output: notes
                 {{task}}
                 deliverable:
                   path: /output/notes.md
@@ -223,17 +252,24 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     {
         // The manager holds file_write, the workers do not: the task is said, and the manager is not named.
         var missing = CrewDeliverableWriters.OfCrewFile($$"""
+            name: report
+            goal: report
             {{process}}
             agents:
               boss:
                 role: Boss
+                goal: lead
                 tools: [file_write]
               analyst:
                 role: Analyst
+                goal: read
               writer:
                 role: Writer
+                goal: write
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: boss
                 deliverable:
                   path: /output/notes.md
@@ -246,15 +282,21 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void Every_agent_of_an_autonomous_crew_may_run_a_task()
     {
         Assert.Empty(CrewDeliverableWriters.OfCrewFile("""
+            name: report
+            goal: report
             process: autonomous
             agents:
               boss:
                 role: Boss
+                goal: lead
                 tools: [file_write]
               analyst:
                 role: Analyst
+                goal: read
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: analyst
                 deliverable:
                   path: /output/notes.md
@@ -268,15 +310,21 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     public void The_agent_a_task_names_runs_it_under_a_sequential_parallel_or_graph_process(string process)
     {
         var missing = CrewDeliverableWriters.OfCrewFile($$"""
+            name: report
+            goal: report
             {{process}}
             agents:
               analyst:
                 role: Analyst
+                goal: read
               writer:
                 role: Writer
+                goal: write
                 tools: [file_write]
             tasks:
               read:
+                description: read
+                expected_output: notes
                 agent: analyst
                 deliverable:
                   path: /output/notes.md
@@ -371,6 +419,17 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         { "process: hierarchical\nmanagerAgent: ghost", ReadTask, "names no agent of the crew" },
         { "process: consensual\nmanagerAgent: ghost", ReadTask, "names no agent of the crew" },
         { "process: hierarchical", ReadTask, "requires a manager agent" },
+        // What the validator the crew factory runs refuses: Studio reads no copy of it, it calls it.
+        { "process: hierarchical\nmanagerAgent: writer", ReadTask.Replace("agent: analyst", "agent: analyst\n    asyncExecution: true", StringComparison.Ordinal), "async" },
+        { "", ReadTask.Replace("    expected_output: notes\n", "", StringComparison.Ordinal), "must have an expected output" },
+        { "", ReadTask.Replace("    description: read\n", "", StringComparison.Ordinal), "must have a description" },
+        { "maxRpm: -1", ReadTask, "maxRpm" },
+        // What the loader refuses on another task: a when: naming no decision, a retry: on a decision.
+        { "", ReadTask + "\n  other:\n    description: x\n    expected_output: y\n    when: { read: yes }\n", "read" },
+        { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    " + Decision + "\n    retry: { attempts: 2 }\n", "cannot declare retry" },
+        { "", ReadTask + "\n  other:\n    description: x\n    expected_output: y\n    deliverable: { path: /output/b.json, source: structured_output }\n", "Schema" },
+        // A key the loader does not know.
+        { "", ReadTask.Replace("agent: analyst", "agent: analyst\n    nonsense: 1", StringComparison.Ordinal), "nonsense" },
     };
 
     [Fact]
@@ -461,26 +520,52 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     {
         Directory.CreateDirectory(Path.Combine(_root, "agents"));
         Directory.CreateDirectory(Path.Combine(_root, "tasks"));
-        File.WriteAllText(Path.Combine(_root, "crew.yaml"), "name: report\n");
-        File.WriteAllText(Path.Combine(_root, "agents", "analyst.yaml"), "role: Analyst\ntools:\n  - file_read\n");
-        File.WriteAllText(Path.Combine(_root, "tasks", "read.yaml"), "agent: analyst\ndeliverable:\n  path: /output/notes.md\n");
+        File.WriteAllText(Path.Combine(_root, "crew.yaml"), "name: report\ngoal: report\n");
+        File.WriteAllText(Path.Combine(_root, "agents", "analyst.yaml"), "role: Analyst\ngoal: read\ntools:\n  - file_read\n");
+        File.WriteAllText(Path.Combine(_root, "tasks", "read.yaml"), "description: read\nexpected_output: notes\nagent: analyst\ndeliverable:\n  path: /output/notes.md\n");
 
         var target = new RunTarget { Kind = RunTargetKind.MultiFileCrewDirectory, SelectedPath = _root, RunPath = _root };
         AssertFinding(Assert.Single(CrewDeliverableWriters.Of(target)), "read", ["analyst"], "/output/notes.md");
 
-        File.WriteAllText(Path.Combine(_root, "agents", "analyst.yaml"), "role: Analyst\ntools:\n  - file_write\n");
+        File.WriteAllText(Path.Combine(_root, "agents", "analyst.yaml"), "role: Analyst\ngoal: read\ntools:\n  - file_write\n");
         Assert.Empty(CrewDeliverableWriters.Of(target));
         Assert.Empty(CrewDeliverableWriters.Of(null));
         Assert.Empty(CrewDeliverableWriters.OfCrewFile("agents: [not a map"));
     }
 
     [Fact]
+    public void A_crew_file_is_read_through_the_engines_loader_and_a_refused_one_is_said_nothing_of()
+    {
+        Directory.CreateDirectory(_root);
+        var file = Path.Combine(_root, "report.yaml");
+        File.WriteAllText(file, """
+            name: report
+            goal: report
+            agents:
+              analyst: { role: Analyst, goal: read, tools: [file_read] }
+            tasks:
+              read: { description: read, expected_output: notes, agent: analyst, deliverable: { path: /output/notes.md } }
+            """);
+
+        var target = new RunTarget { Kind = RunTargetKind.YamlFile, SelectedPath = file, RunPath = file };
+        AssertFinding(Assert.Single(CrewDeliverableWriters.Of(target)), "read", ["analyst"], "/output/notes.md");
+
+        // The validator refuses a crew without a goal: its load error is the one thing to read.
+        File.WriteAllText(file, File.ReadAllText(file).Replace("goal: report\n", "", StringComparison.Ordinal));
+        Assert.Empty(CrewDeliverableWriters.Of(target));
+
+        // A file the disk no longer holds is no crew to judge.
+        File.Delete(file);
+        Assert.Empty(CrewDeliverableWriters.Of(target));
+    }
+
+    [Fact]
     public void The_flat_triplet_is_read_and_a_script_is_not()
     {
         Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "crew.yaml"), "name: report\n");
-        File.WriteAllText(Path.Combine(_root, "agents.yaml"), "analyst:\n  role: Analyst\n");
-        File.WriteAllText(Path.Combine(_root, "tasks.yaml"), "read:\n  agent: analyst\n  deliverable:\n    path: /output/notes.md\n");
+        File.WriteAllText(Path.Combine(_root, "crew.yaml"), "name: report\ngoal: report\n");
+        File.WriteAllText(Path.Combine(_root, "agents.yaml"), "analyst:\n  role: Analyst\n  goal: read\n");
+        File.WriteAllText(Path.Combine(_root, "tasks.yaml"), "read:\n  description: read\n  expected_output: notes\n  agent: analyst\n  deliverable:\n    path: /output/notes.md\n");
 
         var target = new RunTarget { Kind = RunTargetKind.MultiFileCrewDirectory, SelectedPath = _root, RunPath = _root };
         Assert.Equal("read", Assert.Single(CrewDeliverableWriters.Of(target)).Task);
@@ -520,28 +605,12 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     }
 
     [Fact]
-    public void The_engine_still_reads_no_source_as_a_tool_call()
-    {
-        var mapper = File.ReadAllText(Path.Combine(
-            OrkeonSources.Root(), "src/core/Orkeon.Infrastructure/Configuration/Yaml/YamlCrewMapper.cs"));
-        Assert.True(
-            Regex.IsMatch(
-                mapper,
-                @"if \(string\.IsNullOrWhiteSpace\(raw\)\)\s*return [\w.]*DeliverableSource\.ToolCall;",
-                RegexOptions.None,
-                TimeSpan.FromSeconds(5)),
-            "A deliverable without a source no longer reads as tool_call: CrewDeliverableWriters.DeliverableOf reads it so.");
-        Assert.True(mapper.Contains("\"tool_call\" or \"toolcall\" =>", StringComparison.Ordinal),
-            "The deliverable sources are no longer spelled as CrewDeliverableWriters.DeliverableOf reads them.");
-    }
-
-    [Fact]
     public void The_engine_still_picks_the_agents_and_the_opaque_tools_as_Studio_does()
     {
-        // CandidatesOf and IsOpaque are private to the engine: Studio's Collect copies them by hand.
+        // CandidatesOf and IsOpaque are private to the engine: Studio's Judge copies them by hand.
         var check = File.ReadAllText(Path.Combine(
             OrkeonSources.Root(), "src/core/Orkeon.Application/Crew/DeliverableToolCheck.cs"));
-        const string Follow = " CrewDeliverableWriters.Collect (and the catalogue it counts as known) must follow the engine's rule.";
+        const string Follow = " CrewDeliverableWriters.CandidatesOf (and the catalogue it counts as known) must follow the engine's rule.";
         Assert.True(
             Regex.IsMatch(
                 check,

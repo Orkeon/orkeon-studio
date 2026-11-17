@@ -238,6 +238,28 @@ public sealed class CrewDeliverableVerdictDifferentialTests(CrewDeliverableVerdi
             """
         },
         {
+            "read as the engine reads it: its anchors:, a key in snake_case, a value it does not trim",
+            """
+            process: hierarchical
+            manager_agent: boss
+            anchors:
+              writerTools: |
+                - file_write
+            agents:
+              boss: { role: Boss, goal: lead, tools: [file_write] }
+              writer:
+                role: Writer
+                goal: write
+                tools:
+                  *writerTools
+              analyst: { role: Analyst, goal: read }
+            tasks:
+              notes: { description: x, expected_output: y, deliverable: { path: /output/notes.md } }
+              spaced: { description: x, expected_output: y, deliverable: { path: "/output/report.docx " } }
+              doc: { description: x, expected_output: y, deliverable: { path: /output/report.docx } }
+            """
+        },
+        {
             "an MCP server's tool may write anything, a binary file too",
             $$"""
             agents:
@@ -318,15 +340,122 @@ public sealed class CrewDeliverableVerdictDifferentialTests(CrewDeliverableVerdi
         Assert.NotEmpty(CrewDeliverableWriters.OfCrewFile(Named(accepted)));
     }
 
+    /// <summary>
+    /// A crew whose task <c>read</c> no agent can write the file of: <c>@head</c> completes its head,
+    /// <c>@tasks</c> its tasks, <c>@boss</c> its agent <c>boss</c>.
+    /// </summary>
+    private const string RefusedCrew = """
+        name: refused
+        goal: compare the verdicts
+        @head
+        agents:
+          boss: { role: Boss, goal: lead@boss }
+          analyst: { role: Analyst, goal: read }
+        tasks:
+          read:
+            description: x
+            expected_output: y
+            agent: analyst
+            deliverable: { path: /output/notes.md }
+        @tasks
+        """;
+
+    private static string Refused(string head, string tasks, string boss = "") =>
+        RefusedCrew.Replace("@head", head, StringComparison.Ordinal)
+            .Replace("@tasks", tasks, StringComparison.Ordinal)
+            .Replace("@boss", boss, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Crews the validator the crew factory runs, or the loader, refuses: Studio calls the engine's own,
+    /// so each is said nothing of. The values complete the crew's head, its tasks and its agent
+    /// <c>boss</c>; the last is what the refusal says.
+    /// </summary>
+    public static TheoryData<string, string, string, string> CrewsTheValidatorRefuses => new()
+    {
+        // The manager of a hierarchical crew may not bound its own time.
+        { "process: hierarchical\nmanagerAgent: boss", "", ", maxExecutionTime: 300", "maxExecutionTime" },
+        { "process: hierarchical\nmanagerAgent: boss", "  other: { description: x, expected_output: y, asyncExecution: true }", "", "async" },
+        { "", "  other: { description: x }", "", "expected output" },
+        { "", "", ", maxIter: 0", "maxIter" },
+        { "", "  other: { description: x, expected_output: y, deliverable: { path: /output/b.json, source: structured_output } }", "", "schema" },
+        { "", "  other: { description: x, expected_output: y, when: { read: yes } }", "", "read" },
+        { "", "", ", nonsense: 1", "nonsense" },
+    };
+
+    [Theory]
+    [MemberData(nameof(CrewsTheValidatorRefuses))]
+    public async Task Studio_says_nothing_of_a_crew_the_validator_or_the_loader_refuses(string head, string tasks, string boss, string reason)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var refusal = await Assert.ThrowsAnyAsync<Exception>(() => EngineFindingsAsync(Refused(head, tasks, boss), ct, named: false));
+        Assert.Contains(reason, refusal.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(CrewDeliverableWriters.OfCrewFile(Refused(head, tasks, boss)));
+
+        // The crew those refusals start from loads, and its task is said by both.
+        Assert.NotEmpty((await EngineFindingsAsync(Refused(head, ""), ct, named: false)).Findings);
+        Assert.NotEmpty(CrewDeliverableWriters.OfCrewFile(Refused(head, "")));
+    }
+
+    [Fact]
+    public async Task A_crew_without_a_name_or_a_goal_is_refused_and_said_nothing_of()
+    {
+        foreach (var missing in new[] { "name: refused\n", "goal: compare the verdicts\n" })
+        {
+            var yaml = Refused("", "").Replace(missing, "", StringComparison.Ordinal);
+            await Assert.ThrowsAnyAsync<Exception>(() => EngineFindingsAsync(yaml, TestContext.Current.CancellationToken, named: false));
+            Assert.Empty(CrewDeliverableWriters.OfCrewFile(yaml));
+        }
+    }
+
+    /// <summary>
+    /// What only the run's own host judges, Studio does not: a tool name the run does not register
+    /// refuses the crew at load (the strict tool check), and the launch reports that error, while Studio,
+    /// which cannot know the run's MCP servers and plugins, still says the other task. The class doc and
+    /// docs/architecture/studio.md say so; if the engine stops refusing such a crew, they change.
+    /// </summary>
+    [Fact]
+    public async Task A_tool_the_run_does_not_register_is_the_launchs_to_report()
+    {
+        var yaml = Refused("", "", ", tools: [acme_unregistered]");
+
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => EngineFindingsAsync(yaml, TestContext.Current.CancellationToken, named: false));
+        Assert.Contains("acme_unregistered", refusal.Message, StringComparison.Ordinal);
+        Assert.Equal("read", Assert.Single(CrewDeliverableWriters.OfCrewFile(yaml)).Task);
+    }
+
+    /// <summary>
+    /// Studio counts a tool name its catalogue does not carry as one that may write: every tool the run
+    /// registers must be in it, or Studio would stay silent where the engine warns. The tools the host
+    /// registers here are those a run registers without a setting of its own; the catalogue's others are
+    /// registered only under a setting, a key or a crew (named below).
+    /// </summary>
+    [Fact]
+    public async Task The_catalogue_carries_every_tool_a_run_registers()
+    {
+        var registry = engine.Host.Services.GetRequiredService<IToolRegistry>();
+        var registered = (await registry.GetAllToolsAsync(TestContext.Current.CancellationToken))
+            .Select(tool => tool.Name)
+            .Where(name => name != McpTool)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var catalogue = Orkeon.Studio.Core.Tools.ToolCatalog.All.Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Empty(registered.Except(catalogue, StringComparer.OrdinalIgnoreCase));
+        Assert.Equal(
+            ["ask_question_to_coworker", "brave_search", "delegate_work_to_coworker", "human_input", "semantic_search", "spawn_agent"],
+            catalogue.Except(registered, StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal));
+    }
+
     /// <summary>The engine's findings, as <c>orkeon run --validate</c> computes them after the load.</summary>
-    private async Task<(IReadOnlyList<DeliverableToolFinding> Findings, int Tasks)> EngineFindingsAsync(string yaml, CancellationToken ct)
+    private async Task<(IReadOnlyList<DeliverableToolFinding> Findings, int Tasks)> EngineFindingsAsync(
+        string yaml, CancellationToken ct, bool named = true)
     {
         var scope = engine.Host.Services.CreateAsyncScope();
         await using var _ = scope.ConfigureAwait(false);
         var loader = scope.ServiceProvider.GetRequiredService<ICrewDefinitionLoader>();
         var factory = scope.ServiceProvider.GetRequiredService<ICrewFactory>();
 
-        var crew = await factory.CreateFromConfigAsync(await loader.LoadFromStringAsync(Named(yaml), ct), ct);
+        var crew = await factory.CreateFromConfigAsync(await loader.LoadFromStringAsync(named ? Named(yaml) : yaml, ct), ct);
 
         var agents = await scope.ServiceProvider.GetRequiredService<Orkeon.Domain.Agent.IAgentRepository>()
             .GetByIdsAsync(crew.Agents, ct);
