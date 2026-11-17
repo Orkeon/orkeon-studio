@@ -469,6 +469,26 @@ public sealed class RunLogViewModelTests
     }
 
     [Fact]
+    public void Should_ReadTheValidationWarning_AsAWarning_First_Or_AfterAnInfoLine()
+    {
+        // orkeon run --validate writes « WARNING: … » to stderr without a level, exit code 0
+        // (Orkeon #392): not an error beside « validation passed », not the info before it.
+        const string warning = "WARNING: Task 'synthese' declares the deliverable 'report.docx' but no agent that may run it holds a tool that writes it.";
+        var log = new RunLogViewModel();
+
+        log.AppendCommand("orkeon run ./crew --validate");
+        log.Append(ProcessOutputLine.Now(ProcessOutputChannel.StandardError, warning));
+        log.AppendCommand("orkeon run ./crew --validate");
+        log.Append(ProcessOutputLine.Now(ProcessOutputChannel.StandardError, "info: Orkeon.Hosting[1] Loading the crew"));
+        log.Append(ProcessOutputLine.Now(ProcessOutputChannel.StandardError, warning));
+
+        Assert.True(log.Lines[1].IsWarning);
+        Assert.False(log.Lines[1].IsError);
+        Assert.True(log.Lines[4].IsWarning);
+        Assert.False(log.Lines[4].IsError);
+    }
+
+    [Fact]
     public void Should_NotReadAStudioError_AsTheSettingsLine()
     {
         var log = new RunLogViewModel();

@@ -39,8 +39,25 @@ public sealed class CliLogLineTests
         Assert.Equal("warn: Orkeon.Hosting[3] No default model", line.Text);
     }
 
+    /// <summary>
+    /// <c>orkeon run --validate</c> writes the findings of a load it does not refuse straight to
+    /// stderr, led by <c>WARNING: </c> and with no level token (Orkeon #392's task whose file no
+    /// agent can write): a warning, never an error beside a validation that passed.
+    /// </summary>
+    [Fact]
+    public void A_line_the_cli_leads_with_WARNING_is_a_warning_kept_as_is()
+    {
+        const string text = "WARNING: Task 'synthese' declares the deliverable 'report.docx' but no agent that may run it holds a tool that writes it.";
+
+        var line = CliLogLine.Parse(text);
+
+        Assert.Equal(CliLogLevel.Warning, line.Level);
+        Assert.Equal(text, line.Text);
+    }
+
     [Theory]
     [InlineData("=== Crew Output ===")]
+    [InlineData("warning: lower case is the agent's word, not the CLI's")]
     [InlineData("Unhandled exception. System.InvalidOperationException: boom")]
     [InlineData("the agent said fail: nothing")]
     [InlineData("")]
