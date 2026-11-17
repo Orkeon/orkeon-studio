@@ -62,8 +62,9 @@ public sealed record ToolSecret(string EnvName, string UsedBy, Uri ConsoleUrl);
 /// The tools <c>orkeon run</c> registers, by family, with what each one needs (STUDIO-21).
 /// Declared here rather than read from the runtime: the framework carries no "required
 /// settings" metadata, the registry lists names only and a tool absent from it (a key not
-/// set) is invisible there. The list is the <c>orkeon run</c> column of the availability
-/// matrix in <c>docs/tools/inventory.md</c>, and a test pins every name against that file.
+/// set) is invisible there. The families are the <c>orkeon run</c> column of the availability
+/// matrix in <c>docs/tools/inventory.md</c> but for <see cref="UnlistedRunTools"/>, and a test
+/// pins every name against that file.
 /// <para>
 /// The e-mail family (MAIL-05) is the opposite case: its tools are registered whether or not
 /// an account is declared, so the registry lists them all the same, and only this catalogue
@@ -279,6 +280,17 @@ public static class ToolCatalog
             new("list_mounts"),
         ]),
     ];
+
+    /// <summary>
+    /// The tools a run registers that the families leave off the Settings screen: the RAG tools,
+    /// which a crew's <c>rag:</c> collections feed, and three a run registers only under a setting of
+    /// its own (<c>system_one_decide</c> with a decision provider, <c>mcp_prompt_get</c> with MCP
+    /// servers, <c>memory_recall</c> with cognitive memory). Orkeon's own tools all the same: the
+    /// engine's deliverable check counts none of them as a writer, and neither does Studio's
+    /// (<c>CrewDeliverableWriters</c>), where an unknown name may write anything.
+    /// </summary>
+    public static IReadOnlyList<string> UnlistedRunTools { get; } =
+        ["rag_search", "rag_ingest", "rag_eval", "system_one_decide", "mcp_prompt_get", "memory_recall"];
 
     /// <summary>Every tool of every family.</summary>
     public static IEnumerable<ToolInfo> All => Families.SelectMany(family => family.Tools);

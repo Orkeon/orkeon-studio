@@ -1513,7 +1513,11 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         var who = missing.Agents.Count == 1
             ? _strings.Format(StudioStringKeys.RunWarnDeliverableNoWriterItem, missing.Task, missing.Agents[0], missing.Path)
-            : _strings.Format(StudioStringKeys.RunWarnDeliverableNoWriterAgents, missing.Task, string.Join(", ", missing.Agents), missing.Path);
+            : _strings.Format(
+                StudioStringKeys.RunWarnDeliverableNoWriterAgents,
+                missing.Task,
+                string.Join(", ", missing.Agents.Select(agent => _strings.Format(StudioStringKeys.RunWarnDeliverableQuotedAgent, agent))),
+                missing.Path);
         var fix = (missing.IsBinary, missing.PreferredWriter) switch
         {
             (false, var tool) => _strings.Format(StudioStringKeys.RunWarnDeliverableFixText, tool ?? "file_write"),

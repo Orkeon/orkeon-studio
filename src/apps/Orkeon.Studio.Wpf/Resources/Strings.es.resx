@@ -2366,6 +2366,7 @@
   <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Puede que un archivo no se escriba. Corrige cada tarea citada abajo en el YAML del equipo; una CLI de Orkeon 1.2 también lo advierte al cargar el equipo.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>La tarea «{0}» debe escribir {2}, pero su agente «{1}» no tiene ninguna herramienta que lo escriba.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>La tarea «{0}» debe escribir {2}, pero ninguno de los agentes que pueden ejecutarla ({1}) tiene una herramienta que lo escriba.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>«{0}»</value></data>
   <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Da {0} al agente que debe escribirlo, o pon el entregable en source: final_message.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Da {0} al agente que debe escribirlo, o entrega en su lugar un formato de texto (.md, .html, .csv).</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Da al agente que debe escribirlo una herramienta que lo escriba (la de un servidor MCP, la de un plugin), o entrega en su lugar un formato de texto (.md, .html, .csv).</value></data>

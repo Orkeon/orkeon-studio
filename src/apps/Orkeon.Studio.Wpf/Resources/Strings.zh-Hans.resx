@@ -2366,6 +2366,7 @@
   <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>有文件可能不会被写入。请在团队的 YAML 中按提示修正下列每个任务；Orkeon 1.2 CLI 在加载团队时也会发出此警告。</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>任务“{0}”需要写入 {2}，但其智能体“{1}”没有能写入该文件的工具。</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>任务“{0}”需要写入 {2}，但可能运行它的智能体（{1}）都没有能写入该文件的工具。</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>“{0}”</value></data>
   <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>请将 {0} 交给负责写入该文件的智能体，或将交付物设为 source: final_message。</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>请将 {0} 交给负责写入该文件的智能体，或改为交付文本格式（.md、.html、.csv）。</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>请为负责写入该文件的智能体提供能写入它的工具（MCP 服务器或插件提供的工具），或改为交付文本格式（.md、.html、.csv）。</value></data>

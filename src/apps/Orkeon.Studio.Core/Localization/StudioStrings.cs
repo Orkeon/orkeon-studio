@@ -631,6 +631,9 @@ public static class StudioStringKeys
     /// <summary>"Task 'x' must write /output/y, but none of the agents …" — a task several agents may run; {0} is the task, {1} the agents, {2} the deliverable's path. A fix follows.</summary>
     public const string RunWarnDeliverableNoWriterAgents = "Studio.Run.WarnDeliverableNoWriterAgents";
 
+    /// <summary>"'x'" — one agent of the list {1} of <see cref="RunWarnDeliverableNoWriterAgents"/>, quoted as the language quotes a name; {0} is the agent.</summary>
+    public const string RunWarnDeliverableQuotedAgent = "Studio.Run.WarnDeliverableQuotedAgent";
+
     /// <summary>"Give file_write to the agent meant to write it, or …" — the fix of a text file; {0} is the tool that writes it.</summary>
     public const string RunWarnDeliverableFixText = "Studio.Run.WarnDeliverableFixText";
 
@@ -2983,6 +2986,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
             "Task '{0}' must write {2}, but its agent '{1}' has no tool that writes it.",
         [StudioStringKeys.RunWarnDeliverableNoWriterAgents] =
             "Task '{0}' must write {2}, but none of the agents that may run it ({1}) has a tool that writes it.",
+        [StudioStringKeys.RunWarnDeliverableQuotedAgent] = "'{0}'",
         [StudioStringKeys.RunWarnDeliverableFixText] =
             "Give {0} to the agent meant to write it, or set the deliverable to source: final_message.",
         [StudioStringKeys.RunWarnDeliverableFixBinary] =

@@ -650,7 +650,7 @@ public class RunLauncherViewModelTests
                     deliverable:
                       path: /output/report.pdf
                   pick:
-                    decision: { questions: {} }
+                    decision: { questions: { go: { noul: the work is ready } } }
                     deliverable:
                       path: /output/choice.md
                 """);

@@ -2366,6 +2366,7 @@
   <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Eine Datei wird möglicherweise nicht geschrieben. Korrigieren Sie jede unten genannte Aufgabe im YAML des Teams; eine Orkeon-1.2-CLI warnt beim Laden des Teams ebenfalls davor.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber ihr Agent „{1}“ hat kein Werkzeug, das diese Datei schreibt.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>Aufgabe „{0}“ muss {2} schreiben, aber keiner der Agenten, die sie ausführen können ({1}), hat ein Werkzeug, das diese Datei schreibt.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>„{0}“</value></data>
   <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Geben Sie {0} dem Agenten, der die Datei schreiben soll, oder stellen Sie das Ergebnis auf source: final_message.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Geben Sie {0} dem Agenten, der die Datei schreiben soll, oder liefern Sie stattdessen ein Textformat (.md, .html, .csv).</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Geben Sie dem Agenten, der die Datei schreiben soll, ein Werkzeug, das sie schreibt (das eines MCP-Servers, eines Plugins), oder liefern Sie stattdessen ein Textformat (.md, .html, .csv).</value></data>

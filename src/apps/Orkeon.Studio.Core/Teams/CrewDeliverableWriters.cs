@@ -23,7 +23,8 @@ public enum CrewDeliverableFindingKind
 /// <param name="Task">The task's key in the crew.</param>
 /// <param name="Agents">
 /// The keys of the agents that may run it, in the crew's order: the one it names when the process binds
-/// it, else every agent the runtime may pick. Empty for a decision task.
+/// it, else every agent the runtime may pick. Empty for a decision task. The keys are what the user edits;
+/// the CLI's load warning names the same agents by their role.
 /// </param>
 /// <param name="Path">The deliverable's virtual path, as written.</param>
 public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<string> Agents, string Path)
@@ -56,8 +57,8 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// The launchers warn before the run; they never block, the run still ending on a result.
 /// <para>
 /// A belt (the agent's <c>tools:</c> and the task's own) can write the file when it holds a tool
-/// Studio's catalogue does not know (an MCP server's, a plugin's, a script's: it may write, for all
-/// Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>,
+/// Orkeon does not ship, a name neither the catalogue nor its unlisted run tools carry (an MCP
+/// server's, a plugin's, a script's: it may write, for all Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>,
 /// read from the engine, not copied): the tool of the file's format (<c>docx_writer</c> a <c>.docx</c>,
 /// <c>xlsx_writer</c> a <c>.xlsx</c>, <c>image_generation</c> an image, <c>firefox</c> a <c>.png</c>), and
 /// <c>file_write</c> for a text file only. The editors (<c>edit_file</c>, <c>edit_batch</c>,
@@ -70,19 +71,30 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// every agent. The task is named only when none of them can write the file.
 /// </para>
 /// <para>
-/// Not judged, where the engine sees more than the YAML: a provider that runs its own tools, a tool of
-/// Orkeon's that Studio's catalogue lacks (counted as a writer here), a <c>permissionMode:</c> that
-/// denies a tool the agent holds, and a key the loader accepts under another spelling (<c>tools_</c>),
-/// as <see cref="CrewFileSystemScopes"/>. The crew is read as that class reads it: nothing is said of a
-/// crew the engine refuses at load (an unknown process or deliverable source, a task naming an agent the
-/// crew lacks), nor of a <c>.ork.ts</c> one, which the CLI judges itself.
+/// Not judged, where the engine sees more than the YAML: a provider that runs its own tools, and a key
+/// the loader accepts under another spelling (<c>tools_</c>), as <see cref="CrewFileSystemScopes"/>. A
+/// <c>permissionMode:</c> that denies a tool the agent holds is judged by neither: the engine's check
+/// reads the tools the agent holds, as Studio does. The tools a run registers that the Settings screen
+/// does not list (<see cref="Tools.ToolCatalog.UnlistedRunTools"/>: the RAG tools...) are Orkeon's own,
+/// and counted as no writer, as the engine counts them.
+/// </para>
+/// <para>
+/// The crew is read as <see cref="CrewFileSystemScopes"/> reads it, and nothing is said of a crew the
+/// engine refuses at load, so that the load error is the one thing the user reads: an unknown process, a
+/// task naming an agent the crew lacks (whatever the process), a deliverable with an unknown source, a
+/// decision task that names an agent, asks no question or sits under a process that runs no decision
+/// (hierarchical, consensual, autonomous). Nor is anything said of a <c>.ork.ts</c> crew, which the CLI
+/// judges itself.
 /// </para>
 /// </summary>
 public static class CrewDeliverableWriters
 {
-    /// <summary>The tools Studio knows: a name outside them may write a file for all Studio can tell.</summary>
+    /// <summary>
+    /// The tools Orkeon ships that a run registers, listed on the Settings screen or not: a name outside
+    /// them may write a file for all Studio can tell.
+    /// </summary>
     private static readonly HashSet<string> KnownTools =
-        new(Tools.ToolCatalog.All.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+        new(Tools.ToolCatalog.All.Select(tool => tool.Name).Concat(Tools.ToolCatalog.UnlistedRunTools), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the crew's order.</summary>
     public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target) =>
@@ -118,27 +130,34 @@ public static class CrewDeliverableWriters
         }
 
         var byKey = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
+        var declared = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (key, node) in agents)
         {
+            declared.Add(key);
             if (node is YamlMappingNode agent)
                 byKey.TryAdd(key, agent);
         }
+
+        var bindsDeclaredAgent = process == ProcessType.Sequential || process == ProcessType.Parallel || process == ProcessType.Graph;
+        var taskList = tasks.ToList();
+        if (taskList.Exists(entry => entry.Value is YamlMappingNode task && RefusedAtLoad(task, declared, bindsDeclaredAgent)))
+            return result;
 
         var manager = settings is null
             ? null
             : CrewFileSystemScopes.Text(
                 CrewFileSystemScopes.Value(settings, "managerAgent") ?? CrewFileSystemScopes.Value(settings, "manager_agent"));
-        var bindsDeclaredAgent = process == ProcessType.Sequential || process == ProcessType.Parallel || process == ProcessType.Graph;
         var excludesManager = process?.AcceptsManagerAgent == true;
 
-        foreach (var (key, node) in tasks)
+        foreach (var (key, node) in taskList)
         {
             if (node is not YamlMappingNode task || DeliverableOf(task) is not { } deliverable)
                 continue;
 
             var path = deliverable.Path;
 
-            // A decision runs no agent and writes no file, whatever the deliverable's source.
+            // A decision runs no agent and writes no file, whatever the deliverable's source; one the
+            // engine refuses never gets here.
             if (!CrewFileSystemScopes.IsNull(CrewFileSystemScopes.Value(task, "decision")))
             {
                 result.Add(new CrewDeliverableWithoutWriter(key, [], path) { Kind = CrewDeliverableFindingKind.DecisionTask });
@@ -152,7 +171,7 @@ public static class CrewDeliverableWriters
             List<string> candidates;
             if (bindsDeclaredAgent && named is not null)
             {
-                // A task naming an agent the crew lacks is refused at load.
+                // An agent entry that is no map is the loader's to refuse.
                 if (!byKey.ContainsKey(named))
                     continue;
                 candidates = [named];
@@ -174,6 +193,36 @@ public static class CrewDeliverableWriters
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Whether the engine refuses the whole crew at load because of <paramref name="task"/>: it names an
+    /// agent the crew does not declare (<c>YamlCrewMapper.ResolveAgent</c>, whatever the process), its
+    /// deliverable has a path and a source the loader does not know (<c>ParseDeliverableSource</c>), or it
+    /// declares a decision the engine refuses: one that names an agent or sits under a process that runs
+    /// no decision (<c>DecisionTaskRules.Check</c>), or one that asks no question (<c>TaskDecision.Create</c>).
+    /// </summary>
+    private static bool RefusedAtLoad(YamlMappingNode task, HashSet<string> declared, bool runsDecisions)
+    {
+        var named = CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(task, "agent"));
+        if (named is not null && !declared.Contains(named))
+            return true;
+
+        if (CrewFileSystemScopes.Value(task, "deliverable") is YamlMappingNode deliverable
+            && CrewFileSystemScopes.Text(CrewFileSystemScopes.Value(deliverable, "path")) is not null
+            && DeliverableOf(task) is null)
+        {
+            return true;
+        }
+
+        var decision = CrewFileSystemScopes.Value(task, "decision");
+        if (CrewFileSystemScopes.IsNull(decision))
+            return false;
+
+        return named is not null
+            || !runsDecisions
+            || decision is not YamlMappingNode block
+            || CrewFileSystemScopes.Value(block, "questions") is not YamlMappingNode { Children.Count: > 0 };
     }
 
     /// <summary>

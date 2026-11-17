@@ -869,6 +869,7 @@
   <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>A file may not be written. Fix each task below in the team's YAML; an Orkeon 1.2 CLI also warns of it when it loads the team.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>Task '{0}' must write {2}, but its agent '{1}' has no tool that writes it.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>Task '{0}' must write {2}, but none of the agents that may run it ({1}) has a tool that writes it.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>'{0}'</value></data>
   <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Give {0} to the agent meant to write it, or set the deliverable to source: final_message.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Give {0} to the agent meant to write it, or deliver a text format (.md, .html, .csv) instead.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.</value></data>

@@ -1,5 +1,11 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Orkeon.Application.Crew;
+using Orkeon.Domain.FileSystem;
+using Orkeon.Infrastructure.Configuration;
+using Orkeon.Infrastructure.FileSystem;
+using Orkeon.Infrastructure.Security;
+using Orkeon.Infrastructure.Serialization;
 using Orkeon.Studio.Core.Targets;
 using Orkeon.Studio.Core.Teams;
 using Orkeon.Studio.Core.Tools;
@@ -110,6 +116,9 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     [InlineData("tools: [docx_writer]", "/output/notes.md")]
     [InlineData("tools: [xlsx_writer]", "/output/report.docx")]
     [InlineData("tools: [firefox]", "/output/shot.jpg")]
+    // Orkeon's own tools a run registers off the Settings screen write no file either.
+    [InlineData("tools: [file_read, rag_search, rag_ingest, rag_eval]", "/output/notes.md")]
+    [InlineData("tools: [system_one_decide, mcp_prompt_get, memory_recall]", "/output/notes.md")]
     public void A_tool_that_cannot_write_that_file_is_not_enough(string agentTools, string path)
     {
         AssertFinding(Assert.Single(OneAgent(agentTools, path)), "read", ["analyst"], path);
@@ -277,48 +286,122 @@ public sealed class CrewDeliverableWritersTests : IDisposable
         AssertFinding(Assert.Single(missing), "read", ["analyst"], "/output/notes.md");
     }
 
-    [Theory]
-    // Refused at load.
-    [InlineData("process: nonsense", "agent: analyst")]
-    // An agent the crew does not declare is refused at load.
-    [InlineData("process: sequential", "agent: ghost")]
-    public void Nothing_is_said_of_a_crew_the_engine_refuses_at_load(string process, string task)
+    /// <summary>The engine's own crew loader, over no mount: what it refuses, Studio says nothing of.</summary>
+    private static YamlCrewDefinitionLoader EngineLoader(FileSystemRegistry registry) =>
+        new(
+            new YamlDotNetSerializer(),
+            new FileSystemService(
+                registry,
+                new PathValidator(new PathSecurityOptions(), NullLogger<PathValidator>.Instance),
+                NullLogger<FileSystemService>.Instance),
+            NullLogger<YamlCrewDefinitionLoader>.Instance);
+
+    /// <summary>The engine refuses <paramref name="yaml"/> at load, saying <paramref name="reason"/>.</summary>
+    private static async Task AssertEngineRefuses(string yaml, string reason)
     {
-        Assert.Empty(CrewDeliverableWriters.OfCrewFile($$"""
-            {{process}}
-            agents:
-              analyst:
-                role: Analyst
-            tasks:
-              read:
-                {{task}}
-                deliverable:
-                  path: /output/notes.md
-            """));
+        using var registry = new FileSystemRegistry([]);
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => EngineLoader(registry).LoadFromStringAsync(yaml, TestContext.Current.CancellationToken));
+        Assert.Contains(reason, refusal.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>A crew of an analyst (no tool) and a writer (<c>file_write</c>) whose tasks are <paramref name="tasks"/>.</summary>
+    private static string Crew(string process, string tasks) => $$"""
+        name: report
+        goal: report
+        {{process}}
+        agents:
+          analyst:
+            role: Analyst
+            goal: read
+          writer:
+            role: Writer
+            goal: write
+            tools: [file_write]
+        tasks:
+        {{tasks}}
+        """;
+
+    /// <summary>A task <c>read</c> of the analyst that must write a file: a finding when the crew loads.</summary>
+    private const string ReadTask = """
+          read:
+            description: read
+            expected_output: notes
+            agent: analyst
+            deliverable:
+              path: /output/notes.md
+        """;
+
+    /// <summary>A decision that asks one question, as the engine accepts it.</summary>
+    private const string Decision = "decision: { questions: { go: { noul: the work is ready } } }";
+
+    public static TheoryData<string, string, string> CrewsTheEngineRefuses => new()
+    {
+        { "process: nonsense", ReadTask, "nonsense" },
+        // An agent the crew does not declare, on the task itself or on another one, whatever the process.
+        { "", ReadTask.Replace("agent: analyst", "agent: ghost", StringComparison.Ordinal), "ghost" },
+        { "", ReadTask + "\n  other:\n    description: x\n    expected_output: y\n    agent: ghost\n", "ghost" },
+        { "process: hierarchical\nmanagerAgent: writer", ReadTask + "\n  other:\n    description: x\n    expected_output: y\n    agent: ghost\n", "ghost" },
+        // A deliverable source the loader does not know, on another task.
+        { "", ReadTask + "\n  other:\n    description: x\n    expected_output: y\n    deliverable: { path: /output/b.md, source: nonsense }\n", "nonsense" },
+        // A decision under a process that runs none, beside an agent, or asking nothing.
+        { "process: hierarchical\nmanagerAgent: writer", "  pick:\n    description: x\n    expected_output: y\n    " + Decision + "\n    deliverable: { path: /output/choice.md }\n", "does not support" },
+        { "process: consensual\nmanagerAgent: writer", "  pick:\n    description: x\n    expected_output: y\n    " + Decision + "\n    deliverable: { path: /output/choice.md }\n", "does not support" },
+        { "process: autonomous", "  pick:\n    description: x\n    expected_output: y\n    " + Decision + "\n    deliverable: { path: /output/choice.md }\n", "does not support" },
+        { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    agent: writer\n    " + Decision + "\n    deliverable: { path: /output/choice.md }\n", "both a decision and an agent" },
+        { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    decision: { questions: {} }\n    deliverable: { path: /output/choice.md }\n", "at least one question" },
+        { "", ReadTask + "\n  pick:\n    description: x\n    expected_output: y\n    decision: {}\n    deliverable: { path: /output/choice.md }\n", "at least one question" },
+    };
+
+    [Fact]
+    public async Task The_crew_those_refusals_start_from_loads_and_is_said()
+    {
+        // Without the refused task, the same crew loads and its reading task is a finding: what the
+        // refusals silence is a warning Studio would otherwise give.
+        var yaml = Crew("", ReadTask);
+        using (var registry = new FileSystemRegistry([]))
+        {
+            var loader = EngineLoader(registry);
+            Assert.Empty(loader.Validate(await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken)).Errors);
+        }
+
+        AssertFinding(Assert.Single(CrewDeliverableWriters.OfCrewFile(yaml)), "read", ["analyst"], "/output/notes.md");
+    }
+
+    [Theory]
+    [MemberData(nameof(CrewsTheEngineRefuses))]
+    public async Task Nothing_is_said_of_a_crew_the_engine_refuses_at_load(string process, string tasks, string reason)
+    {
+        // The load error is the one thing to fix: no warning about this task or any other.
+        var yaml = Crew(process, tasks);
+        await AssertEngineRefuses(yaml, reason);
+
+        Assert.Empty(CrewDeliverableWriters.OfCrewFile(yaml));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("source: final_message")]
     [InlineData("source: none")]
-    public void A_decision_task_that_declares_a_deliverable_is_a_finding_of_its_own(string source)
+    public async Task A_decision_task_that_declares_a_deliverable_is_a_finding_of_its_own(string source)
     {
         // A decision runs no agent and writes no file, whatever the source and the agents' tools.
-        var missing = CrewDeliverableWriters.OfCrewFile($$"""
-            agents:
-              writer:
-                role: Writer
-                tools: [file_write]
-            tasks:
+        var yaml = Crew("process: sequential", $$"""
               pick:
-                agent: writer
-                decision: { questions: {} }
+                description: pick
+                expected_output: a choice
+                {{Decision}}
                 deliverable:
                   path: /output/choice.md
                   {{source}}
             """);
+        using (var registry = new FileSystemRegistry([]))
+        {
+            var loader = EngineLoader(registry);
+            Assert.Empty(loader.Validate(await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken)).Errors);
+        }
 
-        var finding = Assert.Single(missing);
+        var finding = Assert.Single(CrewDeliverableWriters.OfCrewFile(yaml));
         AssertFinding(finding, "pick", [], "/output/choice.md", CrewDeliverableFindingKind.DecisionTask);
         Assert.Null(finding.PreferredWriter);
     }
@@ -430,6 +513,35 @@ public sealed class CrewDeliverableWritersTests : IDisposable
             "A deliverable without a source no longer reads as tool_call: CrewDeliverableWriters.DeliverableOf reads it so.");
         Assert.True(mapper.Contains("\"tool_call\" or \"toolcall\" =>", StringComparison.Ordinal),
             "The deliverable sources are no longer spelled as CrewDeliverableWriters.DeliverableOf reads them.");
+    }
+
+    [Fact]
+    public void The_engine_still_picks_the_agents_and_the_opaque_tools_as_Studio_does()
+    {
+        // CandidatesOf and IsOpaque are private to the engine: Studio's Collect copies them by hand.
+        var check = File.ReadAllText(Path.Combine(
+            OrkeonSources.Root(), "src/core/Orkeon.Application/Crew/DeliverableToolCheck.cs"));
+        const string Follow = " CrewDeliverableWriters.Collect (and its unlisted run tools) must follow the engine's rule.";
+        Assert.True(
+            Regex.IsMatch(
+                check,
+                @"var bindsDeclaredAgent = processType == ProcessType\.Sequential\s*\|\| processType == ProcessType\.Parallel"
+                + @"\s*\|\| processType == ProcessType\.Graph;\s*if \(bindsDeclaredAgent\)\s*\{\s*if \(task\.AssignedAgent is \{ \} assigned"
+                + @"[^\n]*\n\s*return \[declared\];\s*return crew;\s*\}",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(5)),
+            "The processes that bind a task's declared agent changed." + Follow);
+        Assert.True(
+            check.Contains("return processType.AcceptsManagerAgent && managerAgentId is { } manager", StringComparison.Ordinal),
+            "The manager exclusion changed." + Follow);
+        Assert.True(
+            check.Contains("if (!assembly.StartsWith(\"Orkeon.\", StringComparison.Ordinal)", StringComparison.Ordinal)
+            && check.Contains("assembly is \"Orkeon.Scripting\" or \"Orkeon.Interop.AgentFramework\"", StringComparison.Ordinal)
+            && check.Contains("\"Orkeon.Infrastructure.MCP.McpToolAdapter\"", StringComparison.Ordinal),
+            "The engine's opaque tools changed: a tool Orkeon ships may now be opaque, or one Studio knows no longer is." + Follow);
+        Assert.True(
+            Regex.IsMatch(check, @"if \(task\.IsDecision\)\s*\{\s*findings\.Add\(", RegexOptions.None, TimeSpan.FromSeconds(5)),
+            "A decision task's deliverable is no longer a finding of its own." + Follow);
     }
 
     [Fact]

@@ -869,6 +869,7 @@
   <data name="Studio.Run.WarnDeliverableNoWriter" xml:space="preserve"><value>Un fichier risque de ne pas être écrit. Corrigez chaque tâche ci-dessous dans le YAML de l'équipe ; un CLI Orkeon 1.2 en avertit aussi au chargement de l'équipe.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterItem" xml:space="preserve"><value>La tâche « {0} » doit écrire {2}, mais son agent « {1} » n'a aucun outil qui l'écrive.</value></data>
   <data name="Studio.Run.WarnDeliverableNoWriterAgents" xml:space="preserve"><value>La tâche « {0} » doit écrire {2}, mais aucun des agents qui peuvent l'exécuter ({1}) n'a d'outil qui l'écrive.</value></data>
+  <data name="Studio.Run.WarnDeliverableQuotedAgent" xml:space="preserve"><value>« {0} »</value></data>
   <data name="Studio.Run.WarnDeliverableFixText" xml:space="preserve"><value>Donnez {0} à l'agent chargé de l'écrire, ou passez le livrable en source: final_message.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Donnez {0} à l'agent chargé de l'écrire, ou livrez plutôt un format texte (.md, .html, .csv).</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Donnez à l'agent chargé de l'écrire un outil qui l'écrive (celui d'un serveur MCP, d'un plugin), ou livrez plutôt un format texte (.md, .html, .csv).</value></data>

@@ -488,8 +488,9 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         var tab = PinnedLauncher(team, "/data/out:/output:rw");
 
         Assert.Contains("none of the agents that may run it (", tab.DeliverableWriterWarning, StringComparison.Ordinal);
-        Assert.Contains("spare", tab.DeliverableWriterWarning, StringComparison.Ordinal);
-        Assert.Contains("writer", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        // Each agent quoted as the single-agent line quotes its own, and as the TUI and the CLI do.
+        Assert.Contains("'spare'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
+        Assert.Contains("'writer'", tab.DeliverableWriterWarning, StringComparison.Ordinal);
 
         // One agent able to write is enough: the round-robin may pick it.
         File.AppendAllText(Path.Combine(team, "agents", "spare.yaml"), "tools: [file_write]\n");
@@ -505,7 +506,7 @@ public sealed class LaunchAllowedFoldersTests : IDisposable
         File.AppendAllText(Path.Combine(team, "agents", "writer.yaml"), "tools: [file_write]\n");
         File.WriteAllText(
             Path.Combine(team, "tasks", "pick.yaml"),
-            "description: pick\nexpected_output: a choice\ndecision: { questions: {} }\ndeliverable:\n  path: /output/choice.md\n");
+            "description: pick\nexpected_output: a choice\ndecision: { questions: { go: { noul: the work is ready } } }\ndeliverable:\n  path: /output/choice.md\n");
         var tab = PinnedLauncher(team, "/data/out:/output:rw");
 
         var line = Assert.Single(tab.DeliverableWriterWarning.Split('\n').Skip(1));

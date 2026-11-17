@@ -12,8 +12,9 @@ namespace Orkeon.Studio.Core.Tests;
 
 /// <summary>
 /// STUDIO-21 — the tool catalogue the Settings screen lists is pinned against the documented
-/// inventory: every name it carries is a real registry name, and it carries exactly the tools
-/// the <c>orkeon run</c> column of the availability matrix says a run exposes.
+/// inventory: every name it carries is a real registry name, and its families and its unlisted
+/// run tools carry exactly the tools the <c>orkeon run</c> column of the availability matrix says
+/// a run exposes.
 /// </summary>
 public sealed partial class ToolCatalogTests
 {
@@ -62,12 +63,51 @@ public sealed partial class ToolCatalogTests
 
         Assert.Equal(ToolsARunExposes + 1, names.Count);
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
-        // The families the matrix keeps out of a run never appear: RAG, Slack, the
-        // code interpreter (concrete type only).
+        // The tools the matrix keeps out of a run never appear: Slack, the code interpreter
+        // (concrete type only). RAG is in a run, kept off the Settings screen: an unlisted run tool.
         Assert.Contains("structural_rewrite", names);
-        Assert.DoesNotContain("rag_search", names);
         Assert.DoesNotContain("slack_send_message", names);
         Assert.DoesNotContain("code_interpreter", names);
+        Assert.DoesNotContain("rag_search", names);
+        Assert.Contains("rag_search", ToolCatalog.UnlistedRunTools);
+        Assert.Empty(ToolCatalog.UnlistedRunTools.Intersect(names, StringComparer.Ordinal));
+    }
+
+    // A row of the availability matrix: its first cell, then the start of the orkeon run cell.
+    [GeneratedRegex(@"^\| ([^|]+) \| ([^|]+) \|[^\n]*$", RegexOptions.Multiline)]
+    private static partial Regex MatrixRowPattern();
+
+    [GeneratedRegex(@"`([a-z][a-z0-9_]*)`")]
+    private static partial Regex ToolNamePattern();
+
+    /// <summary>
+    /// Every tool the <c>orkeon run</c> column of the availability matrix names as registered
+    /// (a row that starts with a tick) is in the families or among the unlisted run tools: a name
+    /// in neither would count as a tool Orkeon does not ship, one that may write any file, in the
+    /// pre-launch deliverable check.
+    /// </summary>
+    [Fact]
+    public void Every_tool_a_run_registers_is_listed_or_an_unlisted_run_tool()
+    {
+        var inventory = File.ReadAllText(Path.Combine(OrkeonSources.Root(), "docs", "tools", "inventory.md"));
+        var start = inventory.IndexOf("## Availability by composition root", StringComparison.Ordinal);
+        Assert.True(start >= 0, "docs/tools/inventory.md has no availability matrix.");
+        var matrix = inventory[start..];
+        matrix = matrix[..matrix.IndexOf("\n## ", 1, StringComparison.Ordinal)];
+
+        var registered = MatrixRowPattern().Matches(matrix)
+            .Where(row => row.Groups[2].Value.TrimStart().StartsWith('\u2705'))
+            .SelectMany(row => ToolNamePattern().Matches(row.Groups[1].Value).Select(m => m.Groups[1].Value))
+            .ToList();
+        Assert.Contains("rag_search", registered);
+        Assert.Contains("memory_recall", registered);
+
+        var known = ToolCatalog.All.Select(t => t.Name).Concat(ToolCatalog.UnlistedRunTools).ToHashSet(StringComparer.Ordinal);
+        var missing = registered.Where(name => !known.Contains(name)).ToList();
+        Assert.True(missing.Count == 0, "Registered by orkeon run, unknown to Studio: " + string.Join(", ", missing));
+
+        var documented = DocumentedNames();
+        Assert.All(ToolCatalog.UnlistedRunTools, name => Assert.Contains(name, documented));
     }
 
     [Fact]
