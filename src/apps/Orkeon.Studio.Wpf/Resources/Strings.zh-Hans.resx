@@ -820,7 +820,7 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>已跳过：{0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>任务提前结束：智能体在完成前用尽了迭代次数。其工作可能不完整：请检查它应写入的文件。</value></data>
-  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但其交付物指定的文件从未被写入。请检查其智能体是否有能写入该文件的工具，然后重新运行团队。</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但未写入（或更新）其交付物指定的文件。请检查其智能体是否有能写入该文件的工具，以及任务是否要求写入该文件（如果任务也提前结束，请给智能体更多迭代次数），然后重新运行团队。</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>提前结束：请检查其文件</value></data>
   <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>未写入其文件</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>成功 · {0} 个任务提前结束</value></data>

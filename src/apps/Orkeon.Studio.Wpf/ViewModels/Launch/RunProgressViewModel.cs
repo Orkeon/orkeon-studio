@@ -13,12 +13,18 @@ public sealed class RunTaskViewModel
 {
     private readonly IStudioStrings _strings;
 
+    private readonly bool _writtenLater;
+
     /// <summary>Wraps what the run reported about one task.</summary>
-    public RunTaskViewModel(RunTaskProgress task, IStudioStrings? strings = null)
+    /// <param name="task">The completion.</param>
+    /// <param name="strings">The catalogue its notes are read from.</param>
+    /// <param name="writtenLater">Whether a later completion of the same task succeeded and wrote its file.</param>
+    public RunTaskViewModel(RunTaskProgress task, IStudioStrings? strings = null, bool writtenLater = false)
     {
         ArgumentNullException.ThrowIfNull(task);
         Task = task;
         _strings = strings ?? EnglishStudioStrings.Instance;
+        _writtenLater = writtenLater;
     }
 
     /// <summary>The underlying Core record.</summary>
@@ -66,11 +72,14 @@ public sealed class RunTaskViewModel
     public string CapNote => EndedOnIterationCap ? _strings[StudioStringKeys.RunProgressCapNote] : string.Empty;
 
     /// <summary>
-    /// Whether the task succeeded while the file its deliverable names was never written (Orkeon
-    /// #392): the engine checked it, so the row says it for sure. A task cut short whose file was
-    /// written keeps its cap note alone; one that also missed its file carries both.
+    /// Whether the task succeeded without writing (or updating) the file its deliverable names
+    /// (Orkeon #392): the engine checked it, so the row says it for sure. A task cut short whose
+    /// file was written keeps its cap note alone; one that also missed its file carries both. An
+    /// attempt a later one of the same task made good (a retry, a loop of a graph, that wrote the
+    /// file) says nothing of it: the run counts each task by its last completion, and its advice
+    /// to run the team again would be moot. Its cap note, a fact of that attempt, stays.
     /// </summary>
-    public bool DeliverableMissing => Task.Success && Task.DeliverableMissing;
+    public bool DeliverableMissing => Task.Success && Task.DeliverableMissing && !_writtenLater;
 
     /// <summary>What a task that did not write its file leaves to do, or an empty label.</summary>
     public string DeliverableNote => DeliverableMissing ? _strings[StudioStringKeys.RunProgressDeliverableNote] : string.Empty;
@@ -339,6 +348,20 @@ public sealed class RunProgressViewModel : ObservableObject
     }
 
     /// <summary>
+    /// A completion of task <paramref name="taskId"/> succeeded and wrote its file: the rows of its
+    /// earlier attempts that said the file missing are replaced by rows that no longer say it.
+    /// </summary>
+    private void ClearMissingFileOfEarlierAttempts(string taskId)
+    {
+        for (var index = 0; index < Tasks.Count; index++)
+        {
+            var row = Tasks[index];
+            if (row.DeliverableMissing && string.Equals(row.Task.TaskId, taskId, StringComparison.Ordinal))
+                Tasks[index] = new RunTaskViewModel(row.Task, _strings, writtenLater: true);
+        }
+    }
+
+    /// <summary>
     /// Reads one line of the run's output. Returns true when it was a protocol event, so the
     /// caller knows whether to also show it raw — a line this panel could not read must never
     /// be lost.
@@ -353,7 +376,12 @@ public sealed class RunProgressViewModel : ObservableObject
         _model.Apply(orkeonEvent!);
 
         for (var index = before; index < _model.Tasks.Count; index++)
-            Tasks.Add(new RunTaskViewModel(_model.Tasks[index], _strings));
+        {
+            var task = _model.Tasks[index];
+            if (task.Success && !task.DeliverableMissing && task.TaskId is { Length: > 0 } id)
+                ClearMissingFileOfEarlierAttempts(id);
+            Tasks.Add(new RunTaskViewModel(task, _strings));
+        }
 
         // The in-flight list is short and changes only on a start or a close: rebuilding it
         // is cheaper to reason about than diffing it.

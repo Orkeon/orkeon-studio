@@ -319,7 +319,44 @@ public sealed class RunPanePresentationTests : IDisposable
         var task = Assert.Single(tab.Progress.Tasks);
         Assert.StartsWith("Task cut short:", task.CapNote, StringComparison.Ordinal);
         Assert.StartsWith("File not written:", task.DeliverableNote, StringComparison.Ordinal);
-        Assert.Equal("missing", Assert.Single(tab.AgentCards).State);
+        var card = Assert.Single(tab.AgentCards);
+        Assert.Equal("missing", card.State);
+        // The novice, who sees no table, still learns that the task was cut short.
+        Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task An_agent_with_one_task_cut_short_and_another_that_missed_its_file_is_said_both_on_its_card()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Capped("t-1", "Rédacteur"));
+        launcher.OutputToEmit.Add(Missing("t-2", "Rédacteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var card = Assert.Single(tab.AgentCards);
+        Assert.Equal("missing", card.State);
+        Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task A_failed_task_flagged_missing_its_file_carries_no_file_note()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":false,"durationMs":900,"deliverableMissing":true}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var task = Assert.Single(tab.Progress.Tasks);
+        Assert.False(task.DeliverableMissing);
+        Assert.Equal(string.Empty, task.DeliverableNote);
+        Assert.NotEqual("missing", Assert.Single(tab.AgentCards).State);
     }
 
     [Fact]
@@ -367,7 +404,7 @@ public sealed class RunPanePresentationTests : IDisposable
 
         await tab.RunAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal("Succeeded · 2 tasks did not write their file", tab.RunBadgeText);
+        Assert.Equal("Succeeded · 2 tasks did not write their files", tab.RunBadgeText);
         Assert.Equal("warn", tab.RunBadgeTone);
     }
 
@@ -407,7 +444,59 @@ public sealed class RunPanePresentationTests : IDisposable
 
         var card = Assert.Single(tab.AgentCards);
         Assert.Equal("missing", card.State);
-        Assert.Equal("Did not write its file", card.StatusText);
+        Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task An_agent_the_run_spells_two_ways_says_both_when_its_later_task_missed_its_file()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Capped("t-1", "Redacteur"));
+        launcher.OutputToEmit.Add(Missing("t-2", "Rédacteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var card = Assert.Single(tab.AgentCards);
+        Assert.Equal("missing", card.State);
+        Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task An_agent_the_run_spells_two_ways_stays_failed_after_a_missing_file()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-1", "Redacteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-2","agentRole":"Rédacteur","success":false,"durationMs":900}"""));
+        launcher.ExitCode = 1;
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotEqual("missing", Assert.Single(tab.AgentCards).State);
+    }
+
+    [Fact]
+    public async Task A_failed_run_keeps_its_failed_badge_over_a_task_that_did_not_write_its_file()
+    {
+        var crew = WriteCrew("analyste", "redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-analyste", "Analyste"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-redacteur","agentRole":"Rédacteur","success":false,"durationMs":900}"""));
+        launcher.ExitCode = 1;
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("fail", tab.RunBadgeTone);
+        Assert.DoesNotContain("did not write", tab.RunBadgeText, StringComparison.Ordinal);
+        Assert.Equal("missing", tab.AgentCards[0].State);
     }
 
     [Fact]
@@ -425,6 +514,47 @@ public sealed class RunPanePresentationTests : IDisposable
 
         Assert.Equal("done", Assert.Single(tab.AgentCards).State);
         Assert.Equal("ok", tab.RunBadgeTone);
+        // The first attempt's row no longer asks to run the team again for a file now written.
+        Assert.Equal(2, tab.Progress.Tasks.Count);
+        Assert.All(tab.Progress.Tasks, task => Assert.Equal(string.Empty, task.DeliverableNote));
+        Assert.All(tab.Progress.Tasks, task => Assert.False(task.HasWarning));
+    }
+
+    [Fact]
+    public async Task An_attempt_cut_short_that_a_later_one_made_good_keeps_its_cap_note_alone()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-1", "Rédacteur", capped: true));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":true,"durationMs":900,"deliverableMissing":false}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var first = tab.Progress.Tasks[0];
+        Assert.Equal(string.Empty, first.DeliverableNote);
+        Assert.StartsWith("Task cut short:", first.CapNote, StringComparison.Ordinal);
+        Assert.True(first.HasWarning);
+    }
+
+    [Fact]
+    public async Task A_later_attempt_that_failed_or_missed_its_file_again_leaves_the_earlier_note()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-1", "Rédacteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Rédacteur","success":false,"durationMs":900}"""));
+        launcher.OutputToEmit.Add(Missing("t-2", "Rédacteur"));
+        launcher.OutputToEmit.Add(Missing("t-2", "Rédacteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([true, false, true, true], tab.Progress.Tasks.Select(task => task.DeliverableMissing));
     }
 
     [Fact]

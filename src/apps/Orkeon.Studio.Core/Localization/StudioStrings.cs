@@ -1228,12 +1228,12 @@ public static class StudioStringKeys
     public const string RunBadgeDoneSkippedCapped = "Studio.Run.BadgeDoneSkippedCapped";
 
     /// <summary>
-    /// "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their file}" — a task
+    /// "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their files}" — a task
     /// succeeded without writing its deliverable (Orkeon #392). It takes the place of the cut-short count.
     /// </summary>
     public const string RunBadgeDoneMissing = "Studio.Run.BadgeDoneMissing";
 
-    /// <summary>Both at once: {0} agents not run, {1} tasks that did not write their file.</summary>
+    /// <summary>Both at once: {0} agents not run, {1} tasks that did not write their files.</summary>
     public const string RunBadgeDoneSkippedMissing = "Studio.Run.BadgeDoneSkippedMissing";
 
     /// <summary>"Task details" (UX lot 08).</summary>
@@ -3358,8 +3358,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBadgeDoneSkipped] = "Succeeded · {0} {0:plural:agent not run|agents not run}",
         [StudioStringKeys.RunBadgeDoneCapped] = "Succeeded · {0} {0:plural:task|tasks} cut short",
         [StudioStringKeys.RunBadgeDoneSkippedCapped] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task|tasks} cut short",
-        [StudioStringKeys.RunBadgeDoneMissing] = "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their file}",
-        [StudioStringKeys.RunBadgeDoneSkippedMissing] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their file}",
+        [StudioStringKeys.RunBadgeDoneMissing] = "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their files}",
+        [StudioStringKeys.RunBadgeDoneSkippedMissing] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their files}",
         [StudioStringKeys.RunTaskDetails] = "Task details",
         [StudioStringKeys.HistoryShowError] = "Show the error",
         [StudioStringKeys.RunBadgeFailed] = "failed",
@@ -3551,7 +3551,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
         [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
-        [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but the file its deliverable names was never written. Check that its agent has a tool that writes it, then run the team again.",
+        [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",

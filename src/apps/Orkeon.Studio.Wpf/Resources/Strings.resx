@@ -321,13 +321,13 @@
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Nothing reported yet.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Skipped: {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.</value></data>
-  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>File not written: the task succeeded, but the file its deliverable names was never written. Check that its agent has a tool that writes it, then run the team again.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Cut short: check its files</value></data>
   <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>Did not write its file</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Succeeded · {0} {0:plural:task|tasks} cut short</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task|tasks} cut short</value></data>
-  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Succeeded · {0} {0:plural:task did not write its file|tasks did not write their file}</value></data>
-  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their file}</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Succeeded · {0} {0:plural:task did not write its file|tasks did not write their files}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their files}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — cut short: its iterations ran out, its work may be incomplete</value></data>
   <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — done, but did not write its file</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decision</value></data>

@@ -39,8 +39,9 @@ public sealed record RunSpawnedAgent(string? Role, string? Reason, DateTimeOffse
 /// <see cref="EndedOnIterationCap"/> marks a task that succeeded on the tool-free answer its
 /// agent gave once its iterations were spent: the engine keeps it a success, and a screen says
 /// that its work, a file it had to write above all, may be missing.
-/// <see cref="DeliverableMissing"/> marks a task that succeeded while the file its deliverable
-/// names was never written (Orkeon #392): the engine checked it, so a screen says it for sure.
+/// <see cref="DeliverableMissing"/> marks a task that succeeded without writing (or updating) the
+/// file its deliverable names, absent at its end or unchanged since it started (Orkeon #392): the
+/// engine checked it, so a screen says it for sure.
 /// </summary>
 public sealed record RunTaskProgress(
     string? TaskId,

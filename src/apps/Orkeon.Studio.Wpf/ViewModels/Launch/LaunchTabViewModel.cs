@@ -1629,8 +1629,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             // and the tasks' finding. Of the two task findings the badge says one: files the
             // engine found not written (Orkeon #392) when there are any, a fact, else tasks that
             // ended on their iteration cap, a suspicion. A task cut short that did not write its
-            // file is one task with one file to see to, not two findings; the cards and the
-            // tasks' table still say every task cut short.
+            // file is one task with one file to see to, not two findings; the agents' cards and
+            // the tasks' table still say every task cut short.
             var skipped = CardState == RunCardState.Succeeded ? AgentCards.Count(card => card.State == "notrun") : 0;
             var missing = CardState == RunCardState.Succeeded ? MissingDeliverableCount : 0;
             var capped = CardState == RunCardState.Succeeded && missing == 0 ? CappedTaskCount : 0;
@@ -1662,8 +1662,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private int CappedTaskCount => Progress.Model.CappedTaskCount;
 
     /// <summary>
-    /// How many tasks the engine counted as succeeded without the file their deliverable names
-    /// (Orkeon #392): its own <c>missingDeliverables</c> when the run gave one, else the lines read,
+    /// How many tasks the engine counted as succeeded without writing (or updating) the file their
+    /// deliverable names (Orkeon #392): its own <c>missingDeliverables</c> when the run gave one, else the lines read,
     /// each task by its last. Zero with a CLI older than Orkeon 1.2, which sends neither.
     /// </summary>
     private int MissingDeliverableCount => Progress.Model.MissingDeliverableCount;
@@ -2093,10 +2093,22 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
             // Two spellings the run itself gave for one agent: a plain success under the second
             // does not clear the work to check that the first left, nor does a cut-short one
-            // clear a file the first did not write.
-            cards[index] = WarnRank(first.State) > WarnRank(reported.State) && reported.State is "done" or "capped"
-                ? reported with { State = first.State, StatusText = first.StatusText }
-                : reported;
+            // clear a file the first did not write; a file not written and a task cut short,
+            // one under each spelling, are both said, as they are under one.
+            if (WarnRank(first.State) > WarnRank(reported.State) && reported.State is "done" or "capped")
+            {
+                cards[index] = reported with
+                {
+                    State = first.State,
+                    StatusText = first.State == "missing" && reported.State == "capped" ? MissingAndCappedText : first.StatusText,
+                };
+            }
+            else
+            {
+                cards[index] = reported.State == "missing" && first.State == "capped"
+                    ? reported with { StatusText = MissingAndCappedText }
+                    : reported;
+            }
         }
 
         AgentCards.Clear();
@@ -2104,6 +2116,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             AgentCards.Add(card);
         OnPropertiesChanged(nameof(RunBadgeText), nameof(RunBadgeTone), nameof(IsRunBadgePulsing));
     }
+
+    // The card of an agent that did not write a file and was also cut short: it says both.
+    private string MissingAndCappedText =>
+        _strings[StudioStringKeys.RunLaneMissing] + " · " + _strings[StudioStringKeys.RunLaneCapped];
 
     // How much a success leaves to check: a file not written over a task cut short over a plain success.
     private static int WarnRank(string state) => state switch

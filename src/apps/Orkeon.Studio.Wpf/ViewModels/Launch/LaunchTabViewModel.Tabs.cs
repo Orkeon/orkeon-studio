@@ -603,13 +603,19 @@ public sealed partial class LaunchTabViewModel
             // iterations and whose second went well still left work to check. Each task is read
             // by its last completion, as the run counts them: a retry that went through clears
             // it. The card is the one place the novice reads it, the tasks' table being the
-            // expert's. A file the engine found missing (Orkeon #392) is a fact, the cap a
-            // suspicion: the card says the first when both hold.
+            // expert's. A file the engine found not written (Orkeon #392) is a fact, the cap a
+            // suspicion: the card takes the first's tone, and its words say both when both hold,
+            // on one task or two, so the novice still learns that work was cut short.
             var own = Progress.Model.LastCompletions()
                 .Where(t => t.Success && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
                 .ToList();
             if (own.Exists(t => t.DeliverableMissing))
-                return new(name, "missing", _strings[StudioStringKeys.RunLaneMissing], detail);
+            {
+                var status = own.Exists(t => t.EndedOnIterationCap)
+                    ? MissingAndCappedText
+                    : _strings[StudioStringKeys.RunLaneMissing];
+                return new(name, "missing", status, detail);
+            }
 
             return own.Exists(t => t.EndedOnIterationCap)
                 ? new(name, "capped", _strings[StudioStringKeys.RunLaneCapped], detail)

@@ -75,7 +75,7 @@ public sealed record ForgeFolder(string Path, string Role, string? Purpose = nul
 /// <summary>
 /// One completed task of the running try. <see cref="EndedOnIterationCap"/> marks a success on
 /// the tool-free answer given once the agent's iterations were spent; <see cref="DeliverableMissing"/>
-/// a success whose deliverable's file was never written (Orkeon #392), absent from an older CLI.
+/// a success that did not write (or update) its deliverable's file (Orkeon #392), absent from an older CLI.
 /// </summary>
 public sealed record ForgeTaskProgress(
     string? TaskId,
