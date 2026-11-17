@@ -1,3 +1,4 @@
+using Orkeon.Domain.SharedKernel.ValueObjects;
 using Orkeon.Studio.Core.Events;
 using Orkeon.Studio.Core.FileSystem;
 using System.Text.Json;
@@ -904,7 +905,8 @@ public sealed class ForgeSessionModel
     /// <summary>
     /// The tools the plan's tasks grant (Orkeon #392) folded into the crew-wide
     /// <paramref name="crewTools"/> after the agents' own, as the CLI's trial bench counts the
-    /// crew's tools, and into the <see cref="ForgeAgentView.TaskTools"/> of the agent each task names.
+    /// crew's tools, and into the <see cref="ForgeAgentView.TaskTools"/> of every agent that may
+    /// run the task (<see cref="CandidateKeys"/>).
     /// </summary>
     private static List<ForgeAgentView> WithTaskTools(
         List<ForgeAgentView> agentViews, JsonElement blueprint, List<string> crewTools)
@@ -912,16 +914,20 @@ public sealed class ForgeSessionModel
         var granted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var task in TasksOf(blueprint))
         {
-            var agent = ReadString(task, "agent") is { } key ? agentViews.Find(view => view.Key == key) : null;
+            var candidates = CandidateKeys(blueprint, task)
+                .Select(key => agentViews.Find(view => view.Key == key))
+                .OfType<ForgeAgentView>()
+                .ToList();
             foreach (var tool in ToolsOf(task))
             {
                 if (!crewTools.Contains(tool, StringComparer.Ordinal))
                     crewTools.Add(tool);
-                if (agent is null || agent.Tools.Contains(tool, StringComparer.Ordinal))
-                    continue;
-                var own = granted.TryGetValue(agent.Key, out var list) ? list : granted[agent.Key] = [];
-                if (!own.Contains(tool, StringComparer.Ordinal))
-                    own.Add(tool);
+                foreach (var agent in candidates.Where(agent => !agent.Tools.Contains(tool, StringComparer.Ordinal)))
+                {
+                    var own = granted.TryGetValue(agent.Key, out var list) ? list : granted[agent.Key] = [];
+                    if (!own.Contains(tool, StringComparer.Ordinal))
+                        own.Add(tool);
+                }
             }
         }
 
@@ -993,15 +999,14 @@ public sealed class ForgeSessionModel
     {
         // Per agent, not over the union: the union answered «somebody reads» and the screen
         // could only repeat it. Named, it answers «who», which is the question asked. A task's
-        // own tools are its agent's for that task (Orkeon #392), so a task granting a reading
-        // tool names its agent a reader too.
+        // own tools are those of every agent that may run it (Orkeon #392), so a task granting
+        // a reading tool names each of them a reader too.
         var readers = agents
             .Where(a => HoldsReadingTool(a.Tools))
             .Select(a => a.Role)
             .Concat(TasksOf(blueprint)
                 .Where(task => HoldsReadingTool(ToolsOf(task)))
-                .Select(task => TaskAgentRole(task, roles))
-                .OfType<string>())
+                .SelectMany(task => CandidateRoles(blueprint, task, roles)))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -1027,9 +1032,10 @@ public sealed class ForgeSessionModel
             if (task.ValueKind != JsonValueKind.Object || DeliverableRoot(task) is not { } root)
                 continue;
 
-            // The task's own agent — sitting in the same JsonElement as the deliverable
-            // and, until W-04, never read.
-            AddWriteMount(mounts, root, TaskAgentRole(task, roles));
+            // The agents that may run the task — read from the same JsonElement as the
+            // deliverable (W-04), as the engine picks them.
+            foreach (var writer in WritersOf(blueprint, task, roles))
+                AddWriteMount(mounts, root, writer);
         }
 
         return mounts;
@@ -1042,7 +1048,8 @@ public sealed class ForgeSessionModel
     /// nested or backslashed path — is refused rather than trusted to be absent: anything
     /// else would put the team's own files outside its folder. A root the runner keeps for
     /// itself is refused too, since the very --mount Studio spells would then be rejected at
-    /// start (ADR-008, decision 5), making the adopted team unlaunchable.
+    /// start (ADR-008, decision 5), making the adopted team unlaunchable; so is one carrying
+    /// ':' or ';', the mount grammar's own separators, as the CLI's <c>MountableRoot</c> does.
     /// </summary>
     private static string? DeliverableRoot(JsonElement task)
     {
@@ -1057,6 +1064,7 @@ public sealed class ForgeSessionModel
         var folder = root[1..];
         if (folder.Contains('/', StringComparison.Ordinal)
             || folder.Contains('\\', StringComparison.Ordinal)
+            || folder.AsSpan().ContainsAny(':', ';')
             || folder is "." or "..")
         {
             return null;
@@ -1077,7 +1085,8 @@ public sealed class ForgeSessionModel
                 if (task.ValueKind != JsonValueKind.Object || DeliverableRoot(task) is not { } root)
                     continue;
 
-                writers[root] = Merge(writers.GetValueOrDefault(root), TaskAgentRole(task, roles));
+                foreach (var writer in WritersOf(blueprint, task, roles))
+                    writers[root] = Merge(writers.GetValueOrDefault(root), writer);
             }
         }
 
@@ -1089,9 +1098,42 @@ public sealed class ForgeSessionModel
         ];
     }
 
-    /// <summary>The role of the agent a task names (who writes its deliverable), when the blueprint declares that agent.</summary>
-    private static string? TaskAgentRole(JsonElement task, Dictionary<string, string> roles) =>
-        ReadString(task, "agent") is { } key && roles.TryGetValue(key, out var role) ? role : null;
+    /// <summary>
+    /// The keys of the agents that may run <paramref name="task"/>, as the CLI's
+    /// <c>ForgeBlueprintCompiler.CandidatesOf</c> reads them (Orkeon #392): the agent it names in a
+    /// sequential, parallel or graph crew (every agent when it names none the plan declares);
+    /// every agent but the manager in a crew that takes one (hierarchical, consensual); every
+    /// agent otherwise (autonomous).
+    /// </summary>
+    private static List<string> CandidateKeys(JsonElement blueprint, JsonElement task)
+    {
+        var keys = ArrayOf(blueprint, "agents").Select(agent => ReadString(agent, "key")).OfType<string>().ToList();
+        var crew = blueprint.TryGetProperty("crew", out var node) && node.ValueKind == JsonValueKind.Object ? node : default;
+        var process = crew.ValueKind == JsonValueKind.Object && ReadString(crew, "process") is { } named && !string.IsNullOrWhiteSpace(named)
+            ? named.Trim()
+            : ProcessType.Sequential.Value;
+        var known = ProcessType.All.FirstOrDefault(p => string.Equals(p.Value, process, StringComparison.OrdinalIgnoreCase));
+        if (known is null || known == ProcessType.Sequential || known == ProcessType.Parallel || known == ProcessType.Graph)
+        {
+            var declared = keys.Where(key => string.Equals(key, ReadString(task, "agent"), StringComparison.Ordinal)).ToList();
+            return declared.Count > 0 ? declared : keys;
+        }
+
+        return known.AcceptsManagerAgent && ReadString(blueprint, "manager") is { } manager && !string.IsNullOrWhiteSpace(manager)
+            ? [.. keys.Where(key => !string.Equals(key, manager, StringComparison.Ordinal))]
+            : keys;
+    }
+
+    /// <summary>The roles of the agents that may run <paramref name="task"/>, those the plan declares with a role.</summary>
+    private static IEnumerable<string> CandidateRoles(JsonElement blueprint, JsonElement task, Dictionary<string, string> roles) =>
+        CandidateKeys(blueprint, task).Select(key => roles.GetValueOrDefault(key)).OfType<string>();
+
+    /// <summary>Who writes a task's deliverable: each agent that may run it; none when no such agent has a role.</summary>
+    private static List<string?> WritersOf(JsonElement blueprint, JsonElement task, Dictionary<string, string> roles)
+    {
+        List<string?> writers = [.. CandidateRoles(blueprint, task, roles)];
+        return writers.Count > 0 ? writers : [null];
+    }
 
     /// <summary>The tools whose presence means the team expects something to read, as the CLI's <c>ReadingTools</c>.</summary>
     private static readonly string[] ReadingTools = ["file_read", "directory_read"];

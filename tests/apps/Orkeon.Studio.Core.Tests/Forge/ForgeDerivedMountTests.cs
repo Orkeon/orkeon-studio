@@ -107,8 +107,35 @@ public sealed class ForgeDerivedMountTests
         Assert.Equal(["file_write", "file_read", "web_search", "calculator"], proposal.Tools);
         var writer = proposal.Agents[0];
         Assert.Equal(["file_write"], writer.Tools);
-        Assert.Equal(["file_read", "web_search"], writer.TaskTools);
-        Assert.Empty(proposal.Agents[1].TaskTools);
+        // A task naming no agent the plan declares may be run by any of them, as the engine picks.
+        Assert.Equal(["file_read", "web_search", "calculator"], writer.TaskTools);
+        Assert.Equal(["calculator"], proposal.Agents[1].TaskTools);
+    }
+
+    /// <summary>
+    /// A task's tools and its reading go to every agent that may run it, as the CLI's
+    /// <c>ForgeBlueprintCompiler.CandidatesOf</c> reads a plan (Orkeon #392): the named agent in a
+    /// sequential crew, every worker but the manager in a hierarchical or consensual one, every
+    /// agent in an autonomous one, whatever agent the task names.
+    /// </summary>
+    [Theory]
+    [InlineData("sequential", "", "A")]
+    [InlineData("hierarchical", "m", "A,B")]
+    [InlineData("consensual", "m", "A,B")]
+    [InlineData("hierarchical", "", "M,A,B")]
+    [InlineData("autonomous", "m", "M,A,B")]
+    public void A_tasks_tools_and_reading_go_to_every_agent_that_may_run_it(string process, string manager, string expected)
+    {
+        var json = """{"v":2,"seq":1,"ts":"t","kind":"blueprint.ready","iteration":1,"blueprint":{"crew":{"name":"t","goal":"g","process":"PROCESS"},MANAGER"agents":[{"key":"m","role":"M","goal":"G","tools":[]},{"key":"a","role":"A","goal":"G","tools":[]},{"key":"b","role":"B","goal":"G","tools":[]}],"tasks":[{"key":"t0","description":"d","expectedOutput":"e","agent":"a","tools":["file_read"],"deliverable":"/output/r.md"}]}}"""
+            .Replace("PROCESS", process, StringComparison.Ordinal)
+            .Replace("MANAGER", manager.Length > 0 ? $"\"manager\":\"{manager}\"," : "", StringComparison.Ordinal);
+
+        var model = Feed(json);
+
+        var roles = expected.Split(',');
+        Assert.Equal(roles, model.Proposal!.Agents.Where(a => a.TaskTools.Contains("file_read")).Select(a => a.Role));
+        Assert.Equal(roles, Assert.Single(model.DerivedMounts, m => m.VirtualPath == "/workspace").Agents);
+        Assert.Equal(roles, Assert.Single(model.DerivedMounts, m => m.VirtualPath == "/output").Agents);
     }
 
     [Fact]
@@ -129,7 +156,8 @@ public sealed class ForgeDerivedMountTests
 
         var workspace = Assert.Single(mounts, m => m.VirtualPath == "/workspace");
         Assert.False(workspace.IsReadWrite);
-        Assert.Empty(workspace.Agents!);
+        // Any agent of the crew may run such a task: its only agent reads.
+        Assert.Equal(["A"], workspace.Agents);
     }
 
     [Fact]
@@ -183,6 +211,8 @@ public sealed class ForgeDerivedMountTests
     [Theory]
     [InlineData("/../escaped/r.md")]
     [InlineData("/./r.md")]
+    [InlineData("/out:put/r.md")]
+    [InlineData("/out;put/r.md")]
     public void A_traversal_root_is_never_derived(string deliverable)
     {
         var mounts = Derive("[]", Tasks(deliverable, "/output/r.md"));
