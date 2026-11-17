@@ -1,3 +1,4 @@
+using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Core.Process;
 using Orkeon.Studio.Core.Teams;
 using Orkeon.Studio.Wpf.Tests.Doubles;
@@ -461,6 +462,40 @@ public sealed class RunPanePresentationTests : IDisposable
         var card = Assert.Single(tab.AgentCards);
         Assert.Equal("missing", card.State);
         Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+    }
+
+    [Fact]
+    public async Task An_agent_the_run_spells_two_ways_keeps_its_cap_when_the_first_said_both_and_the_second_missed_its_file()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-1", "Redacteur", capped: true));
+        launcher.OutputToEmit.Add(Missing("t-2", "Rédacteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var card = Assert.Single(tab.AgentCards);
+        Assert.Equal("missing", card.State);
+        Assert.Equal("Did not write its file · Cut short: check its files", card.StatusText);
+        // The tooltip gives both pieces of advice, as the card says both findings.
+        Assert.StartsWith(EnglishStudioStrings.Instance[StudioStringKeys.RunProgressDeliverableNote], card.Note, StringComparison.Ordinal);
+        Assert.EndsWith(EnglishStudioStrings.Instance[StudioStringKeys.RunProgressCapNote], card.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_card_says_one_note_per_finding_in_its_tooltip()
+    {
+        var crew = WriteCrew("redacteur", "veilleur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Missing("t-1", "redacteur"));
+        launcher.OutputToEmit.Add(Capped("t-2", "veilleur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.RunProgressDeliverableNote], Assert.Single(tab.AgentCards, c => c.State == "missing").Note);
+        Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.RunProgressCapNote], Assert.Single(tab.AgentCards, c => c.State == "capped").Note);
     }
 
     [Fact]

@@ -330,6 +330,7 @@
   <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their files}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — cut short: its iterations ran out, its work may be incomplete</value></data>
   <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — done, but did not write its file</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — done, but did not write its file; cut short too: its iterations ran out</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decision (defaulted)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} task(s) finished.</value></data>

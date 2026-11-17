@@ -829,6 +829,7 @@
   <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Agent nicht ausgeführt|Agenten nicht ausgeführt} · {1} {1:plural:Aufgabe hat ihre Datei nicht geschrieben|Aufgaben haben ihre Datei nicht geschrieben}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — vorzeitig beendet: Iterationen aufgebraucht, die Arbeit ist möglicherweise unvollständig</value></data>
   <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben; zudem vorzeitig beendet: Iterationen aufgebraucht</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">

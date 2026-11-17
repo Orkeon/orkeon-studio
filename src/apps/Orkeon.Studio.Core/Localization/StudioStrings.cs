@@ -1925,6 +1925,9 @@ public static class StudioStringKeys
     /// <summary>"{0} — done, but did not write its file" — a trial task that did not write its deliverable (Orkeon #392).</summary>
     public const string WizardActivityMissing = "Studio.Create.ActivityMissing";
 
+    /// <summary>"{0} — done, but did not write its file; cut short too: its iterations ran out" — a trial task both.</summary>
+    public const string WizardActivityMissingCapped = "Studio.Create.ActivityMissingCapped";
+
     /// <summary>"Describe the work to continue."</summary>
     public const string WizardHintDescribe = "Studio.Create.HintDescribe";
 
@@ -3793,6 +3796,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardActivityFailed] = "{0} — failed",
         [StudioStringKeys.WizardActivityCapped] = "{0} — cut short: its iterations ran out, its work may be incomplete",
         [StudioStringKeys.WizardActivityMissing] = "{0} — done, but did not write its file",
+        [StudioStringKeys.WizardActivityMissingCapped] = "{0} — done, but did not write its file; cut short too: its iterations ran out",
         [StudioStringKeys.WizardHintDescribe] = "Describe the work to continue.",
         [StudioStringKeys.WizardHintAssistant] = "Choose a model for the assistant first.",
         [StudioStringKeys.WizardHintReady] = "Ready: you can compose the team.",

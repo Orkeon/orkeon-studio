@@ -2105,7 +2105,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             }
             else
             {
-                cards[index] = reported.State == "missing" && first.State == "capped"
+                // The first spelling's cap holds whether it was the card's state or said beside
+                // a file not written.
+                var firstCapped = first.State == "capped" || first.StatusText == MissingAndCappedText;
+                cards[index] = reported.State == "missing" && firstCapped
                     ? reported with { StatusText = MissingAndCappedText }
                     : reported;
             }
@@ -2113,9 +2116,20 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         AgentCards.Clear();
         foreach (var card in cards)
-            AgentCards.Add(card);
+            AgentCards.Add(card with { Note = NoteOf(card) });
         OnPropertiesChanged(nameof(RunBadgeText), nameof(RunBadgeTone), nameof(IsRunBadgePulsing));
     }
+
+    // What the card's status advises, as its tooltip: the file note, the cap note, or both when
+    // the card says both.
+    private string NoteOf(RunAgentCard card) => card.State switch
+    {
+        "capped" => _strings[StudioStringKeys.RunProgressCapNote],
+        "missing" when card.StatusText == MissingAndCappedText =>
+            _strings[StudioStringKeys.RunProgressDeliverableNote] + "\n\n" + _strings[StudioStringKeys.RunProgressCapNote],
+        "missing" => _strings[StudioStringKeys.RunProgressDeliverableNote],
+        _ => string.Empty,
+    };
 
     // The card of an agent that did not write a file and was also cut short: it says both.
     private string MissingAndCappedText =>
@@ -2161,6 +2175,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 /// </summary>
 public sealed record RunAgentCard(string DisplayName, string Identifier, string State, string StatusText, string Detail)
 {
+    /// <summary>The advice behind the status, as its tooltip: empty unless the card has work to check.</summary>
+    public string Note { get; init; } = string.Empty;
+
     /// <summary>Whether the identifier says something the name does not.</summary>
     public bool HasIdentifier => !string.Equals(Identifier, DisplayName, StringComparison.Ordinal);
 }

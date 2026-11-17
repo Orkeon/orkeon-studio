@@ -908,4 +908,29 @@ public class RunProgressModelTests
         Assert.True(OrkeonEventParser.TryParse(line, out var orkeonEvent), line);
         return orkeonEvent!;
     }
+
+    /// <summary>
+    /// The flags and counts are read typed: a flag that is not a JSON boolean, or a count that is
+    /// not a number, reads as absent — no warning, and the lines counted — never as a crash. What
+    /// a guard on names cannot see (the field kept, its type changed) lands here, quietly: this
+    /// pins that quiet so a change to the readers is a decision.
+    /// </summary>
+    [Theory]
+    [InlineData("\"true\"")]
+    [InlineData("null")]
+    [InlineData("1")]
+    public void A_flag_or_count_of_another_type_reads_as_absent(string value)
+    {
+        var model = Fold(
+            $$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"A","success":true,"endedOnIterationCap":{{value}},"deliverableMissing":{{value}}}""",
+            $$"""{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"cappedTasks":{{(value == "1" ? "\"1\"" : value)}},"missingDeliverables":{{(value == "1" ? "\"1\"" : value)}}}""");
+
+        var task = Assert.Single(model.Tasks);
+        Assert.False(task.EndedOnIterationCap);
+        Assert.False(task.DeliverableMissing);
+        Assert.Null(model.ReportedCappedTasks);
+        Assert.Null(model.ReportedMissingDeliverables);
+        Assert.Equal(0, model.CappedTaskCount);
+        Assert.Equal(0, model.MissingDeliverableCount);
+    }
 }

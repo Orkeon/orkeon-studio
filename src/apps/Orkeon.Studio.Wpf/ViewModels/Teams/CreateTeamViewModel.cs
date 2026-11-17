@@ -3488,22 +3488,18 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     {
         Activity.Clear();
         var fallback = _strings[StudioStringKeys.WizardAgentFallback];
-        // A task the trial completes twice under one id is read by its last line, as the run's
-        // own counts of capped tasks and missing files do: a pass that went through clears an
-        // earlier "cut short" or "did not write its file".
-        var lastOf = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var index = 0; index < _model.Activity.Count; index++)
-        {
-            if (_model.Activity[index].TaskId is { Length: > 0 } id)
-                lastOf[id] = index;
-        }
-
+        // A task the trial completes twice under one id: a later pass that went through clears
+        // an earlier line's finding, as the Launch screen clears an earlier row's file note —
+        // one that wrote the file clears "did not write its file", one not cut short clears
+        // "cut short". A later pass that failed, or met the same end, clears nothing.
         for (var index = 0; index < _model.Activity.Count; index++)
         {
             var task = _model.Activity[index];
-            var last = task.TaskId is not { Length: > 0 } key || lastOf[key] == index;
-            var fileMissing = task.Success && task.DeliverableMissing && last;
-            var cutShort = task.Success && task.EndedOnIterationCap && last;
+            var later = task.TaskId is { Length: > 0 } key
+                ? _model.Activity.Skip(index + 1).Where(next => next.Success && string.Equals(next.TaskId, key, StringComparison.Ordinal)).ToList()
+                : [];
+            var fileMissing = task.Success && task.DeliverableMissing && !later.Exists(next => !next.DeliverableMissing);
+            var cutShort = task.Success && task.EndedOnIterationCap && !later.Exists(next => !next.EndedOnIterationCap);
             // The task id joins the role rather than replacing it: a crew where one agent
             // owns two tasks rendered the same sentence twice, with nothing to tell the
             // reader which of the two had just finished.
@@ -3511,7 +3507,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             var text = (task.Success, task.DurationMs) switch
             {
                 // The engine found the file missing (Orkeon #392): said for sure, before the cap,
-                // which only says it may be.
+                // which only says it may be; both when both hold, as the Launch screen's card.
+                (true, _) when fileMissing && cutShort => _strings.Format(StudioStringKeys.WizardActivityMissingCapped, role),
                 (true, _) when fileMissing => _strings.Format(StudioStringKeys.WizardActivityMissing, role),
                 // A success on the iteration cap is not a plain "done": the trial's file may be missing.
                 (true, _) when cutShort => _strings.Format(StudioStringKeys.WizardActivityCapped, role),

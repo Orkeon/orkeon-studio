@@ -330,6 +330,7 @@
   <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Réussie · {0} {0:plural:agent non exécuté|agents non exécutés} · {1} {1:plural:tâche n'a pas écrit son fichier|tâches n'ont pas écrit leur fichier}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — écourté : ses itérations sont épuisées, son travail est peut-être incomplet</value></data>
   <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier</value></data>
+  <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier ; écourté aussi : ses itérations sont épuisées</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>décision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>décision (par défaut)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} {0:plural:tâche terminée|tâches terminées}.</value></data>
