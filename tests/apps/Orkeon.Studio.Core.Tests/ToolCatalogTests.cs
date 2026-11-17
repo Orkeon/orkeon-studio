@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Configuration;
 using Orkeon.Domain.Attributes;
+using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Core.Tools;
@@ -41,6 +43,21 @@ public sealed partial class ToolCatalogTests
         var inventory = File.ReadAllText(Path.Combine(OrkeonSources.Root(), "docs", "tools", "inventory.md"));
         var table = inventory[inventory.IndexOf("### Names to use in YAML", StringComparison.Ordinal)..];
         return [.. InventoryRowPattern().Matches(table).Select(m => m.Groups[1].Value)];
+    }
+
+    /// <summary>
+    /// The other direction: every documented registry name is in the catalogue but the four the
+    /// matrix keeps out of a run. The matrix names the members of a suite row (Data, Files...) only
+    /// by count; this list does not, so a tool a suite gains fails here.
+    /// </summary>
+    [Fact]
+    public void Every_documented_registry_name_is_in_the_catalogue_but_the_four_a_run_never_registers()
+    {
+        var catalogue = ToolCatalog.All.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
+
+        var outside = DocumentedNames().Where(name => !catalogue.Contains(name)).Order(StringComparer.Ordinal);
+
+        Assert.Equal(["code_interpreter", "progress_report", "slack_read_messages", "slack_send_message"], outside);
     }
 
     [Fact]
@@ -118,34 +135,85 @@ public sealed partial class ToolCatalogTests
     /// tool names the setting the catalogue's line names, so a condition the engine moves fails here.
     /// </summary>
     [Theory]
-    [InlineData("system_one_decide", ToolRequirement.OnlyWithSetting, "Orkeon:Decision:Provider")]
-    [InlineData("memory_recall", ToolRequirement.OnlyWithSetting, "Orkeon:CognitiveMemory:Enabled")]
-    [InlineData("mcp_prompt_get", ToolRequirement.OnlyWithMcpServer, "MCP:Servers")]
-    [InlineData("brave_search", ToolRequirement.OnlyWithStoredKey, "BRAVE_API_KEY")]
+    [InlineData("system_one_decide", ToolRequirement.OnlyWithDecisionProvider, "Orkeon:Decision:Provider", "Orkeon:Decision:Provider")]
+    [InlineData("memory_recall", ToolRequirement.OnlyWithCognitiveMemory, "Orkeon:CognitiveMemory:Enabled = true", "Orkeon:CognitiveMemory:Enabled")]
+    [InlineData("mcp_prompt_get", ToolRequirement.OnlyWithMcpServer, "MCP:Servers", "MCP:Servers")]
+    [InlineData("brave_search", ToolRequirement.OnlyWithStoredKey, "BRAVE_API_KEY", "BRAVE_API_KEY")]
     public void A_tool_registered_under_a_setting_names_the_setting_the_matrix_names(
-        string tool, ToolRequirement requirement, string setting)
+        string tool, ToolRequirement requirement, string argument, string setting)
     {
         var info = Assert.Single(ToolCatalog.All, t => t.Name == tool);
         Assert.Equal(requirement, info.Requirement);
-        Assert.StartsWith(setting, info.Argument, StringComparison.Ordinal);
+        Assert.Equal(argument, info.Argument);
 
         var row = MatrixRowPattern().Matches(AvailabilityMatrix()).Single(r => r.Groups[1].Value.Trim() == $"`{tool}`");
         Assert.Contains($"`{setting}`", row.Groups[2].Value, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// The RAG tools are registered by every run and need no key: the two that read a collection
-    /// say so, the one that fills it needs nothing.
+    /// The conditions are pinned against the engine's code, not only its inventory: the runner host
+    /// reads the memory switch off by default, and MCP is registered only while it is not switched
+    /// off and declares a server, which the catalogue's MCP line says.
     /// </summary>
     [Fact]
-    public void The_rag_tools_are_search_tools_and_the_readers_need_a_collection()
+    public void The_memory_and_mcp_conditions_are_the_ones_the_runner_host_reads()
+    {
+        var hosting = Path.Combine(OrkeonSources.Root(), "src", "hosting", "Orkeon.Hosting");
+        var runner = File.ReadAllText(Path.Combine(hosting, "RunnerHost.cs"));
+        var mcp = File.ReadAllText(Path.Combine(hosting, "McpStartup.cs"));
+
+        Assert.Contains($"GetValue(\"{ToolCatalog.CognitiveMemoryEnabled}\", defaultValue: false)", runner, StringComparison.Ordinal);
+        Assert.Contains("GetValue(\"Enabled\", defaultValue: true)", mcp, StringComparison.Ordinal);
+        Assert.Contains("GetSection(\"Servers\")", mcp, StringComparison.Ordinal);
+        Assert.Equal("MCP:Servers", ToolCatalog.McpServers);
+        Assert.Contains("is on and declares a server", EnglishStudioStrings.Instance[StudioStringKeys.ToolOnlyWithMcpServer], StringComparison.Ordinal);
+        Assert.Contains("memory: true", EnglishStudioStrings.Instance[StudioStringKeys.ToolOnlyWithCognitiveMemory], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// system_one_decide is registered once the engine resolves a decision provider: named by the
+    /// setting, or deduced from a hosted provider's section or its API key. The line names each.
+    /// </summary>
+    [Fact]
+    public void The_decision_line_names_every_way_the_engine_resolves_a_provider()
+    {
+        static DecisionProviderChoice Resolve(Dictionary<string, string?> settings, string? key = null) =>
+            DecisionProviderChoice.Resolve(
+                new ConfigurationBuilder().AddInMemoryCollection(settings).Build(),
+                name => name == key ? "secret" : null);
+
+        Assert.False(Resolve([]).HasProvider);
+        Assert.Equal(DecisionProviderSelection.Named, Resolve(new() { [ToolCatalog.DecisionProvider] = "typesafe" }).How);
+        var line = EnglishStudioStrings.Instance[StudioStringKeys.ToolOnlyWithDecisionProvider];
+        Assert.Contains(ToolCatalog.DecisionProvider, line, StringComparison.Ordinal);
+
+        var hosted = DecisionProviderDescriptor.All.Where(d => d.Hosted).ToList();
+        Assert.Equal(2, hosted.Count);
+        foreach (var provider in hosted)
+        {
+            Assert.Equal(provider, Resolve(new() { [provider.Section + ":Model"] = "m" }).Provider);
+            Assert.Equal(provider, Resolve([], provider.DefaultApiKeyVariable).Provider);
+            Assert.True(provider.KeyRequired);
+            Assert.Contains(provider.Section, line, StringComparison.Ordinal);
+            Assert.Contains(provider.DefaultApiKeyVariable, line, StringComparison.Ordinal);
+            Assert.Contains(provider.DisplayName, line, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// The RAG tools are registered by every run and need no key: rag_search reads a collection,
+    /// rag_eval takes a golden dataset (a required argument) and ingests its corpus itself, and the
+    /// one that fills a collection needs nothing.
+    /// </summary>
+    [Fact]
+    public void The_rag_tools_are_search_tools_and_say_what_each_one_reads()
     {
         var search = Assert.Single(ToolCatalog.Families, f => f.Key == ToolCatalog.SearchFamily);
 
         Assert.Equal(ToolRequirement.RagCollection, Assert.Single(search.Tools, t => t.Name == "rag_search").Requirement);
-        Assert.Equal(ToolRequirement.RagCollection, Assert.Single(search.Tools, t => t.Name == "rag_eval").Requirement);
+        Assert.Equal(ToolRequirement.RagDataset, Assert.Single(search.Tools, t => t.Name == "rag_eval").Requirement);
         Assert.Equal(ToolRequirement.None, Assert.Single(search.Tools, t => t.Name == "rag_ingest").Requirement);
-        Assert.Equal(2, ToolCatalog.All.Count(t => t.Requirement == ToolRequirement.RagCollection));
+        Assert.Single(ToolCatalog.All, t => t.Requirement == ToolRequirement.RagCollection);
     }
 
     [Fact]
@@ -155,6 +223,8 @@ public sealed partial class ToolCatalogTests
         var names = ToolCatalog.All.Select(t => t.Name).ToList();
 
         Assert.Single(names, n => n == "spawn_agent");
+        // The script host's tool: a YAML team cannot list it, and the line says so.
+        Assert.Equal(ToolRequirement.ScriptOnly, Assert.Single(ToolCatalog.All, t => t.Name == "spawn_agent").Requirement);
     }
 
     [Fact]

@@ -1902,13 +1902,22 @@
     <value>braucht ein Cloud-Speicher-Konto, deklariert unter Einstellungen › Cloud-Speicher</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
-    <value>durchsucht eine Sammlung, die der rag:-Block des Teams oder rag_ingest füllt</value>
+    <value>durchsucht eine Sammlung, die der rag:-Block des Teams oder rag_ingest füllt oder die der unter Einstellungen › Dokumentsuche (RAG) gewählte Speicher behält (Expertenmodus)</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
-    <value>erst vorhanden, wenn unter Einstellungen › MCP ein MCP-Server deklariert ist</value>
+    <value>nur vorhanden, solange Einstellungen › MCP (Expertenmodus) eingeschaltet ist und einen Server deklariert</value>
   </data>
-  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve">
-    <value>erst vorhanden mit {0} in der Einstellungsdatei</value>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve">
+    <value>nur im act eines Skript-Agenten (.ork.ts) angeboten; ein YAML-Team, wie Studio es schreibt, kann es nicht aufführen</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve">
+    <value>erst vorhanden mit {0}, von Hand in die Einstellungsdatei geschrieben, und nur bei einem Team mit memory: true</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
+    <value>erst vorhanden, wenn ein Entscheidungsanbieter eingerichtet ist: der Schlüssel TYPESAFE_API_KEY oder LIQUID_API_KEY in Ihrer Umgebung oder Orkeon:Decision:Provider oder ein Abschnitt Orkeon:TypeSafe oder Orkeon:Liquid, von Hand in die Einstellungsdatei geschrieben; TypeSafe und Liquid lehnen ohne ihren Schlüssel jeden Aufruf ab</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
+    <value>braucht einen Referenzdatensatz, eine YAML-Datei in einem freigegebenen Ordner; es füllt die Sammlung selbst mit dessen Korpus</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} Werkzeuge, nichts einzustellen</value>

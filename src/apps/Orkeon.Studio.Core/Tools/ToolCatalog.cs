@@ -42,25 +42,47 @@ public enum ToolRequirement
 
     /// <summary>
     /// A RAG collection to search: one the crew's <c>rag:</c> block declares, which the run ingests
-    /// as the crew loads, or one <c>rag_ingest</c> filled. The tool is registered by every run, with
-    /// the run's on-device embeddings and its default model; nothing is to set, but a collection
-    /// nothing filled answers nothing. The default store lives as long as the run
-    /// (<c>Orkeon:Rag:Provider</c> names one that keeps it).
+    /// as the crew loads, one <c>rag_ingest</c> filled, or one a store that outlives the run keeps
+    /// (<c>Orkeon:Rag:Provider</c>, chosen in the expert RAG tab). The tool is registered by every
+    /// run, with the run's on-device embeddings and its default model; nothing is to set, but a
+    /// collection nothing filled answers nothing.
     /// </summary>
     RagCollection,
 
     /// <summary>
-    /// The tool is registered only once an MCP server is declared, under the section named in
-    /// <see cref="ToolInfo.Argument"/>; without one, it does not exist. The servers are declared in
-    /// Studio's MCP tab, where the sentence sends the reader.
+    /// A golden dataset: <c>rag_eval</c> takes the virtual path of a YAML dataset as a required
+    /// argument and ingests the dataset's corpus into the collection itself. Registered by every run.
+    /// </summary>
+    RagDataset,
+
+    /// <summary>
+    /// The tool is registered only while MCP is on (<c>MCP:Enabled</c> not false) and declares a
+    /// server, under the section named in <see cref="ToolInfo.Argument"/>; otherwise it does not
+    /// exist. Both are set in Studio's MCP tab (expert mode), where the sentence sends the reader.
     /// </summary>
     OnlyWithMcpServer,
 
     /// <summary>
-    /// The tool is registered only once the settings file holds the setting named in
-    /// <see cref="ToolInfo.Argument"/>, which no tab of Studio writes; without it, it does not exist.
+    /// The tool is registered only once a decision provider resolves: named by the setting in
+    /// <see cref="ToolInfo.Argument"/>, or deduced from an <c>Orkeon:TypeSafe</c> or
+    /// <c>Orkeon:Liquid</c> section, else from the <c>TYPESAFE_API_KEY</c> or <c>LIQUID_API_KEY</c>
+    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). TypeSafe and Liquid
+    /// refuse every call without their key. No tab of Studio writes the settings.
     /// </summary>
-    OnlyWithSetting,
+    OnlyWithDecisionProvider,
+
+    /// <summary>
+    /// The tool is registered only with the cognitive memory switch named in
+    /// <see cref="ToolInfo.Argument"/>, which no tab of Studio writes, and handed only to the agents
+    /// of a crew with <c>memory: true</c>.
+    /// </summary>
+    OnlyWithCognitiveMemory,
+
+    /// <summary>
+    /// The tool is never in a run's registry: the script host offers it only in the
+    /// <c>ctx.llm.act</c> of a <c>.ork.ts</c> agent, so a YAML agent that lists it fails to load.
+    /// </summary>
+    ScriptOnly,
 }
 
 /// <summary>One tool of the catalogue: its registry name and what it needs.</summary>
@@ -136,7 +158,7 @@ public static class ToolCatalog
     public const string MountsFamily = "mounts";
 
     /// <summary>Where an MCP server is declared: <c>mcp_prompt_get</c> is registered once one is.</summary>
-    public const string McpServers = McpSection.SectionPath + ":Servers";
+    public const string McpServers = McpSection.ServersPath;
 
     /// <summary>The setting that names a decision provider: <c>system_one_decide</c> is registered once one is configured.</summary>
     public const string DecisionProvider = "Orkeon:Decision:Provider";
@@ -184,7 +206,7 @@ public static class ToolCatalog
             new("local_embed_text"),
             new("rag_search", ToolRequirement.RagCollection),
             new("rag_ingest"),
-            new("rag_eval", ToolRequirement.RagCollection),
+            new("rag_eval", ToolRequirement.RagDataset),
         ]),
         new(FilesFamily,
         [
@@ -266,7 +288,7 @@ public static class ToolCatalog
             new("token_budget"),
             new("memory_store"),
             // Handed to every agent of a crew with memory: true; registered only once the switch is on.
-            new("memory_recall", ToolRequirement.OnlyWithSetting, CognitiveMemoryEnabled + " = true"),
+            new("memory_recall", ToolRequirement.OnlyWithCognitiveMemory, CognitiveMemoryEnabled + " = true"),
         ]),
         new(EventsFamily,
         [
@@ -315,12 +337,13 @@ public static class ToolCatalog
             new("human_input"),
             new("ask_question_to_coworker"),
             new("delegate_work_to_coworker"),
-            new("spawn_agent"),
+            // The script host's tool: offered in a .ork.ts agent's act, never in a YAML crew's registry.
+            new("spawn_agent", ToolRequirement.ScriptOnly),
         ]),
         new(DecisionFamily,
         [
             // Also registered when a decision provider is deduced from its section or its API key.
-            new("system_one_decide", ToolRequirement.OnlyWithSetting, DecisionProvider),
+            new("system_one_decide", ToolRequirement.OnlyWithDecisionProvider, DecisionProvider),
         ]),
         new(McpFamily,
         [

@@ -1902,13 +1902,22 @@
     <value>需要一个云盘账户，在“设置 › 云盘”中声明</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
-    <value>在由团队的 rag: 块或 rag_ingest 填充的集合中检索</value>
+    <value>在由团队的 rag: 块或 rag_ingest 填充的集合中检索，或在“设置 › 文档检索 (RAG)”（专家模式）所选存储保留的集合中检索</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
-    <value>仅在“设置 › MCP”中声明 MCP 服务器后才会出现</value>
+    <value>仅当“设置 › MCP”（专家模式）已开启并声明了服务器时才会出现</value>
   </data>
-  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve">
-    <value>仅当设置文件中有 {0} 时才会出现</value>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve">
+    <value>仅在脚本智能体（.ork.ts）的 act 中提供；Studio 编写的 YAML 团队无法列出它</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve">
+    <value>仅当设置文件中手动写入 {0} 时才会出现，且只有设置了 memory: true 的团队才持有它</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
+    <value>仅在配置了决策提供方后才会出现：环境中的密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或在设置文件中手动写入的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有密钥时，TypeSafe 和 Liquid 会拒绝所有调用</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
+    <value>需要一个标准数据集，即已授权文件夹中的一个 YAML 文件；它会自行用该数据集的语料填充集合</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} 个工具，无需配置</value>

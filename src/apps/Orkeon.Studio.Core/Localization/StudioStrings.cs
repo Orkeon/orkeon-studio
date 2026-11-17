@@ -1586,14 +1586,23 @@ public static class StudioStringKeys
     /// <summary>"needs a drive account, declared in Settings › Drive"</summary>
     public const string ToolNeedsDriveAccount = "Studio.Settings.ToolNeedsDriveAccount";
 
-    /// <summary>"searches a collection the team's rag: block or rag_ingest fills"</summary>
+    /// <summary>"searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)"</summary>
     public const string ToolNeedsRagCollection = "Studio.Settings.ToolNeedsRagCollection";
 
-    /// <summary>"present only once an MCP server is declared in Settings › MCP"</summary>
+    /// <summary>"present only while Settings › MCP (expert mode) is on and declares a server"</summary>
     public const string ToolOnlyWithMcpServer = "Studio.Settings.ToolOnlyWithMcpServer";
 
-    /// <summary>"present only with {0} in the settings file" — {0} is the setting, which no tab writes</summary>
-    public const string ToolOnlyWithSetting = "Studio.Settings.ToolOnlyWithSetting";
+    /// <summary>"needs a golden dataset, a YAML file in an authorized folder; ..."</summary>
+    public const string ToolNeedsRagDataset = "Studio.Settings.ToolNeedsRagDataset";
+
+    /// <summary>"present only once a decision provider is set: ..." — names the setting, the sections and the keys the engine resolves</summary>
+    public const string ToolOnlyWithDecisionProvider = "Studio.Settings.ToolOnlyWithDecisionProvider";
+
+    /// <summary>"present only with {0} written by hand in the settings file, and held only by a team with memory: true" — {0} is the switch, which no tab writes</summary>
+    public const string ToolOnlyWithCognitiveMemory = "Studio.Settings.ToolOnlyWithCognitiveMemory";
+
+    /// <summary>"offered only in the act of a script agent (.ork.ts); ..."</summary>
+    public const string ToolScriptOnly = "Studio.Settings.ToolScriptOnly";
 
     /// <summary>"{0} tools, nothing to configure"</summary>
     public const string ToolFamilyQuietPattern = "Studio.Settings.ToolFamilyQuietPattern";
@@ -3651,9 +3660,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolExpertSetting] = "expert setting below: {0}",
         [StudioStringKeys.ToolNeedsEmailAccount] = "needs an e-mail account, declared in Settings › E-mail",
         [StudioStringKeys.ToolNeedsDriveAccount] = "needs a drive account, declared in Settings › Drive",
-        [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills",
-        [StudioStringKeys.ToolOnlyWithMcpServer] = "present only once an MCP server is declared in Settings › MCP",
-        [StudioStringKeys.ToolOnlyWithSetting] = "present only with {0} in the settings file",
+        [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
+        [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
+        [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
+        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; TypeSafe and Liquid refuse every call without their key",
+        [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
+        [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
         [StudioStringKeys.McpProblemId] = "An identifier is required: letters, digits, '.', '_' and '-'.",
         [StudioStringKeys.McpProblemCommand] = "A stdio server needs a command to launch.",

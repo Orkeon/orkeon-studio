@@ -698,9 +698,12 @@
   <data name="Studio.Settings.ToolExpertSetting" xml:space="preserve"><value>réglage expert ci-dessous : {0}</value></data>
   <data name="Studio.Settings.ToolNeedsEmailAccount" xml:space="preserve"><value>a besoin d'un compte e-mail, déclaré dans Réglages › E-mail</value></data>
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve"><value>a besoin d'un compte de stockage en ligne, déclaré dans Réglages › Stockage en ligne</value></data>
-  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve"><value>cherche dans une collection que remplit le bloc rag: de l'équipe ou rag_ingest</value></data>
-  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>présent seulement une fois un serveur MCP déclaré dans Réglages › MCP</value></data>
-  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve"><value>présent seulement avec {0} dans le fichier de réglages</value></data>
+  <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve"><value>cherche dans une collection que remplit le bloc rag: de l'équipe ou rag_ingest, ou que garde le magasin choisi dans Réglages › Recherche documentaire (RAG) (mode expert)</value></data>
+  <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>présent seulement tant que Réglages › MCP (mode expert) est activé et déclare un serveur</value></data>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve"><value>proposé seulement dans l'act d'un agent scripté (.ork.ts) ; une équipe YAML, telle que Studio les écrit, ne peut pas le citer</value></data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve"><value>présent seulement avec {0} écrit à la main dans le fichier de réglages, et tenu seulement par une équipe avec memory: true</value></data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve"><value>présent seulement une fois un fournisseur de décision réglé : la clé TYPESAFE_API_KEY ou LIQUID_API_KEY dans votre environnement, ou Orkeon:Decision:Provider ou une section Orkeon:TypeSafe ou Orkeon:Liquid écrite à la main dans le fichier de réglages ; TypeSafe et Liquid refusent tout appel sans leur clé</value></data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve"><value>demande un jeu de référence, un fichier YAML dans un dossier autorisé ; il remplit lui-même la collection avec le corpus du jeu</value></data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve"><value>{0} outils, rien à régler</value></data>
   <data name="Studio.Settings.McpProblemId" xml:space="preserve"><value>Un identifiant est requis : lettres, chiffres, '.', '_' et '-'.</value></data>
   <data name="Studio.Settings.McpProblemCommand" xml:space="preserve"><value>Un serveur stdio a besoin d'une commande à lancer.</value></data>

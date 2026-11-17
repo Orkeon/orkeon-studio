@@ -176,10 +176,15 @@ public sealed class ToolRequirementViewModel : ObservableObject
         ToolRequirement.EmailAccount => _strings[StudioStringKeys.ToolNeedsEmailAccount],
         // The sentence sends to the Drive tab, as the e-mail one does to the E-mail tab.
         ToolRequirement.DriveAccount => _strings[StudioStringKeys.ToolNeedsDriveAccount],
+        // The tabs a novice cannot open are said to be expert ones; a setting no tab writes, to be
+        // written by hand in the settings file.
         ToolRequirement.RagCollection => _strings[StudioStringKeys.ToolNeedsRagCollection],
-        // The sentence sends to the MCP tab, where a server is declared; the section is not said.
+        ToolRequirement.RagDataset => _strings[StudioStringKeys.ToolNeedsRagDataset],
+        // The sentence sends to the MCP tab, where servers are declared and MCP switched on or off.
         ToolRequirement.OnlyWithMcpServer => _strings[StudioStringKeys.ToolOnlyWithMcpServer],
-        ToolRequirement.OnlyWithSetting => Format(StudioStringKeys.ToolOnlyWithSetting),
+        ToolRequirement.OnlyWithDecisionProvider => _strings[StudioStringKeys.ToolOnlyWithDecisionProvider],
+        ToolRequirement.OnlyWithCognitiveMemory => Format(StudioStringKeys.ToolOnlyWithCognitiveMemory),
+        ToolRequirement.ScriptOnly => _strings[StudioStringKeys.ToolScriptOnly],
         _ => "",
     };
 

@@ -1902,13 +1902,22 @@
     <value>necesita una cuenta de almacenamiento en la nube, declarada en Ajustes › Almacenamiento en la nube</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
-    <value>busca en una colección que llena el bloque rag: del equipo o rag_ingest</value>
+    <value>busca en una colección que llena el bloque rag: del equipo o rag_ingest, o que conserva el almacén elegido en Ajustes › Búsqueda documental (RAG) (modo experto)</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve">
-    <value>presente solo cuando se declara un servidor MCP en Ajustes › MCP</value>
+    <value>presente solo mientras Ajustes › MCP (modo experto) esté activado y declare un servidor</value>
   </data>
-  <data name="Studio.Settings.ToolOnlyWithSetting" xml:space="preserve">
-    <value>presente solo con {0} en el archivo de ajustes</value>
+  <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve">
+    <value>ofrecida solo en el act de un agente de script (.ork.ts); un equipo YAML, como los escribe Studio, no puede citarla</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve">
+    <value>presente solo con {0} escrito a mano en el archivo de ajustes, y solo en un equipo con memory: true</value>
+  </data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
+    <value>presente solo cuando hay un proveedor de decisión configurado: la clave TYPESAFE_API_KEY o LIQUID_API_KEY en su entorno, o Orkeon:Decision:Provider o una sección Orkeon:TypeSafe u Orkeon:Liquid escrita a mano en el archivo de ajustes; TypeSafe y Liquid rechazan toda llamada sin su clave</value>
+  </data>
+  <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
+    <value>necesita un conjunto de referencia, un archivo YAML en una carpeta autorizada; llena por sí misma la colección con el corpus del conjunto</value>
   </data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve">
     <value>{0} herramientas, nada que configurar</value>
