@@ -10,8 +10,8 @@
 
   Adapted from Orkeon's installers/msi/Package.wxs (its Studio payload and its
   StudioShortcutComponent), trimmed to Studio: no PATH entry, no CLI. The orkeon CLI
-  is a prerequisite installed separately; Studio finds it through ORKEON_CLI_DIR, PATH or
-  the Orkeon installer's folder (%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon).
+  is a prerequisite installed separately; Studio finds it through --cli-dir, next to itself,
+  ORKEON_CLI_DIR, PATH or the Orkeon installer's folder (%LOCALAPPDATA%\Programs\Orkeon\libexec\orkeon).
 
   Defines passed by build-msi.ps1:
     StudioVersion      x.y.z (MSI ProductVersion takes no suffix)

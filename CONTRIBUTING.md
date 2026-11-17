@@ -43,12 +43,12 @@ The packages come from nuget.org. To build against a newer Orkeon, move `OrkeonV
 | `src/apps/Orkeon.Studio.Wpf` | WPF desktop app (`net10.0-windows`). |
 | `tests/apps/Orkeon.Studio.*.Tests` | One test project per application. `Orkeon.Studio.Wpf.Tests` compiles the WPF ViewModels by link and runs on Linux. |
 | `tests/shared/Orkeon.Studio.Tests.Shared` | Shared fixtures (namespaces `Orkeon.Tests.Shared.*`, copied from Orkeon). |
-| `docs/` | Architecture, with its French mirror in `docs/fr/`. |
-| `scripts/` | Repository checks. |
+| `docs/` | Index, architecture and release reference, with their French mirror in `docs/fr/`. |
+| `scripts/` | Repository checks, installing from source, release packaging, the MSI build and the package smokes. |
 
 ## Rules the build enforces
 
-* **No direct `System.IO` or `System.Console`.** Files go through `IFileSystemService`; the `Orkeon.Compliance.Vfs` analyzer fails the build otherwise. Bootstrap code is marked `// EXCEPTION-BOOTSTRAP`, system probing `// OUT-OF-SCOPE`, and a symbol that must touch the disk or the console carries `[SuppressVfsCompliance("reason")]` or `[SuppressConsoleCompliance("reason")]`. See [VFS compliance](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/vfs-compliance.md) and [console compliance](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/console-compliance.md).
+* **No direct `System.IO` or `System.Console`.** Studio has no file-system service: each class that touches the disk (the settings, history and profile stores, the crew and forge readers, the probes `IDirectoryProbe`, `IDiskEntryProbe`, `IFolderWatch`…) carries the suppression below, and the `Orkeon.Compliance.Vfs` analyzer fails the build on any other direct use. Bootstrap code is marked `// EXCEPTION-BOOTSTRAP`, system probing `// OUT-OF-SCOPE`, and a symbol that must touch the disk or the console carries `[SuppressVfsCompliance("reason")]` or `[SuppressConsoleCompliance("reason")]`. See [VFS compliance](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/vfs-compliance.md) and [console compliance](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/console-compliance.md).
 * **`Orkeon.Domain.Task` shadows `System.Threading.Tasks.Task`**, and `Orkeon.Application` shadows WPF's `Application`: in a file that sees both, write the full name.
 * **Zero warnings**: CI builds with `-warnaserror` under the full analyzer set (`AnalysisMode=All`).
 

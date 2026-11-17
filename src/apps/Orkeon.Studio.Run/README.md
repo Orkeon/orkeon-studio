@@ -8,14 +8,13 @@ shared process runner, and watch the run's events stream back. It builds on
 
 ## Distribution
 
-`IsPackable=false`: on no NuGet feed. It ships as the `orkeon-studio-run` launcher in the
-multi-app release archives and, on Debian/Ubuntu, at `/usr/bin/orkeon-studio-run` in
-`orkeon_<version>_amd64.deb` — see the
-[publication matrix](https://github.com/Orkeon/orkeon/blob/main/docs/reference/publication-matrix.md).
+`IsPackable=false`: on no NuGet feed. It ships as the `orkeon-studio-run` launcher in
+`orkeon-studio-<version>-linux-x64.tar.gz`, the Linux archive of Orkeon Studio's own
+release — see [Release](../../../docs/reference/release.md).
 
 ## Documentation
 
-- [Studio architecture](https://github.com/Orkeon/orkeon/blob/main/docs/architecture/studio.md)
+- [Studio architecture](../../../docs/architecture/studio.md)
 - [CLI reference](https://github.com/Orkeon/orkeon/blob/main/docs/reference/cli.md)
 
 MIT © Orkeon Contributors

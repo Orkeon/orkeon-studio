@@ -13,7 +13,7 @@ Orkeon Studio est publié depuis ce dépôt, avec sa propre version : `VersionPr
 | `orkeon-studio-<version>-linux-x64.tar.gz` | `scripts/package-studio.sh` | `bin/orkeon-studio-config`, `bin/orkeon-studio-run`, `libexec/<app>/` (fichiers identiques liés en dur, stockés une fois). |
 | `SHA256SUMS` | le workflow de release | Une ligne par asset. |
 
-Chaque archive contient aussi `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION` et, sous `licenses/<pack>/`, la licence et les notices des runtime packs .NET qu'elle embarque. Chaque application est publiée autonome (`--self-contained true`), non élaguée (`PublishTrimmed=false`) et pas en fichier unique, les options qu'Orkeon utilisait pour Studio. L'`UpgradeCode` du MSI (`installers/msi/Package.wxs`) est généré une fois et ne change jamais : c'est par lui qu'une mise à jour reconnaît un Orkeon Studio antérieur. La `ProductVersion` du MSI perd le suffixe ; la version complète reste dans le nom du fichier et dans le commentaire d'Ajout/Suppression de programmes.
+Chaque archive contient aussi `README.md`, `LICENSE.md`, `NOTICE.md`, `THIRD-PARTY-NOTICES.md`, `VERSION` et, sous `licenses/<pack>/`, la licence et les notices des runtime packs .NET qu'elle embarque. Chaque application est publiée autonome (`--self-contained true`), non élaguée (`PublishTrimmed=false`) et pas en fichier unique, les options qu'Orkeon utilisait pour Studio. L'`UpgradeCode` du MSI (`installers/msi/Package.wxs`) est généré une fois et ne change jamais : c'est par lui qu'une mise à jour reconnaît un Orkeon Studio antérieur. La `ProductVersion` du MSI perd le suffixe ; la version complète reste dans le nom du fichier et dans le commentaire d'Ajout/Suppression de programmes.
 
 ## Le workflow
 
@@ -21,8 +21,8 @@ Chaque archive contient aussi `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION` 
 
 1. `build-test` : refuse un tag qui n'est pas `v` + la version des props, puis construit avec `-warnaserror` et lance les tests, comme `ci.yml`.
 2. `package` (Ubuntu) : `scripts/package-studio.sh` publie les deux RID ; le projet WPF active `EnableWindowsTargeting`.
-3. `smoke-linux` (Ubuntu) : `scripts/smoke-studio-linux.sh` extrait l'archive et vérifie que les deux applications terminal répondent à `--version` sans terminal.
-4. `msi` (Windows) : `scripts/smoke-studio-windows.ps1` lance `orkeon-studio.cmd --smoke-exit` sur le zip extrait (la fenêtre s'ouvre, s'affiche et se ferme avec le code 0), `scripts/build-msi.ps1` construit le MSI avec WiX v5, qui est ensuite installé, testé à nouveau avec son raccourci, puis désinstallé.
+3. `smoke-linux` (Ubuntu) : vérifie les archives avec `SHA256SUMS`, puis `scripts/smoke-studio-linux.sh` extrait l'archive et vérifie que les deux applications terminal répondent à `--version` sans terminal (sur un tag, avec la version du tag) et que l'application Windows n'y figure pas.
+4. `msi` (Windows) : `scripts/smoke-studio-windows.ps1` lance `orkeon-studio.cmd --smoke-exit` sur le zip extrait (la fenêtre s'ouvre, s'affiche et se ferme avec le code 0), `scripts/build-msi.ps1` construit le MSI avec WiX v5, qui est ensuite installé (son raccourci du menu Démarrer vérifié, `orkeon-studio.cmd --smoke-exit` relancé depuis le dossier d'installation) puis désinstallé (charge utile, raccourci et entrée d'Ajout/Suppression de programmes vérifiés absents).
 5. `release` (tag seulement) : chaque asset est vérifié contre `SHA256SUMS`, puis joint à une release GitHub **brouillon**, marquée prerelease quand la version a un suffixe. Le brouillon se publie à la main.
 
 ## Publier une release
@@ -38,4 +38,4 @@ Chaque archive contient aussi `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION` 
 ./scripts/smoke-studio-linux.sh artifacts/release/orkeon-studio-*-linux-x64.tar.gz
 ```
 
-La première publication pour un RID restaure ses runtime packs. `--no-restore` saute cette restauration quand chaque projet a déjà été restauré avec le même `-r <rid>` et `-p:SelfContained=true`. Le MSI ne se construit que sous Windows : `pwsh scripts/build-msi.ps1 -StageDir <le dossier extrait du zip>`.
+La première publication pour un RID restaure ses runtime packs. `--no-restore` saute cette restauration quand chaque projet a déjà été restauré avec le même `-r <rid>` et `-p:SelfContained=true`. Le MSI ne se construit que sous Windows : `pwsh scripts/build-msi.ps1 -StageDir <le dossier unique à la racine du zip extrait>`.

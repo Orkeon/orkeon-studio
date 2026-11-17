@@ -13,7 +13,7 @@ Orkeon Studio is released from this repository, on its own version: `VersionPref
 | `orkeon-studio-<version>-linux-x64.tar.gz` | `scripts/package-studio.sh` | `bin/orkeon-studio-config`, `bin/orkeon-studio-run`, `libexec/<app>/` (identical files hard-linked, stored once). |
 | `SHA256SUMS` | the release workflow | One line per asset. |
 
-Every archive also carries `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION`, and under `licenses/<pack>/` the license and notices of the .NET runtime packs it bundles. Each app is published self-contained (`--self-contained true`), untrimmed (`PublishTrimmed=false`) and not single-file, the flags Orkeon used for Studio. The MSI's `UpgradeCode` (`installers/msi/Package.wxs`) is generated once and never changed: it is how an upgrade recognizes an earlier Orkeon Studio. The MSI `ProductVersion` drops the suffix; the full version stays in the file name and in the Add/Remove Programs comment.
+Every archive also carries `README.md`, `LICENSE.md`, `NOTICE.md`, `THIRD-PARTY-NOTICES.md`, `VERSION`, and under `licenses/<pack>/` the license and notices of the .NET runtime packs it bundles. Each app is published self-contained (`--self-contained true`), untrimmed (`PublishTrimmed=false`) and not single-file, the flags Orkeon used for Studio. The MSI's `UpgradeCode` (`installers/msi/Package.wxs`) is generated once and never changed: it is how an upgrade recognizes an earlier Orkeon Studio. The MSI `ProductVersion` drops the suffix; the full version stays in the file name and in the Add/Remove Programs comment.
 
 ## The workflow
 
@@ -21,8 +21,8 @@ Every archive also carries `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION`, an
 
 1. `build-test`: refuses a tag that is not `v` + the props version, then builds with `-warnaserror` and runs the tests, as `ci.yml` does.
 2. `package` (Ubuntu): `scripts/package-studio.sh` cross-publishes both RIDs; the WPF project sets `EnableWindowsTargeting`.
-3. `smoke-linux` (Ubuntu): `scripts/smoke-studio-linux.sh` extracts the tarball and checks that both terminal apps answer `--version` with no terminal attached.
-4. `msi` (Windows): `scripts/smoke-studio-windows.ps1` runs `orkeon-studio.cmd --smoke-exit` on the extracted zip (the window opens, renders and closes with exit code 0), `scripts/build-msi.ps1` builds the MSI with WiX v5, which is then installed, smoked again with its shortcut, and uninstalled.
+3. `smoke-linux` (Ubuntu): checks the archives against `SHA256SUMS`, then `scripts/smoke-studio-linux.sh` extracts the tarball and checks that both terminal apps answer `--version` with no terminal attached (on a tag, with the tag's version) and that the Windows app is not in it.
+4. `msi` (Windows): `scripts/smoke-studio-windows.ps1` runs `orkeon-studio.cmd --smoke-exit` on the extracted zip (the window opens, renders and closes with exit code 0), `scripts/build-msi.ps1` builds the MSI with WiX v5, which is then installed (its Start-menu shortcut checked, `orkeon-studio.cmd --smoke-exit` run again from the install folder) and uninstalled (payload, shortcut and Add/Remove Programs entry checked gone).
 5. `release` (tag only): every asset is checked against `SHA256SUMS`, then attached to a **draft** GitHub Release, marked prerelease when the version has a suffix. The draft is published by hand.
 
 ## Cutting a release
@@ -38,4 +38,4 @@ Every archive also carries `README.md`, `LICENSE.md`, `NOTICE.md`, `VERSION`, an
 ./scripts/smoke-studio-linux.sh artifacts/release/orkeon-studio-*-linux-x64.tar.gz
 ```
 
-The first publish for a RID restores its runtime packs. `--no-restore` skips that restore when each project was already restored with the same `-r <rid>` and `-p:SelfContained=true`. The MSI builds on Windows only: `pwsh scripts/build-msi.ps1 -StageDir <the zip's extracted folder>`.
+The first publish for a RID restores its runtime packs. `--no-restore` skips that restore when each project was already restored with the same `-r <rid>` and `-p:SelfContained=true`. The MSI builds on Windows only: `pwsh scripts/build-msi.ps1 -StageDir <the single top-level folder of the extracted zip>`.
