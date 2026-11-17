@@ -26,7 +26,15 @@ public sealed record ForgeAgentView(
     string Role,
     string? Goal,
     string? Backstory,
-    IReadOnlyList<string> Tools);
+    IReadOnlyList<string> Tools)
+{
+    /// <summary>
+    /// The tools its tasks grant it beyond its own (a task's <c>tools</c>, Orkeon #392), in plan
+    /// order: the agent holds them while it runs those tasks, so its card shows them, while
+    /// <see cref="Tools"/> stays what the agent editor amends.
+    /// </summary>
+    public IReadOnlyList<string> TaskTools { get; init; } = [];
+}
 
 /// <summary>The proposal card: steps, the plain-words rationale, the agents, and what the team may touch.</summary>
 public sealed record ForgeProposal(
@@ -842,7 +850,7 @@ public sealed class ForgeSessionModel
         // view feeds the Composer cards and the agent editor.
         var roles = new Dictionary<string, string>(StringComparer.Ordinal);
         var tools = new List<string>();
-        var agentViews = ReadAgents(blueprint, roles, tools);
+        var agentViews = WithTaskTools(ReadAgents(blueprint, roles, tools), blueprint, tools);
 
         Proposal = new ForgeProposal(
             ReadSteps(blueprint, roles), ReadString(blueprint, "rationale"), tools, agentViews);
@@ -891,6 +899,33 @@ public sealed class ForgeSessionModel
         }
 
         return agentViews;
+    }
+
+    /// <summary>
+    /// The tools the plan's tasks grant (Orkeon #392) folded into the crew-wide
+    /// <paramref name="crewTools"/> after the agents' own, as the CLI's trial bench counts the
+    /// crew's tools, and into the <see cref="ForgeAgentView.TaskTools"/> of the agent each task names.
+    /// </summary>
+    private static List<ForgeAgentView> WithTaskTools(
+        List<ForgeAgentView> agentViews, JsonElement blueprint, List<string> crewTools)
+    {
+        var granted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var task in TasksOf(blueprint))
+        {
+            var agent = ReadString(task, "agent") is { } key ? agentViews.Find(view => view.Key == key) : null;
+            foreach (var tool in ToolsOf(task))
+            {
+                if (!crewTools.Contains(tool, StringComparer.Ordinal))
+                    crewTools.Add(tool);
+                if (agent is null || agent.Tools.Contains(tool, StringComparer.Ordinal))
+                    continue;
+                var own = granted.TryGetValue(agent.Key, out var list) ? list : granted[agent.Key] = [];
+                if (!own.Contains(tool, StringComparer.Ordinal))
+                    own.Add(tool);
+            }
+        }
+
+        return [.. agentViews.Select(view => granted.TryGetValue(view.Key, out var tools) ? view with { TaskTools = tools } : view)];
     }
 
     /// <summary>One agent's own tools, deduplicated, and folded into the crew-wide <paramref name="crewTools"/>.</summary>

@@ -36,9 +36,9 @@
 
       ExcludeAssets="build" is the opt-out Orkeon 1.2.0 supports (Orkeon #368, #376):
       Orkeon.Scripting reaches SmartComponents.LocalEmbeddings through
-      Orkeon.Tools.Embeddings.Local, whose build target would download the BGE-micro-v2
-      weights (~17 MB) from huggingface.co on a first build, fail an offline one, and copy
-      them to LocalEmbeddingsModel/. No Studio test embeds anything. NuGet unions the flags
+      Orkeon.Tools.Embeddings.Local; the build target of SmartComponents.LocalEmbeddings
+      would download the BGE-micro-v2 weights (~17 MB) from huggingface.co on a first build,
+      fail an offline one, and copy them to LocalEmbeddingsModel/. No Studio test embeds anything. NuGet unions the flags
       of every path to a package, so a new reference that reaches it needs the same flag.
     -->
     <PackageReference Include="Orkeon" />

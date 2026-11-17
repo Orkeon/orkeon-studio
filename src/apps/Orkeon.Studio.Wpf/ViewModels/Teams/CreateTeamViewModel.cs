@@ -3432,8 +3432,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                     agent.Goal is { Length: > 0 } goal
                         ? goal
                         : string.Join(" ", proposal.Steps.Where(step => step.AgentRole == agent.Role).Select(step => step.Description)),
-                    // Scoped to the mounts the blueprint really implies, not to a constant.
-                    [.. agent.Tools.Select(tool => WizardToolChips.For(tool, _strings, ReadScope(), WriteScope()))],
+                    // Scoped to the mounts the blueprint really implies, not to a constant; the
+                    // tools its tasks grant it are its tools too while it runs them.
+                    [.. agent.Tools.Concat(agent.TaskTools)
+                        .Select(tool => WizardToolChips.For(tool, _strings, ReadScope(), WriteScope()))],
                     EditAgent,
                     () => CanEditAgents));
             }

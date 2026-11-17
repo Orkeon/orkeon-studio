@@ -28,6 +28,14 @@ public sealed class ForgeDerivedMountTests
         return model.DerivedMounts;
     }
 
+    private static ForgeSessionModel Feed(string json)
+    {
+        var model = new ForgeSessionModel();
+        Assert.True(OrkeonEventParser.TryParse(json, out var parsed), json);
+        model.Feed(parsed!);
+        return model;
+    }
+
     private static string Tasks(params string[] deliverables) =>
         "[" + string.Join(",", deliverables.Select((d, i) =>
             $$"""{"key":"t{{i}}","description":"d","expectedOutput":"e","agent":"a","deliverable":"{{d}}"}""")) + "]";
@@ -88,6 +96,29 @@ public sealed class ForgeDerivedMountTests
         var workspace = Assert.Single(mounts, m => m.VirtualPath == "/workspace");
         Assert.False(workspace.IsReadWrite);
         Assert.Equal(["A"], workspace.Agents!);
+    }
+
+    [Fact]
+    public void The_tools_a_task_grants_are_the_teams_and_its_agents_as_the_trial_bench_counts_them()
+    {
+        var model = Feed("""{"v":2,"seq":1,"ts":"t","kind":"blueprint.ready","iteration":1,"blueprint":{"crew":{"name":"t","goal":"g"},"agents":[{"key":"w","role":"Writer","goal":"G","tools":["file_write"]},{"key":"r","role":"Reviewer","goal":"G","tools":[]}],"tasks":[{"key":"t0","description":"d","expectedOutput":"e","agent":"w","tools":["file_read","web_search","file_write"]},{"key":"t1","description":"d","expectedOutput":"e","agent":"w","tools":["web_search"]},{"key":"t2","description":"d","expectedOutput":"e","agent":"ghost","tools":["calculator"]}]}}""");
+
+        var proposal = model.Proposal!;
+        Assert.Equal(["file_write", "file_read", "web_search", "calculator"], proposal.Tools);
+        var writer = proposal.Agents[0];
+        Assert.Equal(["file_write"], writer.Tools);
+        Assert.Equal(["file_read", "web_search"], writer.TaskTools);
+        Assert.Empty(proposal.Agents[1].TaskTools);
+    }
+
+    [Fact]
+    public void An_agent_missing_its_key_that_holds_a_reading_tool_still_mounts_the_read_root()
+    {
+        var model = Feed("""{"v":2,"seq":1,"ts":"t","kind":"blueprint.ready","iteration":1,"blueprint":{"crew":{"name":"t","goal":"g"},"agents":[{"role":"R","tools":["file_read"]}],"tasks":[]}}""");
+
+        var workspace = Assert.Single(model.DerivedMounts, m => m.VirtualPath == "/workspace");
+        Assert.False(workspace.IsReadWrite);
+        Assert.Empty(workspace.Agents!);
     }
 
     [Fact]
