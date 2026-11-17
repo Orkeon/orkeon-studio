@@ -195,6 +195,48 @@ public sealed class WizardHonestyTests
         Assert.All(vm.Activity, line => Assert.Equal("Lecteur — done", line.Text));
     }
 
+    [Fact]
+    public async Task A_trial_task_that_did_not_write_its_file_says_so_before_its_cap()
+    {
+        var (vm, processes) = Build();
+        processes.WhileRunning = () =>
+        {
+            // Cut short and missing its file: the fact the engine checked is what the line says.
+            processes.Emit(Out(
+                """{"v":2,"seq":7,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true,"endedOnIterationCap":true,"deliverableMissing":true}"""));
+            // Cut short, its file written: the cap's sentence, as with an older CLI.
+            processes.Emit(Out(
+                """{"v":2,"seq":8,"ts":"t","kind":"task.completed","taskId":"synthese","agentRole":"Redacteur","success":true,"endedOnIterationCap":true,"deliverableMissing":false}"""));
+        };
+
+        await vm.ComposeCommand.ExecuteAsync();
+
+        Assert.Equal("Lecteur — done, but did not write its file", vm.Activity[0].Text);
+        Assert.True(vm.Activity[0].FileMissing);
+        Assert.True(vm.Activity[0].HasWarning);
+        Assert.Equal("Redacteur — cut short: its iterations ran out, its work may be incomplete", vm.Activity[1].Text);
+        Assert.False(vm.Activity[1].FileMissing);
+        Assert.True(vm.Activity[1].HasWarning);
+    }
+
+    [Fact]
+    public async Task A_trial_task_whose_later_pass_wrote_its_file_is_said_done()
+    {
+        var (vm, processes) = Build();
+        processes.WhileRunning = () =>
+        {
+            processes.Emit(Out(
+                """{"v":2,"seq":7,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true,"deliverableMissing":true}"""));
+            processes.Emit(Out(
+                """{"v":2,"seq":8,"ts":"t","kind":"task.completed","taskId":"extraction","agentRole":"Lecteur","success":true,"deliverableMissing":false}"""));
+        };
+
+        await vm.ComposeCommand.ExecuteAsync();
+
+        Assert.Equal([false, false], vm.Activity.Select(line => line.HasWarning));
+        Assert.All(vm.Activity, line => Assert.Equal("Lecteur — done", line.Text));
+    }
+
     /// <summary>
     /// The owner's own screenshot: score 0,70, a green «passing» badge, and four «?» beside
     /// it. Every one of those is honest — 0.70 is the deterministic fallback's constant and

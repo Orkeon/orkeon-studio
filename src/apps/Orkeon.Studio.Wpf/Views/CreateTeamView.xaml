@@ -1639,8 +1639,9 @@
                               <Setter Property="Kind" Value="circle-check"/>
                               <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                             </DataTrigger>
-                            <!-- A success on the iteration cap: the sentence says «cut short». Last, so it wins. -->
-                            <DataTrigger Binding="{Binding CutShort}" Value="True">
+                            <!-- A success on the iteration cap, or one that did not write its file: the
+                                 sentence says so. Last, so it wins. -->
+                            <DataTrigger Binding="{Binding HasWarning}" Value="True">
                               <Setter Property="Kind" Value="triangle-alert"/>
                               <Setter Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
                             </DataTrigger>

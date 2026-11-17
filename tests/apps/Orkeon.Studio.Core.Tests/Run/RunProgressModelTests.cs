@@ -824,6 +824,51 @@ public class RunProgressModelTests
     }
 
     [Fact]
+    public void ShouldMarkTheTask_WhenItDidNotWriteItsDeliverable()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"durationMs":900,"endedOnIterationCap":false,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"durationMs":900,"deliverableMissing":false}""",
+            // A CLI older than Orkeon 1.2 sends no such key: the task reads as it always did.
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"sender","success":true,"durationMs":900}""");
+
+        Assert.Equal([true, false, false], model.Tasks.Select(task => task.DeliverableMissing));
+        Assert.Null(model.ReportedMissingDeliverables);
+        Assert.Equal(1, model.MissingDeliverableCount);
+    }
+
+    [Fact]
+    public void ShouldCountAMissingFileByItsTasksLastCompletion_WhenTheRunGaveNoCount()
+    {
+        var model = Fold(
+            // The same task twice: its last attempt wrote the file.
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":false}""",
+            """{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"relecture","agentRole":"reviewer","success":true,"deliverableMissing":true}""",
+            // A failed task is never one, as the run counts: its failure says more.
+            """{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"envoi","agentRole":"sender","success":false,"deliverableMissing":true}""");
+
+        Assert.Equal(1, model.MissingDeliverableCount);
+    }
+
+    [Fact]
+    public void ShouldTakeTheRunsOwnCount_WhenRunFinishedCarriesMissingDeliverables()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true,"deliverableMissing":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"cappedTasks":0,"missingDeliverables":0}""");
+
+        Assert.Equal(0, model.ReportedMissingDeliverables);
+        Assert.Equal(0, model.MissingDeliverableCount);
+
+        var counted = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"rapport","agentRole":"writer","success":true}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"run.finished","success":true,"exitCode":0,"tokens":10,"durationMs":5,"missingDeliverables":2}""");
+
+        Assert.Equal(2, counted.MissingDeliverableCount);
+    }
+
+    [Fact]
     [Trait("BR", "UC-03")]
     public void ShouldShowSkipReason_WhenTaskCompletedSkipped()
     {

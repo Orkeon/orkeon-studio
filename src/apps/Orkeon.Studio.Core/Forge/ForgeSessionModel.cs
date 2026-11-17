@@ -72,13 +72,18 @@ public sealed record ForgeFolder(string Path, string Role, string? Purpose = nul
     public bool IsInput => string.Equals(Role, InputRole, StringComparison.Ordinal);
 }
 
-/// <summary>One completed task of the running try.</summary>
+/// <summary>
+/// One completed task of the running try. <see cref="EndedOnIterationCap"/> marks a success on
+/// the tool-free answer given once the agent's iterations were spent; <see cref="DeliverableMissing"/>
+/// a success whose deliverable's file was never written (Orkeon #392), absent from an older CLI.
+/// </summary>
 public sealed record ForgeTaskProgress(
     string? TaskId,
     string? AgentRole,
     bool Success,
     long? DurationMs,
-    bool EndedOnIterationCap = false);
+    bool EndedOnIterationCap = false,
+    bool DeliverableMissing = false);
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
 /// <param name="Id">The finding's own identifier, when the judge gave one.</param>
@@ -554,7 +559,9 @@ public sealed class ForgeSessionModel
                     // No duration on the line, or a task that never ran: none, never a measured 0.
                     orkeonEvent.GetBool("skipped") == true ? null : orkeonEvent.GetInt64("durationMs"),
                     // The trial's task ended on its iteration cap: a success whose work may be missing.
-                    orkeonEvent.GetBool("endedOnIterationCap") ?? false));
+                    orkeonEvent.GetBool("endedOnIterationCap") ?? false,
+                    // The trial's task succeeded without writing its file (Orkeon #392).
+                    orkeonEvent.GetBool("deliverableMissing") ?? false));
                 break;
 
             case ForgeEventKinds.CostUpdated:

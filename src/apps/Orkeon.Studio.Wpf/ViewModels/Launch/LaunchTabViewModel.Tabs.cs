@@ -29,7 +29,7 @@ public sealed record RunFolderRow(string VirtualPath, string RightsLabel, bool I
 /// files, and filled by the run's own events — the task it is on, then how it ended.
 /// </summary>
 /// <param name="Name">The agent's role.</param>
-/// <param name="State">waiting | running | done | capped | failed — the tone the view maps to its bar and its mark.</param>
+/// <param name="State">waiting | running | done | capped | missing | failed — the tone the view maps to its bar and its mark.</param>
 /// <param name="StatusText">The state in words.</param>
 /// <param name="Detail">Tool calls · tokens · duration of its last task; empty before it ends one.</param>
 public sealed record RunAgentLane(string Name, string State, string StatusText, string Detail);
@@ -603,9 +603,15 @@ public sealed partial class LaunchTabViewModel
             // iterations and whose second went well still left work to check. Each task is read
             // by its last completion, as the run counts them: a retry that went through clears
             // it. The card is the one place the novice reads it, the tasks' table being the
-            // expert's.
-            return Progress.Model.LastCompletions().Any(t => t.Success && t.EndedOnIterationCap
-                    && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
+            // expert's. A file the engine found missing (Orkeon #392) is a fact, the cap a
+            // suspicion: the card says the first when both hold.
+            var own = Progress.Model.LastCompletions()
+                .Where(t => t.Success && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (own.Exists(t => t.DeliverableMissing))
+                return new(name, "missing", _strings[StudioStringKeys.RunLaneMissing], detail);
+
+            return own.Exists(t => t.EndedOnIterationCap)
                 ? new(name, "capped", _strings[StudioStringKeys.RunLaneCapped], detail)
                 : new(name, "done", _strings[StudioStringKeys.RunLaneDone], detail);
         }

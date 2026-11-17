@@ -1622,14 +1622,21 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         get
         {
             // What a success leaves to check, both said when both hold: agents that never ran,
-            // and tasks that ended on their iteration cap.
+            // and the tasks' finding. Of the two task findings the badge says one: files the
+            // engine found not written (Orkeon #392) when there are any, a fact, else tasks that
+            // ended on their iteration cap, a suspicion. A task cut short that did not write its
+            // file is one task with one file to see to, not two findings; the cards and the
+            // tasks' table still say every task cut short.
             var skipped = CardState == RunCardState.Succeeded ? AgentCards.Count(card => card.State == "notrun") : 0;
-            var capped = CardState == RunCardState.Succeeded ? CappedTaskCount : 0;
-            return (skipped > 0, capped > 0) switch
+            var missing = CardState == RunCardState.Succeeded ? MissingDeliverableCount : 0;
+            var capped = CardState == RunCardState.Succeeded && missing == 0 ? CappedTaskCount : 0;
+            return (skipped > 0, missing > 0, capped > 0) switch
             {
-                (true, true) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedCapped, skipped, capped),
-                (true, false) => _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped),
-                (false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped),
+                (true, true, _) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedMissing, skipped, missing),
+                (false, true, _) => _strings.Format(StudioStringKeys.RunBadgeDoneMissing, missing),
+                (true, false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneSkippedCapped, skipped, capped),
+                (true, false, false) => _strings.Format(StudioStringKeys.RunBadgeDoneSkipped, skipped),
+                (false, false, true) => _strings.Format(StudioStringKeys.RunBadgeDoneCapped, capped),
                 _ => _strings[CardState switch
                 {
                     RunCardState.Running => StudioStringKeys.RunBadgeRunning,
@@ -1650,6 +1657,13 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// </summary>
     private int CappedTaskCount => Progress.Model.CappedTaskCount;
 
+    /// <summary>
+    /// How many tasks the engine counted as succeeded without the file their deliverable names
+    /// (Orkeon #392): its own <c>missingDeliverables</c> when the run gave one, else the lines read,
+    /// each task by its last. Zero with a CLI older than Orkeon 1.2, which sends neither.
+    /// </summary>
+    private int MissingDeliverableCount => Progress.Model.MissingDeliverableCount;
+
     /// <summary>Whether the run's badge pulses: while the process lives (STUDIO-17).</summary>
     public bool IsRunBadgePulsing => CardState == RunCardState.Running;
 
@@ -1658,7 +1672,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     {
         RunCardState.Running => "running",
         RunCardState.Idle => "idle",
-        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 ? "warn" : "ok",
+        RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 || MissingDeliverableCount > 0
+            ? "warn"
+            : "ok",
         RunCardState.Cancelled => "warn",
         _ => "fail",
     };
@@ -2072,8 +2088,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 : CardOf(lane, first.Identifier, finished) with { DisplayName = DisplayNameOf(lane.Name) };
 
             // Two spellings the run itself gave for one agent: a plain success under the second
-            // does not clear the work to check that the first left.
-            cards[index] = first.State == "capped" && reported.State == "done"
+            // does not clear the work to check that the first left, nor does a cut-short one
+            // clear a file the first did not write.
+            cards[index] = WarnRank(first.State) > WarnRank(reported.State) && reported.State is "done" or "capped"
                 ? reported with { State = first.State, StatusText = first.StatusText }
                 : reported;
         }
@@ -2083,6 +2100,14 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             AgentCards.Add(card);
         OnPropertiesChanged(nameof(RunBadgeText), nameof(RunBadgeTone), nameof(IsRunBadgePulsing));
     }
+
+    // How much a success leaves to check: a file not written over a task cut short over a plain success.
+    private static int WarnRank(string state) => state switch
+    {
+        "missing" => 2,
+        "capped" => 1,
+        _ => 0,
+    };
 
     private static RunAgentCard CardOf(RunAgentLane lane, string identifier, bool finished) => new(
         DisplayNameOf(lane.Name),
@@ -2110,8 +2135,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 /// One agent card of the run pane (hrm:L08, D05): the <paramref name="DisplayName"/> on the card,
 /// the <paramref name="Identifier"/> the crew's files give in mono under it — shown only when it
 /// differs from the name (<see cref="HasIdentifier"/>) —, and the lane's state:
-/// waiting | running | done | capped | failed | notrun. <c>capped</c> is a success one of whose
-/// tasks ended on its iteration cap: the card says so, in the warning tone.
+/// waiting | running | done | capped | missing | failed | notrun. <c>capped</c> is a success one of
+/// whose tasks ended on its iteration cap, <c>missing</c> one of whose tasks did not write the file
+/// its deliverable names (Orkeon #392): the card says so, in the warning tone.
 /// </summary>
 public sealed record RunAgentCard(string DisplayName, string Identifier, string State, string StatusText, string Detail)
 {

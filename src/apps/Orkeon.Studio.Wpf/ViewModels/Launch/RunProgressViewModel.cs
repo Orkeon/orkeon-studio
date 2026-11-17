@@ -65,6 +65,19 @@ public sealed class RunTaskViewModel
     /// <summary>What a task cut short by its iteration cap leaves to check, or an empty label.</summary>
     public string CapNote => EndedOnIterationCap ? _strings[StudioStringKeys.RunProgressCapNote] : string.Empty;
 
+    /// <summary>
+    /// Whether the task succeeded while the file its deliverable names was never written (Orkeon
+    /// #392): the engine checked it, so the row says it for sure. A task cut short whose file was
+    /// written keeps its cap note alone; one that also missed its file carries both.
+    /// </summary>
+    public bool DeliverableMissing => Task.Success && Task.DeliverableMissing;
+
+    /// <summary>What a task that did not write its file leaves to do, or an empty label.</summary>
+    public string DeliverableNote => DeliverableMissing ? _strings[StudioStringKeys.RunProgressDeliverableNote] : string.Empty;
+
+    /// <summary>Whether the row's icon is a warning: a success cut short, or one that did not write its file.</summary>
+    public bool HasWarning => EndedOnIterationCap || DeliverableMissing;
+
     /// <summary>"decision" or "decision (defaulted)" for a decision task, else an empty label.</summary>
     public string DecisionLabel
     {

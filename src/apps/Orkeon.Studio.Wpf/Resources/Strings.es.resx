@@ -820,10 +820,15 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Omitida: {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tarea sin terminar: el agente agotó sus iteraciones antes de terminar. Su trabajo puede estar incompleto: compruebe los archivos que debía escribir.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Archivo no escrito: la tarea tuvo éxito, pero el archivo que nombra su entregable nunca se escribió. Compruebe que su agente tiene una herramienta que lo escriba y vuelva a ejecutar el equipo.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Sin terminar: compruebe sus archivos</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>No escribió su archivo</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Exitosa · {0} {0:plural:tarea|tareas} sin terminar</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Exitosa · {0} {0:plural:agente no ejecutado|agentes no ejecutados} · {1} {1:plural:tarea|tareas} sin terminar</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Exitosa · {0} {0:plural:tarea no escribió su archivo|tareas no escribieron su archivo}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Exitosa · {0} {0:plural:agente no ejecutado|agentes no ejecutados} · {1} {1:plural:tarea no escribió su archivo|tareas no escribieron su archivo}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — sin terminar: sus iteraciones se agotaron, su trabajo puede estar incompleto</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — terminado, pero no escribió su archivo</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decisión</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decisión (por defecto)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">

@@ -820,10 +820,15 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Übersprungen: {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Aufgabe vorzeitig beendet: Der Agent hat seine Iterationen aufgebraucht, bevor er fertig war. Seine Arbeit ist möglicherweise unvollständig: Prüfen Sie die Dateien, die er schreiben sollte.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Datei nicht geschrieben: Die Aufgabe war erfolgreich, aber die Datei, die ihr Ergebnis nennt, wurde nie geschrieben. Prüfen Sie, ob ihr Agent ein Werkzeug hat, das diese Datei schreibt, und starten Sie das Team dann erneut.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Vorzeitig beendet: Dateien prüfen</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>Hat seine Datei nicht geschrieben</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Aufgabe|Aufgaben} vorzeitig beendet</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Agent nicht ausgeführt|Agenten nicht ausgeführt} · {1} {1:plural:Aufgabe|Aufgaben} vorzeitig beendet</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Aufgabe hat ihre Datei nicht geschrieben|Aufgaben haben ihre Datei nicht geschrieben}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Erfolgreich · {0} {0:plural:Agent nicht ausgeführt|Agenten nicht ausgeführt} · {1} {1:plural:Aufgabe hat ihre Datei nicht geschrieben|Aufgaben haben ihre Datei nicht geschrieben}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — vorzeitig beendet: Iterationen aufgebraucht, die Arbeit ist möglicherweise unvollständig</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">

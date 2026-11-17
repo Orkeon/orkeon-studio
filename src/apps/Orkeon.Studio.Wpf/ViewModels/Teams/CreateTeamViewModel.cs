@@ -158,10 +158,17 @@ public sealed record WizardChecklistLine(string Statement, bool? Passed, string?
 /// Whether the task succeeded on its iteration cap: the sentence says «cut short», so the icon
 /// is a warning, never the tick of a plain success.
 /// </param>
-public sealed record WizardActivityLine(string Text, string Detail, bool Success, bool CutShort = false)
+/// <param name="FileMissing">
+/// Whether the task succeeded without writing its deliverable's file (Orkeon #392): the sentence
+/// says so in place of «cut short», and the icon is a warning.
+/// </param>
+public sealed record WizardActivityLine(string Text, string Detail, bool Success, bool CutShort = false, bool FileMissing = false)
 {
     /// <summary>Whether the task id is worth showing beside the role.</summary>
     public bool HasDetail => Detail.Length > 0;
+
+    /// <summary>Whether the icon is a warning: a success cut short, or one that did not write its file.</summary>
+    public bool HasWarning => CutShort || FileMissing;
 }
 
 /// <summary>One arbitration button, generated from the engine's own options.</summary>
@@ -3480,7 +3487,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         Activity.Clear();
         var fallback = _strings[StudioStringKeys.WizardAgentFallback];
         // A task the trial completes twice under one id is read by its last line, as the run's
-        // own count of capped tasks does: a pass that went through clears an earlier "cut short".
+        // own counts of capped tasks and missing files do: a pass that went through clears an
+        // earlier "cut short" or "did not write its file".
         var lastOf = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var index = 0; index < _model.Activity.Count; index++)
         {
@@ -3491,14 +3499,18 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         for (var index = 0; index < _model.Activity.Count; index++)
         {
             var task = _model.Activity[index];
-            var cutShort = task.Success && task.EndedOnIterationCap
-                && (task.TaskId is not { Length: > 0 } key || lastOf[key] == index);
+            var last = task.TaskId is not { Length: > 0 } key || lastOf[key] == index;
+            var fileMissing = task.Success && task.DeliverableMissing && last;
+            var cutShort = task.Success && task.EndedOnIterationCap && last;
             // The task id joins the role rather than replacing it: a crew where one agent
             // owns two tasks rendered the same sentence twice, with nothing to tell the
             // reader which of the two had just finished.
             var role = task.AgentRole ?? task.TaskId ?? fallback;
             var text = (task.Success, task.DurationMs) switch
             {
+                // The engine found the file missing (Orkeon #392): said for sure, before the cap,
+                // which only says it may be.
+                (true, _) when fileMissing => _strings.Format(StudioStringKeys.WizardActivityMissing, role),
                 // A success on the iteration cap is not a plain "done": the trial's file may be missing.
                 (true, _) when cutShort => _strings.Format(StudioStringKeys.WizardActivityCapped, role),
                 (true, { } durationMs) => _strings.Format(
@@ -3509,7 +3521,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             };
 
             var detail = task.AgentRole is not null && task.TaskId is { Length: > 0 } id ? id : "";
-            Activity.Add(new WizardActivityLine(text, detail, task.Success, cutShort));
+            Activity.Add(new WizardActivityLine(text, detail, task.Success, cutShort, fileMissing));
         }
     }
 

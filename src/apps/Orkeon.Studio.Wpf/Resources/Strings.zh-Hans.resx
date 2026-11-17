@@ -820,10 +820,15 @@
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>已跳过：{0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>任务提前结束：智能体在完成前用尽了迭代次数。其工作可能不完整：请检查它应写入的文件。</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但其交付物指定的文件从未被写入。请检查其智能体是否有能写入该文件的工具，然后重新运行团队。</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>提前结束：请检查其文件</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>未写入其文件</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>成功 · {0} 个任务提前结束</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>成功 · {0} 个智能体未执行 · {1} 个任务提前结束</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>成功 · {0} 个任务未写入其文件</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>成功 · {0} 个智能体未执行 · {1} 个任务未写入其文件</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — 提前结束：迭代次数已用尽，其工作可能不完整</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — 已完成，但未写入其文件</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>决策（默认）</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve">

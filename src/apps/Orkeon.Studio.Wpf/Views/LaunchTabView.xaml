@@ -881,6 +881,16 @@
                       <Setter TargetName="Status" Property="ToolTip"
                               Value="{Binding [Studio.Run.CapNote], Source={x:Static services:I18n.Instance}}"/>
                     </DataTrigger>
+                    <!-- A success one of whose tasks did not write its file (Orkeon #392): the engine checked it. -->
+                    <DataTrigger Binding="{Binding State}" Value="missing">
+                      <Setter TargetName="Bar" Property="Background" Value="{DynamicResource WarningIconBrush}"/>
+                      <Setter TargetName="Mark" Property="Kind" Value="triangle-alert"/>
+                      <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
+                      <Setter TargetName="Status" Property="TextTrimming" Value="None"/>
+                      <Setter TargetName="Status" Property="TextWrapping" Value="Wrap"/>
+                      <Setter TargetName="Status" Property="ToolTip"
+                              Value="{Binding [Studio.Run.DeliverableNote], Source={x:Static services:I18n.Instance}}"/>
+                    </DataTrigger>
                     <DataTrigger Binding="{Binding State}" Value="failed">
                       <Setter TargetName="Bar" Property="Background" Value="{DynamicResource DangerBrush}"/>
                       <Setter TargetName="Mark" Property="Kind" Value="ban"/>
@@ -984,8 +994,9 @@
                                     <Setter Property="Kind" Value="circle-check"/>
                                     <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                   </DataTrigger>
-                                  <!-- A success on the iteration cap: the work may be missing. Last, so it wins. -->
-                                  <DataTrigger Binding="{Binding EndedOnIterationCap}" Value="True">
+                                  <!-- A success on the iteration cap, or one that did not write its file: the work
+                                       may be missing. Last, so it wins. -->
+                                  <DataTrigger Binding="{Binding HasWarning}" Value="True">
                                     <Setter Property="Kind" Value="triangle-alert"/>
                                     <Setter Property="Foreground" Value="{DynamicResource WarningIconBrush}"/>
                                   </DataTrigger>
@@ -1024,6 +1035,18 @@
                               <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
                                 <Style.Triggers>
                                   <DataTrigger Binding="{Binding CapNote}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                  </DataTrigger>
+                                </Style.Triggers>
+                              </Style>
+                            </TextBlock.Style>
+                          </TextBlock>
+                          <!-- Orkeon #392: the engine checked that the deliverable's file is missing. -->
+                          <TextBlock Margin="33,2,0,0" Text="{Binding DeliverableNote}" TextWrapping="Wrap">
+                            <TextBlock.Style>
+                              <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Style.Triggers>
+                                  <DataTrigger Binding="{Binding DeliverableNote}" Value="">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                   </DataTrigger>
                                 </Style.Triggers>

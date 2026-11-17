@@ -321,10 +321,15 @@
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Rien de rapporté pour l'instant.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Ignorée : {0}</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tâche écourtée : l'agent a épuisé ses itérations avant de finir. Son travail est peut-être incomplet : vérifiez les fichiers qu'il devait écrire.</value></data>
+  <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Fichier non écrit : la tâche a réussi, mais le fichier que nomme son livrable n'a jamais été écrit. Vérifiez que son agent a un outil qui l'écrit, puis relancez l'équipe.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Écourté : vérifiez ses fichiers</value></data>
+  <data name="Studio.Run.LaneMissing" xml:space="preserve"><value>N'a pas écrit son fichier</value></data>
   <data name="Studio.Run.BadgeDoneCapped" xml:space="preserve"><value>Réussie · {0} {0:plural:tâche écourtée|tâches écourtées}</value></data>
   <data name="Studio.Run.BadgeDoneSkippedCapped" xml:space="preserve"><value>Réussie · {0} {0:plural:agent non exécuté|agents non exécutés} · {1} {1:plural:tâche écourtée|tâches écourtées}</value></data>
+  <data name="Studio.Run.BadgeDoneMissing" xml:space="preserve"><value>Réussie · {0} {0:plural:tâche n'a pas écrit son fichier|tâches n'ont pas écrit leur fichier}</value></data>
+  <data name="Studio.Run.BadgeDoneSkippedMissing" xml:space="preserve"><value>Réussie · {0} {0:plural:agent non exécuté|agents non exécutés} · {1} {1:plural:tâche n'a pas écrit son fichier|tâches n'ont pas écrit leur fichier}</value></data>
   <data name="Studio.Create.ActivityCapped" xml:space="preserve"><value>{0} — écourté : ses itérations sont épuisées, son travail est peut-être incomplet</value></data>
+  <data name="Studio.Create.ActivityMissing" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>décision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>décision (par défaut)</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} {0:plural:tâche terminée|tâches terminées}.</value></data>

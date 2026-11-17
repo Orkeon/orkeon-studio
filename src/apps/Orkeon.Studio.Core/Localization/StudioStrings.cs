@@ -747,6 +747,9 @@ public static class StudioStringKeys
     /// <summary>"Cut short: check its files" — an agent one of whose tasks ended on its iteration cap.</summary>
     public const string RunLaneCapped = "Studio.Run.LaneCapped";
 
+    /// <summary>"Did not write its file" — an agent one of whose tasks succeeded without writing its deliverable (Orkeon #392).</summary>
+    public const string RunLaneMissing = "Studio.Run.LaneMissing";
+
     /// <summary>"Command copied" — the same button, right after a copy.</summary>
     public const string RunCommandCopied = "Studio.Run.CommandCopied";
 
@@ -1221,6 +1224,15 @@ public static class StudioStringKeys
     /// <summary>Both at once: {0} agents not run, {1} tasks ended on their iteration cap.</summary>
     public const string RunBadgeDoneSkippedCapped = "Studio.Run.BadgeDoneSkippedCapped";
 
+    /// <summary>
+    /// "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their file}" — a task
+    /// succeeded without writing its deliverable (Orkeon #392). It takes the place of the cut-short count.
+    /// </summary>
+    public const string RunBadgeDoneMissing = "Studio.Run.BadgeDoneMissing";
+
+    /// <summary>Both at once: {0} agents not run, {1} tasks that did not write their file.</summary>
+    public const string RunBadgeDoneSkippedMissing = "Studio.Run.BadgeDoneSkippedMissing";
+
     /// <summary>"Task details" (UX lot 08).</summary>
     public const string RunTaskDetails = "Studio.Run.TaskDetails";
 
@@ -1317,6 +1329,9 @@ public static class StudioStringKeys
 
     /// <summary>"Task cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
     public const string RunProgressCapNote = "Studio.Run.CapNote";
+
+    /// <summary>"File not written: the task succeeded, but ..." — under a task that did not write its deliverable (Orkeon #392).</summary>
+    public const string RunProgressDeliverableNote = "Studio.Run.DeliverableNote";
 
     /// <summary>"decision"</summary>
     public const string RunProgressDecision = "Studio.Run.Decision";
@@ -1879,6 +1894,9 @@ public static class StudioStringKeys
 
     /// <summary>"{0} — cut short: its iterations ran out, its work may be incomplete"</summary>
     public const string WizardActivityCapped = "Studio.Create.ActivityCapped";
+
+    /// <summary>"{0} — done, but did not write its file" — a trial task that did not write its deliverable (Orkeon #392).</summary>
+    public const string WizardActivityMissing = "Studio.Create.ActivityMissing";
 
     /// <summary>"Describe the work to continue."</summary>
     public const string WizardHintDescribe = "Studio.Create.HintDescribe";
@@ -3057,6 +3075,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunLaneDone] = "Done",
         [StudioStringKeys.RunLaneFailed] = "Failed",
         [StudioStringKeys.RunLaneCapped] = "Cut short: check its files",
+        [StudioStringKeys.RunLaneMissing] = "Did not write its file",
         [StudioStringKeys.RunCommandCopied] = "Command copied",
         [StudioStringKeys.MountsOriginSelectedById] = "{0} (selected by id among {1})",
         [StudioStringKeys.MountsOriginNotSelected] = "{0} (not mounted for this run)",
@@ -3335,6 +3354,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBadgeDoneSkipped] = "Succeeded · {0} {0:plural:agent not run|agents not run}",
         [StudioStringKeys.RunBadgeDoneCapped] = "Succeeded · {0} {0:plural:task|tasks} cut short",
         [StudioStringKeys.RunBadgeDoneSkippedCapped] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task|tasks} cut short",
+        [StudioStringKeys.RunBadgeDoneMissing] = "Succeeded · {0} {0:plural:task did not write its file|tasks did not write their file}",
+        [StudioStringKeys.RunBadgeDoneSkippedMissing] = "Succeeded · {0} {0:plural:agent not run|agents not run} · {1} {1:plural:task did not write its file|tasks did not write their file}",
         [StudioStringKeys.RunTaskDetails] = "Task details",
         [StudioStringKeys.HistoryShowError] = "Show the error",
         [StudioStringKeys.RunBadgeFailed] = "failed",
@@ -3526,6 +3547,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
         [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
+        [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but the file its deliverable names was never written. Check that its agent has a tool that writes it, then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",
@@ -3734,6 +3756,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardActivityDoneUntimed] = "{0} — done",
         [StudioStringKeys.WizardActivityFailed] = "{0} — failed",
         [StudioStringKeys.WizardActivityCapped] = "{0} — cut short: its iterations ran out, its work may be incomplete",
+        [StudioStringKeys.WizardActivityMissing] = "{0} — done, but did not write its file",
         [StudioStringKeys.WizardHintDescribe] = "Describe the work to continue.",
         [StudioStringKeys.WizardHintAssistant] = "Choose a model for the assistant first.",
         [StudioStringKeys.WizardHintReady] = "Ready: you can compose the team.",
