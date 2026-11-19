@@ -65,7 +65,7 @@ dotnet run --project src/apps/Orkeon.Studio.Wpf      # Windows seulement
 
 ## Installer depuis les sources
 
-`scripts/install-from-source.sh` (Linux, macOS) et `scripts/install-from-source.ps1` (Windows, PowerShell 7) installent Studio depuis ce clone, à côté d'une CLI Orkeon. Avec `--with-orkeon` (`-WithOrkeon`), ils installent d'abord la CLI depuis le checkout d'Orkeon (`--orkeon-src`, sinon `ORKEON_SOURCE_ROOT`, sinon `../orkeon`) avec le script `install-from-source` de ce checkout.
+`scripts/install-from-source.sh` (Linux, macOS) et `scripts/install-from-source.ps1` (Windows, PowerShell 7) installent Studio depuis ce clone, à côté d'une CLI Orkeon. Avec `--with-orkeon` (`-WithOrkeon`), ils installent d'abord la CLI depuis le checkout d'Orkeon (`--orkeon-src`, sinon `ORKEON_SOURCE_ROOT`, sinon `../orkeon`) avec le script `install-from-source` de ce checkout. Le `.sh` installe les deux applications terminal (`orkeon-studio-config`, `orkeon-studio-run`) ; le `.ps1` installe l'application WPF (`orkeon-studio`) et ces deux-là, et ajoute un raccourci « Orkeon Studio » au menu Démarrer. Le `.ps1` refuse un `-InstallDir` où le MSI d'Orkeon a installé la CLI, puisque ce dossier appartient à Windows Installer, qui réparerait ou retirerait ce que le script y ajoute : désinstallez d'abord le MSI (`-WithOrkeon` installe alors la CLI depuis les sources), ou nommez un autre `-InstallDir`.
 
 ```bash
 ./scripts/install-from-source.sh --with-orkeon            # la CLI, puis Studio, sous ~/.local
@@ -78,7 +78,7 @@ dotnet run --project src/apps/Orkeon.Studio.Wpf      # Windows seulement
 pwsh -File .\scripts\install-from-source.ps1 -WithOrkeon  # Windows : la CLI, puis Studio
 ```
 
-Le script empaquette Orkeon dans `orkeon-feed/` à une version datée par le dernier commit du checkout d'Orkeon (voir `scripts/resolve-version.sh`) et construit Studio contre ces paquets : un nouveau commit d'Orkeon donne une nouvelle version, jamais une copie périmée du cache NuGet. Il refuse d'empaqueter un checkout d'Orkeon qui a des modifications non commitées, ou de réutiliser des paquets de même version empaquetés depuis un autre commit. Cette construction lit un `nuget.config` qu'écrit le script, qui résout `Orkeon.*` depuis `orkeon-feed/` ; celui du dépôt ne lit que nuget.org. Studio s'installe dans l'installation de la CLI (`lib/orkeon/libexec`, ou `libexec\` de `%LOCALAPPDATA%\Programs\Orkeon`), où il trouve la CLI en premier. L'installeur de la CLI remplace ce dossier en entier : après avoir réinstallé la CLI, relancez le script.
+Le script empaquette Orkeon dans `orkeon-feed/` à une version datée par le dernier commit du checkout d'Orkeon, ou à la version du tag quand ce commit est tagué (voir `scripts/resolve-version.sh`) et construit Studio contre ces paquets : un nouveau commit d'Orkeon donne une nouvelle version, jamais une copie périmée du cache NuGet. Il refuse d'empaqueter un checkout d'Orkeon qui a des modifications non commitées, ou de réutiliser des paquets de même version empaquetés depuis un autre commit. Cette construction lit un `nuget.config` qu'écrit le script, qui résout `Orkeon.*` depuis `orkeon-feed/` ; celui du dépôt ne lit que nuget.org. Studio s'installe dans l'installation de la CLI (`lib/orkeon/libexec`, ou `libexec\` de `%LOCALAPPDATA%\Programs\Orkeon`), où il trouve la CLI en premier. L'installeur de la CLI remplace ce dossier en entier : après avoir réinstallé la CLI, relancez le script.
 
 ## Contribuer
 
