@@ -26,6 +26,7 @@ public sealed class WizardFolderRow : ObservableObject
     private string? _directory;
     private bool _isInsideTeam;
     private readonly bool _isDeduced;
+    private readonly bool? _examples;
     private bool _isEdited;
     private WizardHeldFolderRow? _held;
 
@@ -44,6 +45,7 @@ public sealed class WizardFolderRow : ObservableObject
         _role = proposed.Role;
         _purpose = proposed.Purpose ?? "";
         _directory = proposed.Directory;
+        _examples = proposed.Examples;
         // « Inside the team » by default for every folder (STUDIO-46, D-4; UX lot 01): its files
         // then travel with the team, and an input no longer waits on a question — « Use an
         // existing folder… » answers it with a folder of the disk. The field, not the setter:
@@ -82,6 +84,14 @@ public sealed class WizardFolderRow : ObservableObject
 
     /// <summary><c>input</c> or <c>output</c>, as the forge proposed it or the user flipped it.</summary>
     public string Role => _role;
+
+    /// <summary>
+    /// Whether the files of this input change from run to run, as the forge proposed it
+    /// (Orkeon #400): kept through a rename, which the engine's match on the name would lose
+    /// (it ignores letter case only, Orkeon #419), and through the lowercasing of the
+    /// confirmation. Null for an output.
+    /// </summary>
+    public bool? Examples => IsInput ? _examples : null;
 
     /// <summary>Whether the team only reads this folder.</summary>
     public bool IsInput => string.Equals(_role, ForgeFolder.InputRole, StringComparison.Ordinal);
@@ -246,7 +256,7 @@ public sealed class WizardFolderRow : ObservableObject
         var hadDirectory = _directory is not null;
         _directory = null;
         _isInsideTeam = true;
-        OnPropertiesChanged(nameof(Role), nameof(IsInput), nameof(RoleLabel));
+        OnPropertiesChanged(nameof(Role), nameof(IsInput), nameof(RoleLabel), nameof(Examples));
         RaiseAnswer();
         if (hadDirectory)
             _pathChanged(this, _virtualPath);
@@ -536,7 +546,7 @@ public sealed partial class CreateTeamViewModel
         {
             TryNormalizeRootName(row.VirtualPath, out var root);
             var purpose = row.Purpose.Trim();
-            folders.Add(new ForgeFolder(root, row.Role, purpose.Length > 0 ? purpose : null, row.Directory));
+            folders.Add(new ForgeFolder(root, row.Role, purpose.Length > 0 ? purpose : null, row.Directory, row.Examples));
         }
 
         if (!_client.SendFolders(folders))
