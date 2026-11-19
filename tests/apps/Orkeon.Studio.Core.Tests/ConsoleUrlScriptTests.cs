@@ -23,6 +23,57 @@ public sealed class ConsoleUrlScriptTests
             .ToList();
         Assert.All(expected, uri => Assert.Equal(Uri.UriSchemeHttps, uri.Scheme));
 
+        var (exitCode, stdout, stderr) = await RunScript(root, "--list");
+        Assert.True(exitCode == 0, $"exit {exitCode}: {stderr}");
+
+        var printed = stdout.Split('\n')
+            .Select(line => line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(t => t.StartsWith("https://", StringComparison.Ordinal)))
+            .Where(token => token is not null)
+            .Select(token => token!)
+            .Order(StringComparer.Ordinal)
+            .Distinct()
+            .ToList();
+
+        Assert.Equal(
+            expected.Select(u => u.AbsoluteUri).Order(StringComparer.Ordinal).Distinct().ToList(),
+            printed);
+    }
+
+    [Fact]
+    [Trait("BR", "BR-12")]
+    public void ShouldNotBeCalledByAnyWorkflow()
+    {
+        var folder = Path.Combine(ProducedFile.RepositoryRoot(), ".github", "workflows");
+        var files = Directory.EnumerateFiles(folder, "*.yml")
+            .Concat(Directory.EnumerateFiles(folder, "*.yaml"))
+            .ToList();
+
+        Assert.NotEmpty(files);
+        foreach (var file in files)
+            Assert.DoesNotContain("check-console-urls", File.ReadAllText(file), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <c>--help</c> and a mistyped option end offline: a manual check that misread its
+    /// arguments as « check every link » would reach the network on a metered connection.
+    /// </summary>
+    [Theory]
+    [InlineData("--help", 0)]
+    [InlineData("-h", 0)]
+    [InlineData("--lsit", 2)]
+    public async System.Threading.Tasks.Task ShouldAnswerHelpAndRefuseAnUnknownArgumentWithoutARequest(string argument, int expectedExit)
+    {
+        var (exitCode, stdout, stderr) = await RunScript(ProducedFile.RepositoryRoot(), argument);
+
+        Assert.True(exitCode == expectedExit, $"exit {exitCode}: {stderr}");
+        Assert.Contains("--list", expectedExit == 0 ? stdout : stderr, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://", stdout, StringComparison.Ordinal);
+    }
+
+    /// <summary>Runs the script under python3 with a hang guard; skips when python3 is missing.</summary>
+    private static async System.Threading.Tasks.Task<(int ExitCode, string Stdout, string Stderr)> RunScript(string root, string argument)
+    {
         var start = new ProcessStartInfo("python3")
         {
             WorkingDirectory = root,
@@ -30,8 +81,14 @@ public sealed class ConsoleUrlScriptTests
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        // A request the script should not make fails at once on a dead proxy instead of
+        // reaching the network, should a regression read an argument as « check every link ».
+        foreach (var name in new[] { "https_proxy", "HTTPS_PROXY", "http_proxy", "HTTP_PROXY" })
+            start.Environment[name] = "http://127.0.0.1:9";
+        foreach (var name in new[] { "no_proxy", "NO_PROXY" })
+            start.Environment.Remove(name);
         start.ArgumentList.Add(Path.Combine(root, "scripts", "check-console-urls.py"));
-        start.ArgumentList.Add("--list");
+        start.ArgumentList.Add(argument);
 
         SysProcess process;
         try
@@ -41,7 +98,7 @@ public sealed class ConsoleUrlScriptTests
         catch (Win32Exception)
         {
             Assert.Skip("python3 is not on PATH");
-            return;
+            throw;
         }
 
         using (process)
@@ -57,39 +114,10 @@ public sealed class ConsoleUrlScriptTests
             catch (OperationCanceledException)
             {
                 process.Kill(entireProcessTree: true);
-                Assert.Fail("check-console-urls.py --list did not end within the hang guard");
+                Assert.Fail($"check-console-urls.py {argument} did not end within the hang guard");
             }
 
-            var stdout = await output;
-            var stderr = await error;
-            Assert.True(process.ExitCode == 0, $"exit {process.ExitCode}: {stderr}");
-
-            var printed = stdout.Split('\n')
-                .Select(line => line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-                    .FirstOrDefault(t => t.StartsWith("https://", StringComparison.Ordinal)))
-                .Where(token => token is not null)
-                .Select(token => token!)
-                .Order(StringComparer.Ordinal)
-                .Distinct()
-                .ToList();
-
-            Assert.Equal(
-                expected.Select(u => u.AbsoluteUri).Order(StringComparer.Ordinal).Distinct().ToList(),
-                printed);
+            return (process.ExitCode, await output, await error);
         }
-    }
-
-    [Fact]
-    [Trait("BR", "BR-12")]
-    public void ShouldNotBeCalledByAnyWorkflow()
-    {
-        var folder = Path.Combine(ProducedFile.RepositoryRoot(), ".github", "workflows");
-        var files = Directory.EnumerateFiles(folder, "*.yml")
-            .Concat(Directory.EnumerateFiles(folder, "*.yaml"))
-            .ToList();
-
-        Assert.NotEmpty(files);
-        foreach (var file in files)
-            Assert.DoesNotContain("check-console-urls", File.ReadAllText(file), StringComparison.Ordinal);
     }
 }

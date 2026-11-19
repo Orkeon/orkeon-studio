@@ -163,7 +163,7 @@ function Assert-StudioNotRunning {
 
 $msiDir = Join-Path $env:LOCALAPPDATA 'Programs\Orkeon'
 if ($InstallDir.TrimEnd('\') -ieq $msiDir -and (Test-MsiChannelInstalled)) {
-    Write-Problem "install-from-source: Orkeon is installed in $InstallDir by its MSI (see 'Orkeon' in Add/Remove Programs), which already carries Studio. Uninstall it first (-WithOrkeon then installs the CLI from source), or name another -InstallDir."
+    Write-Problem "install-from-source: Orkeon is installed in $InstallDir by its MSI (see 'Orkeon' in Add/Remove Programs): Windows Installer owns that folder and would repair or remove what this script adds. Uninstall it first (-WithOrkeon then installs the CLI from source), or name another -InstallDir."
     exit 1
 }
 

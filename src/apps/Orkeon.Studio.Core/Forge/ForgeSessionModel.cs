@@ -69,7 +69,13 @@ public sealed record ForgeDerivedMount(
 /// <param name="Role"><see cref="InputRole"/> or <see cref="OutputRole"/>.</param>
 /// <param name="Purpose">What the folder holds, in the user's words.</param>
 /// <param name="Directory">The real directory behind it; null for a folder inside the team.</param>
-public sealed record ForgeFolder(string Path, string Role, string? Purpose = null, string? Directory = null)
+/// <param name="Examples">
+/// Whether what an input folder holds changes from run to run, its files then being examples of
+/// what will come (Orkeon #400): the engine's proposal says it, Studio does not show it and sends
+/// it back as it came, so that a name Studio lowercases or the user renames keeps it. Null is
+/// «not said», which an engine before Orkeon 1.3 never sends and which reads as fixed.
+/// </param>
+public sealed record ForgeFolder(string Path, string Role, string? Purpose = null, string? Directory = null, bool? Examples = null)
 {
     /// <summary>The role of a folder the team reads.</summary>
     public const string InputRole = "input";
@@ -811,7 +817,10 @@ public sealed class ForgeSessionModel
                 && ReadString(folder, "role") is ForgeFolder.InputRole or ForgeFolder.OutputRole)
             {
                 folders.Add(new ForgeFolder(
-                    path, ReadString(folder, "role")!, NonBlank(ReadString(folder, "purpose")), NonBlank(ReadString(folder, "dir"))));
+                    path, ReadString(folder, "role")!, NonBlank(ReadString(folder, "purpose")), NonBlank(ReadString(folder, "dir")),
+                    folder.TryGetProperty("examples", out var examples) && examples.ValueKind is JsonValueKind.True or JsonValueKind.False
+                        ? examples.GetBoolean()
+                        : null));
             }
         }
 

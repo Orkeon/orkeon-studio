@@ -1756,6 +1756,43 @@ public partial class CreateTeamWizardTests
     }
 
     /// <summary>
+    /// Orkeon #400. The engine carries a proposed <c>examples</c> over only to a confirmed input
+    /// of the same path (letter case aside since Orkeon #419), and the wizard lets the user
+    /// rename a folder and lowercases every name it confirms: it sends the flag back itself, so that <c>/Inbox</c> renamed <c>/Mailbox</c> and confirmed as
+    /// <c>/mailbox</c> stays an inbox of examples (« a renamed folder says it again »), while a
+    /// folder flipped to an output sends none (the engine refuses true there).
+    /// </summary>
+    [Fact]
+    public async Task A_proposed_examples_input_keeps_its_flag_through_a_rename_and_the_lowercased_confirmation()
+    {
+        var (vm, processes, _) = Build();
+        FillStepOne(vm);
+        ScriptFoldersStep(
+            vm,
+            processes,
+            """{"v":2,"seq":2,"ts":"t","kind":"folders.proposed","folders":[{"path":"/Inbox","role":"input","purpose":"p","examples":true},{"path":"/drafts","role":"input","purpose":"p","examples":true},{"path":"/outmd","role":"output","purpose":"p"}],"defaults":false}""",
+            wizard =>
+            {
+                Assert.Equal([true, true, null], wizard.FolderRows.Select(r => r.Examples));
+                wizard.FolderRows[0].VirtualPath = "/Mailbox";
+                Assert.True(wizard.FolderRows[0].Examples);
+                wizard.FolderRows[1].ToggleRoleCommand.Execute(null);
+                Assert.Null(wizard.FolderRows[1].Examples);
+                wizard.ConfirmFoldersCommand.Execute(null);
+            },
+            [PdfBlueprint(), Paused]);
+
+        await Compose(vm);
+
+        using var document = System.Text.Json.JsonDocument.Parse(
+            processes.InputLines.Single(line => line.Contains("folders.confirmed", StringComparison.Ordinal)));
+        var confirmed = document.RootElement.GetProperty("folders").EnumerateArray()
+            .Select(f => (f.GetProperty("path").GetString(), f.TryGetProperty("examples", out var e) ? e.GetBoolean() : (bool?)null))
+            .ToList();
+        Assert.Equal([("/mailbox", (bool?)true), ("/drafts", null), ("/outmd", null)], confirmed);
+    }
+
+    /// <summary>
     /// STUDIO-57. A request that names no folder gets the engine's defaults: the panel must not
     /// claim it read them from the request, and their purposes come in Studio's language, not
     /// in the brief's — the engine wrote them in French here, the wizard speaks English.

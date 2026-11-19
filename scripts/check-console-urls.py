@@ -8,6 +8,10 @@ src/apps/Orkeon.Studio.Core/Presets/LlmPresets.cs, never copied here (BR-02).
   check-console-urls.py --list   prints one link per line, offline
   check-console-urls.py          requests each link; exit 1 if one is in error
                                  (HTTP 404/410, unreachable host, timeout)
+  check-console-urls.py --help   prints this text, offline
+
+Any other argument is refused (exit 2) before a single request: a mistyped
+option must never turn into a run that reaches the network.
 """
 import re
 import sys
@@ -55,6 +59,14 @@ def check(url: str) -> tuple[bool, str, str]:
 
 
 def main(argv: list[str]) -> int:
+    if "-h" in argv or "--help" in argv:
+        print(__doc__.strip())
+        return 0
+    unknown = [arg for arg in argv if arg != "--list"]
+    if unknown:
+        print(f"check-console-urls.py: unknown argument {unknown[0]!r}; nothing was requested.", file=sys.stderr)
+        print("usage: check-console-urls.py [--list | --help]", file=sys.stderr)
+        return 2
     links = catalogue()
     if not links:
         print("no console link found in " + str(SOURCE), file=sys.stderr)

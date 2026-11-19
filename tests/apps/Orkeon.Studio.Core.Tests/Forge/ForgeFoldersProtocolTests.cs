@@ -194,4 +194,38 @@ public sealed class ForgeFoldersProtocolTests : IDisposable
 
         Assert.Equal("/b", Assert.Single(model.ProposedFolders).Path);
     }
+
+    /// <summary>
+    /// Orkeon #400. The engine carries a proposed <c>examples</c> over to a confirmed input only
+    /// on the same path (letter case aside since Orkeon #419), so Studio reads the flag and sends it back itself: through a
+    /// rename, never on an output (which the engine refuses), and never when the proposal did
+    /// not say it — the line then stays the one an engine before Orkeon 1.3 reads.
+    /// </summary>
+    [Fact]
+    public async Task The_examples_flag_of_a_proposed_input_goes_back_with_the_folder_and_never_on_an_output()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"folders.proposed","folders":[{"path":"/Inbox","role":"input","examples":true},{"path":"/fixed","role":"input","examples":false},{"path":"/plain","role":"input"},{"path":"/out","role":"output","examples":"yes"}]}"""));
+
+        Assert.Equal([true, false, null, null], model.ProposedFolders.Select(f => f.Examples));
+
+        var executables = new FakeExecutableProbe { BaseDirectory = InstallDirectory }.WithFile(BinaryPath);
+        var processes = new FakeProcessLauncher { RunsUntilCancelled = true };
+        var client = new ForgeClient(processes, new OrkeonBinaryLocator(executables));
+        var run = client.RunAsync(new ForgeStartRequest { Need = "inbox" }, _ => { }, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(client.SendFolders(
+        [
+            model.ProposedFolders[0] with { Path = "/inbox" },
+            model.ProposedFolders[1],
+            model.ProposedFolders[2],
+            model.ProposedFolders[3] with { Examples = true },
+        ]));
+        Assert.True(client.RequestCancellation());
+        await run;
+
+        Assert.Equal(
+            ["""{"kind":"folders.confirmed","folders":[{"path":"/inbox","role":"input","purpose":null,"examples":true},{"path":"/fixed","role":"input","purpose":null,"examples":false},{"path":"/plain","role":"input","purpose":null},{"path":"/out","role":"output","purpose":null}]}"""],
+            processes.InputLines);
+    }
 }

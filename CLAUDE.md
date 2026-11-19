@@ -14,7 +14,7 @@ The test runner is **Microsoft.Testing.Platform, not VSTest** (`global.json`). A
 
 ```bash
 dotnet build Orkeon.Studio.sln --no-restore            # CI builds -c Release -warnaserror: zero warnings
-dotnet test Orkeon.Studio.sln --no-build --filter "Category!=Integration&Category!=Slow"   # what ci.yml runs
+dotnet test Orkeon.Studio.sln --no-build --filter "Category!=Integration&Category!=Slow"   # what ci.yml runs, with -c Release
 dotnet test tests/apps/Orkeon.Studio.Core.Tests/Orkeon.Studio.Core.Tests.csproj --no-build --filter "FullyQualifiedName~MyTest"
 dotnet restore Orkeon.Studio.sln -p:NuGetAudit=false   # only when a dependency changed (see below)
 python3 scripts/check-comment-accents.py               # CI runs it

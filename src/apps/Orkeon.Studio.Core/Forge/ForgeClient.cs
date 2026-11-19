@@ -642,7 +642,9 @@ public sealed class ForgeClient
         return WriteLine(new
         {
             kind = ForgeEventKinds.FoldersConfirmed,
-            folders = folders.Select(folder => new ForgeFolderWire(folder.Path, folder.Role, folder.Purpose, folder.Directory)),
+            // «examples» is for an input alone: the engine refuses true on an output (Orkeon #400).
+            folders = folders.Select(folder => new ForgeFolderWire(
+                folder.Path, folder.Role, folder.Purpose, folder.Directory, folder.IsInput ? folder.Examples : null)),
         });
     }
 
@@ -653,14 +655,20 @@ public sealed class ForgeClient
     /// </summary>
     public bool SendFoldersFilled() => WriteLine(new { kind = ForgeEventKinds.FoldersFilled });
 
-    /// <summary>One folder on the wire: <c>dir</c> omitted when the folder lives inside the team.</summary>
+    /// <summary>
+    /// One folder on the wire: <c>dir</c> omitted when the folder lives inside the team, and
+    /// <c>examples</c> when the proposal did not say it (an engine before Orkeon 1.3 ignores it).
+    /// </summary>
     private sealed record ForgeFolderWire(
         [property: System.Text.Json.Serialization.JsonPropertyName("path")] string Path,
         [property: System.Text.Json.Serialization.JsonPropertyName("role")] string Role,
         [property: System.Text.Json.Serialization.JsonPropertyName("purpose")] string? Purpose,
         [property: System.Text.Json.Serialization.JsonPropertyName("dir")]
         [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-        string? Dir);
+        string? Dir,
+        [property: System.Text.Json.Serialization.JsonPropertyName("examples")]
+        [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        bool? Examples);
 
     /// <summary>
     /// Sends the amended blueprint that must follow <c>SendDecision("edit")</c>. The JSON
