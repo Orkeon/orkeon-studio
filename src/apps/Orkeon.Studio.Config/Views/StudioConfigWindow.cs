@@ -59,6 +59,7 @@ internal sealed class StudioConfigWindow : Window
         _sectionViews.Add(new LlmSectionView(_model.Llm, _model.LlmProbe));
         _sectionViews.Add(new RateLimitingSectionView(_model.RateLimiting));
         _sectionViews.Add(new RagSectionView(_model.Rag));
+        _sectionViews.Add(new DecisionSectionView(_model.Decision));
         _sectionViews.Add(new MountsSectionView(_model.Mounts, _model.Directories, lister));
         _sectionViews.Add(new LoggingSectionView(_model.Logging));
         _sectionViews.Add(new LlmLoggingSectionView(_model.LlmLogging));
@@ -103,6 +104,7 @@ internal sealed class StudioConfigWindow : Window
         if (_sectionViews[index] is RawJsonSectionView)
         {
             _model.ApplyForms();
+            RefreshSections();
             _sectionViews[index].Load();
         }
     }
@@ -118,7 +120,16 @@ internal sealed class StudioConfigWindow : Window
         foreach (var view in _sectionViews)
             view.Apply();
 
-        return _model.Preflight(scope);
+        var preflight = _model.Preflight(scope);
+        RefreshSections();
+        return preflight;
+    }
+
+    /// <summary>Shows again, on every screen, what it derives from the document the forms were just applied to.</summary>
+    private void RefreshSections()
+    {
+        foreach (var view in _sectionViews)
+            view.Refresh();
     }
 
     /// <summary>Reloads every screen from the document (after a preset, or after opening a file).</summary>

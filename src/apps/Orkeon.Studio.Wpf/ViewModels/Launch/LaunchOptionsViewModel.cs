@@ -74,6 +74,8 @@ public sealed class LaunchOptionsViewModel : ObservableObject
     private int _verbosity;
     private bool _llmLogEnabled;
     private bool _validateFirst;
+    private bool _useDecisionModels = true;
+    private bool _offersDecisionModels;
     private bool _watchProgress = true;
     private bool _streamGeneratedText;
     private string? _llmLogPath;
@@ -264,6 +266,44 @@ public sealed class LaunchOptionsViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Whether the run uses the decision models (System One) the settings configure; unticked, the run
+    /// passes <c>--no-decision</c> (once offered, <see cref="OffersDecisionModels"/>): each decision task
+    /// answers from its fallback, or lets its <c>otherwise</c> task run, and one that has neither refuses
+    /// the run; <c>system_one_decide</c> still asks the provider. It only turns the circuit off: the
+    /// settings decide whether there is one to use.
+    /// </summary>
+    public bool UseDecisionModels
+    {
+        get => _useDecisionModels;
+        set
+        {
+            if (SetProperty(ref _useDecisionModels, value))
+            {
+                OnPropertyChanged(nameof(SwitchesDecisionOff));
+                OnOptionEdited(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether « Use the decision models » is offered: the crew asks something of them. The launch tab
+    /// sets it with each judgement of the crew, and rebuilds the command line after. While it is false
+    /// the box is hidden and <see cref="SwitchesDecisionOff"/> is false, whatever the box was left at.
+    /// </summary>
+    public bool OffersDecisionModels
+    {
+        get => _offersDecisionModels;
+        set
+        {
+            if (SetProperty(ref _offersDecisionModels, value))
+                OnPropertyChanged(nameof(SwitchesDecisionOff));
+        }
+    }
+
+    /// <summary>Whether the run passes <c>--no-decision</c>: the box is offered and unticked.</summary>
+    public bool SwitchesDecisionOff => OffersDecisionModels && !UseDecisionModels;
+
     /// <summary>Whether to pass <c>--llm-log</c>.</summary>
     public bool LlmLogEnabled
     {
@@ -372,6 +412,7 @@ public sealed class LaunchOptionsViewModel : ObservableObject
         LlmLogEnabled = LlmLogEnabled,
         LlmLogPath = LlmLogPath,
         Validate = validate,
+        NoDecision = SwitchesDecisionOff,
 
         // A dry run reports a verdict, not progress: asking it for the event protocol would
         // buy a stream with nothing in it.

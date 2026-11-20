@@ -83,8 +83,8 @@ public sealed class ToolsSettingsViewModelTests
         var decision = Assert.Single(tools.Families, f => f.Key == ToolCatalog.DecisionFamily);
         Assert.Equal("Decision models", decision.Label);
         Assert.Equal(
-            "present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, "
-                + "or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; "
+            "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, "
+                + "or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; "
                 + "TypeSafe and Liquid refuse every call without their key",
             Assert.Single(decision.Requirements, r => r.Name == "system_one_decide").Text);
 
@@ -191,8 +191,8 @@ public sealed class ToolsSettingsViewModelTests
 
     /// <summary>
     /// The lines that point past the novice's tabs say so in every language: the RAG tab is an
-    /// expert one, and the decision and memory settings are written by hand. The decision line
-    /// names each setting, section and key the engine resolves a provider from.
+    /// expert one, the decision line points at its own tab, and the memory settings are written by
+    /// hand. The decision line names each setting, section and key the engine resolves a provider from.
     /// </summary>
     [Theory]
     [InlineData("fr")]
@@ -208,6 +208,7 @@ public sealed class ToolsSettingsViewModelTests
         var rag = lines["rag_search"];
         Assert.Contains(strings["Studio.Settings.RagTab"], rag, StringComparison.Ordinal);
         Assert.Contains(strings["Studio.Shell.Expert"].ToLowerInvariant(), rag.ToLowerInvariant(), StringComparison.Ordinal);
+        Assert.Contains(strings["Studio.Settings.TabDecision"], lines["system_one_decide"], StringComparison.Ordinal);
         foreach (var name in new[] { "Orkeon:Decision:Provider", "Orkeon:TypeSafe", "Orkeon:Liquid", "TYPESAFE_API_KEY", "LIQUID_API_KEY" })
             Assert.Contains(name, lines["system_one_decide"], StringComparison.Ordinal);
         Assert.Contains("Orkeon:CognitiveMemory:Enabled = true", lines["memory_recall"], StringComparison.Ordinal);

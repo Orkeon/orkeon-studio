@@ -1,6 +1,7 @@
 using Orkeon.Studio.Config.Presentation;
 using Orkeon.Studio.Config.Tests.Doubles;
 using Orkeon.Studio.Config.Views;
+using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.FileSystem;
 using Orkeon.Studio.Core.Process;
 using Orkeon.Studio.Core.Validation;
@@ -9,6 +10,23 @@ namespace Orkeon.Studio.Config.Tests.Views;
 
 public class StudioConfigWindowTests
 {
+    private static async Task<ConfigEditorModel> OpenAsync(string json)
+    {
+        var directory = Directory.CreateTempSubdirectory("studio-config-window").FullName;
+        try
+        {
+            var path = Path.Combine(directory, "appsettings.json");
+            await File.WriteAllTextAsync(path, json, TestContext.Current.CancellationToken);
+            var model = CreateModel();
+            Assert.Null(await model.OpenAsync(path, TestContext.Current.CancellationToken));
+            return model;
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch (IOException) { /* best-effort */ }
+        }
+    }
+
     private static ConfigEditorModel CreateModel()
     {
         var runner = new OrkeonProcessRunner(
@@ -26,7 +44,7 @@ public class StudioConfigWindowTests
         var titles = window.Sections.Select(section => section.Title).ToList();
 
         Assert.Equal(
-            ["LLM", "Rate limiting", "RAG", MountEditorModel.SectionTitle, "Logging", "LLM logging", "Raw JSON (read-only)"],
+            ["LLM", "Rate limiting", "RAG", "Decision models", MountEditorModel.SectionTitle, "Logging", "LLM logging", "Raw JSON (read-only)"],
             titles);
         Assert.Equal(0, window.CurrentSection);
         Assert.True(window.Sections[0].Visible);
@@ -69,6 +87,38 @@ public class StudioConfigWindowTests
 
         Assert.False(preflight.HasBlockingErrors);
         Assert.Equal("llama3", model.Document.Llm.Model);
+    }
+
+    [Fact]
+    public async Task A_provider_name_the_engine_does_not_know_survives_the_window()
+    {
+        var model = await OpenAsync("""{"Orkeon":{"Decision":{"Provider":"acme"}}}""");
+        using var window = new StudioConfigWindow(model);
+        window.ReloadSections();
+        window.SelectSection(window.Sections.ToList().FindIndex(section => section is DecisionSectionView));
+
+        var preflight = window.Validate();
+        window.SelectSection(window.Sections.Count - 1);
+
+        Assert.Contains(preflight.FieldErrors, e => e.Contains("'acme'", StringComparison.Ordinal));
+        Assert.Equal("acme", model.Document.GetString(DecisionSection.ProviderPath));
+        Assert.Equal("acme", model.Decision.Provider);
+    }
+
+    [Fact]
+    public void Validating_refreshes_the_decision_status()
+    {
+        var model = CreateModel();
+        using var window = new StudioConfigWindow(model);
+        var decision = Assert.Single(window.Sections.OfType<DecisionSectionView>());
+        model.Decision.SelectProvider(DecisionForm.StandardChoices.Count - 1);
+        model.Decision.Enabled = false;
+        decision.Load();
+        Assert.DoesNotContain("Off", decision.StatusText, StringComparison.Ordinal);
+
+        window.Validate();
+
+        Assert.Equal("Off: every run goes without the decision models.", decision.StatusText);
     }
 
     [Fact]

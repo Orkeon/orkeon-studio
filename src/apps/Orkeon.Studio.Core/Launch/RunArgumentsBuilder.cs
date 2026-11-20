@@ -61,7 +61,7 @@ public static class RunArgumentsBuilder
         AppendValue(arguments, RunOption.InputsFile, options.InputsFilePath);
     }
 
-    /// <summary>The options both dialects accept: the sandbox, the verbosity, the LLM log.</summary>
+    /// <summary>The options both dialects accept: the sandbox, the verbosity, the LLM log, the decision circuit.</summary>
     private static void AppendSharedOptions(List<string> arguments, RunLaunchOptions options)
     {
         AppendSequence(arguments, RunOption.Mounts, options.Mounts);
@@ -78,6 +78,7 @@ public static class RunArgumentsBuilder
         AppendFlag(arguments, RunOption.LlmLog, options.LlmLogEnabled);
         AppendValue(arguments, RunOption.LlmLogPath, options.LlmLogPath);
         AppendFlag(arguments, RunOption.Validate, options.Validate);
+        AppendFlag(arguments, RunOption.NoDecision, options.NoDecision);
     }
 
     /// <summary>

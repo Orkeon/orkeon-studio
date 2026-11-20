@@ -64,6 +64,17 @@ public sealed partial class EngineDefaultsDriftTests
         Assert.False(RagSection.DefaultWebFallbackEnabled);
     }
 
+    [Fact]
+    public void The_decision_provider_defaults_are_the_engines()
+    {
+        var engine = new Orkeon.Infrastructure.Decision.SystemOne.SystemOneProviderOptions();
+
+        Assert.Equal(DecisionSection.DefaultTimeoutSeconds, engine.TimeoutSeconds);
+        Assert.Equal(DecisionSection.DefaultMaxRetries, engine.MaxRetries);
+        Assert.True(new Orkeon.Infrastructure.LLMs.Decision.DecisionCircuitOptions().Enabled);
+        Assert.True(AppSettingsDocument.CreateEmpty().Decision.IsEnabled);
+    }
+
     [GeneratedRegex(@"public bool Enabled \{ get; set; \}([^;\n]*);?")]
     private static partial Regex EnabledPropertyPattern();
 

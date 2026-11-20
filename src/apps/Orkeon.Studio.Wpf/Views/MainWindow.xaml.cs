@@ -64,10 +64,12 @@ public partial class MainWindow : Window
         shell.CreateTeam.OpenTeamRequested += (_, _) => NavTeams.IsChecked = true;
         shell.AllowedFolders.OpenSettingsRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Launch.OpenAllowedFoldersRequested += (_, _) => NavSettings.IsChecked = true;
+        shell.Launch.OpenDecisionSettingsRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Teams.OpenAllowedFoldersRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Launch.ChooseTeamRequested += (_, _) => NavTeams.IsChecked = true;
         shell.Launch.CreateTeamRequested += (_, _) => NavCreate.IsChecked = true;
         shell.Run.Trial.OpenAllowedFoldersRequested += (_, _) => NavSettings.IsChecked = true;
+        shell.Run.Trial.OpenDecisionSettingsRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Run.Trial.ChooseTeamRequested += (_, _) => NavTeams.IsChecked = true;
         shell.Run.Trial.CreateTeamRequested += (_, _) => NavCreate.IsChecked = true;
         shell.Teams.CreateRequested += (_, _) => NavCreate.IsChecked = true;

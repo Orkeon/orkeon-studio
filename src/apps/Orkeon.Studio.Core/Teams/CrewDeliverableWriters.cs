@@ -1,16 +1,7 @@
-using Microsoft.Extensions.Logging.Abstractions;
-using Orkeon.Compliance.Vfs;
 using Orkeon.Domain.Configuration;
-using Orkeon.Domain.Exceptions;
-using Orkeon.Domain.FileSystem;
 using Orkeon.Domain.SharedKernel.ValueObjects;
 using Orkeon.Domain.Task.ValueObjects;
-using Orkeon.Infrastructure.Configuration;
-using Orkeon.Infrastructure.FileSystem;
-using Orkeon.Infrastructure.Security;
-using Orkeon.Infrastructure.Serialization;
 using Orkeon.Studio.Core.Targets;
-using YamlDotNet.Core;
 using DeliverableToolCheck = Orkeon.Application.Crew.DeliverableToolCheck;
 
 namespace Orkeon.Studio.Core.Teams;
@@ -99,9 +90,6 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// </summary>
 public static class CrewDeliverableWriters
 {
-    /// <summary>Where the crew's folder is mounted for the engine's loader, as <c>orkeon run</c> mounts it.</summary>
-    private const string CrewMount = "/crew";
-
     /// <summary>
     /// The tools Orkeon ships that a run registers, as the Settings screen lists them: a name outside
     /// them may write a file for all Studio can tell.
@@ -113,56 +101,12 @@ public static class CrewDeliverableWriters
     /// The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the
     /// crew's order. Empty without a target, for a script, and for a crew the engine refuses at load.
     /// </summary>
-    [SuppressVfsCompliance(
-        "EXCEPTION-BOOTSTRAP: Studio is a host application; the crew's folder is user-owned storage on the " +
-        "physical disk, mounted for the engine's loader as orkeon run mounts it.")]
-    public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target)
-    {
-        if (target is null || target.Dialect != RunTargetDialect.Yaml || string.IsNullOrWhiteSpace(target.RunPath))
-            return [];
-
-        var directory = target.Kind == RunTargetKind.MultiFileCrewDirectory;
-        var folder = directory ? target.RunPath : Path.GetDirectoryName(Path.GetFullPath(target.RunPath));
-        if (string.IsNullOrEmpty(folder))
-            return [];
-
-        // The engine's file system is async; nothing here awaits the caller's context.
-        return Task.Run(async () =>
-        {
-            try
-            {
-                using var registry = new FileSystemRegistry(
-                    [FileSystemMount.Parse($"{FileSystemMount.Quote(folder)}:{CrewMount}:ro")]);
-                var loader = Loader(registry, folder);
-                var config = directory
-                    ? await loader.LoadFromDirectoryAsync(CrewMount).ConfigureAwait(false)
-                    : await loader.LoadFromFileAsync($"{CrewMount}/{Path.GetFileName(target.RunPath)}").ConfigureAwait(false);
-                return Judge(loader, config);
-            }
-            catch (Exception ex) when (IsRefusal(ex))
-            {
-                return [];
-            }
-        }).GetAwaiter().GetResult();
-    }
+    public static IReadOnlyList<CrewDeliverableWithoutWriter> Of(RunTarget? target) =>
+        EngineCrewReader.Read<IReadOnlyList<CrewDeliverableWithoutWriter>>(target, Judge, []);
 
     /// <summary>The same, of a single-file crew's text.</summary>
-    public static IReadOnlyList<CrewDeliverableWithoutWriter> OfCrewFile(string yaml)
-    {
-        ArgumentNullException.ThrowIfNull(yaml);
-
-        try
-        {
-            using var registry = new FileSystemRegistry([]);
-            var loader = Loader(registry, workspace: null);
-            // A string is loaded at once: the task is complete when it returns.
-            return Judge(loader, loader.LoadFromStringAsync(yaml).GetAwaiter().GetResult());
-        }
-        catch (Exception ex) when (IsRefusal(ex))
-        {
-            return [];
-        }
-    }
+    public static IReadOnlyList<CrewDeliverableWithoutWriter> OfCrewFile(string yaml) =>
+        EngineCrewReader.ReadText<IReadOnlyList<CrewDeliverableWithoutWriter>>(yaml, Judge, []);
 
     /// <summary>
     /// Whether a belt can write <paramref name="path"/>: a tool Studio does not know, or a built-in
@@ -174,36 +118,12 @@ public static class CrewDeliverableWriters
         belt.Any(tool => !KnownTools.Contains(tool)) || DeliverableToolCheck.CanWrite(belt, path);
 
     /// <summary>
-    /// The engine's crew loader over <paramref name="registry"/>, its paths checked by the engine's own
-    /// validator against the crew's folder (<paramref name="workspace"/>), the one root it reads.
-    /// </summary>
-    private static YamlCrewDefinitionLoader Loader(FileSystemRegistry registry, string? workspace) =>
-        new(
-            new YamlDotNetSerializer(),
-            new FileSystemService(
-                registry,
-                new PathValidator(new PathSecurityOptions { DefaultWorkspaceRoot = workspace }, NullLogger<PathValidator>.Instance),
-                NullLogger<FileSystemService>.Instance),
-            NullLogger<YamlCrewDefinitionLoader>.Instance);
-
-    /// <summary>
-    /// Whether <paramref name="ex"/> is how the engine's loader or its file system refuses a crew: what the
-    /// launch would report as the load error.
-    /// </summary>
-    private static bool IsRefusal(Exception ex) =>
-        ex is InvalidOperationException or ArgumentException or FormatException or InvalidCastException
-            or NotSupportedException or IOException or UnauthorizedAccessException or YamlException
-            or FileAccessDeniedException or DomainException;
-
-    /// <summary>
     /// The findings of a loaded crew, as <c>DeliverableToolCheck.Check</c> finds them over the crew the
     /// factory builds from it; none when the factory's validator refuses the crew.
     /// </summary>
-    private static List<CrewDeliverableWithoutWriter> Judge(YamlCrewDefinitionLoader loader, CrewConfiguration crew)
+    private static IReadOnlyList<CrewDeliverableWithoutWriter> Judge(CrewConfiguration crew)
     {
         var result = new List<CrewDeliverableWithoutWriter>();
-        if (!loader.Validate(crew).IsValid)
-            return result;
 
         foreach (var task in crew.Tasks)
         {
@@ -239,7 +159,7 @@ public static class CrewDeliverableWriters
     /// The agents that may run <paramref name="task"/>, in the crew's order, as the engine's
     /// <c>DeliverableToolCheck.CandidatesOf</c> picks them.
     /// </summary>
-    private static List<AgentConfiguration> CandidatesOf(TaskConfiguration task, CrewConfiguration crew)
+    internal static List<AgentConfiguration> CandidatesOf(TaskConfiguration task, CrewConfiguration crew)
     {
         var process = crew.Process;
         if (process == ProcessType.Sequential || process == ProcessType.Parallel || process == ProcessType.Graph)
@@ -256,11 +176,11 @@ public static class CrewDeliverableWriters
     }
 
     /// <summary>An agent by its key, what the user edits; its role when it has none.</summary>
-    private static string KeyOf(AgentConfiguration agent) =>
+    internal static string KeyOf(AgentConfiguration agent) =>
         string.IsNullOrWhiteSpace(agent.Key) ? agent.Role : agent.Key;
 
     /// <summary>A task by its key, else the start of its description, as the engine names it (<c>NameOf</c>).</summary>
-    private static string NameOf(TaskConfiguration task)
+    internal static string NameOf(TaskConfiguration task)
     {
         if (!string.IsNullOrWhiteSpace(task.Key))
             return task.Key;

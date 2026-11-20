@@ -141,6 +141,48 @@ public static class ValidationCodes
     /// </summary>
     public const string DeliverableWithoutWriter = "STUDIO-DELIVERABLE-WRITER";
 
+    /// <summary>
+    /// A crew that cannot run without the decision models (System One): an agent or a task holds
+    /// <c>system_one_decide</c>, a tool a run registers only once a provider is configured, or a decision
+    /// task has neither a fallback nor an <c>otherwise</c> task, which a run refuses once the circuit is
+    /// off. An error when the run cannot give them for sure (no provider in the file the run reads for the
+    /// tool; for such a task, the models switched off there or <c>--no-decision</c> too); a warning for a
+    /// check, and while the CLI resolves the settings.
+    /// </summary>
+    public const string DecisionRequired = "STUDIO-DECISION-REQUIRED";
+
+    /// <summary>
+    /// The settings name a decision provider the engine refuses (an unknown name, two providers it could
+    /// deduce): the host stops before it loads the crew, a check included. An error when the file is the
+    /// one the run reads; a warning otherwise.
+    /// </summary>
+    public const string DecisionProviderRefused = "STUDIO-DECISION-PROVIDER";
+
+    /// <summary>
+    /// A crew that runs with or without the decision models goes without them: each decision task
+    /// answers from its fallback, or lets its <c>otherwise</c> task run. Information.
+    /// </summary>
+    public const string DecisionFallback = "STUDIO-DECISION-FALLBACK";
+
+    /// <summary>
+    /// The decision provider the run uses needs a key and none is in place, neither in its variable nor
+    /// in the file: each request fails, and with it each decision task that asks it. A warning.
+    /// </summary>
+    public const string DecisionKeyMissing = "STUDIO-DECISION-KEY";
+
+    /// <summary>
+    /// The circuit is off for the run while an agent or a task holds <c>system_one_decide</c>: the tool
+    /// still asks the provider, the circuit governing the decision tasks only. A warning.
+    /// </summary>
+    public const string DecisionToolIgnoresSwitch = "STUDIO-DECISION-TOOL";
+
+    /// <summary>
+    /// An agent or a task holds <c>system_one_decide</c>, no provider is configured, and the runner resolves
+    /// tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine drops the tool and runs
+    /// the crew without it. A warning.
+    /// </summary>
+    public const string DecisionToolDropped = "STUDIO-DECISION-TOOL-DROPPED";
+
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";
 

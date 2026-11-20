@@ -105,9 +105,10 @@ public sealed partial class I18nResourceParityTests
     /// <c>Orkeon:FileSystem:Mounts:{index}</c>, which the French strings already carry.
     /// Translating <c>/crew</c> would name a mount that does not exist — and the same holds
     /// for <c>crew/</c>, the sub-folder a promoted team keeps its definition in
-    /// (STUDIO-59): a folder name on disk, quoted as it is.
+    /// (STUDIO-59): a folder name on disk, quoted as it is. So is the engine's settings key
+    /// <c>Orkeon:CrewFactory:StrictTools</c>, which a decision warning names for the user to find.
     /// </summary>
-    private static readonly string[] MountPathLiterals = ["/crew", "crew/"];
+    private static readonly string[] MountPathLiterals = ["/crew", "crew/", "Orkeon:CrewFactory:StrictTools"];
 
     [Fact]
     public void Should_Speak_Of_Equipes_Not_Crews_When_Reading_The_French_Values()

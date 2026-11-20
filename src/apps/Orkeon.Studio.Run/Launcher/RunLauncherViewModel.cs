@@ -25,13 +25,15 @@ internal sealed class RunLauncherViewModel
     private readonly IAppSettingsReader _settingsReader;
     private readonly ITargetProbe _targetProbe;
     private readonly IDirectoryProbe _directories;
+    private readonly Func<string, string?> _environment;
 
     /// <summary>
     /// Creates the launcher over explicit collaborators (the test seam). <paramref name="teamsRoot"/>
     /// is the teams root a real run stamps its team's last run under (STUDIO-31, D-05; STUDIO-61)
     /// and the root a team's own settings file is anchored on (STUDIO-62); null stamps nothing and
     /// finds no team file. <paramref name="targetProbe"/> is the disk the team file is looked up on
-    /// — the detector's, in production; the real disk when absent.
+    /// — the detector's, in production; the real disk when absent. <paramref name="environment"/> is
+    /// where the decision providers' keys are read, the process environment the child inherits when absent.
     /// </summary>
     public RunLauncherViewModel(
         RunTargetDetector detector,
@@ -40,7 +42,8 @@ internal sealed class RunLauncherViewModel
         MountValidator? mountValidator = null,
         IAppSettingsReader? settingsReader = null,
         TeamsRootResolution? teamsRoot = null,
-        ITargetProbe? targetProbe = null)
+        ITargetProbe? targetProbe = null,
+        Func<string, string?>? environment = null)
     {
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(runner);
@@ -52,6 +55,7 @@ internal sealed class RunLauncherViewModel
         _settingsReader = settingsReader ?? PhysicalAppSettingsReader.Instance;
         _targetProbe = targetProbe ?? PhysicalTargetProbe.Instance;
         _directories = new TargetProbeDirectories(_targetProbe);
+        _environment = environment ?? Environment.GetEnvironmentVariable;
     }
 
     /// <summary>
@@ -126,6 +130,9 @@ internal sealed class RunLauncherViewModel
     /// <summary>Whether <see cref="SettingsMounts"/> is the list of a settings file read here, not a blank for an unknown one.</summary>
     private bool _settingsMountsKnown;
 
+    /// <summary>The decision circuit of the settings file read here; null while the CLI resolves the file.</summary>
+    private DecisionStatus? _settingsDecision;
+
     /// <summary>Options the form leaves enabled for the detected target.</summary>
     public IReadOnlyList<RunOption> AvailableOptions => LaunchOptionsModel.AvailableOptions(Target.Target);
 
@@ -192,8 +199,130 @@ internal sealed class RunLauncherViewModel
         messages.AddRange(Options.ValidateMounts());
         messages.AddRange(ValidateFileSystemScopes(dryRun));
         messages.AddRange(ValidateDeliverableWriters());
+        messages.AddRange(ValidateDecisionModels(dryRun));
         return messages;
     }
+
+    /// <summary>
+    /// What the decision models (System One) change to the run (<see cref="DecisionPreflight"/>), the
+    /// crew read again. An error when the launch is refused for sure: a holder of <c>system_one_decide</c>
+    /// and no provider in the settings file read here (tools resolved strictly), a decision task with
+    /// neither a fallback nor an <c>otherwise</c> task on a run with the circuit off, or a provider that
+    /// file names and the engine refuses (a check too). A warning while the CLI resolves the settings
+    /// itself, for a check of a crew a run would refuse (the check stays offered: it loads the crew for
+    /// such a decision task, and reports the engine's unknown-tool line for a holder of the tool), for a
+    /// provider without its key, for a holder of the tool on a run with the circuit off (the tool still
+    /// asks the provider), and for a holder of the tool a lenient runner drops; information for decision
+    /// tasks that go on their fallbacks.
+    /// </summary>
+    private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
+    {
+        if (Target.Target is not { } target
+            || DecisionPreflight.Check(CrewDecisionUsage.Of(target), _settingsDecision, _settingsDecision is not null, Options.NoDecision)
+                is not { } finding)
+        {
+            return [];
+        }
+
+        var holders = string.Join(", ", finding.Usage.ToolHolders.Select(holder => $"'{holder}'"));
+        var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason)));
+        var blocks = dryRun ? finding.BlocksValidate : finding.BlocksLaunch;
+        return finding.Kind switch
+        {
+            DecisionPreflightKind.ProviderRefused => [Say(
+                ValidationCodes.DecisionProviderRefused,
+                blocks,
+                $"The settings name a decision provider the engine refuses, so the CLI will not start: {finding.Status?.Refusal}")],
+            DecisionPreflightKind.RequiredWithoutModel => [Say(
+                ValidationCodes.DecisionRequired,
+                blocks,
+                (dryRun ? CheckOfRequiredText(finding) : "")
+                + $"this crew cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
+            DecisionPreflightKind.RequiredUnknownSettings => [Say(
+                ValidationCodes.DecisionRequired,
+                blocks,
+                $"This crew cannot run without the decision models (System One): {NeedsText(finding)}." + reasons
+                + " The CLI resolves the settings at launch: check that they configure a decision provider and leave the circuit on, or pin the file.")],
+            DecisionPreflightKind.ProviderKeyMissing => [ValidationMessage.Warning(
+                ValidationCodes.DecisionKeyMissing,
+                $"The decision provider {finding.Status?.Provider?.DisplayName} needs an API key and none is in place: "
+                + $"set {finding.Status?.MissingKeyVariable} (or ApiKey in its section). Until then each request it gets fails, "
+                + "and with it each decision task and each system_one_decide call that asks it.",
+                target.RunPath)],
+            DecisionPreflightKind.ToolDroppedWithoutProvider => [ValidationMessage.Warning(
+                ValidationCodes.DecisionToolDropped,
+                $"{holders} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools "
+                + "false, the engine drops the tool and runs the crew without it.",
+                target.RunPath)],
+            DecisionPreflightKind.ToolIgnoresSwitch => [ValidationMessage.Warning(
+                ValidationCodes.DecisionToolIgnoresSwitch,
+                $"{holders} use system_one_decide: on this run the tool still asks {finding.Status?.Provider?.DisplayName}: "
+                + "--no-decision and Orkeon:Decision:Enabled only send the decision tasks to their fallbacks.",
+                target.RunPath)],
+            _ => [ValidationMessage.Information(
+                ValidationCodes.DecisionFallback,
+                "This run goes without the decision models (System One): "
+                + string.Join("; ", finding.Usage.DecisionTasks.Where(task => task.AnswersWithoutModel).Select(FallbackText))
+                + "." + reasons,
+                target.RunPath)],
+        };
+
+        ValidationMessage Say(string code, bool error, string text) =>
+            error ? ValidationMessage.Error(code, text, target.RunPath) : ValidationMessage.Warning(code, text, target.RunPath);
+    }
+
+    /// <summary>
+    /// What a check of a crew a run refuses does: it stays offered, loads the crew for a decision task
+    /// without an answer of its own, and for a holder of <c>system_one_decide</c> with no provider fails
+    /// on the engine's unknown-tool line (tools resolved strictly, the default).
+    /// </summary>
+    private static string CheckOfRequiredText(DecisionPreflightFinding finding) =>
+        finding.RefusesToolAtLoad
+            ? "The check reports the engine's unknown-tool line for system_one_decide, and a run will refuse this crew: "
+            : "A check loads this crew, but a run will refuse it: ";
+
+    /// <summary>
+    /// Why the crew needs the decision models on this run: the holders of <c>system_one_decide</c> while
+    /// no provider is in sight (unless a lenient runner drops the tool), and the decision tasks without an
+    /// answer while the circuit may be off.
+    /// </summary>
+    private static string NeedsText(DecisionPreflightFinding finding)
+    {
+        var needs = new List<string>();
+        var holders = finding.Usage.ToolHolders;
+        if (holders.Count > 0 && finding.Status is not { StrictTools: false } && finding.Status?.Provider is null)
+        {
+            needs.Add(string.Join(", ", holders.Select(holder => $"'{holder}'"))
+                + " use system_one_decide, which needs a decision provider");
+        }
+
+        var unanswered = finding.Usage.TasksWithoutAnswer;
+        if (unanswered.Count > 0 && (finding.SwitchedOffForRun || finding.Status is not { CircuitOn: true }))
+        {
+            var tasks = string.Join(", ", unanswered.Select(task => $"'{task}'"));
+            needs.Add(unanswered.Count == 1
+                ? $"the decision task {tasks} has neither a fallback nor an otherwise task, so it needs the decision models on"
+                : $"the decision tasks {tasks} have neither a fallback nor an otherwise task, so they need the decision models on");
+        }
+
+        return string.Join("; ", needs);
+    }
+
+    /// <summary>One reason the run goes without the decision models, and its fix.</summary>
+    private static string ReasonText(DecisionOffReason reason) => reason switch
+    {
+        DecisionOffReason.NoProvider => "No decision provider is configured (an Orkeon:TypeSafe or Orkeon:Liquid section, or its API key; Kev must be named in Orkeon:Decision:Provider).",
+        DecisionOffReason.SettingsSwitch => "The settings switch the decision tasks off (Orkeon:Decision:Enabled is false).",
+        DecisionOffReason.RunSwitch => "This run switches the decision tasks off: untick --no-decision.",
+        _ => "",
+    };
+
+    /// <summary>What one decision task answers once the circuit is off.</summary>
+    private static string FallbackText(CrewDecisionTask task) =>
+        task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise
+            ? $"task '{task.Task}' gives no answer and task '{otherwise}' runs instead"
+            : $"task '{task.Task}' answers "
+              + string.Join(", ", task.Questions.Where(task.Fallback.ContainsKey).Select(question => $"{question} = {task.Fallback[question]}"));
 
     /// <summary>
     /// The agents the engine will refuse with the mounts of this run (#349): a <c>filesystem:</c>
@@ -330,6 +459,7 @@ internal sealed class RunLauncherViewModel
     {
         var path = ResolvedSettingsPath;
         _settingsMountsKnown = false;
+        _settingsDecision = null;
 
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -356,6 +486,7 @@ internal sealed class RunLauncherViewModel
 
         SettingsMounts = document.Mounts.RawEntries;
         _settingsMountsKnown = true;
+        _settingsDecision = document.Decision.Resolve(_environment);
         SettingsMountsNotice = SettingsMounts.Count == 0
             ? $"'{path}' declares no mount."
             : null;

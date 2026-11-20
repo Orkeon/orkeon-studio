@@ -494,4 +494,71 @@ public sealed class MainWindowViewModelTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public void The_trial_launcher_opens_the_decision_models_settings()
+    {
+        var window = Build();
+
+        window.Run.Trial.OpenDecisionSettingsCommand.Execute(null);
+
+        Assert.True(window.Settings.IsDecisionTab);
+    }
+
+    [Fact]
+    public async Task A_decision_key_stored_in_the_settings_reaches_both_launchers()
+    {
+        var root = TempRoot();
+        try
+        {
+            var team = WriteDecisionTeam(root);
+            var keys = new FakeApiKeyStore();
+            var window = new MainWindowViewModel(new StudioServices
+                {
+                    SettingsStore = new FakeAppSettingsStore(),
+                    Directories = new FakeDirectoryProbe(team),
+                    TargetProbe = new FakeTargetProbe().WithDirectory(team).WithDirectory(Path.Combine(team, "agents")),
+                    Picker = new FakePathPicker(),
+                    ProcessRunner = new OrkeonProcessRunner(
+                        new FakeProcessLauncher(),
+                        new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
+                    HistoryStore = new FakeLaunchHistoryStore(),
+                    KeyStore = keys,
+                },
+                globalPathOverride: GlobalPath);
+            window.Config.SetDocument(Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{}}}"""));
+            window.Launch.Target.Select(team);
+            window.Run.Trial.Target.Select(team);
+            Assert.True(window.Launch.HasDecisionWarning);
+            Assert.True(window.Run.Trial.HasDecisionWarning);
+
+            var liquid = window.Config.Decision.Providers.Single(card => card.Descriptor == Orkeon.Infrastructure.Decision.SystemOne.DecisionProviderDescriptor.Liquid);
+            liquid.Key.KeyInput = "liquid-key";
+            await liquid.Key.StoreCommand.ExecuteAsync(null);
+
+            // The screens the user comes back to judge the crew on the key now in place.
+            Assert.False(window.Launch.HasDecisionWarning);
+            Assert.False(window.Run.Trial.HasDecisionWarning);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>A crew whose decision task answers from its fallback once the circuit is off.</summary>
+    private static string WriteDecisionTeam(string root)
+    {
+        var team = Path.Combine(root, "triage");
+        Directory.CreateDirectory(Path.Combine(team, "agents"));
+        Directory.CreateDirectory(Path.Combine(team, "tasks"));
+        File.WriteAllText(Path.Combine(team, "crew.yaml"), "name: triage\ngoal: triage\nprocess: sequential\n");
+        File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\ngoal: write\n");
+        File.WriteAllText(Path.Combine(team, "tasks", "draft.yaml"), "description: draft\nexpected_output: a draft\nagent: writer\n");
+        File.WriteAllText(
+            Path.Combine(team, "tasks", "pick.yaml"),
+            "description: is it ready\nexpected_output: an answer\ndependencies: [draft]\n"
+            + "decision:\n  questions:\n    go: { noul: the draft is ready }\n  fallback: { go: \"no\" }\n");
+        return team;
+    }
 }

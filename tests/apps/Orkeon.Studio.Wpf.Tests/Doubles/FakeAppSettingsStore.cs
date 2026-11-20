@@ -17,21 +17,32 @@ public sealed class FakeAppSettingsStore : IAppSettingsStore
     /// <summary>When set, a save throws it instead of writing — a locked or read-only file.</summary>
     public Exception? SaveFault { get; set; }
 
+    /// <summary>When set, a load waits for it before it reads the map: a file still being read.</summary>
+    public TaskCompletionSource? LoadGate { get; set; }
+
     public bool Exists(string path) => Files.ContainsKey(path);
 
-    public Task<(AppSettingsDocument? Document, string? ErrorMessage)> TryLoadAsync(
+    public async Task<(AppSettingsDocument? Document, string? ErrorMessage)> TryLoadAsync(
         string path,
         CancellationToken cancellationToken = default)
     {
+        if (LoadGate is { } gate)
+            await gate.Task.ConfigureAwait(false);
+
+        return Load(path);
+    }
+
+    private (AppSettingsDocument? Document, string? ErrorMessage) Load(string path)
+    {
         if (LoadError is { Length: > 0 })
-            return Task.FromResult<(AppSettingsDocument?, string?)>((null, LoadError));
+            return (null, LoadError);
 
         if (!Files.TryGetValue(path, out var json))
-            return Task.FromResult<(AppSettingsDocument?, string?)>((null, $"File not found: {path}"));
+            return (null, $"File not found: {path}");
 
-        return Task.FromResult(AppSettingsDocument.TryParse(json, out var document, out var error)
-            ? ((AppSettingsDocument?)document, (string?)null)
-            : (null, error));
+        return AppSettingsDocument.TryParse(json, out var document, out var error)
+            ? (document, null)
+            : (null, error);
     }
 
     public Task SaveAsync(AppSettingsDocument document, string path, CancellationToken cancellationToken = default)

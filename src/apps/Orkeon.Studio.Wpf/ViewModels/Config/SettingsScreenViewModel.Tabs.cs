@@ -70,6 +70,12 @@ public sealed partial class SettingsScreenViewModel
     public string KeysTabState =>
         KeysState(Profiles.HasSecrets, StoredKeyCount, Profiles.Secrets.Count);
 
+    /// <summary>The provider that answers the decision tasks, off, none, or to fix.</summary>
+    public string DecisionTabSubtitle => Config.Decision.TabSubtitle;
+
+    /// <summary>Warning on a choice the engine refuses, done while a provider answers, empty otherwise.</summary>
+    public string DecisionTabState => Config.Decision.TabState;
+
     /// <summary>The fiches whose row carries a finding of the validation.</summary>
     private int FolderProblemCount => Config.Mounts.Mounts.Count(mount => mount.HasRowProblem);
 
@@ -195,6 +201,11 @@ public sealed partial class SettingsScreenViewModel
             }
         };
         Config.Mounts.PropertyChanged += (_, _) => RefreshTabStates();
+        Config.Decision.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(DecisionSectionViewModel.TabSubtitle) or nameof(DecisionSectionViewModel.TabState) or "" or null)
+                OnPropertiesChanged(nameof(DecisionTabSubtitle), nameof(DecisionTabState));
+        };
         _strings.CultureChanged += (_, _) => RefreshTabStates();
     }
 
@@ -203,6 +214,7 @@ public sealed partial class SettingsScreenViewModel
             nameof(ModelTabSubtitle), nameof(ModelTabState),
             nameof(RagTabSubtitle), nameof(RagTabState),
             nameof(KeysTabSubtitle), nameof(KeysTabState),
+            nameof(DecisionTabSubtitle), nameof(DecisionTabState),
             nameof(FoldersTabSubtitle), nameof(FoldersTabState),
             nameof(ToolsTabSubtitle), nameof(ToolKeysTabSubtitle), nameof(ToolKeysTabState), nameof(ShellTabSubtitle),
             nameof(MailsTabSubtitle), nameof(MailsTabState),

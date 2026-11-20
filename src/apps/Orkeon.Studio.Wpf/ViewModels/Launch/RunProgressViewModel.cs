@@ -103,6 +103,50 @@ public sealed class RunTaskViewModel
             return _strings[key];
         }
     }
+
+    /// <summary>
+    /// The answers of a decision task, one line per question: the option chosen (or the score, or the yes
+    /// of a yes/no question), how likely it is and how sure the model was, as whole percentages. Empty when
+    /// the line carried no answers it could read; the raw JSON stays in <see cref="RunTaskProgress.DecisionAnswers"/>.
+    /// </summary>
+    public string DecisionDetails => string.Join(
+        "\n",
+        DecisionAnswerReading.Parse(Task.DecisionAnswers).Select(DescribeAnswer));
+
+    /// <summary>Whether <see cref="DecisionDetails"/> has anything to show.</summary>
+    public bool HasDecisionDetails => DecisionDetails.Length > 0;
+
+    private string DescribeAnswer(DecisionAnswerReading answer)
+    {
+        // A defaulted question with no fallback: the engine writes empty probabilities and a zero
+        // confidence, which says nothing of the model. Said as no answer, without figures.
+        if (answer is { Chosen: null, Score: null, Likelihood: null })
+            return answer.Question + " = " + _strings[StudioStringKeys.RunProgressDecisionNoAnswer];
+
+        var value = answer switch
+        {
+            { Chosen: { } chosen } => chosen,
+            { Score: { } score } => _strings.Format(
+                StudioStringKeys.RunProgressDecisionScore, score.ToString("0.##", CultureInfo.CurrentCulture)),
+            { Likelihood: not null } => _strings[StudioStringKeys.RunProgressDecisionYes],
+            _ => "—",
+        };
+        var figures = new List<string>(2);
+        if (answer.Likelihood is { } likelihood)
+            figures.Add(_strings.Format(StudioStringKeys.RunProgressDecisionLikelihood, Percent(likelihood)));
+        // A yes/no answer's confidence is the likelihood of its side: said once.
+        if (answer.Confidence is { } confidence
+            && (answer.Likelihood is not { } said || Percent(said) != Percent(confidence)))
+        {
+            figures.Add(_strings.Format(StudioStringKeys.RunProgressDecisionConfidence, Percent(confidence)));
+        }
+
+        // A pattern with no words in it: "question = value · figure · figure".
+        return string.Join(" · ", figures.Prepend(answer.Question + " = " + value));
+    }
+
+    private static string Percent(double share) =>
+        Math.Round(Math.Clamp(share, 0, 1) * 100, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
 }
 
 /// <summary>One task the run has started and not yet finished, as the progress panel shows it (STUDIO-17).</summary>

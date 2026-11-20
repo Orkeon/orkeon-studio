@@ -240,6 +240,7 @@ public sealed class TeamCardViewModel : ObservableObject
         ConfigureModelCommand = new RelayCommand(() => owner.RequestConfigureModel());
         var declarations = CrewLlmDeclarations.CountIn(summary.Path);
         CrewLlmWarning = declarations > 0 ? strings.Format(StudioStringKeys.TeamsCrewOverridesLlm, declarations) : null;
+        DecisionMode = owner.ReadDecisionMode(summary.Path);
         _scheduledRun = ReadScheduledRun();
     }
 
@@ -327,6 +328,28 @@ public sealed class TeamCardViewModel : ObservableObject
 
     /// <summary>Whether the warning shows.</summary>
     public bool HasCrewLlmWarning => CrewLlmWarning is not null;
+
+    /// <summary>What the team's crew asks of the decision models (System One), read when the card is built.</summary>
+    public CrewDecisionMode DecisionMode { get; }
+
+    /// <summary>« System One required » or « System One optional »; empty for a team that asks nothing of them.</summary>
+    public string DecisionBadge => DecisionMode switch
+    {
+        CrewDecisionMode.Required => _strings[StudioStringKeys.TeamsDecisionRequired],
+        CrewDecisionMode.Optional => _strings[StudioStringKeys.TeamsDecisionOptional],
+        _ => string.Empty,
+    };
+
+    /// <summary>What the badge means.</summary>
+    public string? DecisionBadgeTip => DecisionMode switch
+    {
+        CrewDecisionMode.Required => _strings[StudioStringKeys.TeamsDecisionRequiredTip],
+        CrewDecisionMode.Optional => _strings[StudioStringKeys.TeamsDecisionOptionalTip],
+        _ => null,
+    };
+
+    /// <summary>Whether the badge shows.</summary>
+    public bool HasDecisionBadge => DecisionMode != CrewDecisionMode.None;
 
     private void BeginChangeLlm()
     {
@@ -1113,6 +1136,12 @@ public sealed record TeamsDependencies
     /// <summary>Reads the team folders; the real catalog under <see cref="TeamsRoot"/> when null.</summary>
     public Func<IReadOnlyList<TeamSummary>>? LoadTeams { get; init; }
 
+    /// <summary>
+    /// What the crew of the team at the given folder asks of the decision models, for its card's badge;
+    /// <see cref="CrewDecisionUsage.ModeOfTeam"/> when null.
+    /// </summary>
+    public Func<string, CrewDecisionMode>? ReadDecisionMode { get; init; }
+
     /// <summary>Reads the wizard sessions; the real forge catalog when null.</summary>
     public Func<IReadOnlyList<ForgeSolutionSummary>>? LoadSessions { get; init; }
 
@@ -1209,6 +1238,7 @@ public sealed class TeamsViewModel : ObservableObject
     private static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(10);
 
     private readonly Func<IReadOnlyList<TeamSummary>> _loadTeams;
+    private readonly Func<string, CrewDecisionMode> _readDecisionMode;
     private readonly Func<IReadOnlyList<string>> _declaredMounts;
     private readonly IShellOpener? _shellOpener;
     private readonly Func<IReadOnlyList<ForgeSolutionSummary>> _loadSessions;
@@ -1283,6 +1313,7 @@ public sealed class TeamsViewModel : ObservableObject
         _workspace = wired.WorkspaceDirectory ?? Environment.CurrentDirectory;
         // Every team, archived or not: the screen splits them (STUDIO-31).
         _loadTeams = wired.LoadTeams ?? (() => TeamCatalog.List(root, TeamListFilter.All));
+        _readDecisionMode = wired.ReadDecisionMode ?? CrewDecisionUsage.ModeOfTeam;
         _loadSessions = wired.LoadSessions ?? (() => ForgeSessionCatalog.List(_workspace));
         _strings = wired.Strings ?? EnglishStudioStrings.Instance;
         CreateCommand = new RelayCommand(() => CreateRequested?.Invoke(this, EventArgs.Empty));
@@ -1779,6 +1810,9 @@ public sealed class TeamsViewModel : ObservableObject
     /// <summary>The settings of this machine, by name, for a card's model editor.</summary>
     internal IReadOnlyList<string> LlmProfiles =>
         _modelSettings is null ? [] : [.. _modelSettings().Profiles.Select(profile => profile.Name)];
+
+    /// <summary>What the crew of the team at <paramref name="teamPath"/> asks of the decision models.</summary>
+    internal CrewDecisionMode ReadDecisionMode(string teamPath) => _readDecisionMode(teamPath);
 
     /// <summary>« Use the default model (X) », X the setting elected; without one, says so.</summary>
     internal string UseDefaultLlmLabel =>

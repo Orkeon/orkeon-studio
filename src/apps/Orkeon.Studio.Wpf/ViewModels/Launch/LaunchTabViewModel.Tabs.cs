@@ -467,13 +467,22 @@ public sealed partial class LaunchTabViewModel
                 return _strings[StudioStringKeys.RunBlockedFolders];
             }
 
-            return IsBlockedByFileSystemScope ? _strings[StudioStringKeys.RunBlockedScope] : null;
+            if (IsBlockedByFileSystemScope)
+            {
+                return _strings[StudioStringKeys.RunBlockedScope];
+            }
+
+            return IsBlockedByDecision ? DecisionMessage : null;
         }
     }
 
-    /// <summary>Whether a refusal of the team itself holds: an undeclared folder, an unknown id, an archive.</summary>
+    /// <summary>
+    /// Whether a refusal of the team itself holds: an undeclared folder, an unknown id, an archive, or
+    /// the decision models it cannot run without.
+    /// </summary>
     private bool IsTeamRefused =>
-        IsBlockedByUndeclaredFolders || IsBlockedByUnknownMountIds || IsBlockedByFileSystemScope || IsTargetArchived;
+        IsBlockedByUndeclaredFolders || IsBlockedByUnknownMountIds || IsBlockedByFileSystemScope || IsTargetArchived
+        || IsBlockedByDecision;
 
     /// <summary>The beat of the status bar moves the durations between the run's events.</summary>
     internal void RefreshClock() =>
@@ -536,7 +545,7 @@ public sealed partial class LaunchTabViewModel
                 break;
             case nameof(TeamHeadline) or nameof(TeamMetaLine) or nameof(IsTargetArchived)
                 or nameof(IsBlockedByUndeclaredFolders) or nameof(IsBlockedByUnknownMountIds)
-                or nameof(IsBlockedByFileSystemScope):
+                or nameof(IsBlockedByFileSystemScope) or nameof(IsBlockedByDecision):
                 RaiseTeamTabChanged();
                 break;
             case nameof(RunLlmChoice):
