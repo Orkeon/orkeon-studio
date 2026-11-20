@@ -646,6 +646,60 @@ public static class StudioStringKeys
     /// <summary>"Task 'x' is a decision task and must write /output/y …" — a decision task that declares a deliverable, which nothing writes; {0} is the task, {1} the deliverable's path.</summary>
     public const string RunWarnDeliverableDecision = "Studio.Run.WarnDeliverableDecision";
 
+    /// <summary>"Use the decision models (System One)" — the launch option offered to a crew that asks the decision models; unticked, the run passes <c>--no-decision</c>.</summary>
+    public const string RunUseDecisionModels = "Studio.Run.UseDecisionModels";
+
+    /// <summary>The tooltip of <see cref="RunUseDecisionModels"/>: what an unticked box does to the run.</summary>
+    public const string RunUseDecisionModelsHint = "Studio.Run.UseDecisionModelsHint";
+
+    /// <summary>"The settings name a decision provider the engine refuses …" — a launch and a check refused on the provider of the file the run reads; {0} is the engine's reason.</summary>
+    public const string RunBlockedDecisionProvider = "Studio.Run.BlockedDecisionProvider";
+
+    /// <summary>"This machine's settings name a decision provider the engine refuses …" — the same, while the CLI picks the settings file itself; {0} is the engine's reason.</summary>
+    public const string RunWarnDecisionProvider = "Studio.Run.WarnDecisionProvider";
+
+    /// <summary>"This team cannot run without the decision models …" — a launch refused: the crew needs System One and the run goes without it; {0} lists who holds <c>system_one_decide</c>, {1} is why the run goes without it (<see cref="RunDecisionOffRunSwitch"/>, <see cref="RunDecisionOffSettings"/> or <see cref="RunDecisionOffNoProvider"/>).</summary>
+    public const string RunBlockedDecisionRequired = "Studio.Run.BlockedDecisionRequired";
+
+    /// <summary>"This team cannot run without the decision models … the CLI picks the settings file itself …" — the warning of a crew that needs System One while the settings the run reads are not known; {0} lists who holds <c>system_one_decide</c>, {1} what this machine's file says, possibly empty.</summary>
+    public const string RunWarnDecisionRequiredUnknown = "Studio.Run.WarnDecisionRequiredUnknown";
+
+    /// <summary>Why a run goes without the decision models: the launch option is unticked.</summary>
+    public const string RunDecisionOffRunSwitch = "Studio.Run.DecisionOffRunSwitch";
+
+    /// <summary>Why a run goes without the decision models: the settings switch them off.</summary>
+    public const string RunDecisionOffSettings = "Studio.Run.DecisionOffSettings";
+
+    /// <summary>Why a run goes without the decision models: no provider is configured.</summary>
+    public const string RunDecisionOffNoProvider = "Studio.Run.DecisionOffNoProvider";
+
+    /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool.</summary>
+    public const string RunDecisionNeedTool = "Studio.Run.DecisionNeedTool";
+
+    /// <summary>Why a team needs the decision models: {0} the decision tasks with no answer once the circuit is off.</summary>
+    public const string RunDecisionNeedAnswer = "Studio.Run.DecisionNeedAnswer";
+
+    /// <summary>A warning: {0} the provider, {1} the empty key variable.</summary>
+    public const string RunWarnDecisionKeyMissing = "Studio.Run.WarnDecisionKeyMissing";
+
+    /// <summary>A warning: {0} the holders of the tool, {1} the provider.</summary>
+    public const string RunWarnDecisionToolIgnoresSwitch = "Studio.Run.WarnDecisionToolIgnoresSwitch";
+
+    /// <summary>A warning: {0} the holders of system_one_decide, dropped by a lenient runner (Orkeon:CrewFactory:StrictTools false) as no provider is configured.</summary>
+    public const string RunWarnDecisionToolDropped = "Studio.Run.WarnDecisionToolDropped";
+
+    /// <summary>"This run goes without the decision models …" — the heading of a crew that runs either way, one line per decision task follows; {0} is why the run goes without them.</summary>
+    public const string RunInfoDecisionFallback = "Studio.Run.InfoDecisionFallback";
+
+    /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/>: {0} is the task, {1} its fallback answers (<c>question = answer</c>, comma-separated).</summary>
+    public const string RunInfoDecisionFallbackItem = "Studio.Run.InfoDecisionFallbackItem";
+
+    /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/> without a fallback: {0} is the task, {1} the task its <c>otherwise</c> branch runs.</summary>
+    public const string RunInfoDecisionOtherwiseItem = "Studio.Run.InfoDecisionOtherwiseItem";
+
+    /// <summary>The action of the decision alerts of the launch: opens Settings › Decision models.</summary>
+    public const string RunOpenDecisionSettings = "Studio.Run.OpenDecisionSettings";
+
     /// <summary>"Open the result" — the Launch screen's button once a run finished, one writable folder.</summary>
     public const string RunOpenResult = "Studio.Run.OpenResult";
 
@@ -1341,6 +1395,21 @@ public static class StudioStringKeys
 
     /// <summary>"decision (defaulted)"</summary>
     public const string RunProgressDecisionDefaulted = "Studio.Run.DecisionDefaulted";
+
+    /// <summary>The value of a yes/no answer that chose nothing: its yes probability follows in <see cref="RunProgressDecisionLikelihood"/>.</summary>
+    public const string RunProgressDecisionYes = "Studio.Run.DecisionYes";
+
+    /// <summary>The value of a score answer: {0} is the weighted score.</summary>
+    public const string RunProgressDecisionScore = "Studio.Run.DecisionScore";
+
+    /// <summary>How likely the chosen option is: {0} is a whole percentage.</summary>
+    public const string RunProgressDecisionLikelihood = "Studio.Run.DecisionLikelihood";
+
+    /// <summary>How sure the model was: {0} is a whole percentage.</summary>
+    public const string RunProgressDecisionConfidence = "Studio.Run.DecisionConfidence";
+
+    /// <summary>The value of a defaulted question the run answered with nothing: no model answer and no fallback.</summary>
+    public const string RunProgressDecisionNoAnswer = "Studio.Run.DecisionNoAnswer";
 
     /// <summary>"{0} task(s) finished."</summary>
     public const string RunProgressTasksDone = "Studio.Run.TasksDone";
@@ -2314,6 +2383,18 @@ public static class StudioStringKeys
     /// <summary>"{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only." (STUDIO-73)</summary>
     public const string TeamsCrewOverridesLlm = "Studio.Teams.CrewOverridesLlm";
 
+    /// <summary>"System One required": the badge of a team that cannot run without the decision models.</summary>
+    public const string TeamsDecisionRequired = "Studio.Teams.DecisionRequired";
+
+    /// <summary>The tooltip of <see cref="TeamsDecisionRequired"/>.</summary>
+    public const string TeamsDecisionRequiredTip = "Studio.Teams.DecisionRequiredTip";
+
+    /// <summary>"System One optional": the badge of a team that runs with the decision models or without them.</summary>
+    public const string TeamsDecisionOptional = "Studio.Teams.DecisionOptional";
+
+    /// <summary>The tooltip of <see cref="TeamsDecisionOptional"/>.</summary>
+    public const string TeamsDecisionOptionalTip = "Studio.Teams.DecisionOptionalTip";
+
     /// <summary>"Use the default model ({0})" - {0} the setting elected (STUDIO-73).</summary>
     public const string TeamsUseDefaultLlm = "Studio.Teams.UseDefaultLlm";
 
@@ -2366,6 +2447,90 @@ public static class StudioStringKeys
     public const string SettingsTabAccountsEmpty = "Studio.Settings.TabAccountsEmpty";
     public const string SettingsTabMcpCount = "Studio.Settings.TabMcpCount";
     public const string SettingsTabMcpEmpty = "Studio.Settings.TabMcpEmpty";
+
+    /// <summary>The header of the decision models tab of Settings.</summary>
+    public const string SettingsTabDecision = "Studio.Settings.TabDecision";
+
+    /// <summary>The decision tab's subtitle while the settings switch the models off.</summary>
+    public const string SettingsTabDecisionOff = "Studio.Settings.TabDecisionOff";
+
+    /// <summary>The decision tab's subtitle while no provider is configured.</summary>
+    public const string SettingsTabDecisionNone = "Studio.Settings.TabDecisionNone";
+
+    /// <summary>The decision tab's subtitle while the engine refuses the provider's choice.</summary>
+    public const string SettingsTabDecisionRefused = "Studio.Settings.TabDecisionRefused";
+
+    /// <summary>The title of the decision models card.</summary>
+    public const string SettingsDecisionTitle = "Studio.Settings.DecisionTitle";
+
+    /// <summary>What the decision models are, under the card's title.</summary>
+    public const string SettingsDecisionIntro = "Studio.Settings.DecisionIntro";
+
+    /// <summary>The circuit's switch, Orkeon:Decision:Enabled.</summary>
+    public const string SettingsDecisionEnabled = "Studio.Settings.DecisionEnabled";
+
+    /// <summary>What the switch does to every run; a single run can still go without them at launch.</summary>
+    public const string SettingsDecisionEnabledHint = "Studio.Settings.DecisionEnabledHint";
+
+    /// <summary>The label of the provider list, Orkeon:Decision:Provider.</summary>
+    public const string SettingsDecisionProvider = "Studio.Settings.DecisionProvider";
+
+    /// <summary>The automatic entry of the provider list: the engine deduces the provider.</summary>
+    public const string SettingsDecisionProviderAuto = "Studio.Settings.DecisionProviderAuto";
+
+    /// <summary>How the automatic choice deduces the provider.</summary>
+    public const string SettingsDecisionProviderHint = "Studio.Settings.DecisionProviderHint";
+
+    /// <summary>The status line of a named provider; {0} is its name.</summary>
+    public const string SettingsDecisionStatusNamed = "Studio.Settings.DecisionStatusNamed";
+
+    /// <summary>The status line of a deduced provider; {0} is its name.</summary>
+    public const string SettingsDecisionStatusDeduced = "Studio.Settings.DecisionStatusDeduced";
+
+    /// <summary>The status line while no provider is configured.</summary>
+    public const string SettingsDecisionStatusNone = "Studio.Settings.DecisionStatusNone";
+
+    /// <summary>The status line while the switch is off.</summary>
+    public const string SettingsDecisionStatusOff = "Studio.Settings.DecisionStatusOff";
+
+    /// <summary>The status line while the engine refuses the choice; {0} is its reason.</summary>
+    public const string SettingsDecisionStatusRefused = "Studio.Settings.DecisionStatusRefused";
+
+    /// <summary>The provider sections a run leaves aside; {0} lists them.</summary>
+    public const string SettingsDecisionIgnored = "Studio.Settings.DecisionIgnored";
+
+    /// <summary>What a hosted provider is.</summary>
+    public const string SettingsDecisionHosted = "Studio.Settings.DecisionHosted";
+
+    /// <summary>What a local provider (Kev) is.</summary>
+    public const string SettingsDecisionLocal = "Studio.Settings.DecisionLocal";
+
+    /// <summary>The button that writes a provider's section.</summary>
+    public const string SettingsDecisionSetUp = "Studio.Settings.DecisionSetUp";
+
+    /// <summary>The button that removes a provider's section.</summary>
+    public const string SettingsDecisionRemove = "Studio.Settings.DecisionRemove";
+
+    /// <summary>What a card says while its provider's section is not written.</summary>
+    public const string SettingsDecisionNotSetUp = "Studio.Settings.DecisionNotSetUp";
+
+    /// <summary>What the card of a local server (Kev) says while it is not named: the engine never deduces it.</summary>
+    public const string SettingsDecisionNamedOnly = "Studio.Settings.DecisionNamedOnly";
+
+    /// <summary>The label of a provider's BaseUrl.</summary>
+    public const string SettingsDecisionLblBaseUrl = "Studio.Settings.DecisionLblBaseUrl";
+
+    /// <summary>The label of a provider's Model.</summary>
+    public const string SettingsDecisionLblModel = "Studio.Settings.DecisionLblModel";
+
+    /// <summary>The label of a provider's TimeoutSeconds.</summary>
+    public const string SettingsDecisionLblTimeout = "Studio.Settings.DecisionLblTimeout";
+
+    /// <summary>The label of a provider's MaxRetries.</summary>
+    public const string SettingsDecisionLblRetries = "Studio.Settings.DecisionLblRetries";
+
+    /// <summary>Said when the file holds a provider's key (ApiKey).</summary>
+    public const string SettingsDecisionKeyInFile = "Studio.Settings.DecisionKeyInFile";
     public const string SettingsTabStudioSub = "Studio.Settings.TabStudioSub";
     public const string SettingsTabLimitsSub = "Studio.Settings.TabLimitsSub";
     public const string SettingsTabFileValid = "Studio.Settings.TabFileValid";
@@ -3022,6 +3187,24 @@ public sealed class EnglishStudioStrings : IStudioStrings
             "Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.",
         [StudioStringKeys.RunWarnDeliverableDecision] =
             "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
+        [StudioStringKeys.RunUseDecisionModels] = "Use the decision models (System One)",
+        [StudioStringKeys.RunUseDecisionModelsHint] = "Unticked, the decision tasks go without them (--no-decision): each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider.",
+        [StudioStringKeys.RunBlockedDecisionProvider] = "The settings name a decision provider the engine refuses, so the CLI will not start: {0} Fix it in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionProvider] = "This machine's settings name a decision provider the engine refuses: unless the settings file the CLI picks says otherwise, it will not start. {0}",
+        [StudioStringKeys.RunBlockedDecisionRequired] = "This team cannot run without the decision models (System One): {0}. {1}",
+        [StudioStringKeys.RunWarnDecisionRequiredUnknown] = "This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}",
+        [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: tick « Use the decision models ».",
+        [StudioStringKeys.RunDecisionOffSettings] = "The settings switch the decision models off: turn them on in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionOffNoProvider] = "No decision provider is configured: set one up in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which needs a provider",
+        [StudioStringKeys.RunDecisionNeedAnswer] = "the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on",
+        [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionToolIgnoresSwitch] = "{0} use system_one_decide: on this run the tool still asks {1}, as the switch only sends the decision tasks to their fallbacks.",
+        [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
+        [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): each decision task answers from its fallback. {0}",
+        [StudioStringKeys.RunInfoDecisionFallbackItem] = "Task '{0}': {1}",
+        [StudioStringKeys.RunInfoDecisionOtherwiseItem] = "Task '{0}': no answer, task '{1}' runs instead.",
+        [StudioStringKeys.RunOpenDecisionSettings] = "Decision models settings",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
         [StudioStringKeys.RunOpenLogsNotYet] = "The logs folder does not exist yet: it is created at the first logged call.",
@@ -3355,6 +3538,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
         ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): an agent or a task uses system_one_decide, which a run has only once a decision provider is configured, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task answers from its fallback, or lets its « otherwise » task run.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL"] = "The decision models are off for this run, yet an agent or a task uses system_one_decide: the tool still asks the provider, as the switch governs the decision tasks only.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",
@@ -3581,6 +3770,11 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
+        [StudioStringKeys.RunProgressDecisionYes] = "yes",
+        [StudioStringKeys.RunProgressDecisionScore] = "score {0}",
+        [StudioStringKeys.RunProgressDecisionLikelihood] = "probability {0}%",
+        [StudioStringKeys.RunProgressDecisionConfidence] = "confidence {0}%",
+        [StudioStringKeys.RunProgressDecisionNoAnswer] = "no answer",
         [StudioStringKeys.RunProgressTasksDone] = "{0} task(s) finished.",
         [StudioStringKeys.RunProgressTasksProgress] = "{0} task(s) finished, {1} in progress.",
         [StudioStringKeys.RunProgressTaskSince] = "since {0}",
@@ -3666,7 +3860,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
         [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
         [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
-        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; TypeSafe and Liquid refuse every call without their key",
+        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; TypeSafe and Liquid refuse every call without their key",
         [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
         [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
@@ -3931,6 +4125,10 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsLlmTeamFileDefault] = "Default of the team's settings file",
         [StudioStringKeys.TeamsScheduledRunNoDefault] = "The scheduled run will answer as an echo: the saved settings file has no default model. Save the settings.",
         [StudioStringKeys.TeamsCrewOverridesLlm] = "{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only.",
+        [StudioStringKeys.TeamsDecisionRequired] = "System One required",
+        [StudioStringKeys.TeamsDecisionRequiredTip] = "This team cannot run without the decision models (System One): an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.",
+        [StudioStringKeys.TeamsDecisionOptional] = "System One optional",
+        [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task answers from its fallback.",
         [StudioStringKeys.TeamsUseDefaultLlm] = "Use the default model ({0})",
         [StudioStringKeys.TeamsUseDefaultLlmNone] = "Use the default model",
         [StudioStringKeys.TeamsUseDefaultLlmHint] = "Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.",
@@ -3960,6 +4158,34 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsTabAccountsEmpty] = "No account",
         [StudioStringKeys.SettingsTabMcpCount] = "{0} {0:plural:server|servers}",
         [StudioStringKeys.SettingsTabMcpEmpty] = "No server",
+        [StudioStringKeys.SettingsTabDecision] = "Decision models",
+        [StudioStringKeys.SettingsTabDecisionOff] = "Off",
+        [StudioStringKeys.SettingsTabDecisionNone] = "No provider",
+        [StudioStringKeys.SettingsTabDecisionRefused] = "To fix",
+        [StudioStringKeys.SettingsDecisionTitle] = "Decision models (System One)",
+        [StudioStringKeys.SettingsDecisionIntro] = "A decision model answers typed questions with probabilities: a choice among options, a yes or no, a score. A team uses it through its decision tasks, or through the system_one_decide tool. The decision profiles written by hand are kept as they are.",
+        [StudioStringKeys.SettingsDecisionEnabled] = "Use the decision models",
+        [StudioStringKeys.SettingsDecisionEnabledHint] = "Off, the decision tasks of every run go without them: each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider. A single run can also go without them, at launch.",
+        [StudioStringKeys.SettingsDecisionProvider] = "Provider",
+        [StudioStringKeys.SettingsDecisionProviderAuto] = "Automatic",
+        [StudioStringKeys.SettingsDecisionProviderHint] = "Automatic: the engine takes the only provider set up below, or whose key is in place. With two, it refuses to start: name one.",
+        [StudioStringKeys.SettingsDecisionStatusNamed] = "{0} answers the decision tasks.",
+        [StudioStringKeys.SettingsDecisionStatusDeduced] = "{0} answers the decision tasks, deduced from its section or its key.",
+        [StudioStringKeys.SettingsDecisionStatusNone] = "No provider is set up: the runs go without the decision models.",
+        [StudioStringKeys.SettingsDecisionStatusOff] = "Off: the decision tasks go without the decision models.",
+        [StudioStringKeys.SettingsDecisionStatusRefused] = "The engine refuses these settings and will not start: {0}",
+        [StudioStringKeys.SettingsDecisionIgnored] = "Left aside: {0}.",
+        [StudioStringKeys.SettingsDecisionHosted] = "Hosted service · a key is needed",
+        [StudioStringKeys.SettingsDecisionLocal] = "Local server · the key is optional",
+        [StudioStringKeys.SettingsDecisionSetUp] = "Set up",
+        [StudioStringKeys.SettingsDecisionRemove] = "Remove",
+        [StudioStringKeys.SettingsDecisionNotSetUp] = "Not set up. Its key alone is enough for the engine to deduce it.",
+        [StudioStringKeys.SettingsDecisionNamedOnly] = "A local server is never deduced: choose it in the provider list above.",
+        [StudioStringKeys.SettingsDecisionLblBaseUrl] = "API address",
+        [StudioStringKeys.SettingsDecisionLblModel] = "Model",
+        [StudioStringKeys.SettingsDecisionLblTimeout] = "Timeout (seconds)",
+        [StudioStringKeys.SettingsDecisionLblRetries] = "Retries",
+        [StudioStringKeys.SettingsDecisionKeyInFile] = "This file holds a key for this provider (ApiKey). Studio keeps the keys in the user environment: remove it from the file in the JSON tab.",
         [StudioStringKeys.SettingsTabStudioSub] = "How Studio behaves",
         [StudioStringKeys.SettingsTabLimitsSub] = "Rates, index, logs",
         [StudioStringKeys.SettingsTabFileValid] = "Valid file",

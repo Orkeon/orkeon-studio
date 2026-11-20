@@ -89,6 +89,9 @@ internal sealed class LauncherFixture
         return directory;
     }
 
+    /// <summary>The environment the decision providers' keys are read from: empty unless a test sets one.</summary>
+    public Func<string, string?> Environment { get; set; } = _ => null;
+
     /// <summary>Builds the launcher over the declared doubles.</summary>
     public RunLauncherViewModel Build() => new(
         new RunTargetDetector(Targets),
@@ -97,5 +100,6 @@ internal sealed class LauncherFixture
         new MountValidator(Directories),
         Settings,
         TeamsRoot,
-        Targets);
+        Targets,
+        Environment);
 }

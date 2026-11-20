@@ -89,6 +89,9 @@ public sealed class LaunchOptionsModel
     /// <summary><c>--allow-external-mounts</c>.</summary>
     public bool AllowExternalMounts { get; set; }
 
+    /// <summary><c>--no-decision</c>: the run goes without the decision models (System One).</summary>
+    public bool NoDecision { get; set; }
+
     /// <summary>
     /// The settings entries this launch keeps by id (<c>--mount-id</c>, VFS-90) — what a team
     /// whose folders are settings declarations contributes; typed by hand in the TUI form.
@@ -235,6 +238,7 @@ public sealed class LaunchOptionsModel
             LlmLogEnabled = LlmLogEnabled,
             LlmLogPath = LlmLogPath,
             Validate = validate,
+            NoDecision = NoDecision,
         };
     }
 }

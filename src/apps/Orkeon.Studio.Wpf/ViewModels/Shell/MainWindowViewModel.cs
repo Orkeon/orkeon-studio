@@ -140,6 +140,9 @@ public sealed class MainWindowViewModel : ObservableObject
             EnvironmentForTarget = TeamEnvironment,
             ShellOpener = shellOpener,
             DeclaredMounts = declaredMounts,
+            // The decision circuit of the settings file as saved, keys read where Settings stores them.
+            MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+            KeyStore = keyStore,
             Clipboard = seams.Clipboard,
             Clock = seams.Clock,
             // STUDIO-31: a real run stamps its team's last run under the teams root (D-05), and the
@@ -286,6 +289,8 @@ public sealed class MainWindowViewModel : ObservableObject
                 EnvironmentForTarget = TeamEnvironment,
                 ShellOpener = shellOpener,
                 DeclaredMounts = declaredMounts,
+                MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+                KeyStore = keyStore,
                 Clock = seams.Clock,
                 // No teams root: a trial stamps no last run (STUDIO-31, D-05). It still reads the
                 // team's own settings file, as the Run screen does (STUDIO-62): the rehearsal runs
@@ -440,8 +445,10 @@ public sealed class MainWindowViewModel : ObservableObject
         // over an engine that just failed. The window brings the screen forward itself.
         CreateTeam.OpenDiagnosticRequested += (_, _) => Config.Diagnostic.RunCommand.Execute(null);
         Launch.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
+        Launch.OpenDecisionSettingsRequested += (_, _) => Settings.ShowDecisionCommand.Execute(null);
         Teams.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
         Run.Trial.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
+        Run.Trial.OpenDecisionSettingsRequested += (_, _) => Settings.ShowDecisionCommand.Execute(null);
         // STUDIO-73: « Configure a model » on a machine without one lands on the model tab.
         Launch.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);
         Run.Trial.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);
@@ -534,6 +541,16 @@ public sealed class MainWindowViewModel : ObservableObject
         // STUDIO-52: what a scheduled team's run cannot follow is read against the settings file as
         // saved — read again after each save or load —, and against the model settings Studio shows.
         Config.Saved += (_, _) => _ = RefreshSavedSettingsGuarded();
+        // The decision models settings changed, a key stored included: the launchers judge the crew
+        // again on them, so the screen the user comes back to says what the run will get.
+        Config.Decision.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(DecisionSectionViewModel.Status) or "" or null)
+            {
+                Launch.RefreshDecision();
+                Run.Trial.RefreshDecision();
+            }
+        };
         Settings.Profiles.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ModelProfilesViewModel.Set))
@@ -918,6 +935,13 @@ public sealed class MainWindowViewModel : ObservableObject
         var (document, _) = await _settingsStore.TryLoadAsync(path).ConfigureAwait(true);
         return document;
     }
+
+    /// <summary>
+    /// The decision circuit (System One) a run gets from this machine's settings file as saved — the
+    /// document of the settings screen until the file was read —, resolved as the engine resolves it.
+    /// </summary>
+    private DecisionStatus MachineDecisionStatus(IApiKeyStore keys) =>
+        (_savedSettings ?? Config.Document).Decision.Resolve(keys.Peek);
 
     /// <summary>Reads the settings file as saved again, then what every screen says of a team's run outside Studio.</summary>
     private async Task RefreshSavedSettingsAsync()

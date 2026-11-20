@@ -41,6 +41,7 @@ internal sealed class RunLauncherWindow : Window
     private readonly TextField _inputsFileField;
     private readonly TextField _verbosityField;
     private readonly CheckBox _llmLog;
+    private readonly CheckBox _noDecision;
     private readonly TextField _llmLogPathField;
 
     private readonly Label _mountsSummary;
@@ -99,13 +100,14 @@ internal sealed class RunLauncherWindow : Window
         _llmLog = new CheckBox { X = 36, Y = 5, Text = "--llm-log" };
         var llmLogPathLabel = new Label { X = 50, Y = 5, Text = "path:" };
         _llmLogPathField = new TextField { X = 56, Y = 5, Width = Dim.Fill() };
+        _noDecision = new CheckBox { X = 0, Y = 6, Text = "--no-decision (run without the decision models, System One)" };
 
         _optionsFrame.Add(
             _variablesLabel, _variablesField,
             _initialContextLabel, _initialContextField,
             _inputsLabel, _inputsField,
             _inputsFileLabel, _inputsFileField,
-            verbosityLabel, _verbosityField, _llmLog, llmLogPathLabel, _llmLogPathField);
+            verbosityLabel, _verbosityField, _llmLog, llmLogPathLabel, _llmLogPathField, _noDecision);
 
         // ── Mounts, command line, actions ─────────────────────────────────────────
         var mountsButton = new Button { X = 0, Y = 13, Text = "Mounts…" };
@@ -159,6 +161,10 @@ internal sealed class RunLauncherWindow : Window
             RefreshSettingsLabel();
             RefreshCommandLine();
         };
+
+        // The switches reach the command line at once: the preview shows what a run would spawn.
+        _llmLog.ValueChanged += (_, _) => RefreshCommandLine();
+        _noDecision.ValueChanged += (_, _) => RefreshCommandLine();
 
         mountsButton.OnAccept(() =>
         {
@@ -322,6 +328,7 @@ internal sealed class RunLauncherWindow : Window
         options.InputsFilePath = NullIfBlank(_inputsFileField.Text);
         options.LlmLogEnabled = _llmLog.Value == CheckState.Checked;
         options.LlmLogPath = NullIfBlank(_llmLogPathField.Text);
+        options.NoDecision = _noDecision.Value == CheckState.Checked;
         options.Verbosity = int.TryParse(_verbosityField.Text, CultureInfo.InvariantCulture, out var verbosity)
             ? verbosity
             : 0;
@@ -515,6 +522,18 @@ internal sealed class RunLauncherWindow : Window
         DetectTarget();
     }
 
+    /// <summary>Test-only: ticks or unticks the checkbox of <paramref name="option"/>, as a click does.</summary>
+    internal void SetSwitchForTest(RunOption option, bool on)
+    {
+        var box = option switch
+        {
+            RunOption.LlmLog => _llmLog,
+            RunOption.NoDecision => _noDecision,
+            _ => throw new ArgumentOutOfRangeException(nameof(option), option, "Not a switch of the form."),
+        };
+        box.Value = on ? CheckState.Checked : CheckState.UnChecked;
+    }
+
     /// <summary>Test-only: whether the field of <paramref name="option"/> is usable on screen.</summary>
     internal bool IsOptionFieldEnabled(RunOption option) => option switch
     {
@@ -524,6 +543,7 @@ internal sealed class RunLauncherWindow : Window
         RunOption.InputsFile => _inputsFileField.Enabled,
         RunOption.Verbose => _verbosityField.Enabled,
         RunOption.LlmLog => _llmLog.Enabled,
+        RunOption.NoDecision => _noDecision.Enabled,
         RunOption.Settings => _settingsField.Enabled,
         _ => true,
     };
@@ -569,6 +589,7 @@ internal sealed class RunLauncherWindow : Window
             _inputsFileField.Dispose();
             _verbosityField.Dispose();
             _llmLog.Dispose();
+            _noDecision.Dispose();
             _llmLogPathField.Dispose();
             _mountsSummary.Dispose();
             _commandLine.Dispose();

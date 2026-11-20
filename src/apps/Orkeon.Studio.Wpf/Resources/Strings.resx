@@ -333,6 +333,11 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — done, but did not write its file; cut short too: its iterations ran out</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decision (defaulted)</value></data>
+  <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>yes</value></data>
+  <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>score {0}</value></data>
+  <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>probability {0}%</value></data>
+  <data name="Studio.Run.DecisionConfidence" xml:space="preserve"><value>confidence {0}%</value></data>
+  <data name="Studio.Run.DecisionNoAnswer" xml:space="preserve"><value>no answer</value></data>
   <data name="Studio.Run.TasksDone" xml:space="preserve"><value>{0} task(s) finished.</value></data>
   <data name="Studio.Run.TasksProgress" xml:space="preserve"><value>{0} task(s) finished, {1} in progress.</value></data>
   <data name="Studio.Run.TaskSince" xml:space="preserve"><value>since {0}</value></data>
@@ -586,6 +591,12 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>This team cannot run without the decision models (System One): an agent or a task uses system_one_decide, which a run has only once a decision provider is configured, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task answers from its fallback, or lets its « otherwise » task run.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>The decision models are off for this run, yet an agent or a task uses system_one_decide: the tool still asks the provider, as the switch governs the decision tasks only.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY" xml:space="preserve"><value>The team is a folder: the engine runs it as a whole.</value></data>
@@ -703,7 +714,7 @@
   <data name="Studio.Settings.ToolOnlyWithMcpServer" xml:space="preserve"><value>present only while Settings › MCP (expert mode) is on and declares a server</value></data>
   <data name="Studio.Settings.ToolScriptOnly" xml:space="preserve"><value>offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it</value></data>
   <data name="Studio.Settings.ToolOnlyWithCognitiveMemory" xml:space="preserve"><value>present only with {0} written by hand in the settings file, and held only by a team with memory: true</value></data>
-  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve"><value>present only once a decision provider is set: the key TYPESAFE_API_KEY or LIQUID_API_KEY in your environment, or Orkeon:Decision:Provider or an Orkeon:TypeSafe or Orkeon:Liquid section written by hand in the settings file; TypeSafe and Liquid refuse every call without their key</value></data>
+  <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve"><value>present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; TypeSafe and Liquid refuse every call without their key</value></data>
   <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve"><value>needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself</value></data>
   <data name="Studio.Settings.ToolFamilyQuietPattern" xml:space="preserve"><value>{0} tools, nothing to configure</value></data>
   <data name="Studio.Settings.McpProblemId" xml:space="preserve"><value>An identifier is required: letters, digits, '.', '_' and '-'.</value></data>
@@ -883,6 +894,24 @@
   <data name="Studio.Run.WarnDeliverableFixBinary" xml:space="preserve"><value>Give {0} to the agent meant to write it, or deliver a text format (.md, .html, .csv) instead.</value></data>
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.</value></data>
+  <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>Use the decision models (System One)</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Unticked, the decision tasks go without them (--no-decision): each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider.</value></data>
+  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>The settings name a decision provider the engine refuses, so the CLI will not start: {0} Fix it in Settings › Decision models.</value></data>
+  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>This machine's settings name a decision provider the engine refuses: unless the settings file the CLI picks says otherwise, it will not start. {0}</value></data>
+  <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. {1}</value></data>
+  <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>This run goes without them: tick « Use the decision models ».</value></data>
+  <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>The settings switch the decision models off: turn them on in Settings › Decision models.</value></data>
+  <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>No decision provider is configured: set one up in Settings › Decision models.</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} use system_one_decide, which needs a provider</value></data>
+  <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.</value></data>
+  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} use system_one_decide: on this run the tool still asks {1}, as the switch only sends the decision tasks to their fallbacks.</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task answers from its fallback. {0}</value></data>
+  <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>Task '{0}': {1}</value></data>
+  <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>Task '{0}': no answer, task '{1}' runs instead.</value></data>
+  <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Decision models settings</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (selected by id among {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (not mounted for this run)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (one of {1} entries — nothing selects it)</value></data>
@@ -1997,6 +2026,10 @@
   <data name="Studio.Teams.LlmTeamFileDefault" xml:space="preserve"><value>Default of the team's settings file</value></data>
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>The scheduled run will answer as an echo: the saved settings file has no default model. Save the settings.</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only.</value></data>
+  <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>System One required</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>This team cannot run without the decision models (System One): an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.</value></data>
+  <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One optional</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task answers from its fallback.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Use the default model ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Use the default model</value></data>
   <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.</value></data>
@@ -2059,6 +2092,34 @@
   <data name="Studio.Settings.TabMcpEmpty" xml:space="preserve">
     <value>No server</value>
   </data>
+  <data name="Studio.Settings.TabDecision" xml:space="preserve"><value>Decision models</value></data>
+  <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Off</value></data>
+  <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>No provider</value></data>
+  <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>To fix</value></data>
+  <data name="Studio.Settings.DecisionTitle" xml:space="preserve"><value>Decision models (System One)</value></data>
+  <data name="Studio.Settings.DecisionIntro" xml:space="preserve"><value>A decision model answers typed questions with probabilities: a choice among options, a yes or no, a score. A team uses it through its decision tasks, or through the system_one_decide tool. The decision profiles written by hand are kept as they are.</value></data>
+  <data name="Studio.Settings.DecisionEnabled" xml:space="preserve"><value>Use the decision models</value></data>
+  <data name="Studio.Settings.DecisionEnabledHint" xml:space="preserve"><value>Off, the decision tasks of every run go without them: each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider. A single run can also go without them, at launch.</value></data>
+  <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>Provider</value></data>
+  <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>Automatic</value></data>
+  <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>Automatic: the engine takes the only provider set up below, or whose key is in place. With two, it refuses to start: name one.</value></data>
+  <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} answers the decision tasks.</value></data>
+  <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} answers the decision tasks, deduced from its section or its key.</value></data>
+  <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>No provider is set up: the runs go without the decision models.</value></data>
+  <data name="Studio.Settings.DecisionStatusOff" xml:space="preserve"><value>Off: the decision tasks go without the decision models.</value></data>
+  <data name="Studio.Settings.DecisionStatusRefused" xml:space="preserve"><value>The engine refuses these settings and will not start: {0}</value></data>
+  <data name="Studio.Settings.DecisionIgnored" xml:space="preserve"><value>Left aside: {0}.</value></data>
+  <data name="Studio.Settings.DecisionHosted" xml:space="preserve"><value>Hosted service · a key is needed</value></data>
+  <data name="Studio.Settings.DecisionLocal" xml:space="preserve"><value>Local server · the key is optional</value></data>
+  <data name="Studio.Settings.DecisionSetUp" xml:space="preserve"><value>Set up</value></data>
+  <data name="Studio.Settings.DecisionRemove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Studio.Settings.DecisionNotSetUp" xml:space="preserve"><value>Not set up. Its key alone is enough for the engine to deduce it.</value></data>
+  <data name="Studio.Settings.DecisionNamedOnly" xml:space="preserve"><value>A local server is never deduced: choose it in the provider list above.</value></data>
+  <data name="Studio.Settings.DecisionLblBaseUrl" xml:space="preserve"><value>API address</value></data>
+  <data name="Studio.Settings.DecisionLblModel" xml:space="preserve"><value>Model</value></data>
+  <data name="Studio.Settings.DecisionLblTimeout" xml:space="preserve"><value>Timeout (seconds)</value></data>
+  <data name="Studio.Settings.DecisionLblRetries" xml:space="preserve"><value>Retries</value></data>
+  <data name="Studio.Settings.DecisionKeyInFile" xml:space="preserve"><value>This file holds a key for this provider (ApiKey). Studio keeps the keys in the user environment: remove it from the file in the JSON tab.</value></data>
   <data name="Studio.Settings.TabStudioSub" xml:space="preserve">
     <value>How Studio behaves</value>
   </data>

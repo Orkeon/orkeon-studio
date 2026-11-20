@@ -24,4 +24,12 @@ internal abstract class SectionView : FrameView
 
     /// <summary>Widgets to form.</summary>
     public abstract void Apply();
+
+    /// <summary>
+    /// After the forms were written into the document: shows again what a screen derives from it (a
+    /// status line), leaving the fields as typed. Nothing by default.
+    /// </summary>
+    public virtual void Refresh()
+    {
+    }
 }

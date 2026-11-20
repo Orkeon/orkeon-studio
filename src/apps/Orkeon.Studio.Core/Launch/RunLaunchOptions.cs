@@ -66,6 +66,13 @@ public sealed record RunLaunchOptions
     public bool Validate { get; init; }
 
     /// <summary>
+    /// <c>--no-decision</c>: switch the decision circuit off for this run, whatever
+    /// <c>Orkeon:Decision:Enabled</c> says: decision tasks answer from their fallback, without
+    /// asking the decision model (System One).
+    /// </summary>
+    public bool NoDecision { get; init; }
+
+    /// <summary>
     /// <c>--events jsonl</c>: ask for the event protocol instead of plain text. A screen that
     /// shows progress rather than scrollback needs it; the raw-terminal path does not.
     /// </summary>

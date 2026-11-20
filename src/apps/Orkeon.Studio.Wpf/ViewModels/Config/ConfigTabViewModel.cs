@@ -67,6 +67,8 @@ public sealed class ConfigTabViewModel : ObservableObject
         LlmLogging = new LlmLoggingSectionViewModel(() => _document, MarkDirty, _strings);
         ShellTools = new ShellToolsSectionViewModel(() => _document, MarkDirty);
         Mcp = new McpSectionViewModel(() => _document, MarkDirty, _strings);
+        // The decision models: their keys go to the store of the model keys, never to the document.
+        Decision = new DecisionSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
 
         Mounts = new MountsEditorViewModel(seams.Directories, Picker, requireAtLeastOne: true, _strings, seams.Clipboard);
         Mounts.Changed += OnMountsChanged;
@@ -212,6 +214,9 @@ public sealed class ConfigTabViewModel : ObservableObject
     /// <summary>The <c>MCP</c> form of the MCP tab (STUDIO-21).</summary>
     public McpSectionViewModel Mcp { get; }
 
+    /// <summary>The decision models (System One): <c>Orkeon:Decision</c> and the provider sections.</summary>
+    public DecisionSectionViewModel Decision { get; }
+
     /// <summary>The <c>Orkeon:Tools:Email</c> form of the E-mail tab (STUDIO-67).</summary>
     public EmailSectionViewModel Email { get; }
 
@@ -356,6 +361,7 @@ public sealed class ConfigTabViewModel : ObservableObject
         LlmLogging.Refresh();
         ShellTools.Refresh();
         Mcp.Refresh();
+        Decision.Refresh();
         Email.Refresh();
         Drive.Refresh();
         Mounts.Load(_document.Mounts.RawEntries);

@@ -127,6 +127,15 @@ public sealed class RunArgumentsBuilderTests
     }
 
     [Fact]
+    public void A_run_without_the_decision_models_says_so_after_the_shared_options()
+    {
+        var options = new RunLaunchOptions { Validate = true, NoDecision = true };
+
+        Assert.Equal(["run", "/crews/crew.yaml", "--validate", "--no-decision"], RunArgumentsBuilder.Build(YamlTarget(), options));
+        Assert.Equal(BareYamlArguments, RunArgumentsBuilder.Build(YamlTarget(), new RunLaunchOptions()));
+    }
+
+    [Fact]
     public void A_full_script_launch_maps_the_script_only_options()
     {
         var options = new RunLaunchOptions

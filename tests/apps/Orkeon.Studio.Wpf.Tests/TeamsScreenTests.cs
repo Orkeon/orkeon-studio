@@ -74,13 +74,15 @@ public sealed class TeamsScreenTests : IDisposable
         Func<string, TeamActivity>? activityOf = null,
         FakeProcessLauncher? processes = null,
         Func<IReadOnlyList<TeamSummary>>? loadTeams = null,
-        IShellOpener? shellOpener = null) =>
+        IShellOpener? shellOpener = null,
+        Func<string, CrewDecisionMode>? readDecisionMode = null) =>
         new(new TeamsDependencies
         {
             TeamsRoot = TeamsRoot,
             WorkspaceDirectory = _root,
             LoadSessions = () => [],
             LoadTeams = loadTeams,
+            ReadDecisionMode = readDecisionMode,
             HistoryStore = history,
             ShellOpener = shellOpener,
             Clock = new StubTimeProvider { Now = Now },
@@ -93,6 +95,31 @@ public sealed class TeamsScreenTests : IDisposable
         });
 
     private static IEnumerable<string> Slugs(IEnumerable<TeamCardViewModel> cards) => cards.Select(card => card.Slug);
+
+    // ── System One: what a crew asks of the decision models, on its card ──
+
+    [Fact]
+    public void A_card_says_whether_its_team_needs_the_decision_models_or_takes_them_as_an_option()
+    {
+        Team("triage");
+        Team("veille");
+        Team("rapport");
+        var screen = Screen(readDecisionMode: path => Path.GetFileName(path) switch
+        {
+            "triage" => CrewDecisionMode.Required,
+            "veille" => CrewDecisionMode.Optional,
+            _ => CrewDecisionMode.None,
+        });
+
+        var cards = screen.Teams.ToDictionary(card => card.Slug);
+        Assert.Equal(Text(StudioStringKeys.TeamsDecisionRequired), cards["triage"].DecisionBadge);
+        Assert.Equal(Text(StudioStringKeys.TeamsDecisionRequiredTip), cards["triage"].DecisionBadgeTip);
+        Assert.True(cards["triage"].HasDecisionBadge);
+        Assert.Equal(Text(StudioStringKeys.TeamsDecisionOptional), cards["veille"].DecisionBadge);
+        Assert.False(cards["rapport"].HasDecisionBadge);
+        Assert.Equal(string.Empty, cards["rapport"].DecisionBadge);
+        Assert.Null(cards["rapport"].DecisionBadgeTip);
+    }
 
     // ── D-01: the search and the order, in memory ──
 

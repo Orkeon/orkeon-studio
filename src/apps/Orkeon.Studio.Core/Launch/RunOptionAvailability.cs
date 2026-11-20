@@ -42,6 +42,9 @@ public enum RunOption
     /// <summary><c>--validate</c>.</summary>
     Validate,
 
+    /// <summary><c>--no-decision</c>.</summary>
+    NoDecision,
+
     /// <summary><c>--events</c>.</summary>
     Events,
 
@@ -60,6 +63,12 @@ public enum RunOption
 /// </summary>
 public static class RunOptionAvailability
 {
+    /// <summary>
+    /// <c>--no-decision</c>, which <c>Orkeon.Constants.Cli</c> does not carry: <c>RunCommand</c> spells it
+    /// as a literal. <c>RunOptionAvailabilityTests</c> pins it against the CLI's source.
+    /// </summary>
+    public const string NoDecisionFlag = "--no-decision";
+
     private static readonly RunOption[] Shared =
     [
         RunOption.Settings,
@@ -70,6 +79,7 @@ public static class RunOptionAvailability
         RunOption.LlmLog,
         RunOption.LlmLogPath,
         RunOption.Validate,
+        RunOption.NoDecision,
     ];
 
     private static readonly RunOption[] YamlOnly = [RunOption.Variables, RunOption.InitialContext];
@@ -114,6 +124,7 @@ public static class RunOptionAvailability
             RunOption.LlmLog => RunOptionNames.Flag(RunOptionNames.LlmLog),
             RunOption.LlmLogPath => RunOptionNames.Flag(RunOptionNames.LlmLogPath),
             RunOption.Validate => RunOptionNames.Flag(RunOptionNames.Validate),
+            RunOption.NoDecision => NoDecisionFlag,
             RunOption.Events => RunOptionNames.Flag(RunOptionNames.Events),
             RunOption.Stream => RunOptionNames.Flag(RunOptionNames.Stream),
             RunOption.Client => RunOptionNames.Flag(RunOptionNames.Client),

@@ -180,6 +180,28 @@ public sealed class LaunchOptionsViewModelTests
     };
 
     [Fact]
+    public void Should_NotifyTheDecisionBox_When_ItIsOfferedOrWithdrawn()
+    {
+        var options = new LaunchOptionsViewModel { UseDecisionModels = false };
+        var raised = new List<string?>();
+        options.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        options.OffersDecisionModels = true;
+        options.OffersDecisionModels = true;
+
+        Assert.Equal(1, raised.Count(name => name == nameof(LaunchOptionsViewModel.OffersDecisionModels)));
+        Assert.Contains(nameof(LaunchOptionsViewModel.SwitchesDecisionOff), raised);
+        Assert.True(options.SwitchesDecisionOff);
+
+        raised.Clear();
+        options.OffersDecisionModels = false;
+
+        Assert.Contains(nameof(LaunchOptionsViewModel.OffersDecisionModels), raised);
+        Assert.Contains(nameof(LaunchOptionsViewModel.SwitchesDecisionOff), raised);
+        Assert.False(options.SwitchesDecisionOff);
+    }
+
+    [Fact]
     public void Should_OfferVariables_When_TheTargetIsYaml()
     {
         var options = new LaunchOptionsViewModel { Target = Yaml };

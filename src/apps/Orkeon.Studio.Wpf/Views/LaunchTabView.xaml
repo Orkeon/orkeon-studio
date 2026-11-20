@@ -297,6 +297,33 @@
                 <!-- #349: a scope the mounts shown refuse, for an agent the run may not start or with settings Studio does not see. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding FileSystemScopeWarning}"
                                 Visibility="{Binding HasFileSystemScopeWarning, Converter={StaticResource BooleanToVisibility}}"/>
+                <!-- System One: a team that needs the decision models on a run without them, or a refused provider. -->
+                <controls:Alert Tone="Danger" Margin="0,14,0,0" Message="{Binding DecisionMessage}"
+                                Visibility="{Binding IsBlockedByDecision, Converter={StaticResource BooleanToVisibility}}">
+                  <controls:Alert.Actions>
+                    <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenDecisionSettingsCommand}"
+                            Content="{Binding [Studio.Run.OpenDecisionSettings], Source={x:Static services:I18n.Instance}}"/>
+                  </controls:Alert.Actions>
+                </controls:Alert>
+                <!-- System One: the settings the CLI picks may not give the team its decision models, the provider
+                     has no key, or a holder of system_one_decide runs with the circuit off. -->
+                <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding DecisionWarning}"
+                                Visibility="{Binding HasDecisionWarning, Converter={StaticResource BooleanToVisibility}}">
+                  <controls:Alert.Actions>
+                    <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenDecisionSettingsCommand}"
+                            Content="{Binding [Studio.Run.OpenDecisionSettings], Source={x:Static services:I18n.Instance}}"/>
+                  </controls:Alert.Actions>
+                </controls:Alert>
+                <!-- System One: a team that runs either way goes on its fallbacks for this run. -->
+                <controls:Alert Tone="Info" Margin="0,14,0,0" Message="{Binding DecisionInfo}"
+                                Visibility="{Binding HasDecisionInfo, Converter={StaticResource BooleanToVisibility}}">
+                  <controls:Alert.Actions>
+                    <!-- Not when the run's own box is all that turns the models off: the settings cannot change it. -->
+                    <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenDecisionSettingsCommand}"
+                            Visibility="{Binding ShowsDecisionSettingsAction, Converter={StaticResource BooleanToVisibility}}"
+                            Content="{Binding [Studio.Run.OpenDecisionSettings], Source={x:Static services:I18n.Instance}}"/>
+                  </controls:Alert.Actions>
+                </controls:Alert>
                 <!-- Orkeon #392: a task must write a file no agent that may run it can write, or a decision declares one. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding DeliverableWriterWarning}"
                                 Visibility="{Binding HasDeliverableWriterWarning, Converter={StaticResource BooleanToVisibility}}"/>
@@ -344,6 +371,12 @@
               <CheckBox Margin="0,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Center"
                         IsChecked="{Binding Options.ValidateFirst}"
                         Content="{Binding [Studio.Run.ValidateFirst], Source={x:Static services:I18n.Instance}}"/>
+              <!-- System One: offered to a team that asks the decision models; unticked, the run goes without them. -->
+              <CheckBox Margin="0,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        IsChecked="{Binding Options.UseDecisionModels}"
+                        Visibility="{Binding UsesDecisionModels, Converter={StaticResource BooleanToVisibility}}"
+                        Content="{Binding [Studio.Run.UseDecisionModels], Source={x:Static services:I18n.Instance}}"
+                        ToolTip="{Binding [Studio.Run.UseDecisionModelsHint], Source={x:Static services:I18n.Instance}}"/>
 
               <!-- advanced options, folded. C12 (R16): the shared Disclosure, « label + chevron »,
                    the label stable; closed by default as before. -->
@@ -1018,6 +1051,10 @@
                               </Style>
                             </TextBlock.Style>
                           </TextBlock>
+                          <!-- The answers a decision task gave: the option, its probability and the confidence. -->
+                          <TextBlock Margin="33,2,0,0" Text="{Binding DecisionDetails}" TextWrapping="Wrap"
+                                     ToolTip="{Binding Task.DecisionAnswers}" Style="{StaticResource Hint}"
+                                     Visibility="{Binding HasDecisionDetails, Converter={StaticResource BooleanToVisibility}}"/>
                           <TextBlock Margin="33,2,0,0" Text="{Binding SkipReason}" TextWrapping="Wrap">
                             <TextBlock.Style>
                               <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">

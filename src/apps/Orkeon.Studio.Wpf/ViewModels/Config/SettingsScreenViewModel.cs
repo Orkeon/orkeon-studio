@@ -25,6 +25,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>The API keys the model settings resolve, kept in the user environment (refonte lot 11).</summary>
     public const string KeysTab = "keys";
 
+    /// <summary>The decision models (System One): the switch, the provider and its key.</summary>
+    public const string DecisionTab = "decision";
+
     /// <summary>The mounts tab.</summary>
     public const string FoldersTab = "folders";
 
@@ -118,6 +121,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         ShowModelCommand = new RelayCommand(() => ActiveTab = ModelTab);
         ShowRagCommand = new RelayCommand(() => ActiveTab = RagTab);
         ShowKeysCommand = new RelayCommand(() => ActiveTab = KeysTab);
+        ShowDecisionCommand = new RelayCommand(() => ActiveTab = DecisionTab);
         // The folders tab re-reads the teams' own folders on arrival (ActiveTab): the section is
         // a view over the sidecars, and a team adopted or deleted since the last visit must show.
         // Asked again while it shows, it reads them again.
@@ -236,7 +240,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         get => _activeTab;
         set
         {
-            var requested = value is RagTab or KeysTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab ? value : ModelTab;
+            var requested = value is RagTab or KeysTab or DecisionTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab ? value : ModelTab;
             if (_mode.IsNovice && requested is RagTab or LimitsTab or JsonTab or McpTab or ShellTab)
                 requested = ModelTab;
 
@@ -245,7 +249,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
             if (SetProperty(ref _activeTab, requested))
             {
                 OnPropertiesChanged(
-                    nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
+                    nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsDecisionTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
                     nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab));
                 // The classeur selects a tab through ActiveTab itself, not through its command.
                 if (IsFoldersTab)
@@ -275,6 +279,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
 
     /// <summary>True while the API-keys tab shows.</summary>
     public bool IsKeysTab => _activeTab == KeysTab;
+
+    /// <summary>True while the decision models tab shows.</summary>
+    public bool IsDecisionTab => _activeTab == DecisionTab;
 
     /// <summary>True while the allowed-folders tab shows.</summary>
     public bool IsFoldersTab => _activeTab == FoldersTab;
@@ -314,6 +321,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
 
     /// <summary>Shows the API-keys tab.</summary>
     public RelayCommand ShowKeysCommand { get; }
+
+    /// <summary>Shows the decision models tab: what a launch's decision alert points at.</summary>
+    public RelayCommand ShowDecisionCommand { get; }
 
     /// <summary>Shows the folders tab.</summary>
     public RelayCommand ShowFoldersCommand { get; }

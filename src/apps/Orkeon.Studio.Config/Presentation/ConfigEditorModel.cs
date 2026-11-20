@@ -81,6 +81,9 @@ internal sealed class ConfigEditorModel
     /// <summary>The <c>Orkeon:Rag</c> form.</summary>
     public RagForm Rag { get; } = new();
 
+    /// <summary>The decision models form: <c>Orkeon:Decision</c> and the provider sections.</summary>
+    public DecisionForm Decision { get; } = new();
+
     /// <summary>The <c>Logging:LogLevel</c> form.</summary>
     public LoggingForm Logging { get; } = new();
 
@@ -97,7 +100,7 @@ internal sealed class ConfigEditorModel
     public ILlmEndpointProbe LlmProbe => _llmProbe;
 
     /// <summary>The section forms, in navigation order.</summary>
-    public IReadOnlyList<ISettingsForm> Forms => [Llm, RateLimiting, Rag, Logging, LlmLogging];
+    public IReadOnlyList<ISettingsForm> Forms => [Llm, RateLimiting, Rag, Decision, Logging, LlmLogging];
 
     /// <summary>The document as it would be written — the raw, read-only view.</summary>
     public string RawJson => Document.ToJson();

@@ -46,6 +46,7 @@ public sealed class AppSettingsDocument
         ShellTools = new ShellToolsSection(this);
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
+        Decision = new DecisionSection(this);
     }
 
     /// <summary>The mutable JSON tree backing this document — the raw-edit surface of the UIs.</summary>
@@ -80,6 +81,9 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the <c>Orkeon:Tools:Drive</c> section.</summary>
     public DriveSection Drive { get; }
+
+    /// <summary>Typed view over the decision models: <c>Orkeon:Decision</c> and the provider sections.</summary>
+    public DecisionSection Decision { get; }
 
     /// <summary>Creates an empty document (<c>{}</c>).</summary>
     public static AppSettingsDocument CreateEmpty() => new(new JsonObject());
@@ -193,6 +197,28 @@ public sealed class AppSettingsDocument
 
     /// <summary>Removes the key at the colon-separated path, if present.</summary>
     public void Remove(string path) => SetNode(path, null);
+
+    /// <summary>
+    /// <paramref name="path"/> as the file spells it, for the path accessors, which are exact: each
+    /// segment becomes the key of its object the configuration reads under that name (the very
+    /// spelling, else the first that differs only by case), and from the first segment the file does
+    /// not hold on, the caller's spelling stays. A read through it finds what the run binds; a write
+    /// lands on the key in place, never on a twin the configuration would read as a duplicate.
+    /// </summary>
+    public string PathAsWritten(string path)
+    {
+        var segments = SplitPath(path);
+        JsonNode? current = Root;
+        for (var i = 0; i < segments.Length; i++)
+        {
+            if (current is not JsonObject obj || SectionNodes.FindKey(obj, segments[i]) is not { } found)
+                break;
+            segments[i] = found;
+            current = obj[found];
+        }
+
+        return string.Join(':', segments);
+    }
 
     /// <summary>
     /// Reads a value as text. Numbers and booleans are rendered in their invariant

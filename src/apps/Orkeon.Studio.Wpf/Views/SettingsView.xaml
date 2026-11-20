@@ -410,6 +410,11 @@
 
         </StackPanel>
       </controls:StepTab>
+      <controls:StepTab Tag="decision" Header="{Binding [Studio.Settings.TabDecision], Source={x:Static services:I18n.Instance}}"
+                      Subtitle="{Binding DecisionTabSubtitle}" State="{Binding DecisionTabState}">
+        <!-- ══ MODELES DE DECISION (System One): the switch, the provider, its key ══ -->
+        <views:DecisionView DataContext="{Binding Config.Decision}"/>
+      </controls:StepTab>
       <controls:StepTab Tag="folders" Header="{Binding [Studio.Shell.Folders], Source={x:Static services:I18n.Instance}}"
                       Subtitle="{Binding FoldersTabSubtitle}" State="{Binding FoldersTabState}"
                       Group="{Binding [Studio.Settings.GroupAccess], Source={x:Static services:I18n.Instance}}">

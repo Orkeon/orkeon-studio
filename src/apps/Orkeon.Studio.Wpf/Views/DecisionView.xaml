@@ -1,0 +1,115 @@
+<!-- The "Decision models" settings tab (System One): the switch, the provider, the status line a run
+     of the file gets, then one card per provider with the row of its key. The key goes to the user
+     environment, never to the file. DataContext: DecisionSectionViewModel (bound as Settings.Config.Decision). -->
+<UserControl x:Class="Orkeon.Studio.Wpf.Views.DecisionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:config="clr-namespace:Orkeon.Studio.Wpf.ViewModels.Config"
+             xmlns:controls="clr-namespace:Orkeon.Studio.Wpf.Controls"
+             xmlns:services="clr-namespace:Orkeon.Studio.Wpf.Services">
+  <StackPanel>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+          <controls:LucideIcon Kind="route" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+          <TextBlock Style="{StaticResource CardTitle}" ToolTip="Orkeon:Decision"
+                     Text="{Binding [Studio.Settings.DecisionTitle], Source={x:Static services:I18n.Instance}}"/>
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.DecisionIntro], Source={x:Static services:I18n.Instance}}"/>
+        <CheckBox Margin="0,14,0,0" IsChecked="{Binding Enabled}"
+                  Content="{Binding [Studio.Settings.DecisionEnabled], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.DecisionEnabledHint], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                   Text="{Binding [Studio.Settings.DecisionProvider], Source={x:Static services:I18n.Instance}}"/>
+        <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                  ItemsSource="{Binding ProviderChoices}" SelectedItem="{Binding SelectedProvider}"
+                  DisplayMemberPath="Label"/>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.DecisionProviderHint], Source={x:Static services:I18n.Instance}}"/>
+        <!-- The circuit a run of this file gets, resolved as the engine resolves it; the provider
+             sections it leaves aside are said under it, in plain sight. -->
+        <controls:Alert Margin="0,14,0,0" Message="{Binding StatusText}">
+          <TextBlock Style="{StaticResource MetaText}" TextWrapping="Wrap" Text="{Binding IgnoredText}"
+                     Visibility="{Binding IgnoredText, Converter={StaticResource StringPresentToVisibility}}"/>
+          <controls:Alert.Style>
+            <Style TargetType="controls:Alert" BasedOn="{StaticResource {x:Type controls:Alert}}">
+              <Setter Property="Tone" Value="Info"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOn}" Value="True">
+                  <Setter Property="Tone" Value="Success"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsRefused}" Value="True">
+                  <Setter Property="Tone" Value="Danger"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </controls:Alert.Style>
+        </controls:Alert>
+      </StackPanel>
+    </Border>
+
+    <!-- one card per provider the engine knows; every field writes in place, blank for the default -->
+    <ItemsControl ItemsSource="{Binding Providers}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="{x:Type config:DecisionProviderCardViewModel}">
+          <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+            <StackPanel>
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top"
+                        controls:ButtonSize.Height="32" controls:ButtonIcon.Kind="plus"
+                        Command="{Binding SetUpCommand}"
+                        Visibility="{Binding IsConfigured, Converter={StaticResource InverseBooleanToVisibility}}"
+                        Content="{Binding [Studio.Settings.DecisionSetUp], Source={x:Static services:I18n.Instance}}"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource BtnGhost}" VerticalAlignment="Top"
+                        controls:ButtonSize.Height="32" controls:ButtonIcon.Kind="trash-2"
+                        Command="{Binding RemoveCommand}"
+                        Visibility="{Binding IsConfigured, Converter={StaticResource BooleanToVisibility}}"
+                        Content="{Binding [Studio.Settings.DecisionRemove], Source={x:Static services:I18n.Instance}}"/>
+                <StackPanel>
+                  <TextBlock Style="{StaticResource CardTitle}" Text="{Binding Name}" ToolTip="{Binding SectionPath}"/>
+                  <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0" Text="{Binding Kind}"/>
+                </StackPanel>
+              </DockPanel>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding Hint}"
+                         Visibility="{Binding HasHint, Converter={StaticResource BooleanToVisibility}}"/>
+              <StackPanel Visibility="{Binding IsConfigured, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Settings.DecisionLblBaseUrl], Source={x:Static services:I18n.Instance}}"/>
+                <TextBox Style="{StaticResource InputMono}" Text="{Binding BaseAddress, UpdateSourceTrigger=LostFocus}" Tag="{Binding BaseAddressDefault}"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Settings.DecisionLblModel], Source={x:Static services:I18n.Instance}}"/>
+                <TextBox Style="{StaticResource InputMono}" Width="320" HorizontalAlignment="Left"
+                         Text="{Binding Model, UpdateSourceTrigger=LostFocus}" Tag="{Binding ModelDefault}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                  <StackPanel Margin="0,0,16,0">
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,5"
+                               Text="{Binding [Studio.Settings.DecisionLblTimeout], Source={x:Static services:I18n.Instance}}"/>
+                    <TextBox Style="{StaticResource Input}" Width="140"
+                             Text="{Binding TimeoutSeconds, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                             Tag="{x:Static config:DecisionProviderCardViewModel.TimeoutSecondsDefault}"/>
+                  </StackPanel>
+                  <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,5"
+                               Text="{Binding [Studio.Settings.DecisionLblRetries], Source={x:Static services:I18n.Instance}}"/>
+                    <TextBox Style="{StaticResource Input}" Width="140"
+                             Text="{Binding MaxRetries, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                             Tag="{x:Static config:DecisionProviderCardViewModel.MaxRetriesDefault}"/>
+                  </StackPanel>
+                </StackPanel>
+              </StackPanel>
+              <!-- The key: on the variable the run reads it from, configured or not (a key alone deduces the provider). -->
+              <ContentControl Margin="0,14,0,0" Content="{Binding Key}" ContentTemplate="{StaticResource KeyRowTemplate}"/>
+              <controls:Alert Tone="Warning" Margin="0,8,0,0"
+                              Message="{Binding [Studio.Settings.DecisionKeyInFile], Source={x:Static services:I18n.Instance}}"
+                              Visibility="{Binding HasApiKeyInFile, Converter={StaticResource BooleanToVisibility}}"/>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+  </StackPanel>
+</UserControl>

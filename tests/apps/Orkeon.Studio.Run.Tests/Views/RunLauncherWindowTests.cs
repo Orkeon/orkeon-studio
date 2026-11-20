@@ -58,6 +58,25 @@ public class RunLauncherWindowTests
     }
 
     [Fact]
+    public void Ticking_a_switch_refreshes_the_command_line()
+    {
+        var fixture = new LauncherFixture().WithInstalledCli();
+        var crew = fixture.WithYamlCrew();
+        using var window = new RunLauncherWindow(fixture.Build());
+        window.SelectTargetForTest(crew);
+        Assert.DoesNotContain("--no-decision", window.CommandLineText, StringComparison.Ordinal);
+
+        window.SetSwitchForTest(RunOption.NoDecision, on: true);
+        Assert.Contains("--no-decision", window.CommandLineText, StringComparison.Ordinal);
+
+        window.SetSwitchForTest(RunOption.LlmLog, on: true);
+        Assert.Contains("--llm-log", window.CommandLineText, StringComparison.Ordinal);
+
+        window.SetSwitchForTest(RunOption.NoDecision, on: false);
+        Assert.DoesNotContain("--no-decision", window.CommandLineText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void The_detected_shape_and_the_command_line_are_shown()
     {
         var fixture = new LauncherFixture().WithInstalledCli();

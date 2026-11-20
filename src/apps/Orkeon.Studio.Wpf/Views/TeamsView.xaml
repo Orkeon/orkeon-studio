@@ -399,6 +399,12 @@
                 <TextBlock Style="{StaticResource Hint}" Foreground="{DynamicResource WarningInkBrush}" Margin="0,4,0,0"
                            TextWrapping="Wrap" Text="{Binding CrewLlmWarning}"
                            Visibility="{Binding HasCrewLlmWarning, Converter={StaticResource BooleanToVisibility}}"/>
+                <!-- What the crew asks of the decision models (System One): required, or optional at launch. -->
+                <Border Style="{StaticResource ToolChip}" Margin="0,6,0,0" HorizontalAlignment="Left"
+                        ToolTip="{Binding DecisionBadgeTip}"
+                        Visibility="{Binding HasDecisionBadge, Converter={StaticResource BooleanToVisibility}}">
+                  <TextBlock Style="{StaticResource ToolChipText}" Text="{Binding DecisionBadge}"/>
+                </Border>
                 <!-- The need (STUDIO-16, D-02/D-03), folded to two lines (#117), the whole text
                      unfolded or in the tooltip. -->
                 <TextBlock Margin="0,6,0,0" Text="{Binding DescriptionDisplay}" ToolTip="{Binding DescriptionDisplay}"
