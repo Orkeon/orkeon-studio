@@ -1600,6 +1600,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe wird von ihrem Relais beantwortet, antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen, und was System One gewählt hätte, fällt auf das zurück, was das Team oder die Einstellungen angeben.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Der Entscheidungsanbieter, den die Ausführung nutzt, braucht einen Schlüssel, und keiner ist vorhanden, weder in seiner Variablen noch in der Einstellungsdatei: Jede Anfrage an ihn scheitert.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Ein Agent oder eine Aufgabe lässt System One sein Profil wählen (llm.profile: auto), und die Einstellungen geben keine Leiter aus zwei oder mehr Modellprofilen vor, oder eine Sprosse nennt kein Profil: Die Engine lehnt das Team beim Laden ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>Das Team deklariert decision.mode: none, und ein Agent oder eine Aufgabe nennt ein Entscheidungsprofil der Einstellungen: Der Modus lehnt jede Nutzung von System One ab, daher lehnt die Engine das Team beim Laden ab.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Eine Einstellung enthält einen Wert, den die Engine beim Start ablehnt (ein Anteil außerhalb seiner Grenzen, eine zu kleine Größe, ein unbekannter Name): Keine Ausführung würde damit starten.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>Die Ausführung überbrückt Werkzeuge zu einem anderen Rechner, und das Token der Brücke steht nicht in seiner Umgebungsvariablen oder ist kürzer als 16 Zeichen: Die Ausführung verweigert den Start.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>Die Einstellungen nennen die Adresse einer Werkzeugbrücke und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
@@ -2348,6 +2349,16 @@
   <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>Nein: Das Team fragt sie nie</value></data>
   <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>Wenn verfügbar: Das Team läuft mit oder ohne sie</value></data>
   <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Immer: Das Team kann nicht ohne sie laufen</value></data>
+  <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>Die Entscheidungsmodelle sind auf diesem Rechner aus ({0}): Das Team kann zusammengestellt werden, sein Probelauf wird aber abgelehnt, bis sie unter Einstellungen › Entscheidungsmodelle eingerichtet sind.</value></data>
+  <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>Die Entscheidungsmodelle sind auf diesem Rechner aus ({0}): Der Probelauf läuft nur ohne sie.</value></data>
+  <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>Durchlauf {0} von {1}: mit den Entscheidungsmodellen</value></data>
+  <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>Durchlauf {0} von {1}: ohne die Entscheidungsmodelle</value></data>
+  <data name="Studio.Create.PassWith" xml:space="preserve"><value>mit den Entscheidungsmodellen</value></data>
+  <data name="Studio.Create.PassWithout" xml:space="preserve"><value>ohne die Entscheidungsmodelle</value></data>
+  <data name="Studio.Create.VerdictWithMet" xml:space="preserve"><value>Mit den Entscheidungsmodellen: Kriterien erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithNotMet" xml:space="preserve"><value>Mit den Entscheidungsmodellen: Kriterien nicht erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithoutMet" xml:space="preserve"><value>Ohne die Entscheidungsmodelle: Kriterien erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithoutNotMet" xml:space="preserve"><value>Ohne die Entscheidungsmodelle: Kriterien nicht erfüllt</value></data>
   <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Soll das Team die Entscheidungsmodelle (System One) verwenden?</value></data>
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Sie beantworten eine Frage mit einer Wahrscheinlichkeit: welcher Weg zu nehmen ist, ob eine Arbeit fertig ist. Die Wahl wird beim Zusammenstellen des Teams getroffen und bleibt bei ihm; mit „Wenn verfügbar“ läuft der Probelauf zweimal, mit ihnen und dann ohne sie.</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Zusammenstellen, ohne die Entscheidungsmodelle zu fragen</value></data>
@@ -2484,6 +2495,7 @@
   <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} lassen System One ihr Profil wählen (llm.profile: auto), und {1}: Die Engine lehnt das Team beim Laden ab. Legen Sie die Leiter unter Einstellungen › Entscheidungsmodelle fest.</value></data>
   <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} lassen System One ihr Profil wählen (llm.profile: auto), und in den Einstellungen dieses Rechners {1}: Sofern die Einstellungsdatei, die die CLI wählt, nichts anderes sagt, lehnt die Engine das Team beim Laden ab.</value></data>
   <data name="Studio.Run.WarnDecisionLadderRung" xml:space="preserve"><value>{0} lassen System One ihr Profil wählen (llm.profile: auto), und {1}: Sofern die Ausführung dieses Profil nicht auf anderem Weg erhält, lehnt die Engine das Team beim Laden ab.</value></data>
+  <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} nennen ein Entscheidungsprofil, und das Team deklariert decision.mode: none, das jede Nutzung von System One ablehnt: Die Engine lehnt das Team beim Laden ab.</value></data>
   <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>die Einstellungen geben keine Leiter aus zwei oder mehr Profilen zur Auswahl vor</value></data>
   <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>die Leiter nennt {0}, das kein Modellprofil der Einstellungen ist</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} hat keinen Schlüssel: Die Variable {1} ist leer und die Einstellungsdatei enthält keinen, daher scheitert jede Anfrage an ihn und mit ihr jede Entscheidungsaufgabe, die ihn fragt. Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
@@ -2496,7 +2508,9 @@
   <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>„{0}“: Es wird keine Denkstufe gewählt, die seines Profils gilt.</value></data>
   <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>„{0}“: Es wird keine Fähigkeit gewählt, der Agent trägt seine Ersatzfähigkeiten, falls vorhanden.</value></data>
   <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>„{0}“: Es wird kein Werkzeugergebnis gekürzt.</value></data>
+  <data name="Studio.Run.InfoDecisionProfileItem" xml:space="preserve"><value>„{0}“: Die Entscheidungsstufen seines Profils werden übersprungen.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Einstellungen der Entscheidungsmodelle</value></data>
+  <data name="Studio.Run.OpenBridgeSettings" xml:space="preserve"><value>Einstellungen der Werkzeugbrücke</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (per Kennung ausgewählt unter {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (für diesen Lauf nicht eingehängt)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (einer von {1} Einträgen — nichts wählt ihn aus)</value></data>
@@ -4174,8 +4188,9 @@
     <value>Der Dateisystembereich eines Agenten passt nicht zu den Ordnern dieser Ausführung.</value>
   </data>
   <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>Die Werkzeugbrücke dieser Einstellungen stoppt die Ausführung beim Start: {0}</value></data>
-  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Speichern Sie das Token unter Einstellungen › Limits &amp; Index auf der Karte der Werkzeugbrücke.</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Speichern Sie das Token unter Einstellungen › Limits &amp; Index (Expertenmodus) auf der Karte der Werkzeugbrücke.</value></data>
   <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>Diese Einstellungen nennen eine Werkzeugbrücke ({0}) und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
+  <data name="Studio.Run.WarnBridge" xml:space="preserve"><value>Mit den Einstellungen dieses Rechners würde die Werkzeugbrücke die Ausführung beim Start stoppen: {0} Sofern die Einstellungsdatei, die die CLI wählt, nichts anderes sagt, startet die Ausführung nicht.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Nicht erlaubt</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Diesen Ordner erlauben</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

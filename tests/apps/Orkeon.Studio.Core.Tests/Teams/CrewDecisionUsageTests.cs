@@ -299,11 +299,61 @@ public sealed class CrewDecisionUsageTests : IDisposable
     }
 
     [Fact]
-    public void A_script_or_no_target_reads_as_asking_nothing()
+    public void No_target_asks_nothing_and_nothing_is_known_of_a_script()
     {
         Assert.Same(CrewDecisionUsage.None, CrewDecisionUsage.Of(null));
-        Assert.Same(CrewDecisionUsage.None, CrewDecisionUsage.Of(
-            new RunTarget { Kind = RunTargetKind.ScriptFile, SelectedPath = "/x/crew.ork.ts", RunPath = "/x/crew.ork.ts" }));
+
+        // Studio does not read a script: what it asks is unknown, never « nothing ».
+        var script = CrewDecisionUsage.Of(
+            new RunTarget { Kind = RunTargetKind.ScriptFile, SelectedPath = "/x/crew.ork.ts", RunPath = "/x/crew.ork.ts" });
+        Assert.True(script.Unknown);
+        Assert.Equal(CrewDecisionMode.None, script.Mode);
+    }
+
+    /// <summary>
+    /// A crew the engine refuses at load (here a decision task under the mode none) is not a crew that
+    /// asks nothing: nothing is known of it, and its error is the launch's to report.
+    /// </summary>
+    [Fact]
+    public void Nothing_is_known_of_a_crew_file_the_engine_refuses()
+    {
+        var path = Path.Combine(_root, "refused.yaml");
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(path, Crew(DecisionTask).Replace("process: sequential", "process: sequential\ndecision: { mode: none }", StringComparison.Ordinal));
+
+        var usage = CrewDecisionUsage.Of(new RunTarget { Kind = RunTargetKind.YamlFile, SelectedPath = path, RunPath = path });
+
+        Assert.True(usage.Unknown);
+        Assert.Equal(CrewDecisionMode.None, usage.Mode);
+    }
+
+    [Fact]
+    public void The_profiles_a_crew_names_are_listed_without_the_default_and_auto()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew(
+            """
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+                llm_override: { profile: guarded }
+            """,
+            """
+            agents:
+              analyst:
+                role: Analyst
+                goal: read
+                llm: { profile: Strong }
+              writer:
+                role: Writer
+                goal: write
+                llm: { profile: default }
+            """));
+
+        Assert.Equal(CrewDecisionMode.None, usage.Mode);
+        Assert.Equal(
+            [new CrewNamedProfile("analyst", "Strong"), new CrewNamedProfile("read", "guarded")],
+            usage.NamedProfiles);
     }
 
     /// <summary>A team folder as Studio promotes it: its crew under <c>crew/</c>, an agent and a task per file.</summary>

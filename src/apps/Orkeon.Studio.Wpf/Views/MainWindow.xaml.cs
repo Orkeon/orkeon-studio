@@ -65,6 +65,8 @@ public partial class MainWindow : Window
         shell.AllowedFolders.OpenSettingsRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Launch.OpenAllowedFoldersRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Launch.OpenDecisionSettingsRequested += (_, _) => NavSettings.IsChecked = true;
+        shell.Launch.OpenBridgeSettingsRequested += (_, _) => NavSettings.IsChecked = true;
+        shell.Run.Trial.OpenBridgeSettingsRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Teams.OpenAllowedFoldersRequested += (_, _) => NavSettings.IsChecked = true;
         shell.Launch.ChooseTeamRequested += (_, _) => NavTeams.IsChecked = true;
         shell.Launch.CreateTeamRequested += (_, _) => NavCreate.IsChecked = true;

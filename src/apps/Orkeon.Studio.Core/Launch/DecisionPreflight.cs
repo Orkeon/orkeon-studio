@@ -24,6 +24,14 @@ public enum DecisionPreflightKind
     RouteWithoutLadder,
 
     /// <summary>
+    /// The crew states <c>decision.mode: none</c> and an agent or a task names a profile the settings
+    /// define as a decision profile: the engine refuses the crew at load, the mode refusing any use of
+    /// System One. The launch is blocked when the settings are those of the file the run reads, warned of
+    /// otherwise; a check stays offered and reports the engine's line.
+    /// </summary>
+    ProfileRefusedByMode,
+
+    /// <summary>
     /// The crew cannot run without the decision models (<see cref="CrewDecisionMode.Required"/>) and this
     /// run goes without them. A crew that states <c>decision.mode: required</c> is refused before its
     /// first task (exit code 69). A crew that states no mode is refused for an agent or a task that holds
@@ -97,7 +105,7 @@ public sealed record DecisionPreflightFinding(
     /// </summary>
     public bool BlocksLaunch =>
         Kind == DecisionPreflightKind.RequiredWithoutModel
-        || (Kind == DecisionPreflightKind.ProviderRefused && SettingsKnown)
+        || (Kind is DecisionPreflightKind.ProviderRefused or DecisionPreflightKind.ProfileRefusedByMode && SettingsKnown)
         || (Kind == DecisionPreflightKind.RouteWithoutLadder && SettingsKnown && Status is { HasRouteLadder: false });
 
     /// <summary>
@@ -106,6 +114,13 @@ public sealed record DecisionPreflightFinding(
     /// </summary>
     public IReadOnlyList<string> RoutedHolders =>
         [.. Usage.OtherUses.Where(use => use.Kind == CrewSystemOneUseKind.RouteAuto).Select(use => use.Holder)];
+
+    /// <summary>
+    /// The agents and tasks that name a decision profile of the settings, in the crew's order: those a
+    /// <see cref="DecisionPreflightKind.ProfileRefusedByMode"/> finding is about.
+    /// </summary>
+    public IReadOnlyList<string> DecisionProfileHolders =>
+        [.. Usage.OtherUses.Where(use => use.Kind == CrewSystemOneUseKind.DecisionProfile).Select(use => use.Holder)];
 
     /// <summary>
     /// Whether the finding blocks a check (<c>--validate</c>) too: only a refused provider of the file the
@@ -154,6 +169,8 @@ public static class DecisionPreflight
         CrewDecisionUsage usage, DecisionStatus? status, bool settingsKnown, bool noDecision)
     {
         ArgumentNullException.ThrowIfNull(usage);
+        var stated = usage;
+        usage = Effective(usage, status);
         var known = settingsKnown && status is not null;
         DecisionPreflightFinding Say(DecisionPreflightKind kind, IReadOnlyList<DecisionOffReason>? reasons = null) =>
             new(kind, usage, status, known, noDecision, reasons ?? []);
@@ -169,6 +186,10 @@ public static class DecisionPreflight
         // A profile to pick with no ladder to pick it on: the engine refuses the crew at load.
         if (status is { ServesRouteAuto: false } && usage.OtherUses.Any(use => use.Kind == CrewSystemOneUseKind.RouteAuto))
             return Say(DecisionPreflightKind.RouteWithoutLadder);
+
+        // A crew that states none refuses any use of System One, a decision profile included: the load fails.
+        if (stated is { Declared: true, Mode: CrewDecisionMode.None } && usage.OtherUses.Count > stated.OtherUses.Count)
+            return Say(DecisionPreflightKind.ProfileRefusedByMode);
 
         if (usage.Mode == CrewDecisionMode.None)
             return null;
@@ -216,5 +237,31 @@ public static class DecisionPreflight
             return Say(DecisionPreflightKind.OptionalWithoutModel, Reasons(fromSettings: true));
 
         return null;
+    }
+
+    /// <summary>
+    /// What the crew asks once the settings are read: the profiles it names that the settings define as
+    /// decision profiles are uses of System One too (their stages follow the circuit), and a crew that
+    /// stated no mode and asked nothing else then runs with the decision models or without them. The
+    /// usage itself when the settings define no such profile, or were not read.
+    /// </summary>
+    public static CrewDecisionUsage Effective(CrewDecisionUsage usage, DecisionStatus? status)
+    {
+        ArgumentNullException.ThrowIfNull(usage);
+        if (status is not { DecisionProfiles.Count: > 0 })
+            return usage;
+
+        var uses = usage.NamedProfiles
+            .Where(named => status.DecisionProfiles.Contains(named.Profile, StringComparer.OrdinalIgnoreCase))
+            .Select(named => new CrewSystemOneUse(CrewSystemOneUseKind.DecisionProfile, named.Holder))
+            .ToList();
+        if (uses.Count == 0)
+            return usage;
+
+        return usage with
+        {
+            OtherUses = [.. usage.OtherUses, .. uses],
+            Mode = usage is { Declared: false, Mode: CrewDecisionMode.None } ? CrewDecisionMode.Optional : usage.Mode,
+        };
     }
 }

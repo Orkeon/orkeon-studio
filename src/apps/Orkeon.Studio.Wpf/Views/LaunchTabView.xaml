@@ -326,7 +326,20 @@
                 </controls:Alert>
                 <!-- The tool bridge of the file the run reads: a value its start refuses, or tools to bridge with no token. -->
                 <controls:Alert Tone="Danger" Margin="0,14,0,0" Message="{Binding BridgeMessage}"
-                                Visibility="{Binding IsBlockedByBridge, Converter={StaticResource BooleanToVisibility}}"/>
+                                Visibility="{Binding IsBlockedByBridge, Converter={StaticResource BooleanToVisibility}}">
+                  <controls:Alert.Actions>
+                    <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenBridgeSettingsCommand}"
+                            Content="{Binding [Studio.Run.OpenBridgeSettings], Source={x:Static services:I18n.Instance}}"/>
+                  </controls:Alert.Actions>
+                </controls:Alert>
+                <!-- The same on this machine's settings, while the CLI picks the file itself: a warning. -->
+                <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding BridgeWarning}"
+                                Visibility="{Binding HasBridgeWarning, Converter={StaticResource BooleanToVisibility}}">
+                  <controls:Alert.Actions>
+                    <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenBridgeSettingsCommand}"
+                            Content="{Binding [Studio.Run.OpenBridgeSettings], Source={x:Static services:I18n.Instance}}"/>
+                  </controls:Alert.Actions>
+                </controls:Alert>
                 <!-- A bridge's address with no tool allowed on it: nothing is bridged. -->
                 <controls:Alert Tone="Info" Margin="0,14,0,0" Message="{Binding BridgeInfo}"
                                 Visibility="{Binding HasBridgeInfo, Converter={StaticResource BooleanToVisibility}}"/>

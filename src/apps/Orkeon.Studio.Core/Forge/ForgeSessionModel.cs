@@ -98,7 +98,14 @@ public sealed record ForgeTaskProgress(
     bool Success,
     long? DurationMs,
     bool EndedOnIterationCap = false,
-    bool DeliverableMissing = false);
+    bool DeliverableMissing = false)
+{
+    /// <summary>
+    /// The pass of the trial the task ran in: <c>on</c> (with the decision models) or <c>off</c>, for a
+    /// crew that runs either way and is tried twice; null for a single-pass trial.
+    /// </summary>
+    public string? Circuit { get; init; }
+}
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
 /// <param name="Id">The finding's own identifier, when the judge gave one.</param>
@@ -631,8 +638,13 @@ public sealed class ForgeSessionModel
                 TrialPass = (int?)orkeonEvent.GetInt64("pass");
                 TrialPasses = (int?)orkeonEvent.GetInt64("passes");
                 TrialCircuit = orkeonEvent.GetString("circuit");
-                _activity.Clear();
-                _mailActions.Clear();
+                // The second pass of a trial continues it: what the first one did stays on the screen.
+                if (TrialPass is not > 1)
+                {
+                    _activity.Clear();
+                    _mailActions.Clear();
+                }
+
                 break;
 
             case ForgeEventKinds.TaskCompleted:
@@ -645,7 +657,10 @@ public sealed class ForgeSessionModel
                     // The trial's task ended on its iteration cap: a success whose work may be missing.
                     orkeonEvent.GetBool("endedOnIterationCap") ?? false,
                     // The trial's task succeeded without writing its file (Orkeon #392).
-                    orkeonEvent.GetBool("deliverableMissing") ?? false));
+                    orkeonEvent.GetBool("deliverableMissing") ?? false)
+                {
+                    Circuit = orkeonEvent.GetString("circuit"),
+                });
                 break;
 
             case ForgeEventKinds.CostUpdated:
@@ -660,8 +675,11 @@ public sealed class ForgeSessionModel
                 break;
 
             case ForgeEventKinds.RunFinished:
-                RunInProgress = false;
-                _mailActions.Clear();
+                // Each pass of a trial ends with its own line: the trial is over at the last one, and
+                // the mail actions of the passes add up.
+                RunInProgress = TrialPass is { } pass && TrialPasses is { } passes && pass < passes;
+                if (TrialPass is not > 1)
+                    _mailActions.Clear();
                 _mailActions.AddRange(ReadMailActions(orkeonEvent.Root));
                 break;
 

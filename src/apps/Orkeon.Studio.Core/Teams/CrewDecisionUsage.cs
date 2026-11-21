@@ -48,7 +48,19 @@ public enum CrewSystemOneUseKind
 
     /// <summary>The tool results an agent's loop prunes (<c>compaction: { prune: true }</c>).</summary>
     Prune,
+
+    /// <summary>
+    /// The decision stages of a profile an agent or a task names (<c>llm.profile</c>,
+    /// <c>llm_override.profile</c>), when the settings define that name as a decision profile
+    /// (<c>Orkeon:Decision:Profiles</c>): only the settings tell, so the launch adds it (<c>DecisionPreflight</c>).
+    /// </summary>
+    DecisionProfile,
 }
+
+/// <summary>A profile an agent or a task names, other than the default and <c>auto</c>.</summary>
+/// <param name="Holder">The key of the agent or the task.</param>
+/// <param name="Profile">The profile's name, as written.</param>
+public sealed record CrewNamedProfile(string Holder, string Profile);
 
 /// <summary>One thing a crew lets System One pick.</summary>
 /// <param name="Kind">What is picked.</param>
@@ -89,8 +101,8 @@ public sealed record CrewDecisionTask(
 /// (a run refuses it once the circuit is off), else
 /// <see cref="CrewDecisionMode.Optional"/> when the crew declares a decision task or lets System One
 /// pick something (<see cref="OtherUses"/>), else
-/// <see cref="CrewDecisionMode.None"/>. A crew the engine refuses at load, and a <c>.ork.ts</c> crew,
-/// read as <see cref="None"/>.
+/// <see cref="CrewDecisionMode.None"/>. Of a crew the engine refuses at load, and of a <c>.ork.ts</c>
+/// crew, nothing is known (<see cref="Unknown"/>).
 /// </summary>
 /// <param name="Mode">What the crew asks of the decision models.</param>
 /// <param name="DecisionTasks">Its decision tasks, in the crew's order.</param>
@@ -118,12 +130,32 @@ public sealed partial record CrewDecisionUsage(
     /// </summary>
     public IReadOnlyList<CrewSystemOneUse> OtherUses { get; init; } = [];
 
+    /// <summary>
+    /// The profiles the crew's agents and tasks name, in the crew's order. One of them may be a decision
+    /// profile of the settings the run reads, which is then a use of System One: the crew cannot tell.
+    /// </summary>
+    public IReadOnlyList<CrewNamedProfile> NamedProfiles { get; init; } = [];
+
+    /// <summary>
+    /// Whether nothing is known of what the crew asks: the engine refuses it at load (its error is the
+    /// launch's to report), or it is a script, which Studio does not read. <see cref="Mode"/> is then
+    /// <see cref="CrewDecisionMode.None"/> for want of anything better, and a screen must not conclude
+    /// from it that the crew goes without the decision models.
+    /// </summary>
+    public bool Unknown { get; init; }
+
+    /// <summary>A crew nothing is known of (<see cref="Unknown"/>).</summary>
+    public static CrewDecisionUsage Unreadable { get; } = new(CrewDecisionMode.None, [], []) { Unknown = true };
+
     /// <summary>The decision tasks that have no answer once the circuit is off, in the crew's order.</summary>
     public IReadOnlyList<string> TasksWithoutAnswer =>
         [.. DecisionTasks.Where(task => !task.AnswersWithoutModel).Select(task => task.Task)];
 
     /// <summary>What the crew <paramref name="target"/> runs asks of the decision models.</summary>
-    public static CrewDecisionUsage Of(RunTarget? target) => EngineCrewReader.Read(target, Judge, None);
+    public static CrewDecisionUsage Of(RunTarget? target) =>
+        target is { Dialect: not RunTargetDialect.Yaml }
+            ? Unreadable
+            : EngineCrewReader.Read(target, Judge, None, Unreadable);
 
     /// <summary>The same, of a single-file crew's text.</summary>
     public static CrewDecisionUsage OfCrewFile(string yaml) => EngineCrewReader.ReadText(yaml, Judge, None);
@@ -169,6 +201,7 @@ public sealed partial record CrewDecisionUsage(
     {
         var holders = new List<string>();
         var others = new List<CrewSystemOneUse>();
+        var named = new List<CrewNamedProfile>();
         // The engine routes an agent's tasks: a manager or a without: relay that no task is assigned to
         // runs on the default profile even on llm.profile: auto, and needs no ladder (CrewFactory.UnroutedAgents).
         var relays = crew.Tasks.Select(task => task.Decision?.Without?.Agent).OfType<string>().ToHashSet(StringComparer.Ordinal);
@@ -182,6 +215,7 @@ public sealed partial record CrewDecisionUsage(
             var unrouted = !assigned.Contains(agent.Id)
                 && (agent.Id.Equals(crew.ManagerAgentId) || relays.Contains(agent.Key ?? agent.Role));
             AddLlmUses(others, key, unrouted ? null : agent.LlmConfig?.Profile, agent.LlmConfig?.Thinking);
+            AddNamedProfile(named, key, agent.LlmConfig?.Profile);
             if (agent.Skills is { Auto: true })
                 others.Add(new CrewSystemOneUse(CrewSystemOneUseKind.SkillsAuto, key));
             if (agent.Compaction is { Prune: true })
@@ -196,6 +230,7 @@ public sealed partial record CrewDecisionUsage(
                 holders.Add(name);
 
             AddLlmUses(others, name, task.LlmOverride?.Profile, task.LlmOverride?.Thinking);
+            AddNamedProfile(named, name, task.LlmOverride?.Profile);
             if (task.Decision is not { } decision)
                 continue;
 
@@ -222,7 +257,18 @@ public sealed partial record CrewDecisionUsage(
             _ when decisions.Count > 0 || others.Count > 0 => CrewDecisionMode.Optional,
             _ => CrewDecisionMode.None,
         };
-        return new CrewDecisionUsage(mode, decisions, holders) { Declared = declared, OtherUses = others };
+        return new CrewDecisionUsage(mode, decisions, holders) { Declared = declared, OtherUses = others, NamedProfiles = named };
+    }
+
+    private static void AddNamedProfile(List<CrewNamedProfile> named, string holder, string? profile)
+    {
+        var name = profile?.Trim();
+        if (!string.IsNullOrEmpty(name)
+            && !string.Equals(name, LlmProfileNames.Auto, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(name, LlmProfileNames.Default, StringComparison.OrdinalIgnoreCase))
+        {
+            named.Add(new CrewNamedProfile(holder, name));
+        }
     }
 
     /// <summary>What an agent's or a task's model block lets System One pick: its profile, its thinking.</summary>

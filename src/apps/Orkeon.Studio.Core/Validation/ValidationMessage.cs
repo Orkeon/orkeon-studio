@@ -188,6 +188,12 @@ public static class ValidationCodes
     public const string DecisionLadder = "STUDIO-DECISION-LADDER";
 
     /// <summary>
+    /// The crew states <c>decision.mode: none</c> and an agent or a task names a decision profile of the
+    /// settings: the mode refuses any use of System One, and the engine refuses the crew at load.
+    /// </summary>
+    public const string DecisionModeRefused = "STUDIO-DECISION-MODE";
+
+    /// <summary>
     /// A value, or a key, of a section the engine validates at start (the compaction, the pruning, the
     /// skills, the tool bridge) that its own rules refuse: the run would not start. The sentence is the
     /// engine's. A warning for a summary profile the file does not define, which the run's environment

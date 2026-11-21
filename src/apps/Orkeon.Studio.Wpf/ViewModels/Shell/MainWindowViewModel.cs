@@ -142,6 +142,7 @@ public sealed class MainWindowViewModel : ObservableObject
             DeclaredMounts = declaredMounts,
             // The decision circuit of the settings file as saved, keys read where Settings stores them.
             MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+            MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
             KeyStore = keyStore,
             Clipboard = seams.Clipboard,
             Clock = seams.Clock,
@@ -227,6 +228,8 @@ public sealed class MainWindowViewModel : ObservableObject
                 // « Open the folder » in the wizard's header (STUDIO-14, D-15) — the same
                 // opener the team cards use, gated the same way.
                 ShellOpener = shellOpener,
+                // What a decision mode chosen on the first step meets on this machine.
+                MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
                 // STUDIO-39: the gallery reads the catalogue of the binary every other screen
                 // runs, through the same runner. The suggestions pause on a timer of their own,
                 // and the problem a chosen case writes is read in the language the window speaks.
@@ -290,6 +293,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 ShellOpener = shellOpener,
                 DeclaredMounts = declaredMounts,
                 MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+            MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
                 KeyStore = keyStore,
                 Clock = seams.Clock,
                 // No teams root: a trial stamps no last run (STUDIO-31, D-05). It still reads the
@@ -449,6 +453,9 @@ public sealed class MainWindowViewModel : ObservableObject
         Teams.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
         Run.Trial.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
         Run.Trial.OpenDecisionSettingsRequested += (_, _) => Settings.ShowDecisionCommand.Execute(null);
+        // The bridge's cards are on the Limits tab, which the Expert mode shows.
+        Launch.OpenBridgeSettingsRequested += (_, _) => Settings.ShowLimitsCommand.Execute(null);
+        Run.Trial.OpenBridgeSettingsRequested += (_, _) => Settings.ShowLimitsCommand.Execute(null);
         // STUDIO-73: « Configure a model » on a machine without one lands on the model tab.
         Launch.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);
         Run.Trial.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);

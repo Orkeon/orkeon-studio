@@ -1600,6 +1600,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其配置（llm.profile: auto），而设置中没有包含两个或更多模型配置的阶梯，或某一级未对应任何配置：引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>团队声明了 decision.mode: none，而某个智能体或任务指定了设置中的决策配置：该模式拒绝任何对 System One 的使用，因此引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>某项设置的值会在启动时被引擎拒绝（比例超出范围、大小过小或名称未知）：使用该值时任何运行都无法启动。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>运行会把工具桥接到另一台机器，而工具桥的令牌不在其环境变量中，或短于 16 个字符：运行拒绝启动。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>设置中指定了工具桥的地址，但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
@@ -2348,6 +2349,16 @@
   <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>否：团队从不询问它们</value></data>
   <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>可用时使用：团队无论有无它们都能运行</value></data>
   <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>始终：团队离不开它们</value></data>
+  <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：团队可以组建，但在“设置 › 决策模型”中完成配置之前，其试运行会被拒绝。</value></data>
+  <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：试运行将只在不使用它们的情况下执行。</value></data>
+  <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：使用决策模型</value></data>
+  <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：不使用决策模型</value></data>
+  <data name="Studio.Create.PassWith" xml:space="preserve"><value>使用决策模型</value></data>
+  <data name="Studio.Create.PassWithout" xml:space="preserve"><value>不使用决策模型</value></data>
+  <data name="Studio.Create.VerdictWithMet" xml:space="preserve"><value>使用决策模型：满足标准</value></data>
+  <data name="Studio.Create.VerdictWithNotMet" xml:space="preserve"><value>使用决策模型：未满足标准</value></data>
+  <data name="Studio.Create.VerdictWithoutMet" xml:space="preserve"><value>不使用决策模型：满足标准</value></data>
+  <data name="Studio.Create.VerdictWithoutNotMet" xml:space="preserve"><value>不使用决策模型：未满足标准</value></data>
   <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>团队是否使用决策模型（System One）？</value></data>
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>它们以概率回答问题：走哪条路径、某项工作是否就绪。此选择在组建团队时确定并随团队保留；选择“可用时使用”时，试运行会执行两次，先使用它们，再不使用。</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>组建时不询问决策模型</value></data>
@@ -2484,6 +2495,7 @@
   <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其配置（llm.profile: auto），而{1}：引擎在加载团队时会拒绝它。请在“设置 › 决策模型”中设置阶梯。</value></data>
   <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其配置（llm.profile: auto），而在本机设置中{1}：除非 CLI 选用的设置文件另有规定，否则引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Run.WarnDecisionLadderRung" xml:space="preserve"><value>{0} 让 System One 选择其配置（llm.profile: auto），而{1}：除非运行以其他方式获得该配置，否则引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} 指定了决策配置，而团队声明了 decision.mode: none，它拒绝任何对 System One 的使用：引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>设置中没有可供选择的、包含两个或更多配置的阶梯</value></data>
   <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>阶梯中包含 {0}，它不是设置中的模型配置</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此它收到的每个请求都会失败，询问它的每个决策任务也随之失败。请在“设置 › 决策模型”中保存密钥。</value></data>
@@ -2496,7 +2508,9 @@
   <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>“{0}”：不选择思考级别，沿用其配置的级别。</value></data>
   <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>“{0}”：不选择技能，智能体携带其后备技能（如有）。</value></data>
   <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>“{0}”：不裁剪任何工具结果。</value></data>
+  <data name="Studio.Run.InfoDecisionProfileItem" xml:space="preserve"><value>“{0}”：跳过其配置中的决策阶段。</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>决策模型设置</value></data>
+  <data name="Studio.Run.OpenBridgeSettings" xml:space="preserve"><value>工具桥设置</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0}（在 {1} 个条目中按标识选中）</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0}（本次运行未挂载）</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0}（{1} 个条目之一 — 没有任何选择）</value></data>
@@ -4174,8 +4188,9 @@
     <value>某个智能体的文件系统范围与此次运行的文件夹不符。</value>
   </data>
   <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>这些设置中的工具桥会在启动时中止运行：{0}</value></data>
-  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} 请在“设置 › 限制与索引”中工具桥的卡片上保存令牌。</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} 请在“设置 › 限制与索引”（专家模式）中工具桥的卡片上保存令牌。</value></data>
   <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>这些设置指定了工具桥（{0}），但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
+  <data name="Studio.Run.WarnBridge" xml:space="preserve"><value>按本机设置，工具桥会在启动时中止运行：{0} 除非 CLI 选用的设置文件另有规定，否则运行不会启动。</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>未允许</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>允许此文件夹</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

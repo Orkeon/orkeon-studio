@@ -829,6 +829,9 @@
                           IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
                            Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
+                <!-- What the chosen mode meets on this machine, before anything is composed. -->
+                <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
+                                Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>
                 <CheckBox Margin="0,10,0,0" IsChecked="{Binding DesignWithoutSystemOne}" Foreground="{DynamicResource InkBrush}"
                           Content="{Binding [Studio.Create.DesignWithoutSystemOne], Source={x:Static services:I18n.Instance}}"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
@@ -1635,6 +1638,9 @@
             <controls:Alert Tone="Warning" Margin="0,10,0,0"
                             Message="{Binding [Studio.Create.TrialInsideTeam], Source={x:Static services:I18n.Instance}}"
                             Visibility="{Binding TrialReadsInsideTeam, Converter={StaticResource BooleanToVisibility}}"/>
+            <!-- A team that runs with the decision models or without them is tried twice: which pass is under way. -->
+            <TextBlock Style="{StaticResource MetaText}" Margin="0,12,0,0" Text="{Binding TrialPassLine}"
+                       Visibility="{Binding TrialPassLine, Converter={StaticResource StringPresentToVisibility}}"/>
             <ItemsControl ItemsSource="{Binding Activity}" Margin="0,12,0,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -1700,6 +1706,9 @@
             <TextBlock Style="{StaticResource MetaText}" Margin="0,2,0,8"
                        TextWrapping="Wrap" Text="{Binding VerdictSummary}"
                        Visibility="{Binding HasVerdictSummary, Converter={StaticResource BooleanToVisibility}}"/>
+            <!-- The verdict of each pass of a two-pass trial; the score and the checklist are the trial's as a whole. -->
+            <TextBlock Style="{StaticResource MetaText}" Margin="0,0,0,8" TextWrapping="Wrap" Text="{Binding VerdictPassesLine}"
+                       Visibility="{Binding VerdictPassesLine, Converter={StaticResource StringPresentToVisibility}}"/>
             <StackPanel Orientation="Horizontal">
               <TextBlock Style="{StaticResource Subhead}" VerticalAlignment="Center"
                          Text="{Binding [Studio.Create.VerdictTitle], Source={x:Static services:I18n.Instance}}"/>

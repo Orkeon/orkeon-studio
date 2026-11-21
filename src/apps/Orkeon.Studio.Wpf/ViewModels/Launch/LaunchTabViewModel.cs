@@ -113,6 +113,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _environmentForTarget = seams.EnvironmentForTarget;
         _declaredMounts = seams.DeclaredMounts ?? (() => []);
         _machineDecisionStatus = seams.MachineDecisionStatus ?? (() => null);
+        _machineBridgeFinding = seams.MachineBridgeFinding ?? (() => null);
         _keyStore = seams.KeyStore ?? new EnvironmentApiKeyStore();
         _clipboard = seams.Clipboard ?? new InMemoryClipboardService();
         _directories = seams.Directories ?? PhysicalDirectoryProbe.Instance;
@@ -137,7 +138,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             OnPropertiesChanged(nameof(BinaryStatus), nameof(ValidationSummary),
                 nameof(CliBanner), nameof(TeamMetaLine), nameof(TeamDescription), nameof(OpenResultLabel), nameof(ArchivedTargetMessage),
                 nameof(TeamSettingsLine), nameof(CrewLlmWarning),
-                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo), nameof(BridgeMessage), nameof(BridgeInfo));
+                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo), nameof(BridgeMessage), nameof(BridgeInfo), nameof(BridgeWarning));
             // The « Default (X) » entry is worded in the language: the list and its selection move with it.
             RaiseRunLlmChanged();
             RaiseRunStateChanged();
@@ -177,6 +178,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
         OpenAllowedFoldersCommand = new RelayCommand(() => OpenAllowedFoldersRequested?.Invoke(this, EventArgs.Empty));
         OpenDecisionSettingsCommand = new RelayCommand(() => OpenDecisionSettingsRequested?.Invoke(this, EventArgs.Empty));
+        OpenBridgeSettingsCommand = new RelayCommand(() => OpenBridgeSettingsRequested?.Invoke(this, EventArgs.Empty));
         RestoreTargetCommand = new RelayCommand(() => RestoreTeamAt(_team.TeamDirectory), () => IsTargetArchived);
         CopyCommandLineCommand = new RelayCommand(CopyCommandLine, () => CommandLinePreview is { Length: > 0 });
         ChooseTeamCommand = new RelayCommand(() => ChooseTeamRequested?.Invoke(this, EventArgs.Empty));
@@ -727,21 +729,33 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     // offers the restore instead of a button that would run it anyway.
     private bool CanLaunch() => CanValidate() && !IsBlockedByFileSystemScope && !IsBlockedByDecision;
 
+    private readonly Func<ToolBridgePreflightFinding?> _machineBridgeFinding;
     private ToolBridgePreflightFinding? _bridgeFinding;
+    private bool _bridgeKnown;
 
     /// <summary>
     /// Whether the tool bridge of the file the run reads stops it at start, a check included
     /// (<see cref="ToolBridgePreflight"/>): a value of one of its two sections the host refuses, or tools
     /// to bridge with no token in its environment variable.
     /// </summary>
-    public bool IsBlockedByBridge => _bridgeFinding?.BlocksStart == true;
+    public bool IsBlockedByBridge => _bridgeKnown && _bridgeFinding?.BlocksStart == true;
 
     /// <summary>Why the tool bridge stops the run, in the engine's words; empty when it does not.</summary>
-    public string BridgeMessage => _bridgeFinding is { BlocksStart: true } finding
-        ? _strings.Format(
-            StudioStringKeys.RunBlockedBridge,
-            finding.Kind == ToolBridgePreflightKind.TokenRefused ? _strings.Format(StudioStringKeys.RunBridgeTokenRefused, finding.Reason) : finding.Reason)
-        : "";
+    public string BridgeMessage => IsBlockedByBridge ? _strings.Format(StudioStringKeys.RunBlockedBridge, BridgeReason(_bridgeFinding!)) : "";
+
+    /// <summary>
+    /// Whether the tool bridge of this machine's settings would stop the run while the CLI picks the
+    /// settings file itself: a warning that never blocks, the file it picks may say otherwise.
+    /// </summary>
+    public bool HasBridgeWarning => !_bridgeKnown && _bridgeFinding?.BlocksStart == true;
+
+    /// <summary>The warning of <see cref="HasBridgeWarning"/>.</summary>
+    public string BridgeWarning => HasBridgeWarning ? _strings.Format(StudioStringKeys.RunWarnBridge, BridgeReason(_bridgeFinding!)) : "";
+
+    private string BridgeReason(ToolBridgePreflightFinding finding) =>
+        finding.Kind == ToolBridgePreflightKind.TokenRefused
+            ? _strings.Format(StudioStringKeys.RunBridgeTokenRefused, finding.Reason)
+            : finding.Reason;
 
     /// <summary>Whether the settings name a bridge that bridges nothing: an address, no tool allowed.</summary>
     public bool HasBridgeInfo => _bridgeFinding is { Kind: ToolBridgePreflightKind.NothingBridged };
@@ -1603,11 +1617,15 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
     /// <summary>
     /// Whether the crew asks anything of the decision models (System One): a decision task, an agent
-    /// or a task holding <c>system_one_decide</c>, or something System One picks
-    /// (<see cref="CrewDecisionUsage"/>). The option
+    /// or a task holding <c>system_one_decide</c>, something System One picks, or a profile the settings
+    /// define as a decision profile (<see cref="CrewDecisionUsage"/>, <see cref="DecisionPreflight.Effective"/>);
+    /// or whether nothing is known of the crew (a script, a crew the engine refuses at load), in which
+    /// case the option is offered rather than withheld on a guess. The option
     /// « Use the decision models » is offered only then.
     /// </summary>
-    public bool UsesDecisionModels => _decisionUsage.Mode != CrewDecisionMode.None;
+    public bool UsesDecisionModels => _usesDecisionModels;
+
+    private bool _usesDecisionModels;
 
     /// <summary>
     /// Whether the launch is refused on the decision models (<see cref="DecisionPreflight"/>): the crew
@@ -1632,7 +1650,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             BlocksLaunch: false,
             Kind: DecisionPreflightKind.RequiredUnknownSettings or DecisionPreflightKind.ProviderRefused
                 or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolWithheld
-                or DecisionPreflightKind.RouteWithoutLadder,
+                or DecisionPreflightKind.RouteWithoutLadder or DecisionPreflightKind.ProfileRefusedByMode,
         };
 
     /// <summary>The warning of <see cref="HasDecisionWarning"/>.</summary>
@@ -1673,16 +1691,20 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             ? _settingsDecisionDocument?.Decision.Resolve(_keyStore.Peek)
             : _machineDecisionStatus();
         // The box is offered only to a crew that asks the models; hidden, it sends no --no-decision.
-        Options.OffersDecisionModels = UsesDecisionModels;
         var finding = DecisionPreflight.Check(_decisionUsage, status, _settingsDecisionKnown, Options.SwitchesDecisionOff);
         _decisionFinding = finding;
-        // The bridge is judged on the very file the run reads, never on the machine's standing in for it.
-        _bridgeFinding = _settingsDecisionKnown && _settingsDecisionDocument is { } read
-            ? ToolBridgePreflight.Check(read, _keyStore.Peek)
-            : null;
+        // The bridge of the very file the run reads blocks; the machine's, standing in for the file the
+        // CLI picks, only warns, as for the decision models.
+        _bridgeKnown = _settingsDecisionKnown && _settingsDecisionDocument is not null;
+        _bridgeFinding = _bridgeKnown ? ToolBridgePreflight.Check(_settingsDecisionDocument!, _keyStore.Peek) : _machineBridgeFinding();
+        // What the crew asks once the settings are read: a profile it names may be a decision profile.
+        var effective = DecisionPreflight.Effective(_decisionUsage, status);
+        _usesDecisionModels = effective.Mode != CrewDecisionMode.None || _decisionUsage.Unknown;
+        Options.OffersDecisionModels = _usesDecisionModels;
         OnPropertiesChanged(nameof(UsesDecisionModels), nameof(IsBlockedByDecision), nameof(DecisionMessage),
             nameof(HasDecisionWarning), nameof(DecisionWarning), nameof(HasDecisionInfo), nameof(DecisionInfo),
             nameof(IsBlockedByBridge), nameof(BridgeMessage), nameof(HasBridgeInfo), nameof(BridgeInfo),
+            nameof(HasBridgeWarning), nameof(BridgeWarning),
             nameof(ShowsDecisionSettingsAction));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();
@@ -1717,6 +1739,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 return _strings.Format(
                     finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionProvider : StudioStringKeys.RunWarnDecisionProvider,
                     finding.Status?.Refusal ?? "");
+            case DecisionPreflightKind.ProfileRefusedByMode:
+                return _strings.Format(StudioStringKeys.RunBlockedDecisionModeProfile, Quoted(finding.DecisionProfileHolders));
             case DecisionPreflightKind.RouteWithoutLadder:
                 // A rung that names no profile of the file only warns: the run is given Studio's own
                 // model profiles besides. No ladder at all is the engine's refusal.
@@ -1802,6 +1826,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             CrewSystemOneUseKind.RouteAuto => StudioStringKeys.RunInfoDecisionRouteItem,
             CrewSystemOneUseKind.SkillsAuto => StudioStringKeys.RunInfoDecisionSkillsItem,
             CrewSystemOneUseKind.Prune => StudioStringKeys.RunInfoDecisionPruneItem,
+            CrewSystemOneUseKind.DecisionProfile => StudioStringKeys.RunInfoDecisionProfileItem,
             _ => StudioStringKeys.RunInfoDecisionEffortItem,
         },
         use.Holder);
@@ -1856,6 +1881,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
     /// <summary>Opens the decision models settings, from an alert of the decision preflight.</summary>
     public RelayCommand OpenDecisionSettingsCommand { get; }
+
+    /// <summary>« Tool bridge settings », the action of the bridge alerts: opens Settings on the tab that holds the bridge's cards.</summary>
+    public RelayCommand OpenBridgeSettingsCommand { get; }
+
+    /// <summary>Raised by <see cref="OpenBridgeSettingsCommand"/>: the shell lands on the tab of the tool bridge.</summary>
+    public event EventHandler? OpenBridgeSettingsRequested;
 
     /// <summary>Raised by <see cref="OpenDecisionSettingsCommand"/>: the shell lands on the decision models tab.</summary>
     public event EventHandler? OpenDecisionSettingsRequested;
@@ -2528,6 +2559,13 @@ public sealed record LaunchTabDependencies
     /// not known; the verdict then warns of a crew that needs the decision models.
     /// </summary>
     public Func<DecisionStatus?>? MachineDecisionStatus { get; init; }
+
+    /// <summary>
+    /// What the tool bridge of the machine's settings file as saved does to a run
+    /// (<see cref="ToolBridgePreflight"/>), read at each verdict: what the run likely meets while the CLI
+    /// picks the file itself, a warning then, never a block. Null when it is not known.
+    /// </summary>
+    public Func<ToolBridgePreflightFinding?>? MachineBridgeFinding { get; init; }
 
     /// <summary>
     /// Where the decision providers' keys are read when a pinned or team file is judged; the process and

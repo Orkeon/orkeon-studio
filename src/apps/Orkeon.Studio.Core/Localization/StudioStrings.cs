@@ -186,6 +186,36 @@ public static class StudioStringKeys
     /// <summary>The choice of a team that cannot run without the decision models.</summary>
     public const string WizardCrewDecisionRequired = "Studio.Create.CrewDecisionRequired";
 
+    /// <summary>A warning under the mode list: « Always » is chosen and the decision models are off on this machine; {0} is why.</summary>
+    public const string WizardCrewDecisionRequiredOff = "Studio.Create.CrewDecisionRequiredOff";
+
+    /// <summary>A warning under the mode list: « When available » is chosen and the decision models are off on this machine; {0} is why.</summary>
+    public const string WizardCrewDecisionOptionalOff = "Studio.Create.CrewDecisionOptionalOff";
+
+    /// <summary>The pass of a two-pass trial under way, with the decision models: {0} the pass, {1} how many.</summary>
+    public const string WizardTrialPassWith = "Studio.Create.TrialPassWith";
+
+    /// <summary>The pass of a two-pass trial under way, without the decision models: {0} the pass, {1} how many.</summary>
+    public const string WizardTrialPassWithout = "Studio.Create.TrialPassWithout";
+
+    /// <summary>The pass a line of the trial's activity belongs to, when the trial runs twice: with the decision models.</summary>
+    public const string WizardPassWith = "Studio.Create.PassWith";
+
+    /// <summary>The pass a line of the trial's activity belongs to, when the trial runs twice: without the decision models.</summary>
+    public const string WizardPassWithout = "Studio.Create.PassWithout";
+
+    /// <summary>The verdict of the pass run with the decision models, when it passes.</summary>
+    public const string WizardVerdictWithMet = "Studio.Create.VerdictWithMet";
+
+    /// <summary>The verdict of the pass run with the decision models, when it does not pass.</summary>
+    public const string WizardVerdictWithNotMet = "Studio.Create.VerdictWithNotMet";
+
+    /// <summary>The verdict of the pass run without the decision models, when it passes.</summary>
+    public const string WizardVerdictWithoutMet = "Studio.Create.VerdictWithoutMet";
+
+    /// <summary>The verdict of the pass run without the decision models, when it does not pass.</summary>
+    public const string WizardVerdictWithoutNotMet = "Studio.Create.VerdictWithoutNotMet";
+
     /// <summary>"Rewriting your request…" — the status line while <c>forge rephrase</c> runs (STUDIO-57).</summary>
     public const string WizardRephrasing = "Studio.Create.Rephrasing";
 
@@ -700,6 +730,9 @@ public static class StudioStringKeys
     /// <summary>A warning: {0} the agents and tasks on llm.profile: auto, {1} the rungs of the ladder that name no profile of the settings (<see cref="RunDecisionLadderUnknownRungs"/>).</summary>
     public const string RunWarnDecisionLadderRung = "Studio.Run.WarnDecisionLadderRung";
 
+    /// <summary>A launch refused: {0} the agents and tasks that name a decision profile, in a team that states decision.mode: none.</summary>
+    public const string RunBlockedDecisionModeProfile = "Studio.Run.BlockedDecisionModeProfile";
+
     /// <summary>What is wrong with the ladder: there is none of two profiles or more.</summary>
     public const string RunDecisionLadderMissing = "Studio.Run.DecisionLadderMissing";
 
@@ -735,6 +768,9 @@ public static class StudioStringKeys
 
     /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent on compaction: { prune: true }, prunes nothing.</summary>
     public const string RunInfoDecisionPruneItem = "Studio.Run.InfoDecisionPruneItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task on a decision profile, whose decision stages are skipped.</summary>
+    public const string RunInfoDecisionProfileItem = "Studio.Run.InfoDecisionProfileItem";
 
     /// <summary>The action of the decision alerts of the launch: opens Settings › Decision models.</summary>
     public const string RunOpenDecisionSettings = "Studio.Run.OpenDecisionSettings";
@@ -836,6 +872,9 @@ public static class StudioStringKeys
 
     /// <summary>Information: the settings name a bridge's address, {0}, and allow no tool on it.</summary>
     public const string RunInfoBridgeIdle = "Studio.Run.InfoBridgeIdle";
+
+    /// <summary>A warning while the CLI picks the settings file itself: the tool bridge of this machine's settings would stop the run; {0} is the reason.</summary>
+    public const string RunWarnBridge = "Studio.Run.WarnBridge";
 
     /// <summary>"Not allowed" (UX lot 08).</summary>
     public const string RunFolderNotAllowed = "Studio.Run.FolderNotAllowed";
@@ -3325,6 +3364,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.",
         [StudioStringKeys.RunWarnDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.",
         [StudioStringKeys.RunWarnDecisionLadderRung] = "{0} let System One pick their profile (llm.profile: auto), and {1}: unless the run is given that profile another way, the engine refuses the team when it loads it.",
+        [StudioStringKeys.RunBlockedDecisionModeProfile] = "{0} name a decision profile, and the team states decision.mode: none, which refuses any use of System One: the engine refuses the team when it loads it.",
         [StudioStringKeys.RunDecisionLadderMissing] = "the settings give no ladder of two profiles or more to pick on",
         [StudioStringKeys.RunDecisionLadderUnknownRungs] = "the ladder names {0}, which is no model profile of the settings",
         [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
@@ -3337,6 +3377,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunInfoDecisionEffortItem] = "'{0}': no thinking level is picked, it keeps the one of its profile.",
         [StudioStringKeys.RunInfoDecisionSkillsItem] = "'{0}': no skill is picked, it carries its fallback skills, if any.",
         [StudioStringKeys.RunInfoDecisionPruneItem] = "'{0}': no tool result is pruned.",
+        [StudioStringKeys.RunInfoDecisionProfileItem] = "'{0}': the decision stages of its profile are skipped.",
         [StudioStringKeys.RunOpenDecisionSettings] = "Decision models settings",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
@@ -3414,8 +3455,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
         [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
         [StudioStringKeys.RunBlockedBridge] = "The tool bridge of these settings stops the run at start: {0}",
-        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Store the token in Settings › Limits & index, on the tool bridge's card.",
+        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Store the token in Settings › Limits & index (Expert mode), on the tool bridge's card.",
         [StudioStringKeys.RunInfoBridgeIdle] = "These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
+        [StudioStringKeys.RunWarnBridge] = "On this machine's settings, the tool bridge would stop the run at start: {0} Unless the settings file the CLI picks says otherwise, the run will not start.",
         [StudioStringKeys.RunFolderNotAllowed] = "Not allowed",
         [StudioStringKeys.RunAllowThisFolder] = "Allow this folder",
         [StudioStringKeys.RunBlockedArchived] = "This team is archived: restore it to launch it.",
@@ -3491,6 +3533,16 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardCrewDecisionNone] = "No: the team never asks them",
         [StudioStringKeys.WizardCrewDecisionOptional] = "When available: the team runs with or without them",
         [StudioStringKeys.WizardCrewDecisionRequired] = "Always: the team cannot run without them",
+        [StudioStringKeys.WizardCrewDecisionRequiredOff] = "The decision models are off on this machine ({0}): the team can be composed, but its trial will be refused until they are set up in Settings › Decision models.",
+        [StudioStringKeys.WizardCrewDecisionOptionalOff] = "The decision models are off on this machine ({0}): the trial will run without them only.",
+        [StudioStringKeys.WizardTrialPassWith] = "Pass {0} of {1}: with the decision models",
+        [StudioStringKeys.WizardTrialPassWithout] = "Pass {0} of {1}: without the decision models",
+        [StudioStringKeys.WizardPassWith] = "with the decision models",
+        [StudioStringKeys.WizardPassWithout] = "without the decision models",
+        [StudioStringKeys.WizardVerdictWithMet] = "With the decision models: criteria met",
+        [StudioStringKeys.WizardVerdictWithNotMet] = "With the decision models: criteria not met",
+        [StudioStringKeys.WizardVerdictWithoutMet] = "Without the decision models: criteria met",
+        [StudioStringKeys.WizardVerdictWithoutNotMet] = "Without the decision models: criteria not met",
         [StudioStringKeys.WizardRephrasing] = "Rewriting your request…",
         [StudioStringKeys.WizardRephrased] = "Request rewritten — « Back to my words » restores what you typed.",
         [StudioStringKeys.WizardRephraseFailed] = "The request could not be rewritten: {0}",
@@ -3682,6 +3734,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-LADDER"] = "An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-MODE"] = "The team states decision.mode: none and an agent or a task names a decision profile of the settings: the mode refuses any use of System One, so the engine refuses the team when it loads it.",
         ["Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED"] = "A setting holds a value the engine refuses at start (a share outside its bounds, a size too small, a name it does not know): no run would start with it.",
         ["Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN"] = "The run bridges tools to another machine and the bridge's token is not in its environment variable, or is shorter than 16 characters: the run refuses to start.",
         ["Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE"] = "The settings name a tool bridge's address and allow no tool on it: nothing is bridged, every tool runs on this machine.",

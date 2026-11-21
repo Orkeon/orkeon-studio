@@ -331,4 +331,38 @@ public sealed class DecisionPreflightTests
             DecisionPreflightKind.OptionalWithoutModel,
             DecisionPreflight.Check(Optional, null, settingsKnown: true, noDecision: true)?.Kind);
     }
+
+    /// <summary>
+    /// Only the settings tell that a profile a crew names is a decision profile: its stages follow the
+    /// circuit, so the crew asks System One after all, and a crew that states none is refused at load.
+    /// </summary>
+    [Fact]
+    public void A_profile_the_settings_define_as_a_decision_profile_is_a_use_of_System_One()
+    {
+        var names = new CrewDecisionUsage(CrewDecisionMode.None, [], [])
+        {
+            NamedProfiles = [new CrewNamedProfile("analyst", "Guarded"), new CrewNamedProfile("writer", "strong")],
+        };
+        var guarded = On with { DecisionProfiles = ["guarded"] };
+
+        var effective = DecisionPreflight.Effective(names, guarded);
+        Assert.Equal(CrewDecisionMode.Optional, effective.Mode);
+        Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.DecisionProfile, "analyst"), Assert.Single(effective.OtherUses));
+        Assert.Same(names, DecisionPreflight.Effective(names, On));
+        Assert.Same(names, DecisionPreflight.Effective(names, null));
+
+        Assert.Null(DecisionPreflight.Check(names, guarded, settingsKnown: true, noDecision: false));
+        var without = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(names, guarded, settingsKnown: true, noDecision: true));
+        Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, without.Kind);
+        Assert.Equal(["analyst"], without.DecisionProfileHolders);
+
+        var none = names with { Declared = true };
+        var refused = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(none, guarded, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.ProfileRefusedByMode, refused.Kind);
+        Assert.True(refused.BlocksLaunch);
+        Assert.False(refused.BlocksValidate);
+        Assert.False(DecisionPreflight.Check(none, guarded, settingsKnown: false, noDecision: false)!.BlocksLaunch);
+        // A crew that states none and names no decision profile is told nothing.
+        Assert.Null(DecisionPreflight.Check(none, On, settingsKnown: true, noDecision: true));
+    }
 }

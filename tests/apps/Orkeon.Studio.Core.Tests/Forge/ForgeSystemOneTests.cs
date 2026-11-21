@@ -172,4 +172,31 @@ public sealed class ForgeSystemOneTests
 
         Assert.Contains(spelling, source, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The second pass of a trial continues it: what the first did stays, each line knows its pass, the
+    /// trial is under way until the last pass ends, and the mail actions of the passes add up.
+    /// </summary>
+    [Fact]
+    public void The_second_pass_of_a_trial_keeps_what_the_first_one_did()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"run.started","run":1,"passes":2,"pass":1,"circuit":"on"}"""));
+        model.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","agentRole":"Analyst","success":false,"circuit":"on"}"""));
+        model.Feed(Parse("""{"v":2,"seq":3,"ts":"t","kind":"run.finished","run":1,"circuit":"on","mailActions":[{"kind":"send","to":"a@example.org","subject":"first"}]}"""));
+        Assert.True(model.RunInProgress);
+
+        model.Feed(Parse("""{"v":2,"seq":4,"ts":"t","kind":"run.started","run":1,"passes":2,"pass":2,"circuit":"off","cause":"trial"}"""));
+        model.Feed(Parse("""{"v":2,"seq":5,"ts":"t","kind":"task.completed","taskId":"read","agentRole":"Analyst","success":true,"circuit":"off"}"""));
+        model.Feed(Parse("""{"v":2,"seq":6,"ts":"t","kind":"run.finished","run":1,"circuit":"off","mailActions":[{"kind":"send","to":"a@example.org","subject":"second"}]}"""));
+
+        Assert.False(model.RunInProgress);
+        Assert.Equal([("on", false), ("off", true)], model.Activity.Select(task => (task.Circuit!, task.Success)));
+        Assert.Equal(2, model.MailActions.Count);
+
+        // Another trial starts from nothing.
+        model.Feed(Parse("""{"v":2,"seq":7,"ts":"t","kind":"run.started","run":2,"passes":2,"pass":1,"circuit":"on"}"""));
+        Assert.Empty(model.Activity);
+        Assert.Empty(model.MailActions);
+    }
 }

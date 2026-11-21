@@ -426,4 +426,62 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.Contains("https://desk.example:7410/", idle.BridgeInfo, StringComparison.Ordinal);
         Assert.True(idle.RunCommand.CanExecute(null));
     }
+
+    /// <summary>
+    /// While the CLI picks the settings file itself, the bridge of this machine's settings stands in for
+    /// it as the decision circuit does: what would stop the run is a warning, and blocks nothing.
+    /// </summary>
+    [Fact]
+    public void The_bridge_of_the_machines_settings_warns_and_never_blocks_while_the_cli_picks_the_file()
+    {
+        var team = NewTeam();
+        var machine = AppSettingsDocument.Parse("""{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":["*"]}}}}""");
+        var tab = new LaunchTabViewModel(new LaunchTabDependencies
+        {
+            ProcessRunner = new OrkeonProcessRunner(
+                new FakeProcessLauncher(), new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
+            TargetProbe = new FakeTargetProbe().WithDirectory(team).WithDirectory(Path.Combine(team, "agents")),
+            Directories = new FakeDirectoryProbe([team]),
+            HistoryStore = new FakeLaunchHistoryStore(),
+            SettingsStore = new FakeAppSettingsStore(),
+            MachineDecisionStatus = () => null,
+            MachineBridgeFinding = () => ToolBridgePreflight.Check(machine, _ => null),
+            KeyStore = new FakeApiKeyStore(),
+        });
+        tab.Target.Select(team);
+        tab.RefreshDecision();
+
+        Assert.False(tab.IsBlockedByBridge);
+        Assert.True(tab.HasBridgeWarning);
+        Assert.Contains("On this machine's settings", tab.BridgeWarning, StringComparison.Ordinal);
+        Assert.Contains("ORKEON_BRIDGE_TOKEN, which is not set", tab.BridgeWarning, StringComparison.Ordinal);
+        Assert.True(tab.RunCommand.CanExecute(null));
+
+        var asked = 0;
+        tab.OpenBridgeSettingsRequested += (_, _) => asked++;
+        tab.OpenBridgeSettingsCommand.Execute(null);
+        Assert.Equal(1, asked);
+    }
+
+    /// <summary>
+    /// A profile the crew names is a decision profile of the settings the run reads: the team asks
+    /// System One after all, the box is offered, and unticking it says what becomes of the profile.
+    /// </summary>
+    [Fact]
+    public void A_team_on_a_decision_profile_of_the_settings_is_offered_the_box()
+    {
+        var team = NewTeam();
+        File.WriteAllText(Path.Combine(team, "agents", "writer.yaml"), "role: Writer\ngoal: write\nllm: { profile: guarded }\n");
+        var plain = Launcher(team, Liquid);
+        Assert.False(plain.UsesDecisionModels);
+
+        var tab = Launcher(team, """{"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Profiles":{"guarded":{"Target":"default"}}}}}""");
+        Assert.True(tab.UsesDecisionModels);
+        Assert.False(tab.HasDecisionInfo);
+
+        tab.Options.UseDecisionModels = false;
+
+        Assert.True(tab.HasDecisionInfo);
+        Assert.Contains("'writer': the decision stages of its profile are skipped.", tab.DecisionInfo, StringComparison.Ordinal);
+    }
 }

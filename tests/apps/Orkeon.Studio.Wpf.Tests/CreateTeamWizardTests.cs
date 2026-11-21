@@ -36,7 +36,8 @@ public partial class CreateTeamWizardTests
         IApiKeyStore? keyStore = null,
         string? assistantKeyEnvName = null,
         Orkeon.Studio.Core.FileSystem.IDiskEntryProbe? diskEntries = null,
-        FakeFolderWatch? folderWatch = null)
+        FakeFolderWatch? folderWatch = null,
+        Func<DecisionStatus?>? machineDecision = null)
     {
         var document = AppSettingsDocument.CreateEmpty();
         var llm = new LlmSectionViewModel(() => document, () => { });
@@ -74,6 +75,7 @@ public partial class CreateTeamWizardTests
                 Dispatcher = dispatcher,
                 DiskEntries = diskEntries,
                 FolderWatch = folderWatch ?? new FakeFolderWatch(),
+                MachineDecisionStatus = machineDecision,
             });
         return (vm, processes, profiles);
     }

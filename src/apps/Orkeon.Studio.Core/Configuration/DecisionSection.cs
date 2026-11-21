@@ -223,7 +223,12 @@ public sealed class DecisionSection
             if (!TryReadPicks(configuration, out var ladder, out var unknownRungs, out refusal))
                 return status with { Refusal = refusal };
 
-            status = status with { RouteLadder = ladder, UnknownRungs = unknownRungs };
+            status = status with
+            {
+                RouteLadder = ladder,
+                UnknownRungs = unknownRungs,
+                DecisionProfiles = [.. configuration.GetSection(ProfilesPath).GetChildren().Select(profile => profile.Key)],
+            };
 
             // A fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
             // settings' switch named before the missing provider, as the engine names them.
@@ -525,6 +530,12 @@ public sealed record DecisionStatus(
     /// such a rung is warned of and never blocks.
     /// </summary>
     public IReadOnlyList<string> UnknownRungs { get; init; } = [];
+
+    /// <summary>
+    /// The names of the decision profiles the settings define (<c>Orkeon:Decision:Profiles</c>): an agent
+    /// or a task that names one asks System One through the profile's stages.
+    /// </summary>
+    public IReadOnlyList<string> DecisionProfiles { get; init; } = [];
 
     /// <summary>
     /// Whether the settings give a ladder at all: two rungs or more (a single one already refuses the

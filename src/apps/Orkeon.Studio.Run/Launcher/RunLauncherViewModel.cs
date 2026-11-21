@@ -258,6 +258,12 @@ internal sealed class RunLauncherViewModel
                 ValidationCodes.DecisionProviderRefused,
                 blocks,
                 $"The engine refuses the decision settings, so the CLI will not start: {finding.Status?.Refusal}")],
+            DecisionPreflightKind.ProfileRefusedByMode => [Say(
+                ValidationCodes.DecisionModeRefused,
+                blocks,
+                string.Join(", ", finding.DecisionProfileHolders.Select(holder => $"'{holder}'"))
+                + " name a decision profile, and the crew states decision.mode: none, which refuses any use of System One: "
+                + "the engine refuses the crew when it loads it.")],
             DecisionPreflightKind.RouteWithoutLadder => [Say(
                 ValidationCodes.DecisionLadder,
                 blocks,
@@ -364,6 +370,7 @@ internal sealed class RunLauncherViewModel
         CrewSystemOneUseKind.RouteAuto => $"'{use.Holder}' runs on the default profile, no profile being picked",
         CrewSystemOneUseKind.SkillsAuto => $"'{use.Holder}' carries its fallback skills, none being picked",
         CrewSystemOneUseKind.Prune => $"'{use.Holder}' prunes no tool result",
+        CrewSystemOneUseKind.DecisionProfile => $"the decision stages of the profile of '{use.Holder}' are skipped",
         _ => $"'{use.Holder}' keeps the thinking level of its profile, none being picked",
     };
 

@@ -383,6 +383,12 @@ public sealed record CreateTeamDependencies
     public IShellOpener? ShellOpener { get; init; }
 
     /// <summary>
+    /// The decision circuit of this machine's settings as saved, which the assistant and the trial run
+    /// on: read when the wizard says what a chosen decision mode meets. Null when it is not known.
+    /// </summary>
+    public Func<Orkeon.Studio.Core.Configuration.DecisionStatus?>? MachineDecisionStatus { get; init; }
+
+    /// <summary>
     /// The use-case catalogue and its search session (STUDIO-39); the wizard offers no gallery and
     /// suggests nothing when null, the rule of <see cref="ShellOpener"/>.
     /// </summary>
@@ -522,6 +528,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         _dispatcher = wired.Dispatcher ?? ImmediateUiDispatcher.Instance;
         _strings = wired.Strings ?? EnglishStudioStrings.Instance;
         _shellOpener = wired.ShellOpener;
+        _machineDecisionStatus = wired.MachineDecisionStatus ?? (() => null);
         _workspace = wired.WorkspaceDirectory ?? Environment.CurrentDirectory;
         _teamsRoot = wired.TeamsRoot ?? TeamCatalog.DefaultRoot();
         _useCases = wired.UseCases;
@@ -646,7 +653,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         RemoveReferenceUseCaseCommand = new RelayCommand(RemoveReferenceUseCase, () => HasReferenceUseCase);
         Gallery.PropertyChanged += (_, e) => OnGalleryPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnUseCaseLanguageChanged();
-        _strings.CultureChanged += (_, _) => OnPropertiesChanged(nameof(CrewDecisionChoices), nameof(SelectedCrewDecision));
+        _strings.CultureChanged += (_, _) => OnPropertiesChanged(
+            nameof(CrewDecisionChoices), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice), nameof(TrialPassLine), nameof(VerdictPassesLine));
 
         Profiles.PropertyChanged += (_, e) => OnProfilesPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnAdoptProfileLanguageChanged();
@@ -1283,6 +1291,64 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
     private string _crewDecision = ForgeCrewDecisions.None;
     private bool _designWithoutSystemOne;
+    private readonly Func<Orkeon.Studio.Core.Configuration.DecisionStatus?> _machineDecisionStatus;
+
+    /// <summary>
+    /// What the chosen mode meets on this machine, said before anything is composed: a team that must
+    /// have the decision models while they are off here would be composed, then refused at its trial;
+    /// one that takes them when available would be tried without them only. Empty when the mode asks
+    /// nothing, the models are on, or their state is not known.
+    /// </summary>
+    public string CrewDecisionNotice
+    {
+        get
+        {
+            if (_crewDecision == ForgeCrewDecisions.None || _machineDecisionStatus() is not { CircuitOn: false } status)
+                return string.Empty;
+
+            var why = status switch
+            {
+                { Refusal: { } refusal } => refusal,
+                { Enabled: false } => _strings[StudioStringKeys.RunNoteCauseSettings],
+                _ => _strings[StudioStringKeys.RunNoteCauseNoProvider],
+            };
+            return _strings.Format(
+                _crewDecision == ForgeCrewDecisions.Required
+                    ? StudioStringKeys.WizardCrewDecisionRequiredOff
+                    : StudioStringKeys.WizardCrewDecisionOptionalOff,
+                why);
+        }
+    }
+
+    /// <summary>
+    /// The pass of a two-pass trial under way (« Pass 1 of 2: with the decision models »): a team that
+    /// runs either way is tried with them, then without. Empty for a single-pass trial, and once it ended.
+    /// </summary>
+    public string TrialPassLine =>
+        _model is { RunInProgress: true, TrialPass: { } pass, TrialPasses: > 1 and var passes }
+            ? _strings.Format(
+                IsWithModels(_model.TrialCircuit) ? StudioStringKeys.WizardTrialPassWith : StudioStringKeys.WizardTrialPassWithout,
+                pass,
+                passes)
+            : string.Empty;
+
+    /// <summary>
+    /// The verdict of each pass of a two-pass trial, one line each, in the trial's order; empty for a
+    /// single-pass trial. The score and the checklist above them are the trial's as a whole.
+    /// </summary>
+    public string VerdictPassesLine =>
+        _model.Verdict is { Passes: { Count: > 1 } passes }
+            ? string.Join("\n", passes.Select(pass => _strings[(IsWithModels(pass.Circuit), pass.Passing) switch
+            {
+                (true, true) => StudioStringKeys.WizardVerdictWithMet,
+                (true, false) => StudioStringKeys.WizardVerdictWithNotMet,
+                (false, true) => StudioStringKeys.WizardVerdictWithoutMet,
+                _ => StudioStringKeys.WizardVerdictWithoutNotMet,
+            }]))
+            : string.Empty;
+
+    private static bool IsWithModels(string? circuit) =>
+        string.Equals(circuit, Orkeon.Constants.Protocol.DecisionCircuitStates.On, StringComparison.Ordinal);
 
     /// <summary>
     /// What the team to compose asks of the decision models (System One), in the engine's order: nothing,
@@ -1310,6 +1376,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                 return;
             _crewDecision = value.Mode;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CrewDecisionNotice));
         }
     }
 
@@ -3392,10 +3459,20 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     }
 
     private ForgeErrorInfo? _surfacedError;
+    private ForgeWarningInfo? _surfacedWarning;
 
     private void SyncFromModel()
     {
-        OnPropertyChanged(nameof(CanChooseCrewDecision));
+        OnPropertiesChanged(nameof(CanChooseCrewDecision), nameof(CrewDecisionNotice), nameof(TrialPassLine), nameof(VerdictPassesLine));
+        // A warning of the assistant (a pass of the trial skipped, a mode derived, System One left out)
+        // reaches the status line as the engine words it: it explains what the screen then shows.
+        if (_model.LastWarning is { } warning && !ReferenceEquals(warning, _surfacedWarning))
+        {
+            _surfacedWarning = warning;
+            if (warning.Code is not (ForgeWarningCodes.SessionNotRenamed or ForgeWarningCodes.LauncherTooLong))
+                StatusMessage = warning.Message is { Length: > 0 } ? $"{warning.Code}: {warning.Message}" : warning.Code;
+        }
+
         // The mode the session was created with, once the engine states it: the list shows it.
         if (_model.CrewDecision is { } stated && stated != _crewDecision)
         {
@@ -3567,6 +3644,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     {
         Activity.Clear();
         var fallback = _strings[StudioStringKeys.WizardAgentFallback];
+        var twoPasses = _model.Activity.Select(task => task.Circuit).Distinct().Count() > 1 || _model.TrialPasses > 1;
         // A task the trial completes twice under one id: a later pass that went through clears
         // an earlier line's finding, as the Launch screen clears an earlier row's file note —
         // one that wrote the file clears "did not write its file", one not cut short clears
@@ -3574,8 +3652,12 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         for (var index = 0; index < _model.Activity.Count; index++)
         {
             var task = _model.Activity[index];
+            // Within its own pass only: the pass without the decision models redoes every task, and its
+            // success says nothing of what the pass with them left.
             var later = task.TaskId is { Length: > 0 } key
-                ? _model.Activity.Skip(index + 1).Where(next => next.Success && string.Equals(next.TaskId, key, StringComparison.Ordinal)).ToList()
+                ? _model.Activity.Skip(index + 1).Where(next => next.Success
+                    && string.Equals(next.TaskId, key, StringComparison.Ordinal)
+                    && string.Equals(next.Circuit, task.Circuit, StringComparison.Ordinal)).ToList()
                 : [];
             var fileMissing = task.Success && task.DeliverableMissing && !later.Exists(next => !next.DeliverableMissing);
             var cutShort = task.Success && task.EndedOnIterationCap && !later.Exists(next => !next.EndedOnIterationCap);
@@ -3599,6 +3681,12 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             };
 
             var detail = task.AgentRole is not null && task.TaskId is { Length: > 0 } id ? id : "";
+            // A trial in two passes says which one each line belongs to.
+            if (twoPasses && task.Circuit is not null)
+            {
+                var pass = _strings[IsWithModels(task.Circuit) ? StudioStringKeys.WizardPassWith : StudioStringKeys.WizardPassWithout];
+                detail = detail.Length > 0 ? $"{detail} · {pass}" : pass;
+            }
             Activity.Add(new WizardActivityLine(text, detail, task.Success, cutShort, fileMissing));
         }
     }

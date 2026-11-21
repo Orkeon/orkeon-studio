@@ -613,6 +613,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>The team states decision.mode: none and an agent or a task names a decision profile of the settings: the mode refuses any use of System One, so the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>A setting holds a value the engine refuses at start (a share outside its bounds, a size too small, a name it does not know): no run would start with it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>The run bridges tools to another machine and the bridge's token is not in its environment variable, or is shorter than 16 characters: the run refuses to start.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>The settings name a tool bridge's address and allow no tool on it: nothing is bridged, every tool runs on this machine.</value></data>
@@ -897,6 +898,16 @@
   <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>No: the team never asks them</value></data>
   <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>When available: the team runs with or without them</value></data>
   <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Always: the team cannot run without them</value></data>
+  <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>The decision models are off on this machine ({0}): the team can be composed, but its trial will be refused until they are set up in Settings › Decision models.</value></data>
+  <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>The decision models are off on this machine ({0}): the trial will run without them only.</value></data>
+  <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>Pass {0} of {1}: with the decision models</value></data>
+  <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>Pass {0} of {1}: without the decision models</value></data>
+  <data name="Studio.Create.PassWith" xml:space="preserve"><value>with the decision models</value></data>
+  <data name="Studio.Create.PassWithout" xml:space="preserve"><value>without the decision models</value></data>
+  <data name="Studio.Create.VerdictWithMet" xml:space="preserve"><value>With the decision models: criteria met</value></data>
+  <data name="Studio.Create.VerdictWithNotMet" xml:space="preserve"><value>With the decision models: criteria not met</value></data>
+  <data name="Studio.Create.VerdictWithoutMet" xml:space="preserve"><value>Without the decision models: criteria met</value></data>
+  <data name="Studio.Create.VerdictWithoutNotMet" xml:space="preserve"><value>Without the decision models: criteria not met</value></data>
   <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Should the team use the decision models (System One)?</value></data>
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>They answer a question with a probability: which path to take, whether a piece of work is ready. The choice is made when the team is composed and stays with it; with « When available », the trial runs twice, with them then without.</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Compose without asking the decision models</value></data>
@@ -971,6 +982,7 @@
   <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.</value></data>
   <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Run.WarnDecisionLadderRung" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and {1}: unless the run is given that profile another way, the engine refuses the team when it loads it.</value></data>
+  <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} name a decision profile, and the team states decision.mode: none, which refuses any use of System One: the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>the settings give no ladder of two profiles or more to pick on</value></data>
   <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>the ladder names {0}, which is no model profile of the settings</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.</value></data>
@@ -983,7 +995,9 @@
   <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>'{0}': no thinking level is picked, it keeps the one of its profile.</value></data>
   <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>'{0}': no skill is picked, it carries its fallback skills, if any.</value></data>
   <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>'{0}': no tool result is pruned.</value></data>
+  <data name="Studio.Run.InfoDecisionProfileItem" xml:space="preserve"><value>'{0}': the decision stages of its profile are skipped.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Decision models settings</value></data>
+  <data name="Studio.Run.OpenBridgeSettings" xml:space="preserve"><value>Tool bridge settings</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (selected by id among {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (not mounted for this run)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (one of {1} entries — nothing selects it)</value></data>
@@ -2458,8 +2472,9 @@
     <value>An agent's file-system scope does not fit the folders of this run.</value>
   </data>
   <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>The tool bridge of these settings stops the run at start: {0}</value></data>
-  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Store the token in Settings › Limits &amp; index, on the tool bridge's card.</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Store the token in Settings › Limits &amp; index (Expert mode), on the tool bridge's card.</value></data>
   <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.</value></data>
+  <data name="Studio.Run.WarnBridge" xml:space="preserve"><value>On this machine's settings, the tool bridge would stop the run at start: {0} Unless the settings file the CLI picks says otherwise, the run will not start.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Not allowed</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Allow this folder</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">
