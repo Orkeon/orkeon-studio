@@ -1,4 +1,5 @@
 using Orkeon.Compliance.Vfs;
+using Orkeon.Constants.Llm;
 using Orkeon.Domain.Configuration;
 using Orkeon.Studio.Core.Targets;
 
@@ -7,23 +8,52 @@ namespace Orkeon.Studio.Core.Teams;
 /// <summary>What a crew asks of the decision models (System One).</summary>
 public enum CrewDecisionMode
 {
-    /// <summary>The crew never asks a decision model: no decision task, no <c>system_one_decide</c>.</summary>
+    /// <summary>
+    /// The crew never asks a decision model: it says so (<c>decision.mode: none</c>), or it has no
+    /// decision task, no <c>system_one_decide</c> and nothing System One picks.
+    /// </summary>
     None,
 
     /// <summary>
-    /// The crew runs with the decision models or without them: its decision tasks ask the model when
-    /// the circuit is on and answer from their fallback (or let their <c>otherwise</c> task run) when it
-    /// is off.
+    /// The crew runs with the decision models or without them. Declared (<c>decision.mode: optional</c>),
+    /// each decision task is answered by its <c>without:</c> relay when the circuit is off. Deduced, its
+    /// decision tasks answer from their fallback (or let their <c>otherwise</c> task run), and what System
+    /// One picks (a profile, a thinking level, skills, pruning) falls back to what the crew or the host states.
     /// </summary>
     Optional,
 
     /// <summary>
-    /// The crew cannot run without a decision model: an agent, or a task, holds <c>system_one_decide</c>,
-    /// a tool a run registers only once a provider is configured; or a decision task has neither a
-    /// fallback nor an <c>otherwise</c> task, which a run refuses once the circuit is off.
+    /// The crew cannot run without a decision model. Declared (<c>decision.mode: required</c>), a run is
+    /// refused before its first task once the circuit is off. Deduced: an agent, or a task, holds
+    /// <c>system_one_decide</c>, a tool the engine withholds once the circuit is off; or a decision task has
+    /// neither a fallback nor an <c>otherwise</c> task, which a run refuses once the circuit is off.
     /// </summary>
     Required,
 }
+
+/// <summary>What a crew lets System One pick, beside its decision tasks and <c>system_one_decide</c>.</summary>
+public enum CrewSystemOneUseKind
+{
+    /// <summary>The profile of an agent or a task (<c>llm.profile: auto</c>), picked on the host's ladder.</summary>
+    RouteAuto,
+
+    /// <summary>The thinking level of an agent or a task (<c>thinking: { effort: auto }</c>).</summary>
+    EffortAuto,
+
+    /// <summary>Whether an agent or a task thinks at all (<c>thinking: { enabled: auto }</c>).</summary>
+    ThinkingAuto,
+
+    /// <summary>The skills an agent carries (<c>skills: { auto: true }</c>).</summary>
+    SkillsAuto,
+
+    /// <summary>The tool results an agent's loop prunes (<c>compaction: { prune: true }</c>).</summary>
+    Prune,
+}
+
+/// <summary>One thing a crew lets System One pick.</summary>
+/// <param name="Kind">What is picked.</param>
+/// <param name="Holder">The key of the agent or the task that asks for it.</param>
+public sealed record CrewSystemOneUse(CrewSystemOneUseKind Kind, string Holder);
 
 /// <summary>One decision task of a crew, and what it answers when the circuit is off.</summary>
 /// <param name="Task">The task's key in the crew.</param>
@@ -37,20 +67,28 @@ public sealed record CrewDecisionTask(
     string? OtherwiseTask)
 {
     /// <summary>
-    /// Whether the task has an answer once the circuit is off: a fallback, or an <c>otherwise</c> task.
-    /// The engine loads one that has neither, and refuses the run at its entry when the circuit is off.
+    /// The key of the agent that answers in place of the model when the circuit is off (the task's
+    /// <c>without:</c> relay, of a crew with <c>decision.mode: optional</c>); null when none is declared.
     /// </summary>
-    public bool AnswersWithoutModel => Fallback.Count > 0 || OtherwiseTask is not null;
+    public string? RelayAgent { get; init; }
+
+    /// <summary>
+    /// Whether the task has an answer once the circuit is off: a relay, a fallback, or an <c>otherwise</c>
+    /// task. The engine loads one that has none, and refuses the run at its entry when the circuit is off.
+    /// </summary>
+    public bool AnswersWithoutModel => RelayAgent is not null || Fallback.Count > 0 || OtherwiseTask is not null;
 }
 
 /// <summary>
 /// What a YAML crew asks of the decision models, read with the engine's own loader
-/// (<see cref="EngineCrewReader"/>). Until the engine lets a crew state its mode, the mode is deduced:
+/// (<see cref="EngineCrewReader"/>). The mode is the one the crew states (<c>decision: { mode }</c>,
+/// <see cref="Declared"/>). A crew that states none is deduced:
 /// <see cref="CrewDecisionMode.Required"/> when an agent's or a task's tools hold <c>system_one_decide</c>
-/// (the run refuses the crew when no provider registers that tool, under the default strict tool
-/// resolution) or when a decision task has neither a fallback nor an <c>otherwise</c> task (a run
-/// refuses it once the circuit is off), else
-/// <see cref="CrewDecisionMode.Optional"/> when the crew declares a decision task, else
+/// (the engine withholds the tool once the circuit is off, and refuses the crew at load under the default
+/// strict tool resolution) or when a decision task has neither a fallback nor an <c>otherwise</c> task
+/// (a run refuses it once the circuit is off), else
+/// <see cref="CrewDecisionMode.Optional"/> when the crew declares a decision task or lets System One
+/// pick something (<see cref="OtherUses"/>), else
 /// <see cref="CrewDecisionMode.None"/>. A crew the engine refuses at load, and a <c>.ork.ts</c> crew,
 /// read as <see cref="None"/>.
 /// </summary>
@@ -67,6 +105,18 @@ public sealed partial record CrewDecisionUsage(
 
     /// <summary>A crew that asks nothing of the decision models.</summary>
     public static CrewDecisionUsage None { get; } = new(CrewDecisionMode.None, [], []);
+
+    /// <summary>
+    /// Whether the crew states its mode (<c>decision: { mode }</c>): the engine then applies the mode's
+    /// own rules. False when <see cref="Mode"/> is deduced from what the crew holds.
+    /// </summary>
+    public bool Declared { get; init; }
+
+    /// <summary>
+    /// What the crew lets System One pick, in the crew's order: with the circuit off each falls back to
+    /// what the crew or the host states, and the run goes on.
+    /// </summary>
+    public IReadOnlyList<CrewSystemOneUse> OtherUses { get; init; } = [];
 
     /// <summary>The decision tasks that have no answer once the circuit is off, in the crew's order.</summary>
     public IReadOnlyList<string> TasksWithoutAnswer =>
@@ -104,7 +154,8 @@ public sealed partial record CrewDecisionUsage(
             {
                 var text = File.ReadAllText(file);
                 return text.Contains(DecideTool, StringComparison.OrdinalIgnoreCase)
-                    || DecisionKey().IsMatch(text);
+                    || DecisionKey().IsMatch(text)
+                    || PickedBySystemOne().IsMatch(text);
             });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
@@ -117,22 +168,31 @@ public sealed partial record CrewDecisionUsage(
     private static CrewDecisionUsage Judge(CrewConfiguration crew)
     {
         var holders = new List<string>();
+        var others = new List<CrewSystemOneUse>();
         foreach (var agent in crew.Agents)
         {
+            var key = CrewDeliverableWriters.KeyOf(agent);
             if (HoldsDecideTool(agent.Tools))
-                holders.Add(CrewDeliverableWriters.KeyOf(agent));
+                holders.Add(key);
+
+            AddLlmUses(others, key, agent.LlmConfig?.Profile, agent.LlmConfig?.Thinking);
+            if (agent.Skills is { Auto: true })
+                others.Add(new CrewSystemOneUse(CrewSystemOneUseKind.SkillsAuto, key));
+            if (agent.Compaction is { Prune: true })
+                others.Add(new CrewSystemOneUse(CrewSystemOneUseKind.Prune, key));
         }
 
         var decisions = new List<CrewDecisionTask>();
         foreach (var task in crew.Tasks)
         {
+            var name = CrewDeliverableWriters.NameOf(task);
             if (HoldsDecideTool(task.Tools))
-                holders.Add(CrewDeliverableWriters.NameOf(task));
+                holders.Add(name);
 
+            AddLlmUses(others, name, task.LlmOverride?.Profile, task.LlmOverride?.Thinking);
             if (task.Decision is not { } decision)
                 continue;
 
-            var name = CrewDeliverableWriters.NameOf(task);
             var otherwise = crew.Tasks.FirstOrDefault(other =>
                 other.Condition is { IsOtherwise: true } condition
                 && string.Equals(condition.DecisionTask, name, StringComparison.Ordinal));
@@ -140,18 +200,44 @@ public sealed partial record CrewDecisionUsage(
                 name,
                 [.. decision.Questions.Select(question => question.Name)],
                 decision.Fallback,
-                otherwise is null ? null : CrewDeliverableWriters.NameOf(otherwise)));
+                otherwise is null ? null : CrewDeliverableWriters.NameOf(otherwise))
+            {
+                RelayAgent = decision.Without?.Agent,
+            });
         }
 
-        var mode = holders.Count > 0 || decisions.Any(task => !task.AnswersWithoutModel)
-            ? CrewDecisionMode.Required
-            : decisions.Count > 0 ? CrewDecisionMode.Optional : CrewDecisionMode.None;
-        return new CrewDecisionUsage(mode, decisions, holders);
+        var declared = crew.DecisionMode != Orkeon.Domain.Crew.CrewDecisionMode.Unspecified;
+        var mode = crew.DecisionMode switch
+        {
+            Orkeon.Domain.Crew.CrewDecisionMode.None => CrewDecisionMode.None,
+            Orkeon.Domain.Crew.CrewDecisionMode.Optional => CrewDecisionMode.Optional,
+            Orkeon.Domain.Crew.CrewDecisionMode.Required => CrewDecisionMode.Required,
+            _ when holders.Count > 0 || decisions.Any(task => !task.AnswersWithoutModel) => CrewDecisionMode.Required,
+            _ when decisions.Count > 0 || others.Count > 0 => CrewDecisionMode.Optional,
+            _ => CrewDecisionMode.None,
+        };
+        return new CrewDecisionUsage(mode, decisions, holders) { Declared = declared, OtherUses = others };
+    }
+
+    /// <summary>What an agent's or a task's model block lets System One pick: its profile, its thinking.</summary>
+    private static void AddLlmUses(
+        List<CrewSystemOneUse> uses, string holder, string? profile, Orkeon.Domain.SharedKernel.ValueObjects.LlmThinkingConfig? thinking)
+    {
+        if (string.Equals(profile?.Trim(), LlmProfileNames.Auto, StringComparison.OrdinalIgnoreCase))
+            uses.Add(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, holder));
+        if (thinking is { AutoEffort: not null, HasAuto: true })
+            uses.Add(new CrewSystemOneUse(CrewSystemOneUseKind.EffortAuto, holder));
+        if (thinking is { AutoEnabled: true })
+            uses.Add(new CrewSystemOneUse(CrewSystemOneUseKind.ThinkingAuto, holder));
     }
 
     // A "decision" key, bare or quoted, whatever the space before its colon.
     [System.Text.RegularExpressions.GeneratedRegex("""\bdecision["']?\s*:""", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex DecisionKey();
+
+    // What System One picks is asked with the word "auto" (a profile, a thinking level, skills) or "prune".
+    [System.Text.RegularExpressions.GeneratedRegex("""\b(auto|prune)\b""", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex PickedBySystemOne();
 
     private static bool HoldsDecideTool(IEnumerable<string> tools) =>
         tools.Any(tool => string.Equals(tool, DecideTool, StringComparison.OrdinalIgnoreCase));

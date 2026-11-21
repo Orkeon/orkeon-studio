@@ -333,6 +333,23 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — done, but did not write its file; cut short too: its iterations ran out</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>decision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>decision (defaulted)</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>decision (relay)</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One and context</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>Decision models on (team mode: {0}).</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>Decision models off: {1} (team mode: {0}).</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>this run goes without them</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>the settings switch them off</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>no decision provider is configured</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One picked the profile '{1}' ({2} %).</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: profile '{1}', not picked by System One ({2}).</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One picked the thinking level {1} ({2} %).</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: thinking level raised from {1} to {2} after a failed attempt.</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: thinking level {1}, not picked by System One ({2}).</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: skills {1} ({2}).</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: no skill ({1}).</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: context compacted, from {1} to {2} tokens.</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0}: the context could not be compacted ({1}).</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0}: {1} tool results pruned, about {2} tokens freed.</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>yes</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>score {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>probability {0}%</value></data>
@@ -591,12 +608,11 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>This team cannot run without the decision models (System One): an agent or a task uses system_one_decide, which a run has only once a decision provider is configured, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>This team cannot run without the decision models (System One): it states decision.mode: required, an agent or a task uses system_one_decide, which the engine withholds once the models are off, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task answers from its fallback, or lets its « otherwise » task run.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>The decision models are off for this run, yet an agent or a task uses system_one_decide: the tool still asks the provider, as the switch governs the decision tasks only.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY" xml:space="preserve"><value>The team is a folder: the engine runs it as a whole.</value></data>
@@ -903,14 +919,19 @@
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>This run goes without them: tick « Use the decision models ».</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>The settings switch the decision models off: turn them on in Settings › Decision models.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>No decision provider is configured: set one up in Settings › Decision models.</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} use system_one_decide, which needs a provider</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} use system_one_decide, which the engine withholds without the decision models</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>it states decision.mode: required, so the engine refuses the run before its first task</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} use system_one_decide: on this run the tool still asks {1}, as the switch only sends the decision tasks to their fallbacks.</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task answers from its fallback. {0}</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>This run goes without the decision models (System One): the team answers without them. {0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>Task '{0}': {1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>Task '{0}': no answer, task '{1}' runs instead.</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>Task '{0}': the agent '{1}' answers in place of the model.</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>'{0}': no profile is picked, it runs on the default profile.</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>'{0}': no thinking level is picked, it keeps the one of its profile.</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>'{0}': no skill is picked, it carries its fallback skills, if any.</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>'{0}': no tool result is pruned.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Decision models settings</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (selected by id among {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (not mounted for this run)</value></data>
@@ -2027,9 +2048,9 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>The scheduled run will answer as an echo: the saved settings file has no default model. Save the settings.</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only.</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>System One required</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>This team cannot run without the decision models (System One): an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>This team cannot run without the decision models (System One): it states decision.mode: required, an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One optional</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task answers from its fallback.</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task is answered by its relay or from its fallback, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Use the default model ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Use the default model</value></data>
   <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.</value></data>

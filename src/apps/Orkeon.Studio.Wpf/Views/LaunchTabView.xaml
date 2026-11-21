@@ -1251,6 +1251,28 @@
               </Border>
             </StackPanel>
 
+            <!-- What the run said of the decision models and did around its agents' model calls. -->
+            <StackPanel Margin="0,10,0,0"
+                        Visibility="{Binding Progress.HasAgentNotes, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource Hint}"
+                         Text="{Binding [Studio.Run.NotesTitle], Source={x:Static services:I18n.Instance}}"/>
+              <Border Margin="0,4,0,0" Padding="8" CornerRadius="6"
+                      Background="{DynamicResource ConsoleBgBrush}" MaxHeight="120"
+                      BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl ItemsSource="{Binding Progress.AgentNotes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock FontSize="13" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource ConsoleFgBrush}"
+                                   Text="{Binding}"/>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </Border>
+            </StackPanel>
+
             <!-- ── the technical journal (R16): one fold «Journal technique · N lignes», open by default.
                  B05/R10: the title and the count on their own line, the display switch and the
                  toolbar on the next one, wrapping when narrow; 150 px at rest, stretched while the

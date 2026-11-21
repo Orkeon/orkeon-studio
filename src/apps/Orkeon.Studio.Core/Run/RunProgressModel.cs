@@ -56,7 +56,15 @@ public sealed record RunTaskProgress(
     bool Defaulted = false,
     string? DecisionAnswers = null,
     bool EndedOnIterationCap = false,
-    bool DeliverableMissing = false);
+    bool DeliverableMissing = false)
+{
+    /// <summary>
+    /// Who answered a decision task: <c>model</c>, <c>relay</c> (the task's <c>without:</c> agent, the
+    /// circuit off) or <c>fallback</c>. Null on a task that decides nothing, and from a CLI older than
+    /// the field.
+    /// </summary>
+    public string? DecisionSource { get; init; }
+}
 
 /// <summary>
 /// What the run has spent so far, as its latest <c>cost.updated</c> said it — every figure
@@ -166,6 +174,71 @@ public sealed record RunQuestion(
 /// <summary>An <c>error</c> event, as the screen will show it.</summary>
 public sealed record RunErrorInfo(string Code, string Message, bool Recoverable);
 
+/// <summary>
+/// What a run said of the decision models before its first task (<c>run.decision</c>).
+/// </summary>
+/// <param name="Mode">The crew's mode: <c>unspecified</c>, <c>none</c>, <c>optional</c>, <c>required</c> or <c>unknown</c>.</param>
+/// <param name="On">Whether the run asks the decision models.</param>
+/// <param name="Cause">Why it does not: <c>switch</c>, <c>settings</c>, <c>no-provider</c> or <c>trial</c>; null when it does.</param>
+public sealed record RunDecisionCircuit(string? Mode, bool On, string? Cause);
+
+/// <summary>What a <see cref="RunAgentNote"/> tells.</summary>
+public enum RunAgentNoteKind
+{
+    /// <summary>The profile a task ran on (<c>agent.route</c>, an agent on <c>llm.profile: auto</c>).</summary>
+    Route,
+
+    /// <summary>The thinking level a task ran with (<c>agent.effort</c>, thinking on <c>auto</c>).</summary>
+    Effort,
+
+    /// <summary>The skills an agent carried (<c>agent.skills</c>).</summary>
+    Skills,
+
+    /// <summary>A context compacted into a summary (<c>agent.compacted</c>).</summary>
+    Compacted,
+
+    /// <summary>Tool results pruned from a context (<c>agent.pruned</c>).</summary>
+    Pruned,
+}
+
+/// <summary>
+/// One thing the run did around an agent's model calls: a profile or a thinking level System One
+/// picked (or did not), the skills carried, a context compacted or pruned. A field the event did not
+/// carry stays null.
+/// </summary>
+/// <param name="Kind">What is told.</param>
+/// <param name="TaskId">The task it happened in.</param>
+/// <param name="AgentRole">The agent it happened to.</param>
+public sealed record RunAgentNote(RunAgentNoteKind Kind, string? TaskId, string? AgentRole)
+{
+    /// <summary>The profile, the thinking level (<c>off</c> for none), the skills' mode or the compaction's outcome.</summary>
+    public string? Value { get; init; }
+
+    /// <summary>The thinking level before a raise.</summary>
+    public string? Previous { get; init; }
+
+    /// <summary>Why the value was not picked by System One, or how it was reached (the engine's own word).</summary>
+    public string? Reason { get; init; }
+
+    /// <summary>Whether System One picked <see cref="Value"/>.</summary>
+    public bool Picked { get; init; }
+
+    /// <summary>How likely System One held its pick, from 0 to 1.</summary>
+    public double? Probability { get; init; }
+
+    /// <summary>The skills carried.</summary>
+    public IReadOnlyList<string> Names { get; init; } = [];
+
+    /// <summary>The context's tokens before a compaction.</summary>
+    public long? TokensBefore { get; init; }
+
+    /// <summary>The context's tokens after a compaction, or the tokens a pruning freed.</summary>
+    public long? TokensAfter { get; init; }
+
+    /// <summary>The tool results a pruning cut.</summary>
+    public long? Count { get; init; }
+}
+
 /// <summary>Something the run's hub relayed to this process.</summary>
 public sealed record RunHubMessage(string? From, string? Topic, string? CorrelationId, string? Payload);
 
@@ -220,6 +293,7 @@ public sealed class RunProgressModel
     private readonly List<RunDelegationInFlight> _unfinishedDelegations = [];
     private readonly List<RunSpawnedAgent> _spawnedAgents = [];
     private readonly List<RunHubMessage> _hubMessages = [];
+    private readonly List<RunAgentNote> _agentNotes = [];
     private readonly System.Text.StringBuilder _generated = new();
     private DateTimeOffset? _finishedAt;
 
@@ -291,6 +365,15 @@ public sealed class RunProgressModel
 
     /// <summary>Messages the run's hub relayed to this process, oldest first.</summary>
     public IReadOnlyList<RunHubMessage> HubMessages => _hubMessages;
+
+    /// <summary>
+    /// What the run did around its agents' model calls, oldest first: profiles and thinking levels
+    /// picked, skills carried, contexts compacted or pruned.
+    /// </summary>
+    public IReadOnlyList<RunAgentNote> AgentNotes => _agentNotes;
+
+    /// <summary>What the run said of the decision models; null until it does, and from a CLI that does not.</summary>
+    public RunDecisionCircuit? DecisionCircuit { get; private set; }
 
     /// <summary>The target the run opened with, when it said so.</summary>
     public string? Target { get; private set; }
@@ -486,6 +569,12 @@ public sealed class RunProgressModel
             RunEventKinds.HubMessage => ApplyHubMessage(orkeonEvent),
             RunEventKinds.Error => ApplyError(orkeonEvent),
             RunEventKinds.RunFinished => ApplyRunFinished(orkeonEvent),
+            RunEventKinds.RunDecision => ApplyRunDecision(orkeonEvent),
+            RunEventKinds.AgentRoute => ApplyAgentRoute(orkeonEvent),
+            RunEventKinds.AgentEffort => ApplyAgentEffort(orkeonEvent),
+            RunEventKinds.AgentSkills => ApplyAgentSkills(orkeonEvent),
+            RunEventKinds.AgentCompacted => ApplyAgentCompacted(orkeonEvent),
+            RunEventKinds.AgentPruned => ApplyAgentPruned(orkeonEvent),
             _ => false,   // nothing changed, so nothing to announce
         };
 
@@ -539,7 +628,10 @@ public sealed class RunProgressModel
             // Absent from a CLI older than the flag: read as false, the task as it always was.
             orkeonEvent.GetBool("endedOnIterationCap") ?? false,
             // Absent from a CLI older than Orkeon 1.2: read as false, nothing said of the file.
-            orkeonEvent.GetBool("deliverableMissing") ?? false);
+            orkeonEvent.GetBool("deliverableMissing") ?? false)
+        {
+            DecisionSource = orkeonEvent.GetString("decisionSource"),
+        };
         _tasks.Add(finished);
         Settle(finished.TaskId, finished.AgentRole);
         return true;
@@ -669,6 +761,78 @@ public sealed class RunProgressModel
                 orkeonEvent.GetRawJson("payload")));
         }
 
+        return true;
+    }
+
+    /// <summary>The <c>reason</c> of a profile or a thinking level System One picked (the engine's <c>AgentRouteReasons.Model</c>).</summary>
+    private const string PickedByModel = Orkeon.Application.Interfaces.Ports.AgentRouteReasons.Model;
+
+    private bool ApplyRunDecision(OrkeonEvent orkeonEvent)
+    {
+        var circuit = orkeonEvent.GetString("circuit");
+        DecisionCircuit = new RunDecisionCircuit(
+            orkeonEvent.GetString("mode"),
+            string.Equals(circuit, Orkeon.Constants.Protocol.DecisionCircuitStates.On, StringComparison.Ordinal),
+            orkeonEvent.GetString("cause"));
+        return true;
+    }
+
+    private bool ApplyAgentRoute(OrkeonEvent orkeonEvent)
+    {
+        _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Route, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
+        {
+            Value = orkeonEvent.GetString("profile"),
+            Reason = orkeonEvent.GetString("reason"),
+            // The model's pick stands only when the event says so: a pick held too unsure names it too.
+            Picked = string.Equals(orkeonEvent.GetString("reason"), PickedByModel, StringComparison.Ordinal),
+            Probability = orkeonEvent.GetDouble("probability"),
+        });
+        return true;
+    }
+
+    private bool ApplyAgentEffort(OrkeonEvent orkeonEvent)
+    {
+        _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Effort, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
+        {
+            Value = orkeonEvent.GetString("level"),
+            Previous = orkeonEvent.GetString("previous"),
+            Reason = orkeonEvent.GetString("reason"),
+            // The model's pick stands only when the event says so: a pick held too unsure names it too.
+            Picked = string.Equals(orkeonEvent.GetString("reason"), PickedByModel, StringComparison.Ordinal),
+            Probability = orkeonEvent.GetDouble("probability"),
+        });
+        return true;
+    }
+
+    private bool ApplyAgentSkills(OrkeonEvent orkeonEvent)
+    {
+        _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Skills, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
+        {
+            Value = orkeonEvent.GetString("mode"),
+            Reason = orkeonEvent.GetString("reason"),
+            Names = orkeonEvent.GetStrings("skills"),
+        });
+        return true;
+    }
+
+    private bool ApplyAgentCompacted(OrkeonEvent orkeonEvent)
+    {
+        _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Compacted, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
+        {
+            Value = orkeonEvent.GetString("outcome"),
+            TokensBefore = orkeonEvent.GetInt64("tokensBefore"),
+            TokensAfter = orkeonEvent.GetInt64("tokensAfter"),
+        });
+        return true;
+    }
+
+    private bool ApplyAgentPruned(OrkeonEvent orkeonEvent)
+    {
+        _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Pruned, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
+        {
+            Count = orkeonEvent.GetInt64("cut"),
+            TokensAfter = orkeonEvent.GetInt64("freedTokens"),
+        });
         return true;
     }
 

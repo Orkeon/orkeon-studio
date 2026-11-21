@@ -832,6 +832,23 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben; zudem vorzeitig beendet: Iterationen aufgebraucht</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>Entscheidung (Relais)</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One und Kontext</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>Entscheidungsmodelle ein (Teammodus: {0}).</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>Entscheidungsmodelle aus: {1} (Teammodus: {0}).</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>diese Ausführung verzichtet auf sie</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>die Einstellungen schalten sie aus</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>kein Entscheidungsanbieter ist konfiguriert</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One hat das Profil „{1}“ gewählt ({2} %).</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: Profil „{1}“, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One hat die Denkstufe {1} gewählt ({2} %).</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: Denkstufe nach einem fehlgeschlagenen Versuch von {1} auf {2} angehoben.</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: Denkstufe {1}, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: Fähigkeiten {1} ({2}).</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: keine Fähigkeit ({1}).</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: Kontext verdichtet, von {1} auf {2} Tokens.</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0}: Der Kontext konnte nicht verdichtet werden ({1}).</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0}: {1} Werkzeugergebnisse gekürzt, etwa {2} Tokens frei.</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>ja</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>Wert {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>Wahrscheinlichkeit {0} %</value></data>
@@ -1578,12 +1595,11 @@
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>Die filesystem:-Angabe eines Agenten ist fehlerhaft, oder sein Bereich oder Arbeitsverzeichnis verlangt einen Ordner, den die Einbindungen der Ausführung nicht gewähren: Die Engine lehnt das Team beim Laden ab oder lehnt diesen Agenten ab, wenn die Ausführung ihn startet.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Eine Aufgabe muss eine Datei schreiben, für die keiner der Agenten, die sie ausführen können, ein Werkzeug hat, oder eine Entscheidungsaufgabe deklariert ein Ergebnis: Die Ausführung startet, die Datei wird möglicherweise nie geschrieben und die Aufgabe gilt trotzdem als erledigt. Eine Orkeon-1.2-CLI warnt beim Laden ebenfalls davor.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Ein Agent oder eine Aufgabe verwendet system_one_decide, das eine Ausführung erst hat, wenn ein Entscheidungsanbieter konfiguriert ist, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe, was eine Ausführung ablehnt, sobald die Modelle ausgeschaltet sind.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Es erklärt decision.mode: required, ein Agent oder eine Aufgabe verwendet system_one_decide, das die Engine zurückhält, sobald die Modelle aus sind, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe, was eine Ausführung ablehnt, sobald die Modelle aus sind.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>Die Einstellungen nennen einen Entscheidungsanbieter, den die Engine ablehnt (ein unbekannter Name oder zwei Anbieter, die sie ableiten könnte): Die CLI hält an, bevor sie das Team lädt.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe wird von ihrem Relais beantwortet, antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen, und was System One gewählt hätte, fällt auf das zurück, was das Team oder die Einstellungen angeben.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Der Entscheidungsanbieter, den die Ausführung nutzt, braucht einen Schlüssel, und keiner ist vorhanden, weder in seiner Variablen noch in der Einstellungsdatei: Jede Anfrage an ihn scheitert.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>Die Entscheidungsmodelle sind für diese Ausführung ausgeschaltet, doch ein Agent oder eine Aufgabe verwendet system_one_decide: Das Werkzeug fragt den Anbieter weiterhin, denn der Schalter regelt nur die Entscheidungsaufgaben.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe verwendet system_one_decide, und kein Entscheidungsanbieter ist konfiguriert: Mit Orkeon:CrewFactory:StrictTools auf false entfernt die Engine das Werkzeug und führt das Team ohne es aus.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe verwendet system_one_decide, und die Ausführung verzichtet auf die Entscheidungsmodelle: Mit Orkeon:CrewFactory:StrictTools auf false hält die Engine das Werkzeug zurück und führt das Team ohne es aus.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Eine hinzugefügte Ordnerzeile beginnt mit „-“: Die Engine würde sie als Option lesen.</value>
   </data>
@@ -2416,14 +2432,19 @@
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Diese Ausführung verzichtet darauf: Haken Sie „Die Entscheidungsmodelle verwenden“ an.</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>Die Einstellungen schalten die Entscheidungsmodelle aus: Schalten Sie sie unter Einstellungen › Entscheidungsmodelle ein.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>Es ist kein Entscheidungsanbieter konfiguriert: Richten Sie einen unter Einstellungen › Entscheidungsmodelle ein.</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} verwenden system_one_decide, das einen Anbieter braucht</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} verwenden system_one_decide, das die Engine ohne die Entscheidungsmodelle zurückhält</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>die Entscheidungsaufgabe {0} hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe und braucht daher eingeschaltete Entscheidungsmodelle</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>es erklärt decision.mode: required, daher lehnt die Engine die Ausführung vor ihrer ersten Aufgabe ab</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} hat keinen Schlüssel: Die Variable {1} ist leer und die Einstellungsdatei enthält keinen, daher scheitert jede Anfrage an ihn und mit ihr jede Entscheidungsaufgabe, die ihn fragt. Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} verwenden system_one_decide: In diesem Lauf fragt das Werkzeug weiterhin {1}, denn der Schalter schickt nur die Entscheidungsaufgaben zu ihrer Ersatzantwort.</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} verwenden system_one_decide, aber kein Entscheidungsanbieter ist konfiguriert: Mit Orkeon:CrewFactory:StrictTools auf false entfernt die Engine das Werkzeug und führt das Team ohne es aus.</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe antwortet mit ihrer Ersatzantwort. {0}</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} verwenden system_one_decide, und diese Ausführung verzichtet auf die Entscheidungsmodelle: Mit Orkeon:CrewFactory:StrictTools auf false hält die Engine das Werkzeug zurück und führt das Team ohne es aus. {1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Das Team antwortet ohne sie. {0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>Aufgabe „{0}“: {1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>Aufgabe „{0}“: keine Antwort, stattdessen läuft Aufgabe „{1}“.</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>Aufgabe „{0}“: Der Agent „{1}“ antwortet anstelle des Modells.</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>„{0}“: Es wird kein Profil gewählt, es läuft mit dem Standardprofil.</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>„{0}“: Es wird keine Denkstufe gewählt, die seines Profils gilt.</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>„{0}“: Es wird keine Fähigkeit gewählt, der Agent trägt seine Ersatzfähigkeiten, falls vorhanden.</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>„{0}“: Es wird kein Werkzeugergebnis gekürzt.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Einstellungen der Entscheidungsmodelle</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (per Kennung ausgewählt unter {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (für diesen Lauf nicht eingehängt)</value></data>
@@ -3742,9 +3763,9 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>Der geplante Lauf antwortet als Echo: Die gespeicherte Einstellungsdatei hat kein Standardmodell. Speichern Sie die Einstellungen.</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>{0} Agent(en) oder Aufgabe(n) dieses Teams nennen ihr eigenes Modell: Die Wahl gilt nur für die anderen.</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>System One erforderlich</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Ein Agent verwendet system_one_decide, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe. Richten Sie einen Anbieter unter Einstellungen › Entscheidungsmodelle ein.</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Es erklärt decision.mode: required, ein Agent verwendet system_one_decide, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe. Richten Sie einen Anbieter unter Einstellungen › Entscheidungsmodelle ein.</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One optional</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Dieses Team läuft mit den Entscheidungsmodellen (System One) oder ohne sie, wie der Start es wählt: Ohne sie antwortet jede Entscheidungsaufgabe mit ihrer Ersatzantwort.</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Dieses Team läuft mit den Entscheidungsmodellen (System One) oder ohne sie, wie der Start es wählt: Ohne sie wird jede Entscheidungsaufgabe von ihrem Relais oder mit ihrer Ersatzantwort beantwortet, und was System One gewählt hätte, fällt auf das zurück, was das Team oder die Einstellungen angeben.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Standardmodell verwenden ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Standardmodell verwenden</value></data>
   <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Aktiviert läuft das Team auf der beim Start gewählten Standardeinstellung und folgt ihr, wenn sie sich ändert. Deaktiviert bleibt es bei der unten gewählten Einstellung.</value></data>

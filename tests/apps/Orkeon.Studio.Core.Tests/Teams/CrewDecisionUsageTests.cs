@@ -36,6 +36,94 @@ public sealed class CrewDecisionUsageTests : IDisposable
         {tasks}
         """;
 
+    private const string DecisionTask = """
+          read:
+            description: read
+            expected_output: notes
+            agent: analyst
+          pick:
+            description: is it ready
+            dependencies: [read]
+            decision:
+              questions:
+                go: { noul: the work is ready }
+        """;
+
+    [Fact]
+    public void A_crew_that_states_required_is_required_whatever_it_holds()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew(DecisionTask + "\n" + """
+                  fallback: { go: "no" }
+            """).Replace("process: sequential", "process: sequential\ndecision: { mode: required }", StringComparison.Ordinal));
+
+        // Deduced, a decision task with a fallback would run either way: the crew's word wins.
+        Assert.Equal(CrewDecisionMode.Required, usage.Mode);
+        Assert.True(usage.Declared);
+        Assert.Equal("pick", Assert.Single(usage.DecisionTasks).Task);
+    }
+
+    [Fact]
+    public void A_crew_that_states_optional_names_the_relay_of_each_decision_task()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew(DecisionTask + "\n" + """
+                  without: { agent: writer, instructions: answer from the notes }
+            """).Replace("process: sequential", "process: sequential\ndecision: { mode: optional }", StringComparison.Ordinal));
+
+        Assert.Equal(CrewDecisionMode.Optional, usage.Mode);
+        Assert.True(usage.Declared);
+        var task = Assert.Single(usage.DecisionTasks);
+        Assert.Equal("writer", task.RelayAgent);
+        Assert.True(task.AnswersWithoutModel);
+        Assert.Empty(usage.TasksWithoutAnswer);
+    }
+
+    [Fact]
+    public void A_crew_that_states_none_asks_nothing_and_says_so()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew("""
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+            """).Replace("process: sequential", "process: sequential\ndecision: { mode: none }", StringComparison.Ordinal));
+
+        Assert.Equal(CrewDecisionMode.None, usage.Mode);
+        Assert.True(usage.Declared);
+    }
+
+    [Fact]
+    public void What_System_One_picks_makes_a_crew_that_states_no_mode_run_either_way()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew(
+            """
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+            """,
+            """
+            agents:
+              analyst:
+                role: Analyst
+                goal: read
+                llm:
+                  thinking: { effort: auto }
+                skills: { auto: true }
+                compaction: { prune: true }
+              writer:
+                role: Writer
+                goal: write
+            """));
+
+        Assert.Equal(CrewDecisionMode.Optional, usage.Mode);
+        Assert.False(usage.Declared);
+        Assert.Empty(usage.DecisionTasks);
+        Assert.Equal(
+            [CrewSystemOneUseKind.EffortAuto, CrewSystemOneUseKind.SkillsAuto, CrewSystemOneUseKind.Prune],
+            usage.OtherUses.Select(use => use.Kind));
+        Assert.All(usage.OtherUses, use => Assert.Equal("analyst", use.Holder));
+    }
+
     [Fact]
     public void A_crew_without_decision_asks_nothing()
     {

@@ -1574,8 +1574,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Whether the crew asks anything of the decision models (System One): a decision task, or an agent
-    /// or a task holding <c>system_one_decide</c> (<see cref="CrewDecisionUsage"/>). The option
+    /// Whether the crew asks anything of the decision models (System One): a decision task, an agent
+    /// or a task holding <c>system_one_decide</c>, or something System One picks
+    /// (<see cref="CrewDecisionUsage"/>). The option
     /// « Use the decision models » is offered only then.
     /// </summary>
     public bool UsesDecisionModels => _decisionUsage.Mode != CrewDecisionMode.None;
@@ -1583,9 +1584,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// <summary>
     /// Whether the launch is refused on the decision models (<see cref="DecisionPreflight"/>): the crew
     /// cannot run without them and the run goes without them, or the file the run reads names a provider
-    /// the engine refuses. A check stays offered on the first: it loads a crew whose decision task has no
-    /// answer of its own, and for a holder of <c>system_one_decide</c> it reports the engine's unknown-tool
-    /// line (under the default <c>Orkeon:CrewFactory:StrictTools</c>).
+    /// the engine refuses. A check stays offered on the first: it loads the crew and reports what a run
+    /// would refuse as a warning.
     /// </summary>
     public bool IsBlockedByDecision => _decisionFinding?.BlocksLaunch == true;
 
@@ -1595,17 +1595,15 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// <summary>
     /// Whether the decision models may fail the run, a warning that never blocks: the settings the CLI
     /// picks are not known while the crew needs the models and the machine's file does not give them,
-    /// or names a provider the engine refuses; the provider has no key; a holder of
-    /// <c>system_one_decide</c> runs with the circuit off, the tool still asking the provider; or a holder
-    /// of the tool runs without a provider on a lenient runner, which drops the tool.
+    /// or names a provider the engine refuses; the provider has no key; or a holder of
+    /// <c>system_one_decide</c> runs with the circuit off on a lenient runner, which withholds the tool.
     /// </summary>
     public bool HasDecisionWarning =>
         _decisionFinding is
         {
             BlocksLaunch: false,
             Kind: DecisionPreflightKind.RequiredUnknownSettings or DecisionPreflightKind.ProviderRefused
-                or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolIgnoresSwitch
-                or DecisionPreflightKind.ToolDroppedWithoutProvider,
+                or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolWithheld,
         };
 
     /// <summary>The warning of <see cref="HasDecisionWarning"/>.</summary>
@@ -1613,7 +1611,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
     /// <summary>
     /// Whether the run goes without the decision models on a crew that runs either way: each decision
-    /// task answers from its fallback, or lets its <c>otherwise</c> task run. Information only.
+    /// task is answered by its relay, answers from its fallback, or lets its <c>otherwise</c> task run,
+    /// and what System One picks falls back. Information only.
     /// </summary>
     public bool HasDecisionInfo => _decisionFinding is { Kind: DecisionPreflightKind.OptionalWithoutModel };
 
@@ -1690,35 +1689,36 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 return _strings.Format(StudioStringKeys.RunWarnDecisionRequiredUnknown, DecisionNeeds(finding), reasons).TrimEnd();
             case DecisionPreflightKind.ProviderKeyMissing:
                 return _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider, finding.Status?.MissingKeyVariable ?? "");
-            case DecisionPreflightKind.ToolIgnoresSwitch:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionToolIgnoresSwitch, Quoted(finding.Usage.ToolHolders), provider);
-            case DecisionPreflightKind.ToolDroppedWithoutProvider:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionToolDropped, Quoted(finding.Usage.ToolHolders));
+            case DecisionPreflightKind.ToolWithheld:
+                return _strings.Format(StudioStringKeys.RunWarnDecisionToolDropped, Quoted(finding.Usage.ToolHolders), reasons).TrimEnd();
             default:
                 // Only the tasks that answer without the model are listed: one that has neither a
                 // fallback nor an otherwise task makes the finding a refusal, never this information.
                 return string.Join('\n', finding.Usage.DecisionTasks
                     .Where(task => task.AnswersWithoutModel)
-                    .Select(task => "\u2022 " + DecisionFallbackLine(task))
+                    .Select(DecisionFallbackLine)
+                    .Concat(finding.Usage.OtherUses.Select(DecisionPickLine))
+                    .Select(line => "\u2022 " + line)
                     .Prepend(_strings.Format(StudioStringKeys.RunInfoDecisionFallback, reasons).TrimEnd()));
         }
     }
 
     /// <summary>
-    /// What the crew needs of the decision models that this run may not give, joined with « ; »: the
-    /// holders of <c>system_one_decide</c> while no provider is in sight (unless a lenient runner drops
-    /// the tool), and the decision tasks without an answer of their own while the circuit is off or may be.
+    /// What the crew needs of the decision models that this run may not give, joined with « ; »: its
+    /// own word (<c>decision.mode: required</c>), or, of a crew that states no mode, the holders of
+    /// <c>system_one_decide</c> (unless a lenient runner withholds the tool and goes on) and the decision
+    /// tasks without an answer of their own.
     /// </summary>
     private string DecisionNeeds(DecisionPreflightFinding finding)
     {
+        if (finding.Usage.Declared)
+            return _strings[StudioStringKeys.RunDecisionNeedMode];
+
         var needs = new List<string>();
-        if (finding.Usage.ToolHolders.Count > 0 && finding.Status is not { StrictTools: false } && finding.Status?.Provider is null)
+        if (finding.Usage.ToolHolders.Count > 0 && finding.Status is not { StrictTools: false })
             needs.Add(_strings.Format(StudioStringKeys.RunDecisionNeedTool, Quoted(finding.Usage.ToolHolders)));
-        if (finding.Usage.TasksWithoutAnswer is { Count: > 0 } unanswered
-            && (finding.SwitchedOffForRun || finding.Status is not { CircuitOn: true }))
-        {
+        if (finding.Usage.TasksWithoutAnswer is { Count: > 0 } unanswered)
             needs.Add(_strings.Format(StudioStringKeys.RunDecisionNeedAnswer, Quoted(unanswered)));
-        }
 
         return string.Join("; ", needs);
     }
@@ -1728,12 +1728,15 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         string.Join(", ", names.Select(name => _strings.Format(StudioStringKeys.RunWarnDeliverableQuotedAgent, name)));
 
     /// <summary>
-    /// What one decision task answers once the circuit is off: its fallback answer to each question, or
-    /// the task its <c>otherwise</c> branch runs.
+    /// What one decision task answers once the circuit is off: its relay answers, or its fallback answer
+    /// to each question stands, or the task its <c>otherwise</c> branch runs.
     /// </summary>
     private string DecisionFallbackLine(CrewDecisionTask task)
     {
-        // A task listed here answers without the model (AnswersWithoutModel): one of the two is there.
+        // A task listed here answers without the model (AnswersWithoutModel): one of the three is there.
+        if (task.RelayAgent is { } relay)
+            return _strings.Format(StudioStringKeys.RunInfoDecisionRelayItem, task.Task, relay);
+
         if (task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise)
             return _strings.Format(StudioStringKeys.RunInfoDecisionOtherwiseItem, task.Task, otherwise);
 
@@ -1742,6 +1745,17 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             .Select(question => question + " = " + task.Fallback[question]));
         return _strings.Format(StudioStringKeys.RunInfoDecisionFallbackItem, task.Task, answers);
     }
+
+    /// <summary>What becomes, once the circuit is off, of one thing the crew lets System One pick.</summary>
+    private string DecisionPickLine(CrewSystemOneUse use) => _strings.Format(
+        use.Kind switch
+        {
+            CrewSystemOneUseKind.RouteAuto => StudioStringKeys.RunInfoDecisionRouteItem,
+            CrewSystemOneUseKind.SkillsAuto => StudioStringKeys.RunInfoDecisionSkillsItem,
+            CrewSystemOneUseKind.Prune => StudioStringKeys.RunInfoDecisionPruneItem,
+            _ => StudioStringKeys.RunInfoDecisionEffortItem,
+        },
+        use.Holder);
 
     /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches

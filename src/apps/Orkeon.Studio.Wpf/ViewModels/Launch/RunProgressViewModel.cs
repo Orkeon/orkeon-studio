@@ -87,7 +87,7 @@ public sealed class RunTaskViewModel
     /// <summary>Whether the row's icon is a warning: a success cut short, or one that did not write its file.</summary>
     public bool HasWarning => EndedOnIterationCap || DeliverableMissing;
 
-    /// <summary>"decision" or "decision (defaulted)" for a decision task, else an empty label.</summary>
+    /// <summary>"decision", "decision (defaulted)" or "decision (relay)" for a decision task, else an empty label.</summary>
     public string DecisionLabel
     {
         get
@@ -99,7 +99,9 @@ public sealed class RunTaskViewModel
 
             var key = Task.Defaulted
                 ? StudioStringKeys.RunProgressDecisionDefaulted
-                : StudioStringKeys.RunProgressDecision;
+                : string.Equals(Task.DecisionSource, Orkeon.Constants.Protocol.DecisionSources.Relay, StringComparison.Ordinal)
+                    ? StudioStringKeys.RunProgressDecisionRelay
+                    : StudioStringKeys.RunProgressDecision;
             return _strings[key];
         }
     }
@@ -300,6 +302,16 @@ public sealed class RunProgressViewModel : ObservableObject
     /// <summary>Whether any hub message arrived — gates the hub panel's visibility.</summary>
     public bool HasHubMessages => HubMessages.Count > 0;
 
+    /// <summary>
+    /// What the run said of the decision models and did around its agents' model calls, one line each,
+    /// oldest first: the circuit, the profiles and thinking levels picked, the skills carried, the
+    /// contexts compacted or pruned.
+    /// </summary>
+    public ObservableCollection<string> AgentNotes { get; } = [];
+
+    /// <summary>Whether any such line arrived: gates the panel's visibility.</summary>
+    public bool HasAgentNotes => AgentNotes.Count > 0;
+
     /// <summary>The cost line, empty until the meter moves.</summary>
     public string CostSummary => _model.Cost is { } cost
         ? _strings.Format(
@@ -384,6 +396,7 @@ public sealed class RunProgressViewModel : ObservableObject
         Tasks.Clear();
         RunningTasks.Clear();
         HubMessages.Clear();
+        AgentNotes.Clear();
         AnswerText = string.Empty;
         ReplyText = string.Empty;
         _model = new RunProgressModel(_time);
@@ -417,6 +430,8 @@ public sealed class RunProgressViewModel : ObservableObject
 
         var before = _model.Tasks.Count;
         var hubBefore = _model.HubMessages.Count;
+        var notesBefore = _model.AgentNotes.Count;
+        var circuitBefore = _model.DecisionCircuit;
         _model.Apply(orkeonEvent!);
 
         for (var index = before; index < _model.Tasks.Count; index++)
@@ -438,6 +453,11 @@ public sealed class RunProgressViewModel : ObservableObject
 
         for (var index = hubBefore; index < _model.HubMessages.Count; index++)
             HubMessages.Add(Describe(_model.HubMessages[index]));
+
+        if (_model.DecisionCircuit is { } circuit && !ReferenceEquals(circuit, circuitBefore))
+            AgentNotes.Add(Describe(circuit));
+        for (var index = notesBefore; index < _model.AgentNotes.Count; index++)
+            AgentNotes.Add(Describe(_model.AgentNotes[index]));
 
         // A delta arrives per token, on the UI thread. Re-raising the eleven labels plus the
         // command state for each one would mean thousands of change notifications per
@@ -509,6 +529,58 @@ public sealed class RunProgressViewModel : ObservableObject
         return $"{topic}{from}{message.Payload ?? string.Empty}";
     }
 
+    /// <summary>What the run said of the decision models, as the panel lists it.</summary>
+    private string Describe(RunDecisionCircuit circuit)
+    {
+        var mode = circuit.Mode ?? "\u2014";
+        if (circuit.On)
+            return _strings.Format(StudioStringKeys.RunNoteDecisionOn, mode);
+
+        var cause = circuit.Cause switch
+        {
+            Orkeon.Constants.Protocol.DecisionCircuitCauses.Switch => _strings[StudioStringKeys.RunNoteCauseSwitch],
+            Orkeon.Constants.Protocol.DecisionCircuitCauses.Settings => _strings[StudioStringKeys.RunNoteCauseSettings],
+            Orkeon.Constants.Protocol.DecisionCircuitCauses.NoProvider => _strings[StudioStringKeys.RunNoteCauseNoProvider],
+            // A cause this build does not know is said as the engine wrote it.
+            _ => circuit.Cause ?? "\u2014",
+        };
+        return _strings.Format(StudioStringKeys.RunNoteDecisionOff, mode, cause);
+    }
+
+    /// <summary>
+    /// One thing the run did around an agent's model calls, as the panel lists it. The engine's own
+    /// words (a reason, a mode, an outcome) are shown as written: they are what its documentation names.
+    /// </summary>
+    private string Describe(RunAgentNote note)
+    {
+        var who = note.AgentRole is { Length: > 0 } role ? role : note.TaskId ?? "\u2014";
+        var value = note.Value ?? "\u2014";
+        var reason = note.Reason ?? "\u2014";
+        var share = note.Probability is { } probability
+            ? Math.Round(Math.Clamp(probability, 0, 1) * 100, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture)
+            : "\u2014";
+        return note.Kind switch
+        {
+            RunAgentNoteKind.Route => note.Picked
+                ? _strings.Format(StudioStringKeys.RunNoteRoutePicked, who, value, share)
+                : _strings.Format(StudioStringKeys.RunNoteRouteDefault, who, value, reason),
+            RunAgentNoteKind.Effort when note.Previous is { Length: > 0 } previous =>
+                _strings.Format(StudioStringKeys.RunNoteEffortRaised, who, previous, value),
+            RunAgentNoteKind.Effort => note.Picked
+                ? _strings.Format(StudioStringKeys.RunNoteEffortPicked, who, value, share)
+                : _strings.Format(StudioStringKeys.RunNoteEffortDefault, who, value, reason),
+            RunAgentNoteKind.Skills => note.Names.Count > 0
+                ? _strings.Format(StudioStringKeys.RunNoteSkills, who, string.Join(", ", note.Names), note.Reason ?? value)
+                : _strings.Format(StudioStringKeys.RunNoteSkillsNone, who, note.Reason ?? value),
+            RunAgentNoteKind.Compacted when string.Equals(value, Orkeon.Application.Interfaces.Ports.AgentCompactionOutcomes.Compacted, StringComparison.Ordinal) =>
+                _strings.Format(StudioStringKeys.RunNoteCompacted, who, Count(note.TokensBefore), Count(note.TokensAfter)),
+            RunAgentNoteKind.Compacted => _strings.Format(StudioStringKeys.RunNoteCompactionFailed, who, value),
+            _ => _strings.Format(StudioStringKeys.RunNotePruned, who, Count(note.Count), Count(note.TokensAfter)),
+        };
+
+        static string Count(long? count) => count?.ToString("N0", CultureInfo.CurrentCulture) ?? "\u2014";
+    }
+
     private void RaiseLabels()
     {
         OnPropertyChanged(nameof(Summary));
@@ -529,6 +601,7 @@ public sealed class RunProgressViewModel : ObservableObject
         OnPropertyChanged(nameof(AgentRequestFrom));
         OnPropertyChanged(nameof(AgentRequestPayload));
         OnPropertyChanged(nameof(HasHubMessages));
+        OnPropertyChanged(nameof(HasAgentNotes));
         OnPropertyChanged(nameof(HasRunningTasks));
         OnPropertyChanged(nameof(ActivityLine));
         OnPropertyChanged(nameof(HasActivity));

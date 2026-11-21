@@ -8,18 +8,18 @@ public enum DecisionPreflightKind
 {
     /// <summary>
     /// The settings name a decision provider the engine refuses (an unknown name, two providers it could
-    /// deduce, a Kev address the key may not travel to, an unreadable switch): the runner refuses to
-    /// start, whatever the crew, a check included.
+    /// deduce, a Kev address the key may not travel to, an unreadable switch, a fail-closed LLM judge
+    /// while the circuit is off): the runner refuses to start, whatever the crew, a check included.
     /// </summary>
     ProviderRefused,
 
     /// <summary>
     /// The crew cannot run without the decision models (<see cref="CrewDecisionMode.Required"/>) and this
-    /// run cannot give them: an agent or a task holds <c>system_one_decide</c> and no provider is
-    /// configured while the runner resolves tools strictly (the default), or a decision task has neither a
-    /// fallback nor an <c>otherwise</c> task while the circuit is off. The launch is blocked; a check stays
-    /// offered: it loads the crew for such a decision task, and for a holder of the tool it reports the
-    /// engine's unknown-tool line (<see cref="DecisionPreflightFinding.RefusesToolAtLoad"/>).
+    /// run goes without them. A crew that states <c>decision.mode: required</c> is refused before its
+    /// first task (exit code 69). A crew that states no mode is refused for an agent or a task that holds
+    /// <c>system_one_decide</c>, withheld while the runner resolves tools strictly (the default), or for a
+    /// decision task that has neither a fallback nor an <c>otherwise</c> task. The launch is blocked; a
+    /// check stays offered: it loads the crew and reports what a run would refuse as a warning.
     /// </summary>
     RequiredWithoutModel,
 
@@ -36,22 +36,16 @@ public enum DecisionPreflightKind
     ProviderKeyMissing,
 
     /// <summary>
-    /// A holder of <c>system_one_decide</c> runs while the circuit is off (<c>--no-decision</c> or
-    /// <c>Orkeon:Decision:Enabled</c> false): the circuit governs the decision tasks only, so the tool
-    /// still asks the provider. A warning.
+    /// A holder of <c>system_one_decide</c> runs with the circuit off while the runner resolves tools
+    /// leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine withholds the tool with a
+    /// warning and runs the crew without it. A warning.
     /// </summary>
-    ToolIgnoresSwitch,
+    ToolWithheld,
 
     /// <summary>
-    /// A holder of <c>system_one_decide</c> runs without a provider while the runner resolves tools
-    /// leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine drops the tool with a log line
-    /// and runs the crew without it. A warning.
-    /// </summary>
-    ToolDroppedWithoutProvider,
-
-    /// <summary>
-    /// The crew declares decision tasks that answer without the model, and this run goes without it:
-    /// each answers from its fallback, or lets its <c>otherwise</c> task run. Information only.
+    /// The crew runs with or without the decision models, and this run goes without them: each decision
+    /// task is answered by its relay, answers from its fallback, or lets its <c>otherwise</c> task run, and
+    /// what System One picks falls back to what the crew or the host states. Information only.
     /// </summary>
     OptionalWithoutModel,
 }
@@ -89,7 +83,7 @@ public sealed record DecisionPreflightFinding(
 {
     /// <summary>
     /// Whether the finding blocks « Launch now »: a refused provider of the file the run reads, or a crew
-    /// that needs the decision models on a run that cannot give them.
+    /// that needs the decision models on a run that goes without them.
     /// </summary>
     public bool BlocksLaunch =>
         Kind == DecisionPreflightKind.RequiredWithoutModel
@@ -105,26 +99,24 @@ public sealed record DecisionPreflightFinding(
     public DecisionOffReason? OffReason => Reasons.Count > 0 ? Reasons[0] : null;
 
     /// <summary>
-    /// Whether the engine refuses the crew at load for its holders of <c>system_one_decide</c>: no provider
-    /// in the file the run reads, tools resolved strictly. A check (<c>--validate</c>) then fails too, on
-    /// the engine's unknown-tool line, while the launch is blocked.
+    /// Whether the run is refused on the crew's own word (<c>decision.mode: required</c>), before its
+    /// first task, with the CLI's exit code 69.
     /// </summary>
-    public bool RefusesToolAtLoad =>
-        Kind == DecisionPreflightKind.RequiredWithoutModel
-        && SettingsKnown
-        && Usage.ToolHolders.Count > 0
-        && Status is { Provider: null, StrictTools: true };
+    public bool RefusedByMode =>
+        Kind == DecisionPreflightKind.RequiredWithoutModel && Usage is { Declared: true, Mode: CrewDecisionMode.Required };
 }
 
 /// <summary>
 /// Tells, before a run, what the decision models (System One) change to it: the crew's mode
 /// (<see cref="CrewDecisionUsage"/>) against the circuit the settings give (<see cref="DecisionSection.Resolve"/>)
 /// and the run's own switch (<c>--no-decision</c>). As the engine runs it: the start is refused when the
-/// choice of provider is refused; <c>system_one_decide</c> is registered whenever a provider resolves,
-/// whatever the circuit, so its holders fail only without a provider, at load under strict tool
-/// resolution (the default, a check included), else the tool is dropped; the circuit governs the
-/// decision tasks alone, and with it off a run refuses a decision task that has neither a fallback nor
-/// an <c>otherwise</c> task.
+/// choice of provider is refused; the circuit is off without a provider, under the settings' switch or
+/// under the run's, and then no consumer asks the model. A crew that states <c>required</c> is refused
+/// before its first task; one that states <c>optional</c> answers each decision task by its relay; one
+/// that states no mode has <c>system_one_decide</c> withheld (a refusal at load under strict tool
+/// resolution, the default; a warning otherwise, and under a check), answers its decision tasks from
+/// their fallbacks, and is refused for a decision task that has neither a fallback nor an
+/// <c>otherwise</c> task.
 /// </summary>
 public static class DecisionPreflight
 {
@@ -148,20 +140,25 @@ public static class DecisionPreflight
         DecisionPreflightFinding Say(DecisionPreflightKind kind, IReadOnlyList<DecisionOffReason>? reasons = null) =>
             new(kind, usage, status, known, noDecision, reasons ?? []);
 
+        // The run's own switch meets a fail-closed LLM judge: the host refuses to start, as for a
+        // switch of the settings.
+        if (noDecision && status is { Refusal: null, RefusalOfRunSwitch: { } ofSwitch })
+            status = status with { Refusal = ofSwitch };
+
         if (status?.Refusal is not null)
             return Say(DecisionPreflightKind.ProviderRefused);
 
         if (usage.Mode == CrewDecisionMode.None)
             return null;
 
-        var holders = usage.ToolHolders.Count > 0;
-        var unanswered = usage.TasksWithoutAnswer.Count > 0;
         var noProvider = status is { Provider: null };
-        // Without settings read, the runner's default: strict.
-        var strictTools = status?.StrictTools ?? true;
         var settingsOff = status is { Enabled: false };
-        var circuitOff = noDecision || status is { CircuitOn: false };
-        List<DecisionOffReason> TaskReasons(bool fromSettings)
+        // Off for sure: the run's own switch, or the circuit of the very file the run reads.
+        var offForSure = noDecision || (known && status is { CircuitOn: false });
+        // Off as far as is known: the machine's file says so, or nothing was read.
+        var offAsFarAsKnown = noDecision || status is { CircuitOn: false };
+        var mayBeOff = offAsFarAsKnown || status is null;
+        List<DecisionOffReason> Reasons(bool fromSettings)
         {
             var reasons = new List<DecisionOffReason>();
             if (fromSettings && noProvider)
@@ -173,32 +170,28 @@ public static class DecisionPreflight
             return reasons;
         }
 
-        var toolBlocked = holders && known && noProvider && strictTools;
-        var tasksBlocked = unanswered && (noDecision || (known && status is { CircuitOn: false }));
-        if (toolBlocked || tasksBlocked)
-        {
-            var reasons = new List<DecisionOffReason>();
-            if (toolBlocked)
-                reasons.Add(DecisionOffReason.NoProvider);
-            if (tasksBlocked)
-                reasons.AddRange(TaskReasons(fromSettings: known).Where(reason => !reasons.Contains(reason)));
-            return Say(DecisionPreflightKind.RequiredWithoutModel, [.. reasons.Order()]);
-        }
+        // Without settings read, the runner's default: strict.
+        var strictTools = status?.StrictTools ?? true;
+        var holders = !usage.Declared && usage.ToolHolders.Count > 0;
+        var unanswered = !usage.Declared && usage.TasksWithoutAnswer.Count > 0;
+        var needsModel = usage.Declared
+            ? usage.Mode == CrewDecisionMode.Required
+            : (holders && strictTools) || unanswered;
 
-        if (!known && ((holders && status?.Provider is null && strictTools) || (unanswered && status is not { CircuitOn: true })))
-            return Say(DecisionPreflightKind.RequiredUnknownSettings, TaskReasons(fromSettings: status is not null));
+        if (needsModel && offForSure)
+            return Say(DecisionPreflightKind.RequiredWithoutModel, Reasons(fromSettings: known));
 
-        if (holders && noProvider && !strictTools)
-            return Say(DecisionPreflightKind.ToolDroppedWithoutProvider, [DecisionOffReason.NoProvider]);
+        if (needsModel && !known && mayBeOff)
+            return Say(DecisionPreflightKind.RequiredUnknownSettings, Reasons(fromSettings: status is not null));
 
-        if (status?.MissingKeyVariable is not null && (holders || (usage.DecisionTasks.Count > 0 && !circuitOff)))
+        if (holders && !strictTools && offAsFarAsKnown)
+            return Say(DecisionPreflightKind.ToolWithheld, Reasons(fromSettings: true));
+
+        if (status?.MissingKeyVariable is not null && !offAsFarAsKnown)
             return Say(DecisionPreflightKind.ProviderKeyMissing);
 
-        if (holders && status?.Provider is not null && (noDecision || settingsOff))
-            return Say(DecisionPreflightKind.ToolIgnoresSwitch, TaskReasons(fromSettings: true));
-
-        if (usage.DecisionTasks.Count > 0 && circuitOff)
-            return Say(DecisionPreflightKind.OptionalWithoutModel, TaskReasons(fromSettings: true));
+        if (offAsFarAsKnown)
+            return Say(DecisionPreflightKind.OptionalWithoutModel, Reasons(fromSettings: true));
 
         return null;
     }

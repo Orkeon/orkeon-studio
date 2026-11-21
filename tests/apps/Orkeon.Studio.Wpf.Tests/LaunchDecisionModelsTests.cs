@@ -137,14 +137,15 @@ public sealed class LaunchDecisionModelsTests : IDisposable
     }
 
     [Fact]
-    public void A_lenient_runner_drops_the_tool_without_a_provider_a_warning_that_never_blocks()
+    public void A_lenient_runner_withholds_the_tool_without_a_provider_a_warning_that_never_blocks()
     {
         var tab = Launcher(NewTeam(decideTool: true), """{"Orkeon":{"CrewFactory":{"StrictTools":false}}}""");
 
         Assert.False(tab.IsBlockedByDecision);
         Assert.True(tab.HasDecisionWarning);
         Assert.Contains("'writer'", tab.DecisionWarning, StringComparison.Ordinal);
-        Assert.Contains("the engine drops the tool", tab.DecisionWarning, StringComparison.Ordinal);
+        Assert.Contains("the engine withholds the tool", tab.DecisionWarning, StringComparison.Ordinal);
+        Assert.Contains("No decision provider is configured", tab.DecisionWarning, StringComparison.Ordinal);
         Assert.True(tab.RunCommand.CanExecute(null));
     }
 
@@ -194,7 +195,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
     }
 
     [Fact]
-    public void Unticking_the_decision_models_warns_that_the_tool_still_asks_the_provider_and_reaches_the_command_line()
+    public void Unticking_the_decision_models_stops_a_holder_of_the_tool_which_the_engine_withholds()
     {
         var tab = Launcher(NewTeam(decideTool: true), Liquid);
         Assert.False(tab.IsBlockedByDecision);
@@ -203,13 +204,13 @@ public sealed class LaunchDecisionModelsTests : IDisposable
 
         tab.Options.UseDecisionModels = false;
 
-        // The switch governs the decision tasks alone: the holder still runs, its tool asking Liquid.
-        Assert.False(tab.IsBlockedByDecision);
-        Assert.True(tab.HasDecisionWarning);
-        Assert.Contains("'writer'", tab.DecisionWarning, StringComparison.Ordinal);
-        Assert.Contains("still asks Liquid", tab.DecisionWarning, StringComparison.Ordinal);
-        Assert.True(tab.RunCommand.CanExecute(null));
-        Assert.Null(tab.LaunchBlockedReason);
+        // With the models off no consumer asks them: the engine withholds the tool, and a strict runner
+        // refuses the team that lists it.
+        Assert.True(tab.IsBlockedByDecision);
+        Assert.False(tab.HasDecisionWarning);
+        Assert.Contains("'writer' use system_one_decide, which the engine withholds", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.False(tab.RunCommand.CanExecute(null));
         Assert.Contains("--no-decision", tab.CommandLinePreview, StringComparison.Ordinal);
     }
 
@@ -245,7 +246,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
 
         Assert.True(tab.IsBlockedByDecision);
         Assert.Contains(
-            "'writer' use system_one_decide, which needs a provider; the decision task 'pick' has neither",
+            "'writer' use system_one_decide, which the engine withholds without the decision models; the decision task 'pick' has neither",
             tab.DecisionMessage, StringComparison.Ordinal);
         Assert.Contains("No decision provider is configured", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.DoesNotContain("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);

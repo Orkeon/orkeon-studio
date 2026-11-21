@@ -832,6 +832,23 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — 已完成，但未写入其文件；且提前结束：迭代次数已用尽</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>决策（默认）</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>决策（接替）</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One 与上下文</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>决策模型已开启（团队模式：{0}）。</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>决策模型已关闭：{1}（团队模式：{0}）。</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>本次运行不使用它们</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>设置中已将其关闭</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>未配置决策提供方</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}：System One 选择了配置档“{1}”（{2}%）。</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}：配置档“{1}”，非 System One 选择（{2}）。</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}：System One 选择了思考级别 {1}（{2}%）。</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}：一次尝试失败后，思考级别由 {1} 提高到 {2}。</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}：思考级别 {1}，非 System One 选择（{2}）。</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}：技能 {1}（{2}）。</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}：无技能（{1}）。</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}：上下文已压缩，从 {1} 个令牌降至 {2} 个。</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0}：无法压缩上下文（{1}）。</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0}：已裁剪 {1} 个工具结果，释放约 {2} 个令牌。</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>是</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>得分 {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>概率 {0}%</value></data>
@@ -1578,12 +1595,11 @@
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>某个智能体的 filesystem: 声明格式错误，或其范围或工作根目录要求的文件夹未被此次运行的挂载授予：引擎会在加载时拒绝该团队，或在运行启动该智能体时拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>某个任务需要写入一个文件，但可能运行它的智能体都没有能写入它的工具，或某个决策任务声明了交付物：运行会启动，文件可能永远不会被写入，而任务仍会计为完成。Orkeon 1.2 CLI 在加载时也会发出此警告。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>此团队离不开决策模型（System One）：某个智能体或任务使用 system_one_decide，而只有在配置了决策提供方后运行才会提供该工具；或者某个决策任务既无后备答案也无“otherwise”任务，模型关闭时运行会拒绝它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>此团队离不开决策模型（System One）：它声明了 decision.mode: required，或有智能体或任务使用 system_one_decide（模型关闭后引擎会扣留该工具），或有决策任务既无后备答案也无“otherwise”任务（模型关闭后运行会被拒绝）。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>设置指定了引擎拒绝的决策提供方（未知名称，或可推断出两个提供方）：CLI 会在加载团队前停止。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务使用其后备答案，或让其“otherwise”任务运行。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>本次运行已关闭决策模型，但某个智能体或任务使用 system_one_decide：该工具仍会询问提供方，因为该开关只控制决策任务。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，且未配置决策提供方：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会移除该工具，并在没有它的情况下运行团队。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
   </data>
@@ -2416,14 +2432,19 @@
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请勾选“使用决策模型”。</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>设置关闭了决策模型：请在“设置 › 决策模型”中开启。</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>未配置决策提供方：请在“设置 › 决策模型”中配置一个。</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，它需要提供方</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，没有决策模型时引擎会扣留该工具</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>决策任务 {0} 既无后备答案也无“otherwise”任务，因此需要开启决策模型</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>它声明了 decision.mode: required，因此引擎会在第一个任务之前拒绝运行</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此它收到的每个请求都会失败，询问它的每个决策任务也随之失败。请在“设置 › 决策模型”中保存密钥。</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} 使用 system_one_decide：本次运行中该工具仍会询问 {1}，因为该开关只会让决策任务使用其后备答案。</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，但未配置决策提供方：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会移除该工具，并在没有它的情况下运行团队。</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务使用其后备答案。{0}</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，而本次运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。{1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：团队在没有它们的情况下作答。{0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>任务“{0}”：{1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>任务“{0}”：无答案，改为运行任务“{1}”。</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>任务“{0}”：由智能体“{1}”代替模型作答。</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>“{0}”：不选择配置档，使用默认配置档运行。</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>“{0}”：不选择思考级别，沿用其配置档的级别。</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>“{0}”：不选择技能，智能体携带其后备技能（如有）。</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>“{0}”：不裁剪任何工具结果。</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>决策模型设置</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0}（在 {1} 个条目中按标识选中）</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0}（本次运行未挂载）</value></data>
@@ -3742,9 +3763,9 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>计划运行将以回显方式应答：已保存的设置文件没有默认模型。请保存设置。</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>此团队有 {0} 个智能体或任务指定了自己的模型：该选择仅适用于其余部分。</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>需要 System One</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>此团队离不开决策模型（System One）：有智能体使用 system_one_decide，或有决策任务既无后备答案也无“otherwise”任务。请在“设置 › 决策模型”中配置提供方。</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>此团队离不开决策模型（System One）：它声明了 decision.mode: required，或有智能体使用 system_one_decide，或有决策任务既无后备答案也无“otherwise”任务。请在“设置 › 决策模型”中配置提供方。</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One 可选</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>此团队可使用或不使用决策模型（System One）运行，由启动时决定：不使用时，每个决策任务使用其后备答案。</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>此团队可使用或不使用决策模型（System One）运行，由启动时决定：不使用时，每个决策任务由其接替智能体或后备答案作答，原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>使用默认模型（{0}）</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>使用默认模型</value></data>
   <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>勾选后，团队在运行开始时使用选定的默认设置，并在其变化时跟随。取消勾选后，团队保持在下方选择的设置上。</value></data>

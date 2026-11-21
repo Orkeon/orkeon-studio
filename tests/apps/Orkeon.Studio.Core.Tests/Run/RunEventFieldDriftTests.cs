@@ -23,6 +23,10 @@ public sealed partial class RunEventFieldDriftTests
     private const string RunObserver = "src/hosting/Orkeon.Hosting/Runs/RunEventObserver.cs";
     private const string RunContext = "src/scripting/Orkeon.Scripting.Cli/Commands/Run/ObservedRunContext.cs";
     private const string ForgeStages = "src/scripting/Orkeon.Scripting.Cli/Commands/Forge/ForgeRunStages.cs";
+    private const string RouteObserver = "src/hosting/Orkeon.Hosting/Runs/RunEventsRouteObserver.cs";
+    private const string SkillsObserver = "src/hosting/Orkeon.Hosting/Runs/RunEventsSkillsObserver.cs";
+    private const string CompactionObserver = "src/hosting/Orkeon.Hosting/Runs/RunEventsCompactionObserver.cs";
+    private const string PruneObserver = "src/hosting/Orkeon.Hosting/Runs/RunEventsPruneObserver.cs";
 
     private const string RunProgress = "src/apps/Orkeon.Studio.Core/Run/RunProgressModel.cs";
     private const string ForgeSession = "src/apps/Orkeon.Studio.Core/Forge/ForgeSessionModel.cs";
@@ -54,6 +58,26 @@ public sealed partial class RunEventFieldDriftTests
         { RunObserver, "RunEventKinds.TaskCompleted", "success", RunProgress, RunTaskCompletedReader },
         { RunObserver, "RunEventKinds.TaskCompleted", "endedOnIterationCap", RunProgress, RunTaskCompletedReader },
         { RunObserver, "RunEventKinds.TaskCompleted", "deliverableMissing", RunProgress, RunTaskCompletedReader },
+        { RunObserver, "RunEventKinds.TaskCompleted", "decisionSource", RunProgress, RunTaskCompletedReader },
+        { RunObserver, "RunEventKinds.RunDecision", "mode", RunProgress, "private bool ApplyRunDecision(" },
+        { RunObserver, "RunEventKinds.RunDecision", "circuit", RunProgress, "private bool ApplyRunDecision(" },
+        { RunObserver, "RunEventKinds.RunDecision", "cause", RunProgress, "private bool ApplyRunDecision(" },
+        { RouteObserver, "RunEventKinds.AgentRoute", "agentRole", RunProgress, "private bool ApplyAgentRoute(" },
+        { RouteObserver, "RunEventKinds.AgentRoute", "profile", RunProgress, "private bool ApplyAgentRoute(" },
+        { RouteObserver, "RunEventKinds.AgentRoute", "reason", RunProgress, "private bool ApplyAgentRoute(" },
+        { RouteObserver, "RunEventKinds.AgentRoute", "probability", RunProgress, "private bool ApplyAgentRoute(" },
+        { RouteObserver, "RunEventKinds.AgentEffort", "level", RunProgress, "private bool ApplyAgentEffort(" },
+        { RouteObserver, "RunEventKinds.AgentEffort", "previous", RunProgress, "private bool ApplyAgentEffort(" },
+        { RouteObserver, "RunEventKinds.AgentEffort", "reason", RunProgress, "private bool ApplyAgentEffort(" },
+        { RouteObserver, "RunEventKinds.AgentEffort", "probability", RunProgress, "private bool ApplyAgentEffort(" },
+        { SkillsObserver, "RunEventKinds.AgentSkills", "mode", RunProgress, "private bool ApplyAgentSkills(" },
+        { SkillsObserver, "RunEventKinds.AgentSkills", "skills", RunProgress, "private bool ApplyAgentSkills(" },
+        { SkillsObserver, "RunEventKinds.AgentSkills", "reason", RunProgress, "private bool ApplyAgentSkills(" },
+        { CompactionObserver, "RunEventKinds.AgentCompacted", "outcome", RunProgress, "private bool ApplyAgentCompacted(" },
+        { CompactionObserver, "RunEventKinds.AgentCompacted", "tokensBefore", RunProgress, "private bool ApplyAgentCompacted(" },
+        { CompactionObserver, "RunEventKinds.AgentCompacted", "tokensAfter", RunProgress, "private bool ApplyAgentCompacted(" },
+        { PruneObserver, "RunEventKinds.AgentPruned", "cut", RunProgress, "private bool ApplyAgentPruned(" },
+        { PruneObserver, "RunEventKinds.AgentPruned", "freedTokens", RunProgress, "private bool ApplyAgentPruned(" },
         { RunContext, "RunEventKinds.RunFinished", "cappedTasks", RunProgress, RunFinishedReader },
         { RunContext, "RunEventKinds.RunFinished", "missingDeliverables", RunProgress, RunFinishedReader },
         { ForgeStages, "\"task.completed\"", "taskId", ForgeSession, ForgeTaskCompletedReader },
@@ -98,6 +122,12 @@ public sealed partial class RunEventFieldDriftTests
     [Theory]
     [InlineData("RunEventKinds.TaskCompleted => ApplyTaskCompleted(orkeonEvent)")]
     [InlineData("RunEventKinds.RunFinished => ApplyRunFinished(orkeonEvent)")]
+    [InlineData("RunEventKinds.RunDecision => ApplyRunDecision(orkeonEvent)")]
+    [InlineData("RunEventKinds.AgentRoute => ApplyAgentRoute(orkeonEvent)")]
+    [InlineData("RunEventKinds.AgentEffort => ApplyAgentEffort(orkeonEvent)")]
+    [InlineData("RunEventKinds.AgentSkills => ApplyAgentSkills(orkeonEvent)")]
+    [InlineData("RunEventKinds.AgentCompacted => ApplyAgentCompacted(orkeonEvent)")]
+    [InlineData("RunEventKinds.AgentPruned => ApplyAgentPruned(orkeonEvent)")]
     public void The_run_events_reach_the_readers_the_rows_check(string dispatch)
     {
         var source = File.ReadAllText(Path.Combine(RepositoryRoot(), RunProgress));

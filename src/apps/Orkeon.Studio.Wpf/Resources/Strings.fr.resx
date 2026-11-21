@@ -333,6 +333,23 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — terminé, mais n'a pas écrit son fichier ; écourté aussi : ses itérations sont épuisées</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>décision</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>décision (par défaut)</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>décision (relais)</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One et contexte</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>Modèles de décision activés (mode de l'équipe : {0}).</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>Modèles de décision coupés : {1} (mode de l'équipe : {0}).</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>cette exécution s'en passe</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>les réglages les coupent</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>aucun fournisseur de décision n'est configuré</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0} : System One a choisi le profil « {1} » ({2} %).</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0} : profil « {1} », non choisi par System One ({2}).</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0} : System One a choisi le niveau de réflexion {1} ({2} %).</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0} : niveau de réflexion relevé de {1} à {2} après une tentative échouée.</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0} : niveau de réflexion {1}, non choisi par System One ({2}).</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0} : compétences {1} ({2}).</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0} : aucune compétence ({1}).</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0} : contexte compacté, de {1} à {2} tokens.</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0} : le contexte n'a pas pu être compacté ({1}).</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0} : {1} résultats d'outils élagués, environ {2} tokens libérés.</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>oui</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>score {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>probabilité {0} %</value></data>
@@ -591,12 +608,11 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Plusieurs entrées partagent un même nom interne : une équipe en choisit une par exécution, et le même dossier deux fois est de trop.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>La déclaration filesystem: d'un agent est mal formée, ou sa portée ou sa racine de travail demande un dossier que les montages de l'exécution n'accordent pas : le moteur refuse l'équipe au chargement, ou refuse cet agent quand l'exécution le démarre.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Une tâche doit écrire un fichier pour lequel aucun des agents qui peuvent l'exécuter n'a d'outil, ou une tâche de décision déclare un livrable : l'exécution démarre, le fichier risque de ne jamais être écrit et la tâche compte quand même comme terminée. Un CLI Orkeon 1.2 en avertit aussi au chargement.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Cette équipe ne peut pas s'exécuter sans les modèles de décision (System One) : un agent ou une tâche utilise system_one_decide, dont une exécution ne dispose qu'une fois un fournisseur de décision configuré, ou une tâche de décision n'a ni repli ni tâche « otherwise », ce qu'une exécution refuse dès que les modèles sont désactivés.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Cette équipe ne peut pas s'exécuter sans les modèles de décision (System One) : elle déclare decision.mode: required, un agent ou une tâche utilise system_one_decide, que le moteur retient dès que les modèles sont coupés, ou une tâche de décision n'a ni repli ni tâche « otherwise », ce qu'une exécution refuse dès que les modèles sont coupés.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>Les réglages désignent un fournisseur de décision que le moteur refuse (un nom inconnu, ou deux fournisseurs qu'il pourrait déduire) : le CLI s'arrête avant de charger l'équipe.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Cette exécution se passe des modèles de décision (System One) : chaque tâche de décision répond par son repli, ou laisse s'exécuter sa tâche « otherwise ».</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Cette exécution se passe des modèles de décision (System One) : chaque tâche de décision est répondue par son relais, répond par son repli ou laisse s'exécuter sa tâche « otherwise », et ce que System One aurait choisi revient à ce que l'équipe ou les réglages indiquent.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Le fournisseur de décision qu'utilise l'exécution demande une clé et aucune n'est en place, ni dans sa variable ni dans le fichier de réglages : chaque requête qu'il reçoit échoue.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>Les modèles de décision sont désactivés pour cette exécution, mais un agent ou une tâche utilise system_one_decide : l'outil interroge toujours le fournisseur, car l'interrupteur ne régit que les tâches de décision.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agent ou une tâche utilise system_one_decide et aucun fournisseur de décision n'est configuré : avec Orkeon:CrewFactory:StrictTools à false, le moteur retire l'outil et exécute l'équipe sans lui.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agent ou une tâche utilise system_one_decide et l'exécution se passe des modèles de décision : avec Orkeon:CrewFactory:StrictTools à false, le moteur retient l'outil et exécute l'équipe sans lui.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>Une ligne de dossier ajoutée commence par « - » : le moteur la lirait comme une option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>Un identifiant de dossier n'est pas valide : ce sont les 26 caractères avant « | » d'un dossier déclaré.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY" xml:space="preserve"><value>L'équipe est un dossier : le moteur l'exécute en entier.</value></data>
@@ -903,14 +919,19 @@
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Cette exécution s'en passe : cochez « Utiliser les modèles de décision ».</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>Les réglages désactivent les modèles de décision : activez-les dans Réglages › Modèles de décision.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>Aucun fournisseur de décision n'est configuré : configurez-en un dans Réglages › Modèles de décision.</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} utilisent system_one_decide, qui demande un fournisseur</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} utilisent system_one_decide, que le moteur retient sans les modèles de décision</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>la tâche de décision {0} n'a ni repli ni tâche « otherwise », elle demande donc les modèles de décision activés</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>elle déclare decision.mode: required, le moteur refuse donc l'exécution avant sa première tâche</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} n'a pas de clé : la variable {1} est vide et le fichier de réglages n'en contient pas, donc chaque requête qu'il reçoit échoue, et avec elle chaque tâche de décision qui l'interroge. Enregistrez la clé dans Réglages › Modèles de décision.</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} utilisent system_one_decide : sur cette exécution, l'outil interroge toujours {1}, car l'interrupteur ne renvoie que les tâches de décision à leur repli.</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} utilisent system_one_decide, mais aucun fournisseur de décision n'est configuré : avec Orkeon:CrewFactory:StrictTools à false, le moteur retire l'outil et exécute l'équipe sans lui.</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Cette exécution se passe des modèles de décision (System One) : chaque tâche de décision répond par son repli. {0}</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} utilisent system_one_decide, et cette exécution se passe des modèles de décision : avec Orkeon:CrewFactory:StrictTools à false, le moteur retient l'outil et exécute l'équipe sans lui. {1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Cette exécution se passe des modèles de décision (System One) : l'équipe répond sans eux. {0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>Tâche « {0} » : {1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>Tâche « {0} » : pas de réponse, la tâche « {1} » s'exécute à la place.</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>Tâche « {0} » : l'agent « {1} » répond à la place du modèle.</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>« {0} » : aucun profil n'est choisi, l'exécution se fait sur le profil par défaut.</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>« {0} » : aucun niveau de réflexion n'est choisi, celui de son profil s'applique.</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>« {0} » : aucune compétence n'est choisie, l'agent porte ses compétences de repli, s'il en a.</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>« {0} » : aucun résultat d'outil n'est élagué.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Réglages des modèles de décision</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (sélectionné par identifiant parmi {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (non autorisé pour cette exécution)</value></data>
@@ -2027,9 +2048,9 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>L'exécution planifiée répondra en écho : le fichier de réglages enregistré n'a pas de modèle par défaut. Enregistrez les réglages.</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>{0} {0:plural:agent ou tâche de cette équipe nomme son|agents ou tâches de cette équipe nomment leur} propre modèle : le choix ne s'applique qu'aux autres.</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>System One requis</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Cette équipe ne peut pas s'exécuter sans les modèles de décision (System One) : un agent utilise system_one_decide, ou une tâche de décision n'a ni repli ni tâche « otherwise ». Configurez un fournisseur dans Réglages › Modèles de décision.</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Cette équipe ne peut pas s'exécuter sans les modèles de décision (System One) : elle déclare decision.mode: required, un agent utilise system_one_decide, ou une tâche de décision n'a ni repli ni tâche « otherwise ». Configurez un fournisseur dans Réglages › Modèles de décision.</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One facultatif</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Cette équipe s'exécute avec les modèles de décision (System One) ou sans eux, au choix du lancement : sans eux, chaque tâche de décision répond par son repli.</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Cette équipe s'exécute avec les modèles de décision (System One) ou sans eux, au choix du lancement : sans eux, chaque tâche de décision est répondue par son relais ou par son repli, et ce que System One aurait choisi revient à ce que l'équipe ou les réglages indiquent.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Utiliser le modèle par défaut ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Utiliser le modèle par défaut</value></data>
   <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Cochée, l'équipe utilise le modèle par défaut au moment de l'exécution, et le suit quand il change. Décochée, elle garde le modèle choisi ci-dessous.</value></data>

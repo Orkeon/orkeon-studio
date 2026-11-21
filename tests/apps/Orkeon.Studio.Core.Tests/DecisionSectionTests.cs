@@ -183,4 +183,46 @@ public sealed class DecisionSectionTests
         Assert.True(document.Decision.For(DecisionProviderDescriptor.Liquid).Exists);
         Assert.Same(DecisionProviderDescriptor.Liquid, document.Decision.Resolve(NoEnvironment).Provider);
     }
+
+    /// <summary>
+    /// A fail-closed LLM judge cannot judge without the decision model: the host refuses to start once
+    /// the circuit is off, naming the settings' switch before the missing provider, as the engine does.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": true } } } }""", "no decision provider resolved")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Enabled": false }, "Liquid": {}, "Guardian": { "Llm": { "Enabled": true } } } }""", "Orkeon:Decision:Enabled=false")]
+    public void A_fail_closed_llm_judge_refuses_the_start_once_the_circuit_is_off(string json, string cause)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.True(status.ClosedJudge);
+        Assert.Contains("Orkeon:Guardian:Llm:Enabled is true with FailMode Closed", status.Refusal, StringComparison.Ordinal);
+        Assert.Contains(cause, status.Refusal, StringComparison.Ordinal);
+        Assert.False(status.CircuitOn);
+    }
+
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": true, "FailMode": "Open" } } } }""")]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Enabled": false, "Llm": { "Enabled": true } } } }""")]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": false } } } }""")]
+    public void A_judge_that_fails_open_is_off_or_has_its_guardian_off_refuses_nothing(string json)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.False(status.ClosedJudge);
+        Assert.Null(status.Refusal);
+        Assert.Null(status.RefusalOfRunSwitch);
+    }
+
+    [Fact]
+    public void A_fail_closed_llm_judge_starts_with_the_circuit_on_and_refuses_the_runs_own_switch()
+    {
+        var status = AppSettingsDocument
+            .Parse("""{ "Orkeon": { "Liquid": { "ApiKey": "in-file" }, "Guardian": { "Llm": { "Enabled": true } } } }""")
+            .Decision.Resolve(_ => null);
+
+        Assert.True(status.CircuitOn);
+        Assert.Null(status.Refusal);
+        Assert.Contains("--no-decision", status.RefusalOfRunSwitch, StringComparison.Ordinal);
+    }
 }

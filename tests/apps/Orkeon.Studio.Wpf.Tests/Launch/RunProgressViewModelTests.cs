@@ -353,4 +353,48 @@ public class LaunchOptionsObservationTests
         Assert.False(built.Stream);
         Assert.Null(built.ClientName);
     }
+
+    [Fact]
+    public void The_decision_models_and_what_was_done_around_the_agents_are_listed_one_line_each()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        Assert.False(panel.HasAgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"agent.route","taskId":"read","agentRole":"Analyst","profile":"strong","reason":"model","picked":"strong","probability":0.82}""");
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.route","taskId":"write","agentRole":"Writer","profile":"default","reason":"circuit-off"}""");
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"agent.effort","taskId":"read","agentRole":"Analyst","level":"medium","previous":"low","reason":"raised"}""");
+        panel.TryApply("""{"v":2,"seq":5,"ts":"t","kind":"agent.skills","taskId":"read","agentRole":"Analyst","mode":"fallback","skills":[],"reason":"circuit-off"}""");
+        panel.TryApply("""{"v":2,"seq":6,"ts":"t","kind":"agent.compacted","taskId":"read","agentRole":"Analyst","outcome":"failed","tokensBefore":152000,"tokensAfter":152000}""");
+
+        Assert.True(panel.HasAgentNotes);
+        Assert.Equal(
+            [
+                "Decision models off: this run goes without them (team mode: optional).",
+                "Analyst: System One picked the profile 'strong' (82 %).",
+                "Writer: profile 'default', not picked by System One (circuit-off).",
+                "Analyst: thinking level raised from low to medium after a failed attempt.",
+                "Analyst: no skill (circuit-off).",
+                "Analyst: the context could not be compacted (failed).",
+            ],
+            panel.AgentNotes);
+
+        // A new run starts from an empty panel.
+        panel.Reset((_, _) => true);
+        Assert.False(panel.HasAgentNotes);
+    }
+
+    [Fact]
+    public void A_decision_task_its_relay_answered_says_so()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"pick","success":true,"isDecision":true,"defaulted":false,"decisionSource":"relay"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"again","success":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}""");
+
+        Assert.Equal("decision (relay)", panel.Tasks[0].DecisionLabel);
+        Assert.Equal("decision", panel.Tasks[1].DecisionLabel);
+    }
 }

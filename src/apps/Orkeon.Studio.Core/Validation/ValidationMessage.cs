@@ -171,15 +171,9 @@ public static class ValidationCodes
     public const string DecisionKeyMissing = "STUDIO-DECISION-KEY";
 
     /// <summary>
-    /// The circuit is off for the run while an agent or a task holds <c>system_one_decide</c>: the tool
-    /// still asks the provider, the circuit governing the decision tasks only. A warning.
-    /// </summary>
-    public const string DecisionToolIgnoresSwitch = "STUDIO-DECISION-TOOL";
-
-    /// <summary>
-    /// An agent or a task holds <c>system_one_decide</c>, no provider is configured, and the runner resolves
-    /// tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine drops the tool and runs
-    /// the crew without it. A warning.
+    /// An agent or a task holds <c>system_one_decide</c>, the run goes without the decision models, and the
+    /// runner resolves tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine withholds
+    /// the tool and runs the crew without it. A warning.
     /// </summary>
     public const string DecisionToolDropped = "STUDIO-DECISION-TOOL-DROPPED";
 

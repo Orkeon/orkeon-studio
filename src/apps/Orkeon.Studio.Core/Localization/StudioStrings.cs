@@ -673,22 +673,22 @@ public static class StudioStringKeys
     /// <summary>Why a run goes without the decision models: no provider is configured.</summary>
     public const string RunDecisionOffNoProvider = "Studio.Run.DecisionOffNoProvider";
 
-    /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool.</summary>
+    /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool, which the engine withholds once the circuit is off.</summary>
     public const string RunDecisionNeedTool = "Studio.Run.DecisionNeedTool";
 
     /// <summary>Why a team needs the decision models: {0} the decision tasks with no answer once the circuit is off.</summary>
     public const string RunDecisionNeedAnswer = "Studio.Run.DecisionNeedAnswer";
 
+    /// <summary>Why a team needs the decision models: it states decision.mode: required.</summary>
+    public const string RunDecisionNeedMode = "Studio.Run.DecisionNeedMode";
+
     /// <summary>A warning: {0} the provider, {1} the empty key variable.</summary>
     public const string RunWarnDecisionKeyMissing = "Studio.Run.WarnDecisionKeyMissing";
 
-    /// <summary>A warning: {0} the holders of the tool, {1} the provider.</summary>
-    public const string RunWarnDecisionToolIgnoresSwitch = "Studio.Run.WarnDecisionToolIgnoresSwitch";
-
-    /// <summary>A warning: {0} the holders of system_one_decide, dropped by a lenient runner (Orkeon:CrewFactory:StrictTools false) as no provider is configured.</summary>
+    /// <summary>A warning: {0} the holders of system_one_decide, withheld by a lenient runner (Orkeon:CrewFactory:StrictTools false) as the run goes without the decision models; {1} is why it does.</summary>
     public const string RunWarnDecisionToolDropped = "Studio.Run.WarnDecisionToolDropped";
 
-    /// <summary>"This run goes without the decision models …" — the heading of a crew that runs either way, one line per decision task follows; {0} is why the run goes without them.</summary>
+    /// <summary>"This run goes without the decision models …" — the heading of a crew that runs either way, one line per decision task and per thing System One would pick follows; {0} is why the run goes without them.</summary>
     public const string RunInfoDecisionFallback = "Studio.Run.InfoDecisionFallback";
 
     /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/>: {0} is the task, {1} its fallback answers (<c>question = answer</c>, comma-separated).</summary>
@@ -696,6 +696,21 @@ public static class StudioStringKeys
 
     /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/> without a fallback: {0} is the task, {1} the task its <c>otherwise</c> branch runs.</summary>
     public const string RunInfoDecisionOtherwiseItem = "Studio.Run.InfoDecisionOtherwiseItem";
+
+    /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/> answered by its relay: {0} is the task, {1} the agent that answers.</summary>
+    public const string RunInfoDecisionRelayItem = "Studio.Run.InfoDecisionRelayItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task on llm.profile: auto, runs on the default profile.</summary>
+    public const string RunInfoDecisionRouteItem = "Studio.Run.InfoDecisionRouteItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task whose thinking is on auto, keeps its profile's thinking.</summary>
+    public const string RunInfoDecisionEffortItem = "Studio.Run.InfoDecisionEffortItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent on skills: { auto: true }, carries its fallback skills.</summary>
+    public const string RunInfoDecisionSkillsItem = "Studio.Run.InfoDecisionSkillsItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent on compaction: { prune: true }, prunes nothing.</summary>
+    public const string RunInfoDecisionPruneItem = "Studio.Run.InfoDecisionPruneItem";
 
     /// <summary>The action of the decision alerts of the launch: opens Settings › Decision models.</summary>
     public const string RunOpenDecisionSettings = "Studio.Run.OpenDecisionSettings";
@@ -1395,6 +1410,57 @@ public static class StudioStringKeys
 
     /// <summary>"decision (defaulted)"</summary>
     public const string RunProgressDecisionDefaulted = "Studio.Run.DecisionDefaulted";
+
+    /// <summary>"decision (relay)" — a decision task answered by its <c>without:</c> agent, the decision models off.</summary>
+    public const string RunProgressDecisionRelay = "Studio.Run.DecisionRelay";
+
+    /// <summary>The heading of the run's lines on the decision models and on what was done around the agents' model calls.</summary>
+    public const string RunNotesTitle = "Studio.Run.NotesTitle";
+
+    /// <summary>The run asks the decision models; {0} is the team's mode, in the engine's word.</summary>
+    public const string RunNoteDecisionOn = "Studio.Run.NoteDecisionOn";
+
+    /// <summary>The run goes without the decision models; {0} is the team's mode, {1} why.</summary>
+    public const string RunNoteDecisionOff = "Studio.Run.NoteDecisionOff";
+
+    /// <summary>Why the decision models are off: the run's own switch.</summary>
+    public const string RunNoteCauseSwitch = "Studio.Run.NoteCauseSwitch";
+
+    /// <summary>Why the decision models are off: the settings' switch.</summary>
+    public const string RunNoteCauseSettings = "Studio.Run.NoteCauseSettings";
+
+    /// <summary>Why the decision models are off: no provider.</summary>
+    public const string RunNoteCauseNoProvider = "Studio.Run.NoteCauseNoProvider";
+
+    /// <summary>A profile System One picked: {0} the agent, {1} the profile, {2} how likely, a whole percentage.</summary>
+    public const string RunNoteRoutePicked = "Studio.Run.NoteRoutePicked";
+
+    /// <summary>A profile System One did not pick: {0} the agent, {1} the profile, {2} the engine's reason.</summary>
+    public const string RunNoteRouteDefault = "Studio.Run.NoteRouteDefault";
+
+    /// <summary>A thinking level System One picked: {0} the agent, {1} the level, {2} how likely, a whole percentage.</summary>
+    public const string RunNoteEffortPicked = "Studio.Run.NoteEffortPicked";
+
+    /// <summary>A thinking level raised after a failed attempt: {0} the agent, {1} the level before, {2} the level now.</summary>
+    public const string RunNoteEffortRaised = "Studio.Run.NoteEffortRaised";
+
+    /// <summary>A thinking level System One did not pick: {0} the agent, {1} the level, {2} the engine's reason.</summary>
+    public const string RunNoteEffortDefault = "Studio.Run.NoteEffortDefault";
+
+    /// <summary>The skills an agent carries: {0} the agent, {1} the skills, comma-separated, {2} how they were chosen (the engine's word).</summary>
+    public const string RunNoteSkills = "Studio.Run.NoteSkills";
+
+    /// <summary>An agent that carries no skill: {0} the agent, {1} how that was reached (the engine's word).</summary>
+    public const string RunNoteSkillsNone = "Studio.Run.NoteSkillsNone";
+
+    /// <summary>A context compacted: {0} the agent, {1} its tokens before, {2} after.</summary>
+    public const string RunNoteCompacted = "Studio.Run.NoteCompacted";
+
+    /// <summary>A context the run could not compact: {0} the agent, {1} the engine's outcome.</summary>
+    public const string RunNoteCompactionFailed = "Studio.Run.NoteCompactionFailed";
+
+    /// <summary>Tool results pruned from a context: {0} the agent, {1} how many, {2} the tokens freed.</summary>
+    public const string RunNotePruned = "Studio.Run.NotePruned";
 
     /// <summary>The value of a yes/no answer that chose nothing: its yes probability follows in <see cref="RunProgressDecisionLikelihood"/>.</summary>
     public const string RunProgressDecisionYes = "Studio.Run.DecisionYes";
@@ -3196,14 +3262,19 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: tick « Use the decision models ».",
         [StudioStringKeys.RunDecisionOffSettings] = "The settings switch the decision models off: turn them on in Settings › Decision models.",
         [StudioStringKeys.RunDecisionOffNoProvider] = "No decision provider is configured: set one up in Settings › Decision models.",
-        [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which needs a provider",
+        [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which the engine withholds without the decision models",
         [StudioStringKeys.RunDecisionNeedAnswer] = "the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on",
+        [StudioStringKeys.RunDecisionNeedMode] = "it states decision.mode: required, so the engine refuses the run before its first task",
         [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
-        [StudioStringKeys.RunWarnDecisionToolIgnoresSwitch] = "{0} use system_one_decide: on this run the tool still asks {1}, as the switch only sends the decision tasks to their fallbacks.",
-        [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
-        [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): each decision task answers from its fallback. {0}",
+        [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}",
+        [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): the team answers without them. {0}",
         [StudioStringKeys.RunInfoDecisionFallbackItem] = "Task '{0}': {1}",
         [StudioStringKeys.RunInfoDecisionOtherwiseItem] = "Task '{0}': no answer, task '{1}' runs instead.",
+        [StudioStringKeys.RunInfoDecisionRelayItem] = "Task '{0}': the agent '{1}' answers in place of the model.",
+        [StudioStringKeys.RunInfoDecisionRouteItem] = "'{0}': no profile is picked, it runs on the default profile.",
+        [StudioStringKeys.RunInfoDecisionEffortItem] = "'{0}': no thinking level is picked, it keeps the one of its profile.",
+        [StudioStringKeys.RunInfoDecisionSkillsItem] = "'{0}': no skill is picked, it carries its fallback skills, if any.",
+        [StudioStringKeys.RunInfoDecisionPruneItem] = "'{0}': no tool result is pruned.",
         [StudioStringKeys.RunOpenDecisionSettings] = "Decision models settings",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
@@ -3538,12 +3609,11 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
         ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): an agent or a task uses system_one_decide, which a run has only once a decision provider is configured, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): it states decision.mode: required, an agent or a task uses system_one_decide, which the engine withholds once the models are off, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task answers from its fallback, or lets its « otherwise » task run.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL"] = "The decision models are off for this run, yet an agent or a task uses system_one_decide: the tool still asks the provider, as the switch governs the decision tasks only.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",
@@ -3770,6 +3840,23 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
+        [StudioStringKeys.RunProgressDecisionRelay] = "decision (relay)",
+        [StudioStringKeys.RunNotesTitle] = "System One and context",
+        [StudioStringKeys.RunNoteDecisionOn] = "Decision models on (team mode: {0}).",
+        [StudioStringKeys.RunNoteDecisionOff] = "Decision models off: {1} (team mode: {0}).",
+        [StudioStringKeys.RunNoteCauseSwitch] = "this run goes without them",
+        [StudioStringKeys.RunNoteCauseSettings] = "the settings switch them off",
+        [StudioStringKeys.RunNoteCauseNoProvider] = "no decision provider is configured",
+        [StudioStringKeys.RunNoteRoutePicked] = "{0}: System One picked the profile '{1}' ({2} %).",
+        [StudioStringKeys.RunNoteRouteDefault] = "{0}: profile '{1}', not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteEffortPicked] = "{0}: System One picked the thinking level {1} ({2} %).",
+        [StudioStringKeys.RunNoteEffortRaised] = "{0}: thinking level raised from {1} to {2} after a failed attempt.",
+        [StudioStringKeys.RunNoteEffortDefault] = "{0}: thinking level {1}, not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteSkills] = "{0}: skills {1} ({2}).",
+        [StudioStringKeys.RunNoteSkillsNone] = "{0}: no skill ({1}).",
+        [StudioStringKeys.RunNoteCompacted] = "{0}: context compacted, from {1} to {2} tokens.",
+        [StudioStringKeys.RunNoteCompactionFailed] = "{0}: the context could not be compacted ({1}).",
+        [StudioStringKeys.RunNotePruned] = "{0}: {1} tool results pruned, about {2} tokens freed.",
         [StudioStringKeys.RunProgressDecisionYes] = "yes",
         [StudioStringKeys.RunProgressDecisionScore] = "score {0}",
         [StudioStringKeys.RunProgressDecisionLikelihood] = "probability {0}%",
@@ -4126,9 +4213,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsScheduledRunNoDefault] = "The scheduled run will answer as an echo: the saved settings file has no default model. Save the settings.",
         [StudioStringKeys.TeamsCrewOverridesLlm] = "{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only.",
         [StudioStringKeys.TeamsDecisionRequired] = "System One required",
-        [StudioStringKeys.TeamsDecisionRequiredTip] = "This team cannot run without the decision models (System One): an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.",
+        [StudioStringKeys.TeamsDecisionRequiredTip] = "This team cannot run without the decision models (System One): it states decision.mode: required, an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.",
         [StudioStringKeys.TeamsDecisionOptional] = "System One optional",
-        [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task answers from its fallback.",
+        [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task is answered by its relay or from its fallback, and what System One would pick falls back to what the team or the settings state.",
         [StudioStringKeys.TeamsUseDefaultLlm] = "Use the default model ({0})",
         [StudioStringKeys.TeamsUseDefaultLlmNone] = "Use the default model",
         [StudioStringKeys.TeamsUseDefaultLlmHint] = "Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.",

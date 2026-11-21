@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
+using Orkeon.Application.Crew.Execution;
+using Orkeon.Infrastructure.Decision;
 using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Infrastructure.LLMs.Decision;
 
@@ -29,6 +31,12 @@ public sealed class DecisionSection
     /// tool no registration gives is refused at load; off, the tool is dropped with a log line.
     /// </summary>
     public const string StrictToolsPath = "Orkeon:CrewFactory:StrictTools";
+
+    /// <summary>
+    /// Configuration path of the guardian's switch (on by default): off, no guard runs, the LLM judge of
+    /// <c>Orkeon:Guardian:Llm</c> included.
+    /// </summary>
+    public const string GuardianEnabledPath = "Orkeon:Guardian:Enabled";
 
     /// <summary>The prefix of the environment variables a run reads as settings, above the file.</summary>
     public const string EnvironmentPrefix = Orkeon.Constants.Configuration.EnvironmentVariableNames.SettingsPrefix;
@@ -115,7 +123,7 @@ public sealed class DecisionSection
         try
         {
             var choice = DecisionProviderChoice.Resolve(configuration, environment);
-            return new DecisionStatus(
+            var status = new DecisionStatus(
                 enabled,
                 choice.Provider,
                 choice.How,
@@ -125,6 +133,22 @@ public sealed class DecisionSection
                 MissingKeyVariable = choice.Provider is { } provider ? MissingKey(configuration, provider, environment) : null,
                 StrictTools = strictTools,
             };
+            if (status.Refusal is not null)
+                return status;
+
+            // A fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
+            // settings' switch named before the missing provider, as the engine names them.
+            if (!TryReadClosedJudge(configuration, out var closedJudge, out refusal))
+                return status with { Refusal = refusal };
+
+            status = status with { ClosedJudge = closedJudge };
+            return closedJudge && !status.CircuitOn
+                ? status with
+                {
+                    Refusal = GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(
+                        enabled ? DecisionCircuitCause.NoProvider : DecisionCircuitCause.Settings).OffReason!),
+                }
+                : status;
         }
         catch (InvalidOperationException ex)
         {
@@ -133,6 +157,32 @@ public sealed class DecisionSection
                 StrictTools = strictTools,
             };
         }
+    }
+
+    /// <summary>
+    /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c> enabled, its
+    /// <c>FailMode</c> left on <c>Closed</c>, the guardian itself on), as the engine binds the section; or
+    /// the binder's refusal of a value it cannot convert.
+    /// </summary>
+    private static bool TryReadClosedJudge(IConfiguration configuration, out bool closed, out string? refusal)
+    {
+        closed = false;
+        if (!TryReadSwitch(configuration, GuardianEnabledPath, out var guardian, out refusal))
+            return false;
+
+        var judge = new GuardianLlmOptions();
+        try
+        {
+            configuration.GetSection(GuardianLlmOptions.SectionName).Bind(judge);
+        }
+        catch (InvalidOperationException ex)
+        {
+            refusal = ex.Message;
+            return false;
+        }
+
+        closed = guardian && judge is { Enabled: true, FailMode: GuardianJudgeFailMode.Closed };
+        return true;
     }
 
     /// <summary>
@@ -296,6 +346,21 @@ public sealed record DecisionStatus(
     /// off, the tool is dropped and the crew runs without it.
     /// </summary>
     public bool StrictTools { get; init; } = true;
+
+    /// <summary>
+    /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c>): it refuses to start
+    /// once the circuit is off, a run's own <c>--no-decision</c> included
+    /// (<see cref="RefusalOfRunSwitch"/>).
+    /// </summary>
+    public bool ClosedJudge { get; init; }
+
+    /// <summary>
+    /// What the host answers a run that switches the circuit off itself (<c>--no-decision</c>) while a
+    /// fail-closed LLM judge is configured; null when it starts.
+    /// </summary>
+    public string? RefusalOfRunSwitch => ClosedJudge
+        ? GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(DecisionCircuitCause.Switch).OffReason!)
+        : null;
 }
 
 /// <summary>

@@ -7,9 +7,10 @@ namespace Orkeon.Studio.Core.Tests.Launch;
 
 /// <summary>
 /// What a launch is told of the decision models, as the engine runs a crew: a refused provider stops
-/// every start; <c>system_one_decide</c> needs a provider whatever the circuit; a decision task with no
-/// answer once the circuit is off needs the circuit on; a crew that runs either way is told it goes on
-/// its fallbacks.
+/// every start; a crew that states <c>required</c> needs the circuit on, one that states
+/// <c>optional</c> goes on its relays; of a crew that states no mode, <c>system_one_decide</c> and a
+/// decision task with no answer of its own need the circuit on, and one that runs either way is told it
+/// goes on its fallbacks.
 /// </summary>
 public sealed class DecisionPreflightTests
 {
@@ -25,6 +26,24 @@ public sealed class DecisionPreflightTests
         CrewDecisionMode.Required,
         [new CrewDecisionTask("pick", ["go"], new Dictionary<string, string>(), null)],
         []);
+
+    /// <summary>A crew that states <c>decision.mode: required</c>, and asks System One a decision.</summary>
+    private static readonly CrewDecisionUsage DeclaredRequired = new(
+        CrewDecisionMode.Required,
+        [new CrewDecisionTask("pick", ["go"], new Dictionary<string, string>(), null)],
+        ["analyst"])
+    {
+        Declared = true,
+    };
+
+    /// <summary>A crew that states <c>decision.mode: optional</c>: its decision task has a relay.</summary>
+    private static readonly CrewDecisionUsage DeclaredOptional = new(
+        CrewDecisionMode.Optional,
+        [new CrewDecisionTask("pick", ["go"], new Dictionary<string, string>(), null) { RelayAgent = "analyst" }],
+        [])
+    {
+        Declared = true,
+    };
 
     private static readonly DecisionStatus On = new(true, DecisionProviderDescriptor.Liquid, DecisionProviderSelection.Deduced, [], null);
 
@@ -64,54 +83,113 @@ public sealed class DecisionPreflightTests
     }
 
     [Fact]
-    public void A_lenient_runner_drops_the_tool_without_a_provider_a_warning_that_never_blocks()
+    public void A_lenient_runner_withholds_the_tool_once_the_circuit_is_off_a_warning_that_never_blocks()
     {
         var lenient = NoProvider with { StrictTools = false };
 
-        var dropped = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, lenient, settingsKnown: true, noDecision: false));
-        Assert.Equal(DecisionPreflightKind.ToolDroppedWithoutProvider, dropped.Kind);
-        Assert.Equal([DecisionOffReason.NoProvider], dropped.Reasons);
-        Assert.False(dropped.BlocksLaunch);
-        Assert.False(dropped.BlocksValidate);
-        Assert.False(dropped.RefusesToolAtLoad);
+        var withheld = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, lenient, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.ToolWithheld, withheld.Kind);
+        Assert.Equal([DecisionOffReason.NoProvider], withheld.Reasons);
+        Assert.False(withheld.BlocksLaunch);
+        Assert.False(withheld.BlocksValidate);
 
         // The machine's file stands in for the run's: a lenient one warns the same, never of unknown settings.
         var unknown = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, lenient, settingsKnown: false, noDecision: false));
-        Assert.Equal(DecisionPreflightKind.ToolDroppedWithoutProvider, unknown.Kind);
+        Assert.Equal(DecisionPreflightKind.ToolWithheld, unknown.Kind);
 
-        // A decision task with no answer still needs the circuit: that block stays, the tool no longer in it.
+        // Whatever switches the circuit off: the run's own switch withholds the tool as well.
+        var switched = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(Required, On with { StrictTools = false }, settingsKnown: true, noDecision: true));
+        Assert.Equal(DecisionPreflightKind.ToolWithheld, switched.Kind);
+        Assert.Equal([DecisionOffReason.RunSwitch], switched.Reasons);
+
+        // A decision task with no answer still needs the circuit: that block stays.
         var both = new CrewDecisionUsage(CrewDecisionMode.Required, Unanswered.DecisionTasks, ["analyst"]);
         var blocked = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(both, lenient, settingsKnown: true, noDecision: false));
         Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, blocked.Kind);
         Assert.True(blocked.BlocksLaunch);
-        Assert.False(blocked.RefusesToolAtLoad);
     }
 
-    [Fact]
-    public void A_strict_runner_refuses_the_holder_at_load_which_a_check_reports()
+    /// <summary>
+    /// With the circuit off no consumer asks the model: the engine withholds <c>system_one_decide</c>
+    /// whatever the cause, and a strict runner refuses the crew that lists it. A check reports it as a
+    /// warning, so it stays offered.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(RunsWithoutTheModel))]
+    public void A_strict_runner_refuses_a_holder_of_the_tool_whatever_switches_the_circuit_off(DecisionStatus status, bool noDecision)
     {
-        var finding = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, NoProvider, settingsKnown: true, noDecision: false));
+        var finding = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, status, settingsKnown: true, noDecision));
 
-        Assert.True(finding.RefusesToolAtLoad);
+        Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, finding.Kind);
+        Assert.True(finding.BlocksLaunch);
         Assert.False(finding.BlocksValidate);
-        Assert.False(Assert.IsType<DecisionPreflightFinding>(
-            DecisionPreflight.Check(Unanswered, NoProvider, settingsKnown: true, noDecision: false)).RefusesToolAtLoad);
+        Assert.False(finding.RefusedByMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(RunsWithoutTheModel))]
+    public void A_crew_that_states_required_is_refused_whatever_switches_the_circuit_off(DecisionStatus status, bool noDecision)
+    {
+        // Lenient tools change nothing to it: the mode refuses the run, not the tool.
+        var finding = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(DeclaredRequired, status with { StrictTools = false }, settingsKnown: true, noDecision));
+
+        Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, finding.Kind);
+        Assert.True(finding.BlocksLaunch);
+        Assert.False(finding.BlocksValidate);
+        Assert.True(finding.RefusedByMode);
     }
 
     [Fact]
-    public void The_tool_is_blocked_only_without_a_provider_and_warned_when_the_circuit_is_off()
+    public void A_crew_that_states_required_runs_with_the_circuit_on_and_is_warned_while_the_settings_are_unknown()
     {
-        var blocked = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, NoProvider, settingsKnown: true, noDecision: false));
-        Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, blocked.Kind);
-        Assert.Equal([DecisionOffReason.NoProvider], blocked.Reasons);
+        Assert.Null(DecisionPreflight.Check(DeclaredRequired, On, settingsKnown: true, noDecision: false));
+        Assert.Equal(
+            DecisionPreflightKind.RequiredUnknownSettings,
+            DecisionPreflight.Check(DeclaredRequired, NoProvider, settingsKnown: false, noDecision: false)?.Kind);
+        Assert.Equal(
+            DecisionPreflightKind.RequiredUnknownSettings,
+            DecisionPreflight.Check(DeclaredRequired, null, settingsKnown: false, noDecision: false)?.Kind);
+    }
 
-        // The engine registers system_one_decide whenever a provider resolves: the circuit does not stop it.
-        foreach (var (status, noDecision) in new[] { (SwitchedOff, false), (On, true) })
+    [Theory]
+    [MemberData(nameof(RunsWithoutTheModel))]
+    public void A_crew_that_states_optional_is_told_its_relays_answer(DecisionStatus status, bool noDecision)
+    {
+        var finding = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(DeclaredOptional, status, settingsKnown: true, noDecision));
+
+        Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, finding.Kind);
+        Assert.False(finding.BlocksLaunch);
+        Assert.Equal("analyst", Assert.Single(finding.Usage.DecisionTasks).RelayAgent);
+        Assert.Null(DecisionPreflight.Check(DeclaredOptional, On, settingsKnown: true, noDecision: false));
+    }
+
+    [Fact]
+    public void A_crew_that_only_lets_System_One_pick_is_told_when_the_run_goes_without_it()
+    {
+        var picks = new CrewDecisionUsage(CrewDecisionMode.Optional, [], [])
         {
-            var warned = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, status, settingsKnown: true, noDecision));
-            Assert.Equal(DecisionPreflightKind.ToolIgnoresSwitch, warned.Kind);
-            Assert.False(warned.BlocksLaunch);
-        }
+            OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst")],
+        };
+
+        Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, DecisionPreflight.Check(picks, On, settingsKnown: true, noDecision: true)?.Kind);
+        Assert.Null(DecisionPreflight.Check(picks, On, settingsKnown: true, noDecision: false));
+    }
+
+    [Fact]
+    public void The_runs_own_switch_is_refused_by_a_fail_closed_llm_judge_a_check_included()
+    {
+        var judged = On with { ClosedJudge = true };
+
+        var finding = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Optional, judged, settingsKnown: true, noDecision: true));
+        Assert.Equal(DecisionPreflightKind.ProviderRefused, finding.Kind);
+        Assert.Contains("--no-decision", finding.Status?.Refusal, StringComparison.Ordinal);
+        Assert.True(finding.BlocksLaunch);
+        Assert.True(finding.BlocksValidate);
+
+        // With the models on, the judge judges: nothing to say.
+        Assert.Null(DecisionPreflight.Check(Optional, judged, settingsKnown: true, noDecision: false));
     }
 
     [Fact]

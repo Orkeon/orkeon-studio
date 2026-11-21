@@ -205,15 +205,14 @@ internal sealed class RunLauncherViewModel
 
     /// <summary>
     /// What the decision models (System One) change to the run (<see cref="DecisionPreflight"/>), the
-    /// crew read again. An error when the launch is refused for sure: a holder of <c>system_one_decide</c>
-    /// and no provider in the settings file read here (tools resolved strictly), a decision task with
-    /// neither a fallback nor an <c>otherwise</c> task on a run with the circuit off, or a provider that
-    /// file names and the engine refuses (a check too). A warning while the CLI resolves the settings
-    /// itself, for a check of a crew a run would refuse (the check stays offered: it loads the crew for
-    /// such a decision task, and reports the engine's unknown-tool line for a holder of the tool), for a
-    /// provider without its key, for a holder of the tool on a run with the circuit off (the tool still
-    /// asks the provider), and for a holder of the tool a lenient runner drops; information for decision
-    /// tasks that go on their fallbacks.
+    /// crew read again. An error when the launch is refused for sure: a crew that states
+    /// <c>decision.mode: required</c>, a holder of <c>system_one_decide</c> under strict tools, or a
+    /// decision task with neither a fallback nor an <c>otherwise</c> task, on a run with the circuit off;
+    /// or a provider the settings file read here names and the engine refuses (a check too). A warning
+    /// while the CLI resolves the settings itself, for a check of a crew a run would refuse (the check
+    /// stays offered: it loads the crew and reports the refusal as a warning), for a provider without its
+    /// key, and for a holder of the tool a lenient runner withholds; information for a crew that goes on
+    /// its relays, its fallbacks and what the settings state.
     /// </summary>
     private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
     {
@@ -249,20 +248,16 @@ internal sealed class RunLauncherViewModel
                 + $"set {finding.Status?.MissingKeyVariable} (or ApiKey in its section). Until then each request it gets fails, "
                 + "and with it each decision task and each system_one_decide call that asks it.",
                 target.RunPath)],
-            DecisionPreflightKind.ToolDroppedWithoutProvider => [ValidationMessage.Warning(
+            DecisionPreflightKind.ToolWithheld => [ValidationMessage.Warning(
                 ValidationCodes.DecisionToolDropped,
-                $"{holders} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools "
-                + "false, the engine drops the tool and runs the crew without it.",
-                target.RunPath)],
-            DecisionPreflightKind.ToolIgnoresSwitch => [ValidationMessage.Warning(
-                ValidationCodes.DecisionToolIgnoresSwitch,
-                $"{holders} use system_one_decide: on this run the tool still asks {finding.Status?.Provider?.DisplayName}: "
-                + "--no-decision and Orkeon:Decision:Enabled only send the decision tasks to their fallbacks.",
+                $"{holders} use system_one_decide, and this run goes without the decision models: with "
+                + "Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the crew without it." + reasons,
                 target.RunPath)],
             _ => [ValidationMessage.Information(
                 ValidationCodes.DecisionFallback,
                 "This run goes without the decision models (System One): "
-                + string.Join("; ", finding.Usage.DecisionTasks.Where(task => task.AnswersWithoutModel).Select(FallbackText))
+                + string.Join("; ", finding.Usage.DecisionTasks.Where(task => task.AnswersWithoutModel).Select(FallbackText)
+                    .Concat(finding.Usage.OtherUses.Select(PickText)))
                 + "." + reasons,
                 target.RunPath)],
         };
@@ -272,32 +267,34 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>
-    /// What a check of a crew a run refuses does: it stays offered, loads the crew for a decision task
-    /// without an answer of its own, and for a holder of <c>system_one_decide</c> with no provider fails
-    /// on the engine's unknown-tool line (tools resolved strictly, the default).
+    /// What a check of a crew a run refuses does: it stays offered, loads the crew and reports what the
+    /// run would refuse as a warning.
     /// </summary>
     private static string CheckOfRequiredText(DecisionPreflightFinding finding) =>
-        finding.RefusesToolAtLoad
-            ? "The check reports the engine's unknown-tool line for system_one_decide, and a run will refuse this crew: "
+        finding.RefusedByMode
+            ? "A check loads this crew and warns, but a run will refuse it (exit code 69): "
             : "A check loads this crew, but a run will refuse it: ";
 
     /// <summary>
-    /// Why the crew needs the decision models on this run: the holders of <c>system_one_decide</c> while
-    /// no provider is in sight (unless a lenient runner drops the tool), and the decision tasks without an
-    /// answer while the circuit may be off.
+    /// Why the crew needs the decision models on this run: its own word (<c>decision.mode: required</c>),
+    /// or, of a crew that states no mode, the holders of <c>system_one_decide</c> (unless a lenient runner
+    /// withholds the tool and goes on) and the decision tasks without an answer of their own.
     /// </summary>
     private static string NeedsText(DecisionPreflightFinding finding)
     {
+        if (finding.Usage.Declared)
+            return "it states decision.mode: required, so the engine refuses the run before its first task";
+
         var needs = new List<string>();
         var holders = finding.Usage.ToolHolders;
-        if (holders.Count > 0 && finding.Status is not { StrictTools: false } && finding.Status?.Provider is null)
+        if (holders.Count > 0 && finding.Status is not { StrictTools: false })
         {
             needs.Add(string.Join(", ", holders.Select(holder => $"'{holder}'"))
-                + " use system_one_decide, which needs a decision provider");
+                + " use system_one_decide, which the engine withholds without the decision models");
         }
 
         var unanswered = finding.Usage.TasksWithoutAnswer;
-        if (unanswered.Count > 0 && (finding.SwitchedOffForRun || finding.Status is not { CircuitOn: true }))
+        if (unanswered.Count > 0)
         {
             var tasks = string.Join(", ", unanswered.Select(task => $"'{task}'"));
             needs.Add(unanswered.Count == 1
@@ -312,17 +309,28 @@ internal sealed class RunLauncherViewModel
     private static string ReasonText(DecisionOffReason reason) => reason switch
     {
         DecisionOffReason.NoProvider => "No decision provider is configured (an Orkeon:TypeSafe or Orkeon:Liquid section, or its API key; Kev must be named in Orkeon:Decision:Provider).",
-        DecisionOffReason.SettingsSwitch => "The settings switch the decision tasks off (Orkeon:Decision:Enabled is false).",
-        DecisionOffReason.RunSwitch => "This run switches the decision tasks off: untick --no-decision.",
+        DecisionOffReason.SettingsSwitch => "The settings switch the decision models off (Orkeon:Decision:Enabled is false).",
+        DecisionOffReason.RunSwitch => "This run switches the decision models off: untick --no-decision.",
         _ => "",
     };
 
     /// <summary>What one decision task answers once the circuit is off.</summary>
     private static string FallbackText(CrewDecisionTask task) =>
-        task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise
-            ? $"task '{task.Task}' gives no answer and task '{otherwise}' runs instead"
-            : $"task '{task.Task}' answers "
-              + string.Join(", ", task.Questions.Where(task.Fallback.ContainsKey).Select(question => $"{question} = {task.Fallback[question]}"));
+        task.RelayAgent is { } relay
+            ? $"the agent '{relay}' answers task '{task.Task}' in place of the model"
+            : task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise
+                ? $"task '{task.Task}' gives no answer and task '{otherwise}' runs instead"
+                : $"task '{task.Task}' answers "
+                  + string.Join(", ", task.Questions.Where(task.Fallback.ContainsKey).Select(question => $"{question} = {task.Fallback[question]}"));
+
+    /// <summary>What becomes, once the circuit is off, of one thing the crew lets System One pick.</summary>
+    private static string PickText(CrewSystemOneUse use) => use.Kind switch
+    {
+        CrewSystemOneUseKind.RouteAuto => $"'{use.Holder}' runs on the default profile, no profile being picked",
+        CrewSystemOneUseKind.SkillsAuto => $"'{use.Holder}' carries its fallback skills, none being picked",
+        CrewSystemOneUseKind.Prune => $"'{use.Holder}' prunes no tool result",
+        _ => $"'{use.Holder}' keeps the thinking level of its profile, none being picked",
+    };
 
     /// <summary>
     /// The agents the engine will refuse with the mounts of this run (#349): a <c>filesystem:</c>

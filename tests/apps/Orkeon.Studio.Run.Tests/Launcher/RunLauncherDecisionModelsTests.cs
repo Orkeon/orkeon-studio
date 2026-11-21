@@ -83,16 +83,15 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         Assert.Contains("No decision provider is configured", error.Text, StringComparison.Ordinal);
         Assert.True(launcher.HasBlockingErrors());
 
-        // The check stays offered, and says what the engine answers it: the unknown-tool line.
+        // The check stays offered: the engine loads the crew and reports the withheld tool as a warning.
         var check = Assert.Single(launcher.Validate(dryRun: true), m => m.Code == ValidationCodes.DecisionRequired);
         Assert.Equal(ValidationSeverity.Warning, check.Severity);
-        Assert.StartsWith("The check reports the engine's unknown-tool line for system_one_decide", check.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("loads this crew", check.Text, StringComparison.Ordinal);
+        Assert.StartsWith("A check loads this crew, but a run will refuse it", check.Text, StringComparison.Ordinal);
         Assert.False(launcher.HasBlockingErrors(dryRun: true));
     }
 
     [Fact]
-    public void A_lenient_runner_drops_the_tool_without_a_provider_a_warning_for_a_run_and_a_check()
+    public void A_lenient_runner_withholds_the_tool_without_a_provider_a_warning_for_a_run_and_a_check()
     {
         var launcher = Pin(
             new LauncherFixture().WithInstalledCli(),
@@ -106,13 +105,14 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
             var warning = Assert.Single(messages, m => m.Code == ValidationCodes.DecisionToolDropped);
             Assert.Equal(ValidationSeverity.Warning, warning.Severity);
             Assert.Contains("'analyst' use system_one_decide", warning.Text, StringComparison.Ordinal);
-            Assert.Contains("drops the tool", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("withholds the tool", warning.Text, StringComparison.Ordinal);
+            Assert.Contains("No decision provider is configured", warning.Text, StringComparison.Ordinal);
             Assert.False(launcher.HasBlockingErrors(dryRun));
         }
     }
 
     [Fact]
-    public void A_provider_in_the_file_lets_the_tool_run_and_the_run_switch_only_warns_that_it_still_asks()
+    public void A_provider_in_the_file_lets_the_tool_run_and_the_run_switch_withholds_it()
     {
         var fixture = new LauncherFixture().WithInstalledCli();
         fixture.Environment = LiquidKey;
@@ -121,14 +121,14 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
 
         launcher.Options.NoDecision = true;
 
-        var messages = launcher.Validate();
-        Assert.DoesNotContain(messages, m => m.Code == ValidationCodes.DecisionRequired);
-        var warning = Assert.Single(messages, m => m.Code == ValidationCodes.DecisionToolIgnoresSwitch);
-        Assert.Equal(ValidationSeverity.Warning, warning.Severity);
-        Assert.Contains("'analyst' use system_one_decide", warning.Text, StringComparison.Ordinal);
-        Assert.Contains("the tool still asks Liquid", warning.Text, StringComparison.Ordinal);
-        Assert.False(launcher.HasBlockingErrors());
-        Assert.Contains("--no-decision", launcher.BuildArguments());
+        // With the circuit off no consumer asks the model: the engine withholds the tool, and a strict
+        // runner refuses the crew that lists it.
+        var error = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.DecisionRequired);
+        Assert.Equal(ValidationSeverity.Error, error.Severity);
+        Assert.Contains("'analyst' use system_one_decide", error.Text, StringComparison.Ordinal);
+        Assert.Contains("untick --no-decision", error.Text, StringComparison.Ordinal);
+        Assert.True(launcher.HasBlockingErrors());
+        Assert.False(launcher.HasBlockingErrors(dryRun: true));
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         var error = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.DecisionRequired);
 
         Assert.Equal(ValidationSeverity.Error, error.Severity);
-        Assert.Contains("'analyst' use system_one_decide, which needs a decision provider", error.Text, StringComparison.Ordinal);
+        Assert.Contains("'analyst' use system_one_decide, which the engine withholds without the decision models", error.Text, StringComparison.Ordinal);
         Assert.Contains("the decision task 'pick' has neither", error.Text, StringComparison.Ordinal);
         var noProvider = error.Text.IndexOf("No decision provider is configured", StringComparison.Ordinal);
         var runSwitch = error.Text.IndexOf("untick --no-decision", StringComparison.Ordinal);
