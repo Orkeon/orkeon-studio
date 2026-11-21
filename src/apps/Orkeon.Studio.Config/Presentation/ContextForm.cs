@@ -15,10 +15,11 @@ internal sealed class ContextForm : ISettingsForm
     /// <inheritdoc />
     public string Title => "Context & skills";
 
-    /// <summary>How the fields are written, and what a blank one means.</summary>
-    public static string Notice { get; } =
-        "Leave a field empty for the engine's default. Switches: true or false (compaction is on, pruning off, by default). "
-        + "Shares: above 0, at most 1.";
+    /// <summary>What a blank field means, and how a share is written.</summary>
+    public const string Notice = "Empty field: the engine's default. Shares: above 0, at most 1.";
+
+    /// <summary>How a switch is written, and what each one is by default.</summary>
+    public const string SwitchNotice = "Switches: true or false. By default compaction is on, pruning off.";
 
     /// <summary>Whether a context is compacted: <c>true</c>, <c>false</c>, or blank for the default.</summary>
     public string CompactionEnabled { get; set; } = "";

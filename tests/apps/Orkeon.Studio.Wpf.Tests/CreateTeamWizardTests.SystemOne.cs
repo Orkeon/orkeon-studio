@@ -51,4 +51,31 @@ public partial class CreateTeamWizardTests
 
         Assert.Equal(ForgeCrewDecisions.Required, vm.SelectedCrewDecision.Mode);
     }
+
+    /// <summary>
+    /// The mode and the switch belong to a creation: what a session stated, or the user chose, does not
+    /// become the next team's, and a session's mode cannot be picked again.
+    /// </summary>
+    [Fact]
+    public async Task Starting_over_gives_the_next_creation_the_default_mode_and_no_switch()
+    {
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/s/veille","format":"yaml","crewDecision":"required"}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"session.finished","status":"paused","exitCode":0}"""),
+        ]);
+        FillStepOne(vm);
+        Assert.True(vm.CanChooseCrewDecision);
+        vm.DesignWithoutSystemOne = true;
+        await Compose(vm);
+        Assert.Equal(ForgeCrewDecisions.Required, vm.SelectedCrewDecision.Mode);
+        Assert.False(vm.CanChooseCrewDecision);
+
+        vm.RestartCommand.Execute(null);
+
+        Assert.Equal(ForgeCrewDecisions.None, vm.SelectedCrewDecision.Mode);
+        Assert.False(vm.DesignWithoutSystemOne);
+        Assert.True(vm.CanChooseCrewDecision);
+    }
 }

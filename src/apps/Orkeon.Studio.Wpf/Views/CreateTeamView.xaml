@@ -826,7 +826,7 @@
                            Text="{Binding [Studio.Create.CrewDecisionLabel], Source={x:Static services:I18n.Instance}}"/>
                 <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="320"
                           ItemsSource="{Binding CrewDecisionChoices}" SelectedItem="{Binding SelectedCrewDecision}"
-                          DisplayMemberPath="Label"/>
+                          IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
                            Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
                 <CheckBox Margin="0,10,0,0" IsChecked="{Binding DesignWithoutSystemOne}" Foreground="{DynamicResource InkBrush}"

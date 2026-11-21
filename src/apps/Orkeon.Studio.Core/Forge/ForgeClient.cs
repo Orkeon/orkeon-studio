@@ -114,13 +114,13 @@ public sealed record ForgeStartRequest
 public static class ForgeCrewDecisions
 {
     /// <summary>The crew asks nothing of System One: the engine's choice when the option is not passed.</summary>
-    public const string None = "none";
+    public const string None = Orkeon.Constants.Protocol.RunDecisionModes.None;
 
     /// <summary>The crew runs with System One or without it: each decision task names an agent that answers in its place.</summary>
-    public const string Optional = "optional";
+    public const string Optional = Orkeon.Constants.Protocol.RunDecisionModes.Optional;
 
     /// <summary>The crew cannot run without System One.</summary>
-    public const string Required = "required";
+    public const string Required = Orkeon.Constants.Protocol.RunDecisionModes.Required;
 
     /// <summary>Every mode, in the order a screen offers them.</summary>
     public static IReadOnlyList<string> All { get; } = [None, Optional, Required];

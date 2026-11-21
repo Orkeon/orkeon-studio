@@ -599,6 +599,10 @@ public sealed class ConfigTabViewModel : ObservableObject
     private void MarkDirty()
     {
         IsDirty = true;
+        // What the decision and compaction cards say depends on the profiles another tab edits: a
+        // ladder rung or a summary profile that names one is judged again whatever was edited.
+        Decision?.RefreshVerdict();
+        Compaction?.RefreshVerdict();
         RefreshRawJson();
         DocumentEdited?.Invoke(this, EventArgs.Empty);
     }

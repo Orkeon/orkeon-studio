@@ -200,8 +200,12 @@ public sealed class DecisionPreflightTests
         Assert.True(none.BlocksLaunch);
         Assert.False(none.BlocksValidate);
 
+        // A ladder is there, one rung of which names no profile of the file: a warning, the run being
+        // given Studio's own model profiles besides.
         var unknownRung = On with { RouteLadder = ["default", "strong"], UnknownRungs = ["strong"] };
-        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, DecisionPreflight.Check(picks, unknownRung, settingsKnown: true, noDecision: false)?.Kind);
+        var warned = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, unknownRung, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, warned.Kind);
+        Assert.False(warned.BlocksLaunch);
 
         var machine = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, On, settingsKnown: false, noDecision: false));
         Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, machine.Kind);

@@ -247,17 +247,23 @@ public sealed class DecisionFormTests
         Assert.Equal(["low", "medium"], document.Decision.EffortLevels);
     }
 
-    [Fact]
-    public void Levels_the_engine_refuses_are_said_by_the_status_line()
+    [Theory]
+    [InlineData("", "high, low", "cheapest first")]
+    [InlineData("", "low, ultra", "is not a thinking level")]
+    [InlineData("default", "", "a route needs two or more")]
+    [InlineData("default, auto", "", "the name of the route itself")]
+    public void A_ladder_or_levels_the_engine_refuses_are_refused_at_apply_and_nothing_is_written(string ladder, string levels, string reason)
     {
         var document = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{}}}""");
+        var before = document.ToJson();
         var form = Form();
         form.LoadFrom(document);
 
-        form.EffortLevels = "high, low";
-        Assert.Empty(form.ApplyTo(document));
+        form.RouteLadder = ladder;
+        form.EffortLevels = levels;
+        var errors = form.ApplyTo(document);
 
-        Assert.StartsWith("Refused at start", form.Status, StringComparison.Ordinal);
-        Assert.Contains("cheapest first", form.Status, StringComparison.Ordinal);
+        Assert.Contains(errors, error => error.Contains(reason, StringComparison.Ordinal));
+        Assert.Equal(before, document.ToJson());
     }
 }

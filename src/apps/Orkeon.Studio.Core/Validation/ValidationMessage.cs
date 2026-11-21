@@ -143,25 +143,27 @@ public static class ValidationCodes
     public const string DeliverableWithoutWriter = "STUDIO-DELIVERABLE-WRITER";
 
     /// <summary>
-    /// A crew that cannot run without the decision models (System One): an agent or a task holds
-    /// <c>system_one_decide</c>, a tool a run registers only once a provider is configured, or a decision
-    /// task has neither a fallback nor an <c>otherwise</c> task, which a run refuses once the circuit is
-    /// off. An error when the run cannot give them for sure (no provider in the file the run reads for the
-    /// tool; for such a task, the models switched off there or <c>--no-decision</c> too); a warning for a
-    /// check, and while the CLI resolves the settings.
+    /// The crew cannot run without the decision models and the run goes without them: it states
+    /// <c>decision.mode: required</c> (the engine refuses it before its first task, exit code 69), or,
+    /// stating no mode, an agent or a task holds <c>system_one_decide</c> (withheld once the circuit is
+    /// off, a refusal under strict tools) or a decision task has neither a fallback nor an
+    /// <c>otherwise</c> task. An error when the circuit is off for sure (in the file the run reads, or by
+    /// <c>--no-decision</c>); a warning for a check, and while the CLI resolves the settings.
     /// </summary>
     public const string DecisionRequired = "STUDIO-DECISION-REQUIRED";
 
     /// <summary>
-    /// The settings name a decision provider the engine refuses (an unknown name, two providers it could
-    /// deduce): the host stops before it loads the crew, a check included. An error when the file is the
-    /// one the run reads; a warning otherwise.
+    /// The engine refuses the decision settings: a provider it does not know or cannot deduce, a ladder of
+    /// profiles or a list of thinking levels its rules refuse, a decision profile named <c>auto</c>, or a
+    /// fail-closed LLM judge while the circuit is off. The host stops before it loads the crew, a check
+    /// included. An error when the file is the one the run reads; a warning otherwise.
     /// </summary>
     public const string DecisionProviderRefused = "STUDIO-DECISION-PROVIDER";
 
     /// <summary>
-    /// A crew that runs with or without the decision models goes without them: each decision task
-    /// answers from its fallback, or lets its <c>otherwise</c> task run. Information.
+    /// A crew that runs with or without the decision models goes without them: each decision task is
+    /// answered by its relay, answers from its fallback, or lets its <c>otherwise</c> task run, and what
+    /// System One would pick falls back to what the crew or the settings state. Information.
     /// </summary>
     public const string DecisionFallback = "STUDIO-DECISION-FALLBACK";
 
@@ -186,8 +188,10 @@ public static class ValidationCodes
     public const string DecisionLadder = "STUDIO-DECISION-LADDER";
 
     /// <summary>
-    /// A value of a section the engine validates at start (the compaction, the pruning, the skills, the
-    /// tool bridge) that its own rules refuse: the run would not start. The message is the engine's.
+    /// A value, or a key, of a section the engine validates at start (the compaction, the pruning, the
+    /// skills, the tool bridge) that its own rules refuse: the run would not start. The sentence is the
+    /// engine's. A warning for a summary profile the file does not define, which the run's environment
+    /// may give.
     /// </summary>
     public const string EngineSettingRefused = "STUDIO-SETTING-REFUSED";
 

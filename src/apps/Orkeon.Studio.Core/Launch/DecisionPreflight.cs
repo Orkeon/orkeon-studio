@@ -14,11 +14,12 @@ public enum DecisionPreflightKind
     ProviderRefused,
 
     /// <summary>
-    /// An agent or a task of the crew is on <c>llm.profile: auto</c> and the settings give no ladder that
-    /// serves it (<c>Orkeon:Decision:Route:Ladder</c>: two profiles or more, each a profile of the
-    /// settings): the engine refuses the crew at load, whatever the circuit. The launch is blocked when
-    /// the settings are those of the file the run reads, warned of otherwise; a check stays offered and
-    /// reports the engine's line.
+    /// An agent or a task of the crew is routed on <c>llm.profile: auto</c> and the settings give no
+    /// ladder that serves it (<c>Orkeon:Decision:Route:Ladder</c>). With no ladder the engine refuses the
+    /// crew at load, whatever the circuit: the launch is blocked when the settings are those of the file
+    /// the run reads, warned of otherwise. With a ladder one rung of which names no profile of the
+    /// settings, it only warns: the run is offered Studio's own model profiles besides. A check stays
+    /// offered and reports the engine's line.
     /// </summary>
     RouteWithoutLadder,
 
@@ -96,7 +97,8 @@ public sealed record DecisionPreflightFinding(
     /// </summary>
     public bool BlocksLaunch =>
         Kind == DecisionPreflightKind.RequiredWithoutModel
-        || (Kind is DecisionPreflightKind.ProviderRefused or DecisionPreflightKind.RouteWithoutLadder && SettingsKnown);
+        || (Kind == DecisionPreflightKind.ProviderRefused && SettingsKnown)
+        || (Kind == DecisionPreflightKind.RouteWithoutLadder && SettingsKnown && Status is { HasRouteLadder: false });
 
     /// <summary>
     /// The agents and tasks on <c>llm.profile: auto</c>, in the crew's order: those a

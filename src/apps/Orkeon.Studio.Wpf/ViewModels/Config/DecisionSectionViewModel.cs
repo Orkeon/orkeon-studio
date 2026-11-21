@@ -198,6 +198,12 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
             OnSectionChanged();
     }
 
+    /// <summary>
+    /// Reads the status again after an edit made elsewhere in the document: a profile added, renamed or
+    /// removed changes what a ladder rung names.
+    /// </summary>
+    public void RefreshVerdict() => OnSectionChanged();
+
     /// <inheritdoc />
     public override void Refresh()
     {

@@ -958,8 +958,8 @@
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>Use the decision models (System One)</value></data>
   <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Unticked, the decision tasks go without them (--no-decision): each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider.</value></data>
-  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>The settings name a decision provider the engine refuses, so the CLI will not start: {0} Fix it in Settings › Decision models.</value></data>
-  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>This machine's settings name a decision provider the engine refuses: unless the settings file the CLI picks says otherwise, it will not start. {0}</value></data>
+  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>The engine refuses the decision settings, so the CLI will not start: {0} Fix it in Settings › Decision models.</value></data>
+  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>The engine refuses the decision settings of this machine: unless the settings file the CLI picks says otherwise, it will not start. {0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. {1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}</value></data>
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>This run goes without them: tick « Use the decision models ».</value></data>
@@ -970,6 +970,7 @@
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>it states decision.mode: required, so the engine refuses the run before its first task</value></data>
   <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.</value></data>
   <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.</value></data>
+  <data name="Studio.Run.WarnDecisionLadderRung" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and {1}: unless the run is given that profile another way, the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>the settings give no ladder of two profiles or more to pick on</value></data>
   <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>the ladder names {0}, which is no model profile of the settings</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.</value></data>
@@ -2457,7 +2458,7 @@
     <value>An agent's file-system scope does not fit the folders of this run.</value>
   </data>
   <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>The tool bridge of these settings stops the run at start: {0}</value></data>
-  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Set the variable for your user account, then start Studio again.</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Store the token in Settings › Limits &amp; index, on the tool bridge's card.</value></data>
   <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Not allowed</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Allow this folder</value></data>

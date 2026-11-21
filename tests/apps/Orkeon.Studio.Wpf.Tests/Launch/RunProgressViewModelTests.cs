@@ -397,4 +397,41 @@ public class LaunchOptionsObservationTests
         Assert.Equal("decision (relay)", panel.Tasks[0].DecisionLabel);
         Assert.Equal("decision", panel.Tasks[1].DecisionLabel);
     }
+
+    /// <summary>
+    /// Every run states its circuit, a crew that asks nothing of System One included: the line is held
+    /// until the run does something it explains, so such a crew's panel stays closed.
+    /// </summary>
+    [Fact]
+    public void The_circuit_of_a_crew_that_states_no_mode_is_said_only_once_the_run_explains_something_with_it()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"no-provider"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","success":true}""");
+        Assert.False(panel.HasAgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.pruned","taskId":"write","agentRole":"Writer","cut":1,"dropped":2,"freedTokens":900}""");
+
+        Assert.Equal(
+            [
+                "Decision models off: no decision provider is configured (team mode: unspecified).",
+                "Writer: 3 tool results pruned, about 900 tokens freed.",
+            ],
+            panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_long_run_keeps_the_latest_notes_only()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", System.Globalization.CultureInfo.CurrentCulture), panel.AgentNotes[^1], StringComparison.Ordinal);
+    }
 }

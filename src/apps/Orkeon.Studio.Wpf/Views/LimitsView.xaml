@@ -1,4 +1,4 @@
-<!-- The "Limites & journaux" settings tab (design v3, expert only): rate limits, the RAG
+<!-- The "Limits & index" settings tab (design v3, expert only): rate limits, the RAG
      index, the logging sections, the compaction of a context, the skills and both sides of the tool bridge. DataContext: ConfigTabViewModel (bound as Settings.Config).
      Card titles are plain language (T-08); the literal configuration key rides each title's tooltip — technical
      identifiers, identical in every language, hence not routed through I18n. Every field whose engine default is
@@ -17,7 +17,7 @@
         <ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
       <!-- RateLimiting -->
@@ -151,6 +151,8 @@
           <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblCompactionProfile], Source={x:Static services:I18n.Instance}}"/>
           <TextBox Style="{StaticResource InputMono}" Text="{Binding Compaction.Profile, UpdateSourceTrigger=LostFocus}"/>
           <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.CompactionProfileHint], Source={x:Static services:I18n.Instance}}"/>
+          <controls:Alert Margin="0,8,0,0" Tone="Warning" Message="{Binding Compaction.ProfileWarning}"
+                          Visibility="{Binding Compaction.ProfileWarning, Converter={StaticResource StringPresentToVisibility}}"/>
           <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" ToolTip="Llm:ContextWindowTokens"
                      Text="{Binding [Studio.Settings.ProfileLblContextWindow], Source={x:Static services:I18n.Instance}}"/>
           <TextBox Style="{StaticResource Input}" Text="{Binding Compaction.ContextWindowTokens, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"/>
@@ -190,8 +192,9 @@
                           Visibility="{Binding Skills.ProblemsText, Converter={StaticResource StringPresentToVisibility}}"/>
         </StackPanel>
       </Border>
-      <!-- Orkeon:Tools:Bridge: the tools of a run that execute on another machine (the caller's side) -->
-      <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
+      <!-- Orkeon:Tools:Bridge: the tools of a run that execute on another machine (the caller's side). Full
+           width: the token's row needs the room. -->
+      <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
         <StackPanel>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
             <controls:LucideIcon Kind="plug-zap" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
@@ -220,7 +223,7 @@
       </Border>
 
       <!-- Orkeon:Bridge: the tools orkeon bridge serve runs on this machine for a caller (the serving side) -->
-      <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
+      <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
         <StackPanel>
           <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
             <controls:LucideIcon Kind="plug-zap" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>

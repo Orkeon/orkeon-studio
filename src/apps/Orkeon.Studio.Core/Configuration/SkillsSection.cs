@@ -31,33 +31,34 @@ public sealed class SkillsSection
     internal SkillsSection(AppSettingsDocument document) => _document = document;
 
     /// <summary>True when the section carries at least one key.</summary>
-    public bool Exists => _document.SectionExists(SectionPath);
+    public bool Exists => _document.SectionExists(_document.PathAsWritten(SectionPath));
 
     /// <summary>The virtual folder the skills are read from (an absolute virtual path).</summary>
     public string? Library
     {
-        get => _document.GetString($"{SectionPath}:Library");
-        set => _document.SetString($"{SectionPath}:Library", string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+        get => _document.GetString(Key("Library"));
+        set => _document.SetString(Key("Library"), string.IsNullOrWhiteSpace(value) ? null : value.Trim());
     }
 
     /// <summary>The characters kept of one skill, 1 or more.</summary>
     public int? MaxSkillChars
     {
-        get => _document.GetInt32($"{SectionPath}:MaxSkillChars");
-        set => _document.SetInt32($"{SectionPath}:MaxSkillChars", value);
+        get => _document.GetInt32(Key("MaxSkillChars"));
+        set => _document.SetInt32(Key("MaxSkillChars"), value);
     }
 
     /// <summary>The characters of the whole block of skills in a prompt, <see cref="MinBlockChars"/> or more.</summary>
     public int? MaxBlockChars
     {
-        get => _document.GetInt32($"{SectionPath}:MaxBlockChars");
-        set => _document.SetInt32($"{SectionPath}:MaxBlockChars", value);
+        get => _document.GetInt32(Key("MaxBlockChars"));
+        set => _document.SetInt32(Key("MaxBlockChars"), value);
     }
 
     /// <summary>
     /// What the host's start refuses in the section, as the engine binds and validates it
     /// (<c>AgentSkillsOptions.Problems</c>): a value the binder cannot convert, a library that is no
-    /// absolute virtual path, a size too small. Each with the path of its key; empty when accepted.
+    /// absolute virtual path, a size too small, a key that is no setting of the section. Each with the
+    /// path of its key; empty when accepted.
     /// </summary>
     public IReadOnlyList<(string Path, string Problem)> Problems()
     {
@@ -67,9 +68,13 @@ public sealed class SkillsSection
         if (SettingsBinding.TryBind(configuration, SectionPath, skills, problems))
             problems.AddRange(AgentSkillsOptions.Problems(skills).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
 
+        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentSkillsOptions)));
         return problems;
     }
 
     /// <summary>Removes the whole section.</summary>
-    public void Remove() => _document.Remove(SectionPath);
+    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
+
+    // Each key where the file spells it, in whatever letter case, as the configuration reads it.
+    private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");
 }

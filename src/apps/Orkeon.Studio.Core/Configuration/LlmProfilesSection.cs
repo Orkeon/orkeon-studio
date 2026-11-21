@@ -140,7 +140,8 @@ public sealed class LlmProfilesSection
     /// The key of a section of the <c>Llm</c> shape that states the model's context window, in tokens:
     /// what the compaction of a context measures against. Absent, the engine takes the window it
     /// documents for the model, else its session default. A profile's entry does not model it
-    /// (<see cref="LlmProfileEntry"/>): written by hand in a profile's section, it stays as written.
+    /// (<see cref="LlmProfileEntry"/>): written by hand in a section, it stays as written while the
+    /// section keeps its model, and goes when the model changes.
     /// </summary>
     public const string ContextWindowTokensKey = "ContextWindowTokens";
 
@@ -172,6 +173,10 @@ public sealed class LlmProfilesSection
     internal static void WriteEntry(AppSettingsDocument document, string path, LlmProfileEntry entry)
     {
         var thinking = $"{path}:{ConfigurationKeys.ThinkingSection}";
+        // A window stated for the model the section held does not describe the one it gets: the engine
+        // would measure the new model's context against it. It goes with the model it was written for.
+        if (!string.Equals(document.GetString($"{path}:Model"), entry.Model, StringComparison.Ordinal))
+            document.Remove($"{path}:{ContextWindowTokensKey}");
         document.SetString($"{path}:BaseUrl", entry.BaseUrl);
         document.SetString($"{path}:Model", entry.Model);
         document.SetString($"{path}:{ConfigurationKeys.LlmApiKeyEnvVar}", entry.ApiKeyEnvVar);

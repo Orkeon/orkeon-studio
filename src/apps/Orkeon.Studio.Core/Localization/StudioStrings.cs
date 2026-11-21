@@ -697,6 +697,9 @@ public static class StudioStringKeys
     /// <summary>The same as <see cref="RunBlockedDecisionLadder"/>, while the CLI picks the settings file itself: a warning.</summary>
     public const string RunWarnDecisionLadder = "Studio.Run.WarnDecisionLadder";
 
+    /// <summary>A warning: {0} the agents and tasks on llm.profile: auto, {1} the rungs of the ladder that name no profile of the settings (<see cref="RunDecisionLadderUnknownRungs"/>).</summary>
+    public const string RunWarnDecisionLadderRung = "Studio.Run.WarnDecisionLadderRung";
+
     /// <summary>What is wrong with the ladder: there is none of two profiles or more.</summary>
     public const string RunDecisionLadderMissing = "Studio.Run.DecisionLadderMissing";
 
@@ -3309,8 +3312,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
             "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
         [StudioStringKeys.RunUseDecisionModels] = "Use the decision models (System One)",
         [StudioStringKeys.RunUseDecisionModelsHint] = "Unticked, the decision tasks go without them (--no-decision): each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider.",
-        [StudioStringKeys.RunBlockedDecisionProvider] = "The settings name a decision provider the engine refuses, so the CLI will not start: {0} Fix it in Settings › Decision models.",
-        [StudioStringKeys.RunWarnDecisionProvider] = "This machine's settings name a decision provider the engine refuses: unless the settings file the CLI picks says otherwise, it will not start. {0}",
+        [StudioStringKeys.RunBlockedDecisionProvider] = "The engine refuses the decision settings, so the CLI will not start: {0} Fix it in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionProvider] = "The engine refuses the decision settings of this machine: unless the settings file the CLI picks says otherwise, it will not start. {0}",
         [StudioStringKeys.RunBlockedDecisionRequired] = "This team cannot run without the decision models (System One): {0}. {1}",
         [StudioStringKeys.RunWarnDecisionRequiredUnknown] = "This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}",
         [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: tick « Use the decision models ».",
@@ -3321,6 +3324,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunDecisionNeedMode] = "it states decision.mode: required, so the engine refuses the run before its first task",
         [StudioStringKeys.RunBlockedDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.",
         [StudioStringKeys.RunWarnDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.",
+        [StudioStringKeys.RunWarnDecisionLadderRung] = "{0} let System One pick their profile (llm.profile: auto), and {1}: unless the run is given that profile another way, the engine refuses the team when it loads it.",
         [StudioStringKeys.RunDecisionLadderMissing] = "the settings give no ladder of two profiles or more to pick on",
         [StudioStringKeys.RunDecisionLadderUnknownRungs] = "the ladder names {0}, which is no model profile of the settings",
         [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
@@ -3410,7 +3414,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
         [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
         [StudioStringKeys.RunBlockedBridge] = "The tool bridge of these settings stops the run at start: {0}",
-        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Set the variable for your user account, then start Studio again.",
+        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Store the token in Settings › Limits & index, on the tool bridge's card.",
         [StudioStringKeys.RunInfoBridgeIdle] = "These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
         [StudioStringKeys.RunFolderNotAllowed] = "Not allowed",
         [StudioStringKeys.RunAllowThisFolder] = "Allow this folder",

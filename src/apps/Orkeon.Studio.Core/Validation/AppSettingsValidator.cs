@@ -147,14 +147,6 @@ public sealed class AppSettingsValidator
     }
 
     /// <summary>
-    /// The e-mail accounts (STUDIO-66), judged as the run will judge them: a broken account stops
-    /// no run — the engine sets it aside, and says why when a tool names it —, so each finding is
-    /// a warning in the engine's own sentence (<see cref="EmailAccountRules"/>) and the file saves.
-    /// The one error is a pair of account names, or of keys anywhere in the section
-    /// (<see cref="EmailTwinKeys"/>), equal but for the case and that set one same key: the JSON
-    /// configuration refuses a key written twice, and no run reads the file at all.
-    /// </summary>
-    /// <summary>
     /// The sections the engine validates at start with rules of its own, judged by those very rules: the
     /// compaction and the pruning of a context, the skills, and both sides of the tool bridge (which every
     /// host validates, the serving command or not). One error per refused value, at its key.
@@ -166,8 +158,20 @@ public sealed class AppSettingsValidator
             .Concat(document.ToolBridge.Problems())
             .Concat(document.BridgeServer.Problems()))
             messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path));
+
+        // Like Orkeon:Rag:LlmProfile: the profile may come from the environment a run is launched with.
+        if (document.Compaction.UnknownProfile() is { } unknown)
+            messages.Add(ValidationMessage.Warning(ValidationCodes.EngineSettingRefused, unknown.Problem, unknown.Path));
     }
 
+    /// <summary>
+    /// The e-mail accounts (STUDIO-66), judged as the run will judge them: a broken account stops
+    /// no run — the engine sets it aside, and says why when a tool names it —, so each finding is
+    /// a warning in the engine's own sentence (<see cref="EmailAccountRules"/>) and the file saves.
+    /// The one error is a pair of account names, or of keys anywhere in the section
+    /// (<see cref="EmailTwinKeys"/>), equal but for the case and that set one same key: the JSON
+    /// configuration refuses a key written twice, and no run reads the file at all.
+    /// </summary>
     private static void ValidateEmail(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var email = document.Email;

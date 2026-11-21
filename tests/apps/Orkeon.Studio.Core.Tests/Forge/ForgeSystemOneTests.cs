@@ -125,4 +125,51 @@ public sealed class ForgeSystemOneTests
         Assert.Null(older.TrialPass);
         Assert.Empty(older.Verdict!.Passes);
     }
+
+    /// <summary>
+    /// A crew that runs either way is judged once per pass. A criterion is as good as its worst finding,
+    /// whichever pass it comes from, and an <c>info</c> finding (a pass that was not run) fails nothing.
+    /// </summary>
+    [Fact]
+    public void A_two_pass_verdict_shows_each_criterion_by_its_worst_finding_and_an_info_finding_as_a_remark()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"brief.ready","brief":{"goal":"g","acceptance":[{"id":"A1","statement":"The summary names its sources","kind":"must"}]}}"""));
+        model.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"verdict.ready","score":0.4,"passing":false,"judge":"llm","suggestions":[],"findings":[{"id":"F1","severity":"minor","acceptance":"A1","statement":"one source is vague","circuit":"on"},{"id":"F2","severity":"major","acceptance":"A1","statement":"no source at all","circuit":"off"},{"id":"F-PASS-ON-SKIPPED","severity":"info","statement":"The trial ran without System One only","evidence":"no-provider","circuit":"off"}]}"""));
+
+        Assert.Equal(["on", "off", "off"], model.Verdict!.Findings.Select(finding => finding.Circuit));
+        var checklist = model.BuildChecklist();
+
+        var skipped = Assert.Single(checklist, line => line.Statement.StartsWith("The trial ran without", StringComparison.Ordinal));
+        Assert.True(skipped.IsRemark);
+        var criterion = Assert.Single(checklist, line => line.Statement == "The summary names its sources");
+        Assert.False(criterion.IsRemark);
+        Assert.Equal(false, criterion.Passed);
+        Assert.Contains("no source at all", criterion.Detail, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The options, the event and the fields above are the forge's own spelling, which Studio cannot
+    /// reference: each is read off the engine's source, where a rename would otherwise pass unseen.
+    /// </summary>
+    [Theory]
+    [InlineData("ForgeCommand.cs", "\"--crew-decision\"")]
+    [InlineData("ForgeCommand.cs", "\"--no-decision\"")]
+    [InlineData("ForgeSystemOne.cs", "\"systemone.answered\"")]
+    [InlineData("ForgeEventWriter.cs", "crewDecision =")]
+    [InlineData("ForgeEventWriter.cs", "forgeCircuit =")]
+    [InlineData("ForgeEventWriter.cs", "forgeCircuitCause =")]
+    [InlineData("ForgeCost.cs", "systemOneTokens =")]
+    [InlineData("ForgeRunStages.cs", "passes =")]
+    [InlineData("ForgeRunStages.cs", "pass =")]
+    [InlineData("ForgeRunStages.cs", "circuit =")]
+    [InlineData("ForgeRunStages.cs", "passing =")]
+    [InlineData("ForgeRunStages.cs", "Severity = \"info\"")]
+    public void What_Studio_reads_of_the_forge_is_spelt_as_the_forge_writes_it(string file, string spelling)
+    {
+        var source = File.ReadAllText(Path.Combine(
+            Orkeon.Studio.Tests.Shared.OrkeonSources.Root(), "src", "scripting", "Orkeon.Scripting.Cli", "Commands", "Forge", file));
+
+        Assert.Contains(spelling, source, StringComparison.Ordinal);
+    }
 }

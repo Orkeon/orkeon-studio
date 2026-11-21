@@ -119,6 +119,20 @@ public sealed record ForgeFindingView(
     /// <summary>Whether this finding blocks — a minor one must not look the same.</summary>
     public bool IsBlocking =>
         string.Equals(Severity, SeverityBlocking, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The pass of the trial the finding comes from, <c>on</c> (with the decision models) or <c>off</c>,
+    /// for a crew that runs either way and is tried twice; null for a single-pass trial.
+    /// </summary>
+    public string? Circuit { get; init; }
+
+    /// <summary>
+    /// Whether the finding fails nothing: a <c>minor</c> one, a remark on a criterion met, or an
+    /// <c>info</c> one, a fact of the trial itself (a pass that was not run, say).
+    /// </summary>
+    public bool IsRemark =>
+        string.Equals(Severity, "minor", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Severity, "info", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>One suggestion of the verdict.</summary>
@@ -775,13 +789,17 @@ public sealed class ForgeSessionModel
             var orphaned = string.IsNullOrWhiteSpace(finding.Acceptance)
                 || !_criteria.Any(c => string.Equals(c.Id, finding.Acceptance, StringComparison.OrdinalIgnoreCase));
             if (orphaned)
-                items.Add(new ForgeChecklistItem(finding.Statement, false, finding.Evidence, IsRemark: IsRemark(finding)));
+                items.Add(new ForgeChecklistItem(finding.Statement, false, finding.Evidence, IsRemark: finding.IsRemark));
         }
 
         foreach (var criterion in _criteria)
         {
-            var finding = verdict.Findings.FirstOrDefault(f =>
-                string.Equals(f.Acceptance, criterion.Id, StringComparison.OrdinalIgnoreCase));
+            // A crew that runs either way is judged once per pass: the criterion is as good as its
+            // worst finding, so a pass that fails it is never hidden by one that only remarks on it.
+            var finding = verdict.Findings
+                .Where(f => string.Equals(f.Acceptance, criterion.Id, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(f => f.IsRemark)
+                .FirstOrDefault();
             items.Add(BuildChecklistItem(criterion, finding, verdict.Judge));
         }
 
@@ -810,12 +828,8 @@ public sealed class ForgeSessionModel
             : finding.Statement;
         // UX lot 05 (019, 020): a major or blocking finding fails the criterion — the engine
         // judges such a verdict not passing; only a minor one is a remark on a criterion met.
-        return new ForgeChecklistItem(criterion.Statement, false, detail, IsRemark: IsRemark(finding));
+        return new ForgeChecklistItem(criterion.Statement, false, detail, IsRemark: finding.IsRemark);
     }
-
-    /// <summary>Whether a finding blocks nothing — a minor one: the criterion stays met, with a remark.</summary>
-    private static bool IsRemark(ForgeFindingView f) =>
-        string.Equals(f.Severity, "minor", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The <c>id</c> of the event's <c>reference</c> object; null when there is none.</summary>
     private static string? ReadReferenceId(OrkeonEvent orkeonEvent) =>
@@ -1272,7 +1286,10 @@ public sealed class ForgeSessionModel
                     ReadString(finding, "severity") ?? "",
                     ReadString(finding, "acceptance"),
                     ReadString(finding, "statement") ?? "",
-                    ReadString(finding, "evidence")));
+                    ReadString(finding, "evidence"))
+                {
+                    Circuit = ReadString(finding, "circuit"),
+                });
             }
         }
 

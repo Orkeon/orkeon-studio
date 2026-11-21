@@ -235,7 +235,7 @@ public sealed record RunAgentNote(RunAgentNoteKind Kind, string? TaskId, string?
     /// <summary>The context's tokens after a compaction, or the tokens a pruning freed.</summary>
     public long? TokensAfter { get; init; }
 
-    /// <summary>The tool results a pruning cut.</summary>
+    /// <summary>The tool results a pruning took out of the context: those cut to their head and those dropped.</summary>
     public long? Count { get; init; }
 }
 
@@ -830,7 +830,8 @@ public sealed class RunProgressModel
     {
         _agentNotes.Add(new RunAgentNote(RunAgentNoteKind.Pruned, orkeonEvent.GetString("taskId"), orkeonEvent.GetString("agentRole"))
         {
-            Count = orkeonEvent.GetInt64("cut"),
+            // Cut (shortened to their head) and dropped (removed) alike left the context.
+            Count = (orkeonEvent.GetInt64("cut") ?? 0) + (orkeonEvent.GetInt64("dropped") ?? 0),
             TokensAfter = orkeonEvent.GetInt64("freedTokens"),
         });
         return true;

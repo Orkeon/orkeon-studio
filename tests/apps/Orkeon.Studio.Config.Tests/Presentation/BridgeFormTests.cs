@@ -55,9 +55,9 @@ public sealed class BridgeFormTests
         Assert.False(document.ContainsPath("Orkeon:Tools:Bridge:Address"));
         Assert.False(document.ContainsPath("Orkeon:Tools:Bridge:Allow"));
         // What the screen does not show stays.
-        Assert.Equal(1048576, document.ToolBridge.MaxFileBytes);
+        Assert.Equal(1048576, document.GetInt32("Orkeon:Tools:Bridge:MaxFileBytes"));
         Assert.Equal(["browser_open", "browser_click"], document.BridgeServer.Allow);
-        Assert.Equal("DESK_TOKEN", document.BridgeServer.EffectiveTokenEnvVar);
+        Assert.Equal("DESK_TOKEN", document.BridgeServer.TokenEnvVar);
         Assert.StartsWith("No bridge", form.Status, StringComparison.Ordinal);
     }
 
@@ -78,5 +78,43 @@ public sealed class BridgeFormTests
 
         Assert.Contains(errors, error => error.Contains(reason, StringComparison.Ordinal));
         Assert.Equal(before, document.ToJson());
+    }
+
+    /// <summary>
+    /// The screen shows nine of the bridge's keys: a refused value of another one (a limit, a size) is
+    /// the JSON file's to fix and the settings check's to report, and must not lock the fields shown.
+    /// </summary>
+    [Fact]
+    public void A_refused_key_the_screen_does_not_show_blocks_no_edit()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Bridge":{"MaxSessions":0}}}""");
+        var form = new BridgeForm(_ => null);
+        form.LoadFrom(document);
+
+        form.ServeAllow = "browser_open";
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.Equal(["browser_open"], document.BridgeServer.Allow);
+        Assert.Equal(0, document.GetInt32("Orkeon:Bridge:MaxSessions"));
+    }
+
+    /// <summary>
+    /// A field left as loaded is not written: a list the file writes in a shape the field cannot show
+    /// (here an object, which the engine reads as a list) survives an apply that edits something else.
+    /// </summary>
+    [Fact]
+    public void A_field_left_as_loaded_is_not_rewritten()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":{"0":"*"}}}}}""");
+        var form = new BridgeForm(_ => "0123456789abcdef0123456789abcdef");
+        form.LoadFrom(document);
+        Assert.Equal("", form.Allow);
+
+        form.HostHeader = "desk.example:7410";
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.True(document.ContainsPath("Orkeon:Tools:Bridge:Allow:0"));
+        Assert.True(document.ToolBridge.IsEnabled);
+        Assert.Equal("desk.example:7410", document.ToolBridge.HostHeader);
     }
 }

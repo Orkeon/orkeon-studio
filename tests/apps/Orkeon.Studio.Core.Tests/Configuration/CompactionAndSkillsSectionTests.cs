@@ -80,12 +80,15 @@ public sealed class CompactionAndSkillsSectionTests
     [InlineData("""{ "Orkeon": { "Compaction": { "TriggerShare": 1.5 } } }""", "Orkeon:Compaction:TriggerShare")]
     [InlineData("""{ "Orkeon": { "Compaction": { "KeepRecentTurns": -1 } } }""", "Orkeon:Compaction:KeepRecentTurns")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Profile": "auto" } } }""", "Orkeon:Compaction:Profile")]
-    [InlineData("""{ "Orkeon": { "Compaction": { "Profile": "missing" } } }""", "Orkeon:Compaction:Profile")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "FillShare": 0 } } } }""", "Orkeon:Compaction:Prune:FillShare")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "HeadChars": 0 } } } }""", "Orkeon:Compaction:Prune:HeadChars")]
     [InlineData("""{ "Orkeon": { "Skills": { "Library": "skills" } } }""", "Orkeon:Skills:Library")]
     [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": 0 } } }""", "Orkeon:Skills:MaxSkillChars")]
     [InlineData("""{ "Orkeon": { "Skills": { "MaxBlockChars": 100 } } }""", "Orkeon:Skills:MaxBlockChars")]
+    [InlineData("""{ "Orkeon": { "Skills": { "Libary": "/x" } } }""", "Orkeon:Skills:Libary")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "TrigerShare": 0.5 } } }""", "Orkeon:Compaction:TrigerShare")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "Head": 3 } } } }""", "Orkeon:Compaction:Prune:Head")]
+    [InlineData("""{ "orkeon": { "compaction": { "triggerShare": 2 } } }""", "Orkeon:Compaction:TriggerShare")]
     public void A_value_the_engines_start_refuses_is_an_error_at_its_key(string json, string path)
     {
         var messages = new AppSettingsValidator().Validate(AppSettingsDocument.Parse(json));
@@ -96,13 +99,13 @@ public sealed class CompactionAndSkillsSectionTests
     }
 
     [Fact]
-    public void A_value_the_binder_cannot_convert_is_an_error_at_its_section()
+    public void A_value_the_binder_cannot_convert_is_an_error_at_its_key()
     {
         var messages = new AppSettingsValidator().Validate(
             AppSettingsDocument.Parse("""{ "Orkeon": { "Compaction": { "KeepRecentTurns": "many" } } }"""));
 
         var error = Assert.Single(messages, m => m.Code == ValidationCodes.EngineSettingRefused);
-        Assert.Equal(CompactionSection.SectionPath, error.Path);
+        Assert.Equal("Orkeon:Compaction:KeepRecentTurns", error.Path);
         Assert.Contains("many", error.Text, StringComparison.Ordinal);
     }
 
@@ -122,10 +125,10 @@ public sealed class CompactionAndSkillsSectionTests
     /// <summary>
     /// The window a compaction measures against: above zero, in the default section and in a profile's.
     /// A profile's entry does not model it, so the one written by hand in a profile survives a save of
-    /// that profile.
+    /// that profile, until the profile gets another model.
     /// </summary>
     [Fact]
-    public void A_context_window_is_above_zero_and_a_profiles_own_survives_its_save()
+    public void A_context_window_is_above_zero_and_stays_with_the_model_it_was_written_for()
     {
         var document = AppSettingsDocument.Parse("""
             { "Llm": { "Model": "small", "ContextWindowTokens": 0,
@@ -141,8 +144,39 @@ public sealed class CompactionAndSkillsSectionTests
 
         var entry = document.Llm.Profiles.Get("big");
         Assert.NotNull(entry);
-        Assert.True(document.Llm.Profiles.Set(entry with { Model = "larger" }));
+        Assert.True(document.Llm.Profiles.Set(entry with { Temperature = 0.2 }));
         Assert.Equal(1000000, document.GetInt32("Llm:Profiles:big:ContextWindowTokens"));
         Assert.Equal(128000, document.Llm.ContextWindowTokens);
+
+        // The window was stated for that model: another model in the section does not inherit it.
+        Assert.True(document.Llm.Profiles.Set(entry with { Model = "small-local" }));
+        Assert.False(document.ContainsPath("Llm:Profiles:big:ContextWindowTokens"));
+        Assert.Equal(128000, document.Llm.ContextWindowTokens);
+    }
+
+    /// <summary>
+    /// The engine registers the decision profiles as profiles too: one of them may write the summary.
+    /// A profile these settings do not define is the engine's refusal, said as a warning: a run launched
+    /// from Studio is given Studio's own model profiles through its environment.
+    /// </summary>
+    [Fact]
+    public void A_summary_profile_may_be_a_decision_profile_and_an_unknown_one_only_warns()
+    {
+        var guarded = AppSettingsDocument.Parse("""
+            { "Orkeon": { "Decision": { "Profiles": { "Guarded": { "Target": "default" } } }, "Compaction": { "Profile": "guarded" } } }
+            """);
+        Assert.Empty(guarded.Compaction.Problems());
+        Assert.Null(guarded.Compaction.UnknownProfile());
+        Assert.DoesNotContain(new AppSettingsValidator().Validate(guarded), m => m.Code == ValidationCodes.EngineSettingRefused);
+
+        var missing = AppSettingsDocument.Parse("""{ "Orkeon": { "Compaction": { "Profile": "missing" } } }""");
+        Assert.Empty(missing.Compaction.Problems());
+        var warning = Assert.Single(new AppSettingsValidator().Validate(missing), m => m.Code == ValidationCodes.EngineSettingRefused);
+        Assert.Equal(ValidationSeverity.Warning, warning.Severity);
+        Assert.Equal("Orkeon:Compaction:Profile", warning.Path);
+        // The engine's own sentence, built by its public helper.
+        Assert.Equal(
+            Orkeon.Application.Interfaces.Ports.LlmProfiles.UnknownMessage("missing", "Orkeon:Compaction:Profile", []),
+            warning.Text);
     }
 }

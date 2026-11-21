@@ -56,6 +56,9 @@ public static class ForgeSessionHydrator
             ["dir"] = sessionDirectory,
             ["format"] = session["format"]?.DeepClone(),
             ["reference"] = session["reference"]?.DeepClone(),
+            // The decision mode the session designs its crew for: a session parked on the disk shows it
+            // before any engine run states it again.
+            ["crewDecision"] = session["crewDecision"]?.DeepClone(),
             ["resumed"] = true,
         };
         Feed(model, envelope.ToJsonString());

@@ -130,8 +130,8 @@ public sealed partial record CrewDecisionUsage(
 
     /// <summary>
     /// What the team or crew folder <paramref name="teamPath"/> asks of the decision models, for a team's
-    /// card. The engine's loader reads the crew only when one of its YAML files names a decision or the
-    /// tool: a list of cards loads no crew that asks nothing. A crew it cannot read is
+    /// card. The engine's loader reads the crew only when one of its YAML files names a decision, the
+    /// tool, or a word System One's picks are asked with (<c>auto</c>, <c>prune</c>): a list of cards loads no crew that asks nothing. A crew it cannot read is
     /// <see cref="CrewDecisionMode.None"/>, the Launch screen judging it again before a run.
     /// </summary>
     public static CrewDecisionMode ModeOfTeam(string? teamPath)
@@ -169,13 +169,19 @@ public sealed partial record CrewDecisionUsage(
     {
         var holders = new List<string>();
         var others = new List<CrewSystemOneUse>();
+        // The engine routes an agent's tasks: a manager or a without: relay that no task is assigned to
+        // runs on the default profile even on llm.profile: auto, and needs no ladder (CrewFactory.UnroutedAgents).
+        var relays = crew.Tasks.Select(task => task.Decision?.Without?.Agent).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var assigned = crew.Tasks.Select(task => task.AssignedAgentId).Where(id => id is not null).ToHashSet();
         foreach (var agent in crew.Agents)
         {
             var key = CrewDeliverableWriters.KeyOf(agent);
             if (HoldsDecideTool(agent.Tools))
                 holders.Add(key);
 
-            AddLlmUses(others, key, agent.LlmConfig?.Profile, agent.LlmConfig?.Thinking);
+            var unrouted = !assigned.Contains(agent.Id)
+                && (agent.Id.Equals(crew.ManagerAgentId) || relays.Contains(agent.Key ?? agent.Role));
+            AddLlmUses(others, key, unrouted ? null : agent.LlmConfig?.Profile, agent.LlmConfig?.Thinking);
             if (agent.Skills is { Auto: true })
                 others.Add(new CrewSystemOneUse(CrewSystemOneUseKind.SkillsAuto, key));
             if (agent.Compaction is { Prune: true })

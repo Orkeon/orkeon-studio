@@ -1314,6 +1314,12 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Whether the mode can still be chosen: until a session exists. A session keeps the mode it was
+    /// created with, and the engine refuses another.
+    /// </summary>
+    public bool CanChooseCrewDecision => string.IsNullOrEmpty(_model.Slug);
+
+    /// <summary>
     /// Whether the assistant composes without asking the decision models for its own work
     /// (<c>orkeon forge --no-decision</c>): each run of the assistant, a resume included.
     /// </summary>
@@ -2438,6 +2444,11 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         // Another creation than the one under way: its Folders step stays with it.
         ClearFolderStep();
         ForgetUseCases();
+        // What the team asks of System One, and the assistant's own switch, were that creation's: a
+        // mode a resumed session stated must not become the next team's.
+        _crewDecision = ForgeCrewDecisions.None;
+        _designWithoutSystemOne = false;
+        OnPropertiesChanged(nameof(SelectedCrewDecision), nameof(DesignWithoutSystemOne));
         ResetProjection();
         ForgeSessionHydrator.Hydrate(_model, solution.Directory);
         // The folders it confirmed come back bound as they were (STUDIO-46).
@@ -3078,6 +3089,11 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         // started from (STUDIO-39).
         ClearFolderStep();
         ForgetUseCases();
+        // So do what the team asks of System One and the assistant's own switch: the next team starts
+        // on the engine's default, whatever the session being left stated.
+        _crewDecision = ForgeCrewDecisions.None;
+        _designWithoutSystemOne = false;
+        OnPropertiesChanged(nameof(SelectedCrewDecision), nameof(DesignWithoutSystemOne));
         ResetProjection();
         // The conversation belongs to the creation being ended — unlike ResetProjection,
         // which also runs at the START of a compose and must leave the interview's answers
@@ -3379,6 +3395,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
     private void SyncFromModel()
     {
+        OnPropertyChanged(nameof(CanChooseCrewDecision));
         // The mode the session was created with, once the engine states it: the list shows it.
         if (_model.CrewDecision is { } stated && stated != _crewDecision)
         {

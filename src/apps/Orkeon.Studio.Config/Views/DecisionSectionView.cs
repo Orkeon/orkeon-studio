@@ -46,7 +46,8 @@ internal sealed class DecisionSectionView : SectionView
         _routeLadder = FormLayout.AddField(this, y, "Profiles to pick among", _form.RouteLadder);
         _effortLevels = FormLayout.AddField(this, y + 1, "Thinking levels", _form.EffortLevels);
         FormLayout.AddNote(this, y + 2, DecisionForm.PicksNotice);
-        y += 4;
+        FormLayout.AddNote(this, y + 3, DecisionForm.LevelsNotice);
+        y += 5;
         FormLayout.AddNote(this, y, DecisionForm.KeysNotice);
         FormLayout.AddNote(this, y + 1, DecisionForm.SectionsNotice);
         _status = FormLayout.AddText(this, y + 3, _form.Status);

@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
+using Microsoft.Extensions.Configuration;
 
 namespace Orkeon.Studio.Core.Configuration;
 
@@ -6,9 +8,11 @@ namespace Orkeon.Studio.Core.Configuration;
 /// The serving side of the tool bridge (<c>Orkeon:Bridge</c>): the tools <c>orkeon bridge serve</c> runs
 /// on this machine for a caller on another. Nothing is served while <see cref="Allow"/> is empty. Every
 /// host validates the section at start, the serving command or not: a value it refuses stops every
-/// run. The engine's options class is internal, so the defaults are copied (pinned against the engine's
-/// settings catalogue by <c>ToolBridgeDefaultsDriftTests</c>) and the rules restated
-/// (<see cref="ToolBridgeRules"/>).
+/// run. The engine's options class is internal: the section is bound by the configuration binder onto
+/// a class of the same shape (<see cref="Values"/>) and the rules are restated
+/// (<see cref="ToolBridgeRules"/>), both held to the engine by <c>ToolBridgeRulesOracleTests</c> and
+/// <c>ToolBridgeSectionTests</c>. What only the serving command refuses (its own token, an https prefix
+/// off Windows, a name that is no bridgeable tool) is not judged here.
 /// </summary>
 public sealed class BridgeServerSection
 {
@@ -53,99 +57,85 @@ public sealed class BridgeServerSection
     internal BridgeServerSection(AppSettingsDocument document) => _document = document;
 
     /// <summary>True when the section carries at least one key.</summary>
-    public bool Exists => _document.SectionExists(SectionPath);
+    public bool Exists => _document.SectionExists(_document.PathAsWritten(SectionPath));
 
     /// <summary>The listener's prefix; null lets <see cref="DefaultPrefix"/> stand.</summary>
     public string? Prefix
     {
-        get => _document.GetString($"{SectionPath}:Prefix");
-        set => _document.SetString($"{SectionPath}:Prefix", Blank(value));
+        get => _document.GetString(Key("Prefix"));
+        set => _document.SetString(Key("Prefix"), Blank(value));
     }
 
     /// <summary>The environment variable that holds the token; null lets the default stand.</summary>
     public string? TokenEnvVar
     {
-        get => _document.GetString($"{SectionPath}:TokenEnvVar");
-        set => _document.SetString($"{SectionPath}:TokenEnvVar", Blank(value));
+        get => _document.GetString(Key("TokenEnvVar"));
+        set => _document.SetString(Key("TokenEnvVar"), Blank(value));
     }
-
-    /// <summary>The variable the serving command reads the token from: the one the section names, else the default.</summary>
-    public string EffectiveTokenEnvVar =>
-        TokenEnvVar is { } named && !string.IsNullOrWhiteSpace(named) ? named : ToolBridgeSection.DefaultTokenEnvVar;
 
     /// <summary>The tools served, by name, or the lone <c>*</c> for every bridgeable Orkeon tool.</summary>
     public IReadOnlyList<string> Allow
     {
-        get => _document.GetStringArray($"{SectionPath}:Allow");
+        get => _document.GetStringArray(Key("Allow"));
         set => SetList("Allow", value);
     }
 
     /// <summary>The tools never served, by name; a name here wins over <see cref="Allow"/>.</summary>
     public IReadOnlyList<string> Deny
     {
-        get => _document.GetStringArray($"{SectionPath}:Deny");
+        get => _document.GetStringArray(Key("Deny"));
         set => SetList("Deny", value);
     }
 
-    /// <summary>A key of the section as the file writes it, for the fields Studio shows as text; empty when absent.</summary>
-    public string Written(string key) => _document.GetWritten($"{SectionPath}:{key}");
-
-    /// <summary>Whether <c>orkeon bridge serve</c> serves anything with this file: a tool allowed.</summary>
-    public bool IsServing => Allow.Count > 0;
-
     /// <summary>
-    /// What the host's start refuses in the section, in the engine's words and order, each with the
-    /// path of its key; empty when the section is accepted. A value the binder cannot convert stops the
-    /// start before any rule is read: it is then all that is said.
+    /// What the host's start refuses in the section, each with the path of its key; empty when the
+    /// section is accepted. A value the binder cannot convert stops the start before any rule is read:
+    /// it is then all that is said, the first one only, as the host says it. Then the engine's rules, in
+    /// the engine's words and order, and the keys that are no setting of the section.
     /// </summary>
     public IReadOnlyList<(string Path, string Problem)> Problems()
     {
+        var configuration = DecisionSection.ToConfiguration(_document.Root);
         var problems = new List<(string, string)>();
-        var counts = new[] { "MaxSessions", "MaxConcurrentCalls", "MaxCallsPerSession", "MaxRunsPerSession" };
-        var defaults = new[] { DefaultMaxSessions, DefaultMaxConcurrentCalls, DefaultMaxCallsPerSession, DefaultMaxRunsPerSession };
-        var values = new long[counts.Length];
-        for (var i = 0; i < counts.Length; i++)
-            values[i] = ToolBridgeValues.Int32(_document, SectionPath, counts[i], defaults[i], problems);
-        var request = ToolBridgeValues.Int64(_document, SectionPath, "MaxRequestBytes", DefaultMaxRequestBytes, problems);
-        var files = ToolBridgeValues.Int64(_document, SectionPath, "MaxFileBytes", ToolBridgeSection.DefaultMaxFileBytes, problems);
-        var heartbeat = ToolBridgeValues.Duration(_document, SectionPath, "HeartbeatWindow", DefaultHeartbeatWindow, problems);
-        var read = ToolBridgeValues.Duration(_document, SectionPath, "RequestReadTimeout", DefaultRequestReadTimeout, problems);
-        var stop = ToolBridgeValues.Duration(_document, SectionPath, "StopTimeout", DefaultStopTimeout, problems);
-        if (problems.Count > 0)
+        var values = new Values();
+        if (!SettingsBinding.TryBind(configuration, SectionPath, values, problems))
             return problems;
 
         void Say(string key, string problem) => problems.Add(($"{SectionPath}:{key}", problem));
-        for (var i = 0; i < counts.Length; i++)
+        foreach (var (key, value) in new[]
         {
-            if (values[i] < 1 || values[i] > ToolBridgeRules.MaxCountLimit)
-                Say(counts[i], $"{SectionPath}:{counts[i]} must lie between 1 and {ToolBridgeRules.MaxCountLimit}.");
+            (nameof(Values.MaxSessions), values.MaxSessions), (nameof(Values.MaxConcurrentCalls), values.MaxConcurrentCalls),
+            (nameof(Values.MaxCallsPerSession), values.MaxCallsPerSession), (nameof(Values.MaxRunsPerSession), values.MaxRunsPerSession),
+        })
+        {
+            if (value < 1 || value > ToolBridgeRules.MaxCountLimit)
+                Say(key, $"{SectionPath}:{key} must lie between 1 and {ToolBridgeRules.MaxCountLimit}.");
         }
 
-        if (read < TimeSpan.FromSeconds(1) || read > ToolBridgeRules.MaxTimeout)
+        if (values.RequestReadTimeout < TimeSpan.FromSeconds(1) || values.RequestReadTimeout > ToolBridgeRules.MaxTimeout)
             Say("RequestReadTimeout", $"{SectionPath}:RequestReadTimeout must lie between 00:00:01 and {ToolBridgeRules.MaxTimeout}.");
-        if (stop < TimeSpan.Zero || stop > ToolBridgeRules.MaxTimeout)
+        if (values.StopTimeout < TimeSpan.Zero || values.StopTimeout > ToolBridgeRules.MaxTimeout)
             Say("StopTimeout", $"{SectionPath}:StopTimeout must lie between 00:00:00 and {ToolBridgeRules.MaxTimeout}.");
-        // An absent key leaves the engine's default; a key written blank is read as an empty address.
-        var prefix = _document.ContainsPath($"{SectionPath}:Prefix") ? Written("Prefix") : DefaultPrefix;
-        if (ToolBridgeRules.AddressProblem(prefix, $"{SectionPath}:Prefix") is { } prefixProblem)
-            Say("Prefix", prefixProblem);
-        if (ToolBridgeValues.IsBlankWritten(_document, SectionPath, "TokenEnvVar"))
+        if (ToolBridgeRules.AddressProblem(values.Prefix, $"{SectionPath}:Prefix") is { } prefix)
+            Say("Prefix", prefix);
+        if (string.IsNullOrWhiteSpace(values.TokenEnvVar))
             Say("TokenEnvVar", $"{SectionPath}:TokenEnvVar names no environment variable.");
-        if (request <= 0)
+        if (values.MaxRequestBytes <= 0)
             Say("MaxRequestBytes", $"{SectionPath}:MaxRequestBytes must be positive.");
-        if (files <= 0)
+        if (values.MaxFileBytes <= 0)
             Say("MaxFileBytes", $"{SectionPath}:MaxFileBytes must be positive.");
-        if (heartbeat < TimeSpan.FromSeconds(1) || heartbeat > ToolBridgeRules.MaxTimeout)
+        if (values.HeartbeatWindow < TimeSpan.FromSeconds(1) || values.HeartbeatWindow > ToolBridgeRules.MaxTimeout)
             Say("HeartbeatWindow", $"{SectionPath}:HeartbeatWindow must lie between {TimeSpan.FromSeconds(1)} and {ToolBridgeRules.MaxTimeout}.");
-        problems.AddRange(ToolBridgeValues.Selection(_document, SectionPath));
+        problems.AddRange(ToolBridgeRules.SelectionProblems(SectionPath, values.Allow, values.Deny)
+            .Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
+        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
         return problems;
     }
 
     /// <summary>Removes the whole section.</summary>
-    public void Remove() => _document.Remove(SectionPath);
+    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
 
-    /// <summary>Writes a key of the section from a field's text; blank removes it.</summary>
-    public void Write(string key, string? text) => _document.SetString($"{SectionPath}:{key}", Blank(text));
+    private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
@@ -153,64 +143,43 @@ public sealed class BridgeServerSection
     {
         ArgumentNullException.ThrowIfNull(values);
         if (values.Count == 0)
-            _document.Remove($"{SectionPath}:{key}");
+            _document.Remove(Key(key));
         else
-            _document.SetStringArray($"{SectionPath}:{key}", values);
-    }
-}
-
-/// <summary>Reads the values of a bridge section as the host's binder does, a default standing for an absent key.</summary>
-internal static class ToolBridgeValues
-{
-    /// <summary>Whether the key is written with no value, or a blank one: the binder then reads an empty text.</summary>
-    public static bool IsBlankWritten(AppSettingsDocument document, string section, string key) =>
-        document.ContainsPath($"{section}:{key}") && string.IsNullOrWhiteSpace(document.GetWritten($"{section}:{key}"));
-
-    public static long Int64(AppSettingsDocument document, string section, string key, long fallback, List<(string, string)> problems)
-    {
-        var path = $"{section}:{key}";
-        var written = document.GetWritten(path);
-        if (string.IsNullOrWhiteSpace(written))
-            return fallback;
-        if (long.TryParse(written.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return value;
-        problems.Add((path, ToolBridgeRules.ConversionProblem(written, path, typeof(long))));
-        return fallback;
+            _document.SetStringArray(Key(key), values);
     }
 
-    public static long Int32(AppSettingsDocument document, string section, string key, int fallback, List<(string, string)> problems)
+    /// <summary>
+    /// The section as the engine's <c>ToolBridgeServerOptions</c> shapes it: the same property names,
+    /// types, defaults and order, so the binder reads the file here as it does there and stops on the
+    /// same first value. Its public properties are the section's settings, and nothing else may be
+    /// public on it.
+    /// </summary>
+    internal sealed class Values
     {
-        var path = $"{section}:{key}";
-        var written = document.GetWritten(path);
-        if (string.IsNullOrWhiteSpace(written))
-            return fallback;
-        if (int.TryParse(written.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
-            return value;
-        problems.Add((path, ToolBridgeRules.ConversionProblem(written, path, typeof(int))));
-        return fallback;
-    }
+        public string Prefix { get; set; } = DefaultPrefix;
 
-    public static TimeSpan Duration(AppSettingsDocument document, string section, string key, string fallback, List<(string, string)> problems)
-    {
-        var path = $"{section}:{key}";
-        var written = document.GetWritten(path);
-        if (string.IsNullOrWhiteSpace(written))
-            return TimeSpan.Parse(fallback, CultureInfo.InvariantCulture);
-        if (ToolBridgeRules.TryReadDuration(written.Trim(), out var value))
-            return value;
-        problems.Add((path, ToolBridgeRules.ConversionProblem(written, path, typeof(TimeSpan))));
-        return TimeSpan.Parse(fallback, CultureInfo.InvariantCulture);
-    }
+        public string TokenEnvVar { get; set; } = ToolBridgeSection.DefaultTokenEnvVar;
 
-    /// <summary>The problems of the section's <c>Allow</c> and <c>Deny</c>, each at its list's path.</summary>
-    public static IEnumerable<(string, string)> Selection(AppSettingsDocument document, string section)
-    {
-        foreach (var key in new[] { "Allow", "Deny" })
-        {
-            var entries = document.GetStringArray($"{section}:{key}");
-            var (allow, deny) = key == "Allow" ? (entries, (IReadOnlyList<string>)[]) : ([], entries);
-            foreach (var problem in ToolBridgeRules.SelectionProblems(section, allow, deny))
-                yield return ($"{section}:{key}", problem);
-        }
+        public Collection<string> Allow { get; } = [];
+
+        public Collection<string> Deny { get; } = [];
+
+        public long MaxRequestBytes { get; set; } = DefaultMaxRequestBytes;
+
+        public long MaxFileBytes { get; set; } = ToolBridgeSection.DefaultMaxFileBytes;
+
+        public TimeSpan HeartbeatWindow { get; set; } = TimeSpan.Parse(DefaultHeartbeatWindow, CultureInfo.InvariantCulture);
+
+        public int MaxSessions { get; set; } = DefaultMaxSessions;
+
+        public int MaxConcurrentCalls { get; set; } = DefaultMaxConcurrentCalls;
+
+        public int MaxCallsPerSession { get; set; } = DefaultMaxCallsPerSession;
+
+        public int MaxRunsPerSession { get; set; } = DefaultMaxRunsPerSession;
+
+        public TimeSpan RequestReadTimeout { get; set; } = TimeSpan.Parse(DefaultRequestReadTimeout, CultureInfo.InvariantCulture);
+
+        public TimeSpan StopTimeout { get; set; } = TimeSpan.Parse(DefaultStopTimeout, CultureInfo.InvariantCulture);
     }
 }

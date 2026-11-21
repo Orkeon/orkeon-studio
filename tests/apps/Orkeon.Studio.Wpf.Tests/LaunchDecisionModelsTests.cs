@@ -121,7 +121,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.Contains("'writer'", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.Contains("No decision provider is configured", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.False(tab.RunCommand.CanExecute(null));
-        // A check stays offered: it reports the engine's unknown-tool line, and starts no agent.
+        // A check stays offered: it loads the crew, reports the withheld tool as a warning, and starts no agent.
         Assert.True(tab.ValidateCommand.CanExecute(null));
         // The action bar says why « Launch now » is greyed, and the team tab is amber.
         Assert.Equal(tab.DecisionMessage, tab.LaunchBlockedReason);

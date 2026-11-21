@@ -20,6 +20,7 @@ internal sealed class BridgeSectionView : SectionView
         _form = form ?? throw new ArgumentNullException(nameof(form));
 
         FormLayout.AddNote(this, 0, BridgeForm.Notice);
+        FormLayout.AddNote(this, 1, BridgeForm.JsonNotice);
         FormLayout.AddNote(this, 2, "Tools that run on another machine (Orkeon:Tools:Bridge)");
         Add(3, "  Address of the bridge", () => _form.Address, v => _form.Address = v);
         Add(4, "  Tools to bridge", () => _form.Allow, v => _form.Allow = v);

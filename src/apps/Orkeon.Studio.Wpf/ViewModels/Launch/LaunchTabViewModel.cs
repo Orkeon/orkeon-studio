@@ -1718,8 +1718,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                     finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionProvider : StudioStringKeys.RunWarnDecisionProvider,
                     finding.Status?.Refusal ?? "");
             case DecisionPreflightKind.RouteWithoutLadder:
+                // A rung that names no profile of the file only warns: the run is given Studio's own
+                // model profiles besides. No ladder at all is the engine's refusal.
                 return _strings.Format(
-                    finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionLadder : StudioStringKeys.RunWarnDecisionLadder,
+                    finding.Status is { HasRouteLadder: true } ? StudioStringKeys.RunWarnDecisionLadderRung
+                    : finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionLadder
+                    : StudioStringKeys.RunWarnDecisionLadder,
                     Quoted(finding.RoutedHolders),
                     LadderFault(finding.Status));
             case DecisionPreflightKind.RequiredWithoutModel:

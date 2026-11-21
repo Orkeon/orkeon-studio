@@ -142,6 +142,23 @@ public sealed class DecisionSection
     /// </summary>
     internal const int MaxProbedRungs = 8;
 
+    /// <summary>
+    /// What the host's start refuses in a ladder and in a list of levels, by the engine's own rules
+    /// (<c>AgentRouteOptions.Problems</c>, <c>AgentEffortOptions.Problems</c>); empty when both are accepted.
+    /// </summary>
+    public static IReadOnlyList<string> PickProblems(IReadOnlyList<string> ladder, IReadOnlyList<string> levels)
+    {
+        ArgumentNullException.ThrowIfNull(ladder);
+        ArgumentNullException.ThrowIfNull(levels);
+        var route = new AgentRouteOptions();
+        foreach (var rung in ladder)
+            route.Ladder.Add(rung);
+        var effort = new AgentEffortOptions();
+        foreach (var level in levels)
+            effort.Levels.Add(level);
+        return [.. AgentRouteOptions.Problems(route), .. AgentEffortOptions.Problems(effort)];
+    }
+
     private void SetList(string path, IReadOnlyList<string> values)
     {
         ArgumentNullException.ThrowIfNull(values);
@@ -268,13 +285,23 @@ public sealed class DecisionSection
 
         refusal = null;
         ladder = [.. route.Ladder.Select(rung => rung.Trim())];
-        var offered = configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren()
-            .Concat(configuration.GetSection(ProfilesPath).GetChildren())
-            .Select(profile => profile.Key)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        unknownRungs = [.. ladder.Where(rung => !LlmProfiles.IsDefault(rung) && !offered.Contains(rung))];
+        var offered = ProfilesOf(configuration);
+        unknownRungs = [.. ladder.Where(rung => !LlmProfiles.IsDefault(rung) && !offered.Contains(rung, StringComparer.OrdinalIgnoreCase))];
         return true;
     }
+
+    /// <summary>
+    /// The names a crew, a ladder or the compaction may put for a profile besides the default, as these
+    /// settings define them: the model profiles (<c>Llm:Profiles</c>) and the decision profiles
+    /// (<c>Orkeon:Decision:Profiles</c>), which the engine registers as profiles too. A run launched from
+    /// Studio is offered more: Studio lays its own model profiles in the run's environment.
+    /// </summary>
+    internal static IReadOnlyList<string> ProfilesOf(IConfiguration configuration) =>
+    [
+        .. configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren()
+            .Concat(configuration.GetSection(ProfilesPath).GetChildren())
+            .Select(profile => profile.Key),
+    ];
 
     /// <summary>
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c> enabled, its
@@ -492,16 +519,22 @@ public sealed record DecisionStatus(
     public IReadOnlyList<string> RouteLadder { get; init; } = [];
 
     /// <summary>
-    /// The rungs of <see cref="RouteLadder"/> that name no profile of these settings: the engine refuses
-    /// them when it loads a crew with an agent on <c>llm.profile: auto</c>.
+    /// The rungs of <see cref="RouteLadder"/> that name no profile of these settings. The engine refuses
+    /// a rung it is not offered when it loads a crew with an agent on <c>llm.profile: auto</c>; a run
+    /// launched from Studio is offered Studio's own model profiles besides, through its environment, so
+    /// such a rung is warned of and never blocks.
     /// </summary>
     public IReadOnlyList<string> UnknownRungs { get; init; } = [];
 
     /// <summary>
-    /// Whether the ladder serves a crew with an agent or a task on <c>llm.profile: auto</c>: two rungs or
-    /// more, each a profile of these settings. Otherwise the engine refuses such a crew at load.
+    /// Whether the settings give a ladder at all: two rungs or more (a single one already refuses the
+    /// start). Without one the engine refuses, at load, a crew with an agent or a task routed on
+    /// <c>llm.profile: auto</c>.
     /// </summary>
-    public bool ServesRouteAuto => RouteLadder.Count >= 2 && UnknownRungs.Count == 0;
+    public bool HasRouteLadder => RouteLadder.Count >= 2;
+
+    /// <summary>Whether the ladder serves such a crew for sure: it is there, and each rung is a profile of these settings.</summary>
+    public bool ServesRouteAuto => HasRouteLadder && UnknownRungs.Count == 0;
 
     /// <summary>
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c>): it refuses to start

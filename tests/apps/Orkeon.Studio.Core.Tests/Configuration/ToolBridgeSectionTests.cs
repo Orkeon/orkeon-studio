@@ -33,10 +33,10 @@ public sealed class ToolBridgeSectionTests
         Assert.Equal(["*"], reparsed.ToolBridge.Allow);
         Assert.Equal(["shell_command"], reparsed.ToolBridge.Deny);
         Assert.Equal("MY_BRIDGE_TOKEN", reparsed.ToolBridge.EffectiveTokenEnvVar);
-        Assert.Equal(1048576, reparsed.ToolBridge.MaxFileBytes);
+        Assert.Equal(1048576, reparsed.GetInt32("Orkeon:Tools:Bridge:MaxFileBytes"));
         Assert.True(reparsed.ToolBridge.IsEnabled);
         Assert.Equal("https://0.0.0.0:7410/", reparsed.BridgeServer.Prefix);
-        Assert.True(reparsed.BridgeServer.IsServing);
+        Assert.Equal(2, reparsed.BridgeServer.Allow.Count);
         // The neighbours Studio models elsewhere stay.
         Assert.True(reparsed.GetBoolean("Orkeon:Tools:Shell:Enabled"));
         Assert.Empty(reparsed.ToolBridge.Problems());
@@ -162,5 +162,42 @@ public sealed class ToolBridgeSectionTests
             _ => null));
         Assert.Equal(ToolBridgePreflightKind.SettingsRefused, server.Kind);
         Assert.Equal("Orkeon:Bridge:Allow", server.Path);
+    }
+
+    /// <summary>
+    /// The configuration reads a key in any letter case: Studio reads the section as the engine does,
+    /// and writes each key where the file spells it, never a twin beside it.
+    /// </summary>
+    [Fact]
+    public void Keys_in_another_letter_case_are_read_judged_and_written_in_place()
+    {
+        var document = AppSettingsDocument.Parse("""{ "orkeon": { "tools": { "bridge": { "address": "http://desk.example:7410/", "allow": ["*"] } } } }""");
+        var caller = document.ToolBridge;
+
+        Assert.Equal("http://desk.example:7410/", caller.Address);
+        Assert.Equal(["*"], caller.Allow);
+        Assert.True(caller.IsEnabled);
+        Assert.Contains("requires https", Assert.Single(caller.Problems()).Problem, StringComparison.Ordinal);
+
+        caller.Address = "https://desk.example:7410/";
+
+        Assert.Equal("https://desk.example:7410/", document.GetString("orkeon:tools:bridge:address"));
+        Assert.DoesNotContain("\"Address\"", document.ToJson(), StringComparison.Ordinal);
+        Assert.Empty(caller.Problems());
+    }
+
+    /// <summary>A key that is no setting of its section stops every start: a misspelt one first of all.</summary>
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Bridge": { "Port": 7410 } } }""", "Orkeon:Bridge:Port")]
+    [InlineData("""{ "Orkeon": { "Tools": { "Bridge": { "Adress": "https://desk.example:7410/" } } } }""", "Orkeon:Tools:Bridge:Adress")]
+    public void A_key_that_is_no_setting_of_the_bridge_is_refused(string json, string path)
+    {
+        var document = AppSettingsDocument.Parse(json);
+
+        var problem = Assert.Single(document.ToolBridge.Problems().Concat(document.BridgeServer.Problems()));
+
+        Assert.Equal(path, problem.Path);
+        Assert.StartsWith(path + " is not a setting: ", problem.Problem, StringComparison.Ordinal);
+        Assert.Equal(ToolBridgePreflightKind.SettingsRefused, ToolBridgePreflight.Check(document, _ => null)?.Kind);
     }
 }

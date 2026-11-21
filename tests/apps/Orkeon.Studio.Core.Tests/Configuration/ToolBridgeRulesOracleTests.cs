@@ -40,6 +40,16 @@ public sealed class ToolBridgeRulesOracleTests
         """{ "MaxResponseBytes": 4294967296 }""",
         """{ "Allow": ["browser_*"], "Deny": ["", "*"] }""",
         """{ "Address": "http://bridge.example:7410", "HostHeader": "a/b", "ConnectTimeout": "-00:00:01", "MaxFileBytes": -5, "Allow": ["a*"] }""",
+        // What the binder makes of the JSON, not a second reading of it: keys in another letter case,
+        // a null, a list written as an object, a null entry, a number in hexadecimal.
+        """{ "address": "http://bridge.example:7410/", "allow": ["*"] }""",
+        """{ "TokenEnvVar": null }""",
+        """{ "Address": null, "HostHeader": null }""",
+        """{ "Address": "https://x/", "Allow": { "0": "a*" } }""",
+        """{ "Allow": [null] }""",
+        """{ "Allow": "*" }""",
+        """{ "MaxFileBytes": "0x10" }""",
+        """{ "ConnectTimeout": "30" }""",
     };
 
     public static TheoryData<string> ServerSettings => new()
@@ -60,6 +70,11 @@ public sealed class ToolBridgeRulesOracleTests
         """{ "HeartbeatWindow": "00:10:01" }""",
         """{ "MaxRequestBytes": 0, "MaxFileBytes": 0 }""",
         """{ "Allow": ["*", "a*b", ""] }""",
+        """{ "tokenEnvVar": null }""",
+        """{ "Prefix": null }""",
+        """{ "MaxSessions": "0x10" }""",
+        """{ "maxSessions": 0, "deny": { "a": "b*" } }""",
+        """{ "Allow": [null] }""",
     };
 
     [Theory]
@@ -84,21 +99,28 @@ public sealed class ToolBridgeRulesOracleTests
             AppSettingsDocument.Parse(json).BridgeServer.Problems().Select(problem => problem.Problem));
     }
 
-    /// <summary>A value the binder cannot convert stops the engine's start before its rules: Studio says so too.</summary>
+    /// <summary>
+    /// A value the binder cannot convert stops the engine's start before its rules, on the first such
+    /// value: Studio says the same sentence, and that one only.
+    /// </summary>
     [Theory]
     [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeClientOptions", """{ "Orkeon": { "Tools": { "Bridge": { "ConnectTimeout": "soon" } } } }""")]
     [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeClientOptions", """{ "Orkeon": { "Tools": { "Bridge": { "MaxFileBytes": "big" } } } }""")]
+    [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeClientOptions", """{ "Orkeon": { "Tools": { "Bridge": { "ConnectTimeout": " " } } } }""")]
     [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeServerOptions", """{ "Orkeon": { "Bridge": { "MaxSessions": "many" } } }""")]
+    [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeServerOptions", """{ "Orkeon": { "Bridge": { "MaxSessions": "" } } }""")]
     [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeServerOptions", """{ "Orkeon": { "Bridge": { "HeartbeatWindow": "a while" } } }""")]
-    public void A_value_the_binder_cannot_convert_is_refused_on_both_sides(string optionsType, string json)
+    [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeServerOptions", """{ "Orkeon": { "Bridge": { "MaxRequestBytes": "big", "MaxSessions": "many" } } }""")]
+    [InlineData("Orkeon.Hosting.ToolBridge.ToolBridgeServerOptions", """{ "Orkeon": { "Bridge": { "MaxSessions": 1e3 } } }""")]
+    public void A_value_the_binder_cannot_convert_is_refused_with_the_engines_sentence(string optionsType, string json)
     {
-        Assert.Throws<InvalidOperationException>(() => EngineProblems(optionsType, json));
+        var engine = Assert.Throws<InvalidOperationException>(() => EngineProblems(optionsType, json));
 
         var document = AppSettingsDocument.Parse(json);
         var problems = optionsType.EndsWith("ClientOptions", StringComparison.Ordinal)
             ? document.ToolBridge.Problems()
             : document.BridgeServer.Problems();
-        Assert.StartsWith("Failed to convert configuration value", Assert.Single(problems).Problem, StringComparison.Ordinal);
+        Assert.Equal(engine.Message, Assert.Single(problems).Problem);
     }
 
     /// <summary>The token is read as the engine reads it: trimmed, set, sixteen characters or more.</summary>

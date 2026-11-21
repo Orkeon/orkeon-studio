@@ -19,12 +19,13 @@ internal sealed class ContextSectionView : SectionView
         _form = form ?? throw new ArgumentNullException(nameof(form));
 
         FormLayout.AddNote(this, 0, ContextForm.Notice);
+        FormLayout.AddNote(this, 1, ContextForm.SwitchNotice);
         FormLayout.AddNote(this, 2, "Compaction (Orkeon:Compaction)");
         Add(3, "  Compact a context", () => _form.CompactionEnabled, v => _form.CompactionEnabled = v);
         Add(4, "  Start at share of window", () => _form.TriggerShare, v => _form.TriggerShare = v);
         Add(5, "  Latest turns kept", () => _form.KeepRecentTurns, v => _form.KeepRecentTurns = v);
         Add(6, "  Summary's model profile", () => _form.Profile, v => _form.Profile = v);
-        Add(7, "  Default model's window (tokens)", () => _form.ContextWindowTokens, v => _form.ContextWindowTokens = v);
+        Add(7, "  Model window (tokens)", () => _form.ContextWindowTokens, v => _form.ContextWindowTokens = v);
         FormLayout.AddNote(this, 9, "Pruning of tool results by System One (Orkeon:Compaction:Prune)");
         Add(10, "  Prune tool results", () => _form.PruneEnabled, v => _form.PruneEnabled = v);
         Add(11, "  Start at share of window", () => _form.PruneFillShare, v => _form.PruneFillShare = v);

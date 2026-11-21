@@ -312,6 +312,20 @@ public sealed class RunProgressViewModel : ObservableObject
     /// <summary>Whether any such line arrived: gates the panel's visibility.</summary>
     public bool HasAgentNotes => AgentNotes.Count > 0;
 
+    /// <summary>How many lines <see cref="AgentNotes"/> keeps: the oldest go first.</summary>
+    internal const int MaxAgentNotes = 200;
+
+    private string? _pendingCircuitNote;
+
+    private void ShowCircuitNote()
+    {
+        if (_pendingCircuitNote is not { } line)
+            return;
+
+        _pendingCircuitNote = null;
+        AgentNotes.Add(line);
+    }
+
     /// <summary>The cost line, empty until the meter moves.</summary>
     public string CostSummary => _model.Cost is { } cost
         ? _strings.Format(
@@ -397,6 +411,7 @@ public sealed class RunProgressViewModel : ObservableObject
         RunningTasks.Clear();
         HubMessages.Clear();
         AgentNotes.Clear();
+        _pendingCircuitNote = null;
         AnswerText = string.Empty;
         ReplyText = string.Empty;
         _model = new RunProgressModel(_time);
@@ -454,10 +469,23 @@ public sealed class RunProgressViewModel : ObservableObject
         for (var index = hubBefore; index < _model.HubMessages.Count; index++)
             HubMessages.Add(Describe(_model.HubMessages[index]));
 
+        // Every run says what its circuit is, a crew that asks nothing of System One included: the line
+        // is shown at once for a crew that states it runs with the models (optional, required), and held
+        // for the others until the run does something it explains (a decision task, a pick, a pruning).
         if (_model.DecisionCircuit is { } circuit && !ReferenceEquals(circuit, circuitBefore))
-            AgentNotes.Add(Describe(circuit));
+        {
+            _pendingCircuitNote = Describe(circuit);
+            if (circuit.Mode is Orkeon.Constants.Protocol.RunDecisionModes.Optional or Orkeon.Constants.Protocol.RunDecisionModes.Required)
+                ShowCircuitNote();
+        }
+
+        if (_model.AgentNotes.Count > notesBefore || _model.Tasks.Skip(before).Any(task => task.IsDecision))
+            ShowCircuitNote();
         for (var index = notesBefore; index < _model.AgentNotes.Count; index++)
             AgentNotes.Add(Describe(_model.AgentNotes[index]));
+        // A long tool loop prunes or compacts at each turn: the panel keeps the latest lines.
+        while (AgentNotes.Count > MaxAgentNotes)
+            AgentNotes.RemoveAt(0);
 
         // A delta arrives per token, on the UI thread. Re-raising the eleven labels plus the
         // command state for each one would mean thousands of change notifications per

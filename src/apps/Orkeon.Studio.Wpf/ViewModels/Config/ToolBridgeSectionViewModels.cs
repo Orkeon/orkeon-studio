@@ -73,6 +73,12 @@ public sealed class ToolBridgeSectionViewModel : DocumentSectionViewModel
     /// <summary>The row that stores the token in the user environment, under the variable the section names.</summary>
     public SecretRowViewModel Token => _token;
 
+    /// <summary>
+    /// Raised when the token was stored: what a launch is told of the bridge depends on it, and is
+    /// judged again.
+    /// </summary>
+    public event EventHandler? TokenStored;
+
     /// <summary>What the engine's start refuses in the section, one line each; empty when it is accepted.</summary>
     public string ProblemsText => string.Join("\n", Section.Problems().Select(problem => problem.Problem));
 
@@ -98,12 +104,19 @@ public sealed class ToolBridgeSectionViewModel : DocumentSectionViewModel
         if (string.Equals(_token.EnvName, Section.EffectiveTokenEnvVar, StringComparison.Ordinal))
             return;
 
+        _token.Stored -= OnTokenStored;
         _token = NewTokenRow();
         OnPropertyChanged(nameof(Token));
     }
 
-    private SecretRowViewModel NewTokenRow() =>
-        new(Section.EffectiveTokenEnvVar, () => _strings[StudioStringKeys.SettingsBridgeTokenUsedBy], _keyStore, _strings);
+    private SecretRowViewModel NewTokenRow()
+    {
+        var row = new SecretRowViewModel(Section.EffectiveTokenEnvVar, () => _strings[StudioStringKeys.SettingsBridgeTokenUsedBy], _keyStore, _strings);
+        row.Stored += OnTokenStored;
+        return row;
+    }
+
+    private void OnTokenStored(object? sender, EventArgs e) => TokenStored?.Invoke(this, EventArgs.Empty);
 
     private static string Joined(string? text) => string.Join(", ", DecisionSection.SplitList(text));
 }

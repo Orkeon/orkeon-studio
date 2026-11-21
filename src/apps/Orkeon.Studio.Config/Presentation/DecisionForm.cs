@@ -85,9 +85,11 @@ internal sealed class DecisionForm : ISettingsForm
     public string EffortLevels { get; set; } = "";
 
     /// <summary>What the two lists are for, and how they are written.</summary>
-    public static string PicksNotice { get; } =
-        "System One picks among these for llm.profile: auto and thinking: { effort: auto }. Commas between names, "
-        + "cheapest first; levels among " + string.Join(", ", DecisionSection.KnownEffortLevels)
+    public const string PicksNotice = "For llm.profile: auto and thinking effort auto. Commas, cheapest first.";
+
+    /// <summary>The levels a list may name, and those that stand when it is blank.</summary>
+    public static string LevelsNotice { get; } =
+        "Levels: " + string.Join(", ", DecisionSection.KnownEffortLevels)
         + " (blank: " + string.Join(", ", DecisionSection.DefaultEffortLevels) + ").";
 
     /// <summary>What a run of the file as loaded gets, resolved as the engine resolves it.</summary>
@@ -149,6 +151,8 @@ internal sealed class DecisionForm : ISettingsForm
                 $"{DecisionSection.ProviderPath}: '{name}' is not one of {string.Join(", ", StandardChoices.Skip(1))}: pick one, or the automatic choice."));
         }
 
+        // The two lists, by the engine's own rules: what its start refuses is never written.
+        errors.AddRange(DecisionSection.PickProblems(DecisionSection.SplitList(RouteLadder), DecisionSection.SplitList(EffortLevels)));
         if (errors.Count > 0)
             return errors;
 

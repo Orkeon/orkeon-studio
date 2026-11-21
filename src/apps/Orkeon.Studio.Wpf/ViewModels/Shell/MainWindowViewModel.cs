@@ -551,6 +551,12 @@ public sealed class MainWindowViewModel : ObservableObject
                 Run.Trial.RefreshDecision();
             }
         };
+        // The bridge's token stored: the launch a missing token blocked is judged again at once.
+        Config.ToolBridge.TokenStored += (_, _) =>
+        {
+            Launch.RefreshDecision();
+            Run.Trial.RefreshDecision();
+        };
         Settings.Profiles.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ModelProfilesViewModel.Set))

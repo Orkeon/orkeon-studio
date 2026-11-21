@@ -104,14 +104,39 @@ public sealed class CompactionSectionViewModel : DocumentSectionViewModel
     /// <summary>The watermark of <see cref="PruneHeadChars"/>.</summary>
     public static string PruneHeadCharsDefault => Invariant(CompactionSection.DefaultPruneHeadChars);
 
-    /// <summary>What the engine's start refuses in the section, one line each; empty when it is accepted.</summary>
-    public string ProblemsText => string.Join("\n", Section.Problems().Select(problem => problem.Problem));
+    /// <summary>
+    /// What the engine's start refuses in the section, one line each; empty when it is accepted. A window
+    /// that is not above zero is said here too: the start refuses it with the model's section.
+    /// </summary>
+    public string ProblemsText => string.Join("\n", Section.Problems().Select(problem => problem.Problem).Concat(WindowProblem()));
+
+    /// <summary>
+    /// The engine's refusal of a summary profile these settings do not define, as a warning: a run
+    /// launched from Studio is given Studio's model profiles besides. Empty when there is nothing to say.
+    /// </summary>
+    public string ProfileWarning => Section.UnknownProfile()?.Problem ?? string.Empty;
+
+    /// <summary>
+    /// Reads the verdict again after an edit made elsewhere in the document: a profile added, renamed or
+    /// removed changes what the summary's profile names.
+    /// </summary>
+    public void RefreshVerdict() => OnPropertiesChanged(nameof(ProblemsText), nameof(ProfileWarning));
+
+    private IEnumerable<string> WindowProblem()
+    {
+        if (Document.Llm.ContextWindowTokens is <= 0 and var window)
+        {
+            yield return string.Create(
+                CultureInfo.InvariantCulture,
+                $"{LlmSection.SectionPath}:{LlmProfilesSection.ContextWindowTokensKey}: {window} is not a number of tokens above zero. Leave the key out for the model's documented window.");
+        }
+    }
 
     /// <inheritdoc />
     protected override void OnSectionChanged() => OnPropertiesChanged(
         nameof(Exists), nameof(Enabled), nameof(TriggerShare), nameof(KeepRecentTurns), nameof(Profile), nameof(ContextWindowTokens),
         nameof(PruneEnabled), nameof(PruneFillShare), nameof(PruneKeepRecentMessages), nameof(PruneHeadChars),
-        nameof(ProblemsText));
+        nameof(ProblemsText), nameof(ProfileWarning));
 
     // A share is typed with a point or a comma; an unreadable one is left as it was, the field showing
     // the value kept.

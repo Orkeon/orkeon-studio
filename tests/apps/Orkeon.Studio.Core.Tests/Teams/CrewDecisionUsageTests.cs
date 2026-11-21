@@ -340,4 +340,63 @@ public sealed class CrewDecisionUsageTests : IDisposable
         Assert.Equal(CrewDecisionMode.None, CrewDecisionUsage.ModeOfTeam(Path.Combine(_root, "missing")));
         Assert.Equal(CrewDecisionMode.None, CrewDecisionUsage.ModeOfTeam(null));
     }
+
+    /// <summary>
+    /// System One routes an agent's tasks: a relay no task is assigned to runs on the default profile
+    /// even on <c>llm.profile: auto</c>, and the engine asks no ladder for it. An agent with a task does.
+    /// </summary>
+    [Fact]
+    public void A_relay_without_a_task_of_its_own_is_not_a_profile_to_pick()
+    {
+        const string agents = """
+            agents:
+              analyst:
+                role: Analyst
+                goal: read
+              judge:
+                role: Judge
+                goal: judge
+                llm: { profile: auto }
+            """;
+        var relayOnly = CrewDecisionUsage.OfCrewFile(Crew(DecisionTask + "\n" + """
+                  without: { agent: judge }
+            """, agents).Replace("process: sequential", "process: sequential\ndecision: { mode: optional }", StringComparison.Ordinal));
+
+        Assert.Equal(CrewDecisionMode.Optional, relayOnly.Mode);
+        Assert.Equal("judge", Assert.Single(relayOnly.DecisionTasks).RelayAgent);
+        Assert.DoesNotContain(relayOnly.OtherUses, use => use.Kind == CrewSystemOneUseKind.RouteAuto);
+
+        var routed = CrewDecisionUsage.OfCrewFile(Crew(
+            """
+              read:
+                description: read
+                expected_output: notes
+                agent: judge
+            """,
+            agents));
+        Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "judge"), Assert.Single(routed.OtherUses));
+    }
+
+    [Fact]
+    public void Thinking_switched_on_by_System_One_is_one_of_its_picks()
+    {
+        var usage = CrewDecisionUsage.OfCrewFile(Crew(
+            """
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+            """,
+            """
+            agents:
+              analyst:
+                role: Analyst
+                goal: read
+                llm:
+                  thinking: { enabled: auto }
+            """));
+
+        Assert.Equal(CrewDecisionMode.Optional, usage.Mode);
+        Assert.Contains(usage.OtherUses, use => use is { Kind: CrewSystemOneUseKind.ThinkingAuto, Holder: "analyst" });
+    }
 }

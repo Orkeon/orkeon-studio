@@ -67,7 +67,7 @@ public static class ToolBridgePreflight
                 : null;
         }
 
-        return caller.Address is { } address && !string.IsNullOrWhiteSpace(address)
+        return caller.BoundAddress is { } address
             ? new ToolBridgePreflightFinding(ToolBridgePreflightKind.NothingBridged, address)
             : null;
     }

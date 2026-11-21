@@ -206,17 +206,6 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>
-    /// What the decision models (System One) change to the run (<see cref="DecisionPreflight"/>), the
-    /// crew read again. An error when the launch is refused for sure: a crew that states
-    /// <c>decision.mode: required</c>, a holder of <c>system_one_decide</c> under strict tools, or a
-    /// decision task with neither a fallback nor an <c>otherwise</c> task, on a run with the circuit off;
-    /// or a provider the settings file read here names and the engine refuses (a check too). A warning
-    /// while the CLI resolves the settings itself, for a check of a crew a run would refuse (the check
-    /// stays offered: it loads the crew and reports the refusal as a warning), for a provider without its
-    /// key, and for a holder of the tool a lenient runner withholds; information for a crew that goes on
-    /// its relays, its fallbacks and what the settings state.
-    /// </summary>
-    /// <summary>
     /// What the tool bridge of the settings file read here does to the run (<see cref="ToolBridgePreflight"/>):
     /// an error when the host would refuse to start, a check included (a value of one of the bridge's
     /// two sections it refuses, or tools to bridge with no token in its environment variable);
@@ -240,6 +229,17 @@ internal sealed class RunLauncherViewModel
             ToolBridgeSection.SectionPath)],
     };
 
+    /// <summary>
+    /// What the decision models (System One) change to the run (<see cref="DecisionPreflight"/>), the
+    /// crew read again. An error when the launch is refused for sure: a crew that states
+    /// <c>decision.mode: required</c>, a holder of <c>system_one_decide</c> under strict tools, or a
+    /// decision task with neither a fallback nor an <c>otherwise</c> task, on a run with the circuit off;
+    /// or a provider the settings file read here names and the engine refuses (a check too). A warning
+    /// while the CLI resolves the settings itself, for a check of a crew a run would refuse (the check
+    /// stays offered: it loads the crew and reports the refusal as a warning), for a provider without its
+    /// key, and for a holder of the tool a lenient runner withholds; information for a crew that goes on
+    /// its relays, its fallbacks and what the settings state.
+    /// </summary>
     private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
     {
         if (Target.Target is not { } target
@@ -257,21 +257,21 @@ internal sealed class RunLauncherViewModel
             DecisionPreflightKind.ProviderRefused => [Say(
                 ValidationCodes.DecisionProviderRefused,
                 blocks,
-                $"The settings name a decision provider the engine refuses, so the CLI will not start: {finding.Status?.Refusal}")],
+                $"The engine refuses the decision settings, so the CLI will not start: {finding.Status?.Refusal}")],
             DecisionPreflightKind.RouteWithoutLadder => [Say(
                 ValidationCodes.DecisionLadder,
                 blocks,
                 string.Join(", ", finding.RoutedHolders.Select(holder => $"'{holder}'"))
                 + " run on llm.profile: auto, and "
-                + (finding.Status is { UnknownRungs.Count: > 0 } unknown
-                    ? $"Orkeon:Decision:Route:Ladder names {string.Join(", ", unknown.UnknownRungs.Select(rung => $"'{rung}'"))}, which is no profile of the settings"
-                    : "the settings give no ladder of two profiles or more in Orkeon:Decision:Route:Ladder")
-                + ": the engine refuses the crew when it loads it.")],
+                + (finding.Status is { HasRouteLadder: true } unknown
+                    ? $"Orkeon:Decision:Route:Ladder names {string.Join(", ", unknown.UnknownRungs.Select(rung => $"'{rung}'"))}, which is no profile of the settings: "
+                      + "unless the run is given that profile another way, the engine refuses the crew when it loads it."
+                    : "the settings give no ladder of two profiles or more in Orkeon:Decision:Route:Ladder: the engine refuses the crew when it loads it."))],
             DecisionPreflightKind.RequiredWithoutModel => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,
-                (dryRun ? CheckOfRequiredText(finding) : "")
-                + $"this crew cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
+                (dryRun ? CheckOfRequiredText(finding) + "this crew" : "This crew")
+                + $" cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
             DecisionPreflightKind.RequiredUnknownSettings => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,

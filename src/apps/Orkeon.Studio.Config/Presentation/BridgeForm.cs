@@ -21,10 +21,11 @@ internal sealed class BridgeForm : ISettingsForm
     /// <inheritdoc />
     public string Title => "Tool bridge";
 
-    /// <summary>What the two halves are, and what this screen does not edit.</summary>
-    public const string Notice =
-        "Lists: names separated by commas, or * alone. The token is read from the environment, never from this file. "
-        + "Timeouts, sizes and limits: edit them in the JSON file itself.";
+    /// <summary>How a list is written, and where the token comes from.</summary>
+    public const string Notice = "Lists: names separated by commas, or * alone. The token is read from the environment.";
+
+    /// <summary>What this screen does not edit.</summary>
+    public const string JsonNotice = "Timeouts, sizes and limits: edit them in the JSON file itself.";
 
     /// <summary>The bridge's base address; blank, nothing is bridged.</summary>
     public string Address { get; set; } = "";
@@ -56,6 +57,11 @@ internal sealed class BridgeForm : ISettingsForm
     /// <summary>What a run of the file as loaded bridges, and whether its token is in place.</summary>
     public string Status { get; private set; } = "";
 
+    // The fields as the file gave them: a field left as loaded is not written again, so what the
+    // screen cannot show whole (a list the file writes as an object, an entry it reads as blank) stays.
+    private (string Address, string Allow, string Deny, string TokenEnvVar, string HostHeader,
+        string ServePrefix, string ServeAllow, string ServeDeny, string ServeTokenEnvVar) _loaded;
+
     /// <inheritdoc />
     public void LoadFrom(AppSettingsDocument document)
     {
@@ -71,8 +77,18 @@ internal sealed class BridgeForm : ISettingsForm
         ServeAllow = string.Join(", ", server.Allow);
         ServeDeny = string.Join(", ", server.Deny);
         ServeTokenEnvVar = FieldText.FromString(server.TokenEnvVar);
+        _loaded = (Address, Allow, Deny, TokenEnvVar, HostHeader, ServePrefix, ServeAllow, ServeDeny, ServeTokenEnvVar);
         Status = Describe(document);
     }
+
+    /// <summary>The keys this screen edits: a refusal about another key is the JSON file's to fix, and blocks no edit here.</summary>
+    private static readonly string[] EditedKeys =
+    [
+        $"{ToolBridgeSection.SectionPath}:Address", $"{ToolBridgeSection.SectionPath}:Allow", $"{ToolBridgeSection.SectionPath}:Deny",
+        $"{ToolBridgeSection.SectionPath}:TokenEnvVar", $"{ToolBridgeSection.SectionPath}:HostHeader",
+        $"{BridgeServerSection.SectionPath}:Prefix", $"{BridgeServerSection.SectionPath}:Allow", $"{BridgeServerSection.SectionPath}:Deny",
+        $"{BridgeServerSection.SectionPath}:TokenEnvVar",
+    ];
 
     /// <inheritdoc />
     public IReadOnlyList<string> ApplyTo(AppSettingsDocument document)
@@ -82,27 +98,41 @@ internal sealed class BridgeForm : ISettingsForm
         void Write(AppSettingsDocument target)
         {
             var caller = target.ToolBridge;
-            caller.Address = FieldText.ToStringOrNull(Address);
-            caller.Allow = DecisionSection.SplitList(Allow);
-            caller.Deny = DecisionSection.SplitList(Deny);
-            caller.TokenEnvVar = FieldText.ToStringOrNull(TokenEnvVar);
-            caller.HostHeader = FieldText.ToStringOrNull(HostHeader);
+            if (Address != _loaded.Address)
+                caller.Address = FieldText.ToStringOrNull(Address);
+            if (Allow != _loaded.Allow)
+                caller.Allow = DecisionSection.SplitList(Allow);
+            if (Deny != _loaded.Deny)
+                caller.Deny = DecisionSection.SplitList(Deny);
+            if (TokenEnvVar != _loaded.TokenEnvVar)
+                caller.TokenEnvVar = FieldText.ToStringOrNull(TokenEnvVar);
+            if (HostHeader != _loaded.HostHeader)
+                caller.HostHeader = FieldText.ToStringOrNull(HostHeader);
             var server = target.BridgeServer;
-            server.Prefix = FieldText.ToStringOrNull(ServePrefix);
-            server.Allow = DecisionSection.SplitList(ServeAllow);
-            server.Deny = DecisionSection.SplitList(ServeDeny);
-            server.TokenEnvVar = FieldText.ToStringOrNull(ServeTokenEnvVar);
+            if (ServePrefix != _loaded.ServePrefix)
+                server.Prefix = FieldText.ToStringOrNull(ServePrefix);
+            if (ServeAllow != _loaded.ServeAllow)
+                server.Allow = DecisionSection.SplitList(ServeAllow);
+            if (ServeDeny != _loaded.ServeDeny)
+                server.Deny = DecisionSection.SplitList(ServeDeny);
+            if (ServeTokenEnvVar != _loaded.ServeTokenEnvVar)
+                server.TokenEnvVar = FieldText.ToStringOrNull(ServeTokenEnvVar);
         }
 
-        // Judged on a copy by the rules of the engine's start: what it refuses is never written.
+        // Judged on a copy by the rules of the engine's start: what it refuses in a field of this
+        // screen is never written. A refusal about a key the screen does not show is the settings
+        // check's to report, and blocks no edit here.
         var probe = document.Clone();
         Write(probe);
-        var errors = probe.ToolBridge.Problems().Concat(probe.BridgeServer.Problems()).Select(problem => problem.Problem).ToList();
+        var errors = probe.ToolBridge.Problems().Concat(probe.BridgeServer.Problems())
+            .Where(problem => EditedKeys.Contains(problem.Path, StringComparer.OrdinalIgnoreCase))
+            .Select(problem => problem.Problem)
+            .ToList();
         if (errors.Count > 0)
             return errors;
 
         Write(document);
-        Status = Describe(document);
+        LoadFrom(document);
         return [];
     }
 
@@ -111,7 +141,7 @@ internal sealed class BridgeForm : ISettingsForm
         var caller = document.ToolBridge;
         if (!caller.IsEnabled)
         {
-            return string.IsNullOrWhiteSpace(caller.Address)
+            return caller.BoundAddress is null
                 ? "No bridge: every tool runs on this machine."
                 : "An address and no tool allowed: nothing is bridged.";
         }
@@ -119,6 +149,6 @@ internal sealed class BridgeForm : ISettingsForm
         var variable = caller.EffectiveTokenEnvVar;
         return ToolBridgeRules.TokenProblem(_environment(variable), variable) is { } problem
             ? "A run would refuse to start: " + problem
-            : $"Tools are bridged to {caller.Address}; the token is read from {variable}.";
+            : $"Tools are bridged to {caller.BoundAddress}; the token is read from {variable}.";
     }
 }
