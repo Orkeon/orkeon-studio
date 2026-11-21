@@ -1600,6 +1600,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Esta ejecución prescinde de los modelos de decisión (System One): cada tarea de decisión la responde su relevo, responde con su respuesta de reserva o deja que se ejecute su tarea «otherwise», y lo que System One habría elegido vuelve a lo que indican el equipo o los ajustes.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>El proveedor de decisión que usa la ejecución necesita una clave y no hay ninguna, ni en su variable ni en el archivo de configuración: cada solicitud que recibe falla.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Un agente o una tarea deja que System One elija su perfil (llm.profile: auto) y los ajustes no dan ninguna escala de dos perfiles de modelo o más donde elegir, o un peldaño no nombra ningún perfil: el motor rechaza el equipo al cargarlo.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Un ajuste contiene un valor que el motor rechaza al iniciar (una proporción fuera de sus límites, un tamaño demasiado pequeño, un nombre que no conoce): ninguna ejecución arrancaría con él.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agente o una tarea usa system_one_decide y la ejecución prescinde de los modelos de decisión: con Orkeon:CrewFactory:StrictTools en false, el motor retiene la herramienta y ejecuta el equipo sin ella.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Una línea de carpeta añadida empieza por «-»: el motor la leería como una opción.</value>
@@ -1655,6 +1656,25 @@
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve">
     <value>Registro LLM</value>
   </data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>Compactación del contexto</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>Cuando el contexto de un agente se acerca a la ventana de su modelo, los turnos más antiguos se sustituyen por un resumen, para que una tarea larga continúe. Activada salvo que la desactive.</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>Compactar un contexto que se acerca a la ventana</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>Empezar en esta proporción de la ventana (más de 0, como máximo 1)</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>Últimos turnos que se dejan tal cual</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>Perfil de modelo que redacta el resumen</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>Vacío: lo redacta el modelo de cada agente.</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>Dejar primero que System One recorte los resultados de herramientas más antiguos</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>Desactivado salvo que lo active. Consulta los modelos de decisión: sin ellos no se poda nada.</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>Empezar a podar en esta proporción de la ventana (más de 0, como máximo 1)</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>Últimos mensajes que nunca se juzgan</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>Caracteres que se conservan de un resultado recortado</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>Habilidades</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>Una habilidad es un archivo Markdown que un agente lleva en su prompt. Un equipo enumera las habilidades de cada agente, o deja que System One las elija para cada tarea.</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>Carpeta de las habilidades (ruta virtual)</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>Caracteres que se conservan de una habilidad</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Caracteres de todas las habilidades de un prompt</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Ventana de contexto del modelo predeterminado (tokens)</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Vacío: la ventana que el motor documenta para el modelo. La compactación de un contexto se mide con ella. La ventana de otro perfil de modelo es la clave ContextWindowTokens de su sección, en la pestaña JSON.</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>Terminada sin errores.</value>
   </data>

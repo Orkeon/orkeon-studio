@@ -60,6 +60,7 @@ internal sealed class StudioConfigWindow : Window
         _sectionViews.Add(new RateLimitingSectionView(_model.RateLimiting));
         _sectionViews.Add(new RagSectionView(_model.Rag));
         _sectionViews.Add(new DecisionSectionView(_model.Decision));
+        _sectionViews.Add(new ContextSectionView(_model.Context));
         _sectionViews.Add(new MountsSectionView(_model.Mounts, _model.Directories, lister));
         _sectionViews.Add(new LoggingSectionView(_model.Logging));
         _sectionViews.Add(new LlmLoggingSectionView(_model.LlmLogging));

@@ -136,6 +136,14 @@ public sealed class LlmProfilesSection
             : !string.Equals(apiKey, LlmProviderDefaultModels.DockerModelRunnerApiKeyPlaceholder, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The key of a section of the <c>Llm</c> shape that states the model's context window, in tokens:
+    /// what the compaction of a context measures against. Absent, the engine takes the window it
+    /// documents for the model, else its session default. A profile's entry does not model it
+    /// (<see cref="LlmProfileEntry"/>): written by hand in a profile's section, it stays as written.
+    /// </summary>
+    public const string ContextWindowTokensKey = "ContextWindowTokens";
+
     /// <summary>The fields Studio models of the section of the <c>Llm</c> shape at <paramref name="path"/>.</summary>
     internal static LlmProfileEntry ReadEntry(AppSettingsDocument document, string path, string id) => new()
     {

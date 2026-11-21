@@ -185,6 +185,12 @@ public static class ValidationCodes
     /// </summary>
     public const string DecisionLadder = "STUDIO-DECISION-LADDER";
 
+    /// <summary>
+    /// A value of a section the engine validates at start (the compaction, the pruning, the skills, the
+    /// tool bridge) that its own rules refuse: the run would not start. The message is the engine's.
+    /// </summary>
+    public const string EngineSettingRefused = "STUDIO-SETTING-REFUSED";
+
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";
 

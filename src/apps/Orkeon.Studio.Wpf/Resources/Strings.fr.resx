@@ -613,6 +613,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Cette exécution se passe des modèles de décision (System One) : chaque tâche de décision est répondue par son relais, répond par son repli ou laisse s'exécuter sa tâche « otherwise », et ce que System One aurait choisi revient à ce que l'équipe ou les réglages indiquent.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Le fournisseur de décision qu'utilise l'exécution demande une clé et aucune n'est en place, ni dans sa variable ni dans le fichier de réglages : chaque requête qu'il reçoit échoue.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Un agent ou une tâche laisse System One choisir son profil (llm.profile: auto) et les réglages ne donnent aucune échelle d'au moins deux profils de modèle où choisir, ou un échelon ne nomme aucun profil : le moteur refuse l'équipe au chargement.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Un réglage contient une valeur que le moteur refuse au démarrage (une part hors de ses bornes, une taille trop petite, un nom qu'il ne connaît pas) : aucune exécution ne démarrerait avec elle.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agent ou une tâche utilise system_one_decide et l'exécution se passe des modèles de décision : avec Orkeon:CrewFactory:StrictTools à false, le moteur retient l'outil et exécute l'équipe sans lui.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>Une ligne de dossier ajoutée commence par « - » : le moteur la lirait comme une option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>Un identifiant de dossier n'est pas valide : ce sont les 26 caractères avant « | » d'un dossier déclaré.</value></data>
@@ -632,6 +633,25 @@
   <data name="Studio.Settings.CardRag" xml:space="preserve"><value>Index documentaire</value></data>
   <data name="Studio.Settings.CardLogging" xml:space="preserve"><value>Journalisation</value></data>
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve"><value>Journal des échanges avec le modèle</value></data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>Compaction du contexte</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>Quand le contexte d'un agent approche de la fenêtre de son modèle, les tours les plus anciens sont remplacés par un résumé, pour qu'une longue tâche se poursuive. Active sauf si vous la coupez.</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>Compacter un contexte qui approche de la fenêtre</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>Démarrer à cette part de la fenêtre (plus de 0, au plus 1)</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>Derniers tours laissés tels quels</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>Profil de modèle qui rédige le résumé</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>Vide : le modèle de chaque agent le rédige.</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>Laisser d'abord System One couper les anciens résultats d'outils</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>Coupé sauf si vous l'activez. Il interroge les modèles de décision : sans eux, rien n'est élagué.</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>Démarrer l'élagage à cette part de la fenêtre (plus de 0, au plus 1)</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>Derniers messages jamais jugés</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>Caractères conservés d'un résultat coupé</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>Compétences</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>Une compétence est un fichier Markdown qu'un agent porte dans son prompt. Une équipe liste les compétences de chaque agent, ou laisse System One les choisir pour chaque tâche.</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>Dossier des compétences (chemin virtuel)</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>Caractères conservés d'une compétence</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Caractères de l'ensemble des compétences d'un prompt</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Fenêtre de contexte du modèle par défaut (tokens)</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Vide : la fenêtre que le moteur documente pour le modèle. La compaction d'un contexte se mesure à elle. La fenêtre d'un autre profil de modèle est la clé ContextWindowTokens de sa section, dans l'onglet JSON.</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Terminée sans erreur.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Échouée (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrompue avant la fin.</value></data>

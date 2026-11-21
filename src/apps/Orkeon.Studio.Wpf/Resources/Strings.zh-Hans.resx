@@ -1600,6 +1600,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其配置档（llm.profile: auto），而设置中没有包含两个或更多模型配置档的梯级，或某一级未对应任何配置档：引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>某项设置的值会在启动时被引擎拒绝（比例超出范围、大小过小或名称未知）：使用该值时任何运行都无法启动。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
@@ -1655,6 +1656,25 @@
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve">
     <value>LLM 日志</value>
   </data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>上下文压缩</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>当智能体的上下文接近其模型的窗口时，较早的轮次会被摘要替换，使长任务得以继续。默认开启，除非您将其关闭。</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>压缩接近窗口上限的上下文</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>达到窗口的此比例时开始（大于 0，至多 1）</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>保持原样的最近轮次数</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>撰写摘要的模型配置档</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>留空：由各智能体自己的模型撰写。</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>先让 System One 裁剪较早的工具结果</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>默认关闭，除非您将其开启。它会询问决策模型：没有决策模型时不裁剪任何内容。</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>达到窗口的此比例时开始裁剪（大于 0，至多 1）</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>从不评判的最近消息数</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>被裁剪结果保留的字符数</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>技能</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>技能是智能体在其提示词中携带的 Markdown 文件。团队可列出每个智能体的技能，或让 System One 为每个任务选择。</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>技能文件夹（虚拟路径）</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>单个技能保留的字符数</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>一个提示词中全部技能的字符数</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>默认模型的上下文窗口（令牌数）</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>留空：使用引擎为该模型记录的窗口。上下文压缩以此为基准。其他模型配置档的窗口是其配置节中的 ContextWindowTokens 键，可在 JSON 选项卡中设置。</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>顺利完成，没有错误。</value>
   </data>

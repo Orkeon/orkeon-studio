@@ -65,6 +65,8 @@ public sealed class ConfigTabViewModel : ObservableObject
         Rag = new RagSectionViewModel(() => _document, MarkDirty, _strings);
         Logging = new LoggingSectionViewModel(() => _document, MarkDirty);
         LlmLogging = new LlmLoggingSectionViewModel(() => _document, MarkDirty, _strings);
+        Compaction = new CompactionSectionViewModel(() => _document, MarkDirty);
+        Skills = new SkillsSectionViewModel(() => _document, MarkDirty);
         ShellTools = new ShellToolsSectionViewModel(() => _document, MarkDirty);
         Mcp = new McpSectionViewModel(() => _document, MarkDirty, _strings);
         // The decision models: their keys go to the store of the model keys, never to the document.
@@ -207,6 +209,12 @@ public sealed class ConfigTabViewModel : ObservableObject
 
     /// <summary>The <c>LlmLogging</c> form.</summary>
     public LlmLoggingSectionViewModel LlmLogging { get; }
+
+    /// <summary>The <c>Orkeon:Compaction</c> form, the pruning of tool results included.</summary>
+    public CompactionSectionViewModel Compaction { get; }
+
+    /// <summary>The <c>Orkeon:Skills</c> form.</summary>
+    public SkillsSectionViewModel Skills { get; }
 
     /// <summary>The <c>Orkeon:Tools:Shell</c> form of the Tools tab (STUDIO-21).</summary>
     public ShellToolsSectionViewModel ShellTools { get; }
@@ -359,6 +367,8 @@ public sealed class ConfigTabViewModel : ObservableObject
         Rag.Refresh();
         Logging.Refresh();
         LlmLogging.Refresh();
+        Compaction.Refresh();
+        Skills.Refresh();
         ShellTools.Refresh();
         Mcp.Refresh();
         Decision.Refresh();

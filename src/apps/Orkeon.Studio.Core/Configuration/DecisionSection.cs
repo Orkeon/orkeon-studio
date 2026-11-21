@@ -415,6 +415,19 @@ public sealed class DecisionSection
         }
     }
 
+    // A number JSON cannot write (an infinity set in memory) has no text: read as a key without a value.
+    private static string? ReadValue(JsonNode node)
+    {
+        try
+        {
+            return AppSettingsDocument.ReadString(node);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
     private static void Flatten(JsonNode? node, string? prefix, Dictionary<string, string?> data)
     {
         switch (node)
@@ -433,7 +446,7 @@ public sealed class DecisionSection
                 break;
             default:
                 if (prefix is not null)
-                    data[prefix] = AppSettingsDocument.ReadString(node);
+                    data[prefix] = ReadValue(node);
                 break;
         }
     }

@@ -90,6 +90,17 @@ public sealed partial class LlmSection
         set => _document.SetDouble($"{SectionPath}:Temperature", value);
     }
 
+    /// <summary>
+    /// The model's context window, in tokens (<c>Llm:ContextWindowTokens</c>), above zero: what the
+    /// compaction of a context measures against. Null lets the engine take the window it documents for
+    /// the model.
+    /// </summary>
+    public int? ContextWindowTokens
+    {
+        get => _document.GetInt32($"{SectionPath}:{LlmProfilesSection.ContextWindowTokensKey}");
+        set => _document.SetInt32($"{SectionPath}:{LlmProfilesSection.ContextWindowTokensKey}", value);
+    }
+
     /// <summary>Maximum response tokens (<c>Llm:MaxTokens</c>).</summary>
     public int? MaxTokens
     {

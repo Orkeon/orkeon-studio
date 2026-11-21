@@ -613,6 +613,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>A setting holds a value the engine refuses at start (a share outside its bounds, a size too small, a name it does not know): no run would start with it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
@@ -632,6 +633,25 @@
   <data name="Studio.Settings.CardRag" xml:space="preserve"><value>Document index</value></data>
   <data name="Studio.Settings.CardLogging" xml:space="preserve"><value>Logging</value></data>
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve"><value>LLM journal</value></data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>Context compaction</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>When an agent's context nears its model's window, the older turns are replaced by a summary, so a long task goes on. On unless you switch it off.</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>Compact a context that nears the window</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>Start at this share of the window (above 0, at most 1)</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>Latest turns left as they are</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>Model profile that writes the summary</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>Empty: each agent's own model writes it.</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>First let System One cut the older tool results</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>Off unless you switch it on. It asks the decision models: without them nothing is pruned.</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>Start pruning at this share of the window (above 0, at most 1)</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>Latest messages never judged</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>Characters kept of a result that is cut</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>Skills</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>A skill is a Markdown file an agent carries in its prompt. A team lists the skills of each agent, or lets System One pick them for each task.</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>Folder of the skills (virtual path)</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>Characters kept of one skill</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Characters of all the skills of a prompt</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Context window of the default model (tokens)</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Empty: the window the engine documents for the model. A context is compacted against it. The window of another model profile is the ContextWindowTokens key of its section, in the JSON tab.</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Finished without errors.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Failed (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrupted before the end.</value></data>

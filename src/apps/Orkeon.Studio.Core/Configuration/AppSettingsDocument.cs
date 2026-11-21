@@ -47,6 +47,8 @@ public sealed class AppSettingsDocument
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
         Decision = new DecisionSection(this);
+        Compaction = new CompactionSection(this);
+        Skills = new SkillsSection(this);
     }
 
     /// <summary>The mutable JSON tree backing this document — the raw-edit surface of the UIs.</summary>
@@ -84,6 +86,12 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the decision models: <c>Orkeon:Decision</c> and the provider sections.</summary>
     public DecisionSection Decision { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Compaction</c>: the compaction of a context and the pruning of its tool results.</summary>
+    public CompactionSection Compaction { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Skills</c>: the library of skills and their sizes.</summary>
+    public SkillsSection Skills { get; }
 
     /// <summary>Creates an empty document (<c>{}</c>).</summary>
     public static AppSettingsDocument CreateEmpty() => new(new JsonObject());
