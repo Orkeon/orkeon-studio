@@ -134,6 +134,20 @@ internal sealed class RunLauncherViewModel
     private DecisionStatus? _settingsDecision;
     private ToolBridgePreflightFinding? _settingsBridge;
 
+    /// <summary>
+    /// The engine's refusal of an <c>Orkeon:Compaction:Profile</c> the settings file read here does not
+    /// define and the environment does not lay; null when there is none.
+    /// </summary>
+    private (string Path, string Problem)? _settingsCompactionProfile;
+
+    /// <summary>
+    /// The rungs of the ladder and the decision profiles of the settings file read here that the
+    /// environment of this launcher lays as LLM profiles (the spawned CLI inherits them): the only
+    /// profiles a run gets besides the file's, this launcher laying none itself. A rung is then served;
+    /// a decision profile then shares its name, which the engine refuses.
+    /// </summary>
+    private IReadOnlyList<string> _profilesLaidInEnvironment = [];
+
     /// <summary>Options the form leaves enabled for the detected target.</summary>
     public IReadOnlyList<RunOption> AvailableOptions => LaunchOptionsModel.AvailableOptions(Target.Target);
 
@@ -202,6 +216,15 @@ internal sealed class RunLauncherViewModel
         messages.AddRange(ValidateDeliverableWriters());
         messages.AddRange(ValidateDecisionModels(dryRun));
         messages.AddRange(ValidateToolBridge());
+        if (_settingsCompactionProfile is { } unknown)
+        {
+            // Nothing lays the profile for this run: the host refuses to start, a check included.
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.EngineSettingRefused,
+                "The compaction of the settings stops the run at start: " + unknown.Problem,
+                unknown.Path));
+        }
+
         return messages;
     }
 
@@ -234,22 +257,28 @@ internal sealed class RunLauncherViewModel
     /// crew read again. An error when the launch is refused for sure: a crew that states
     /// <c>decision.mode: required</c>, a holder of <c>system_one_decide</c> under strict tools, or a
     /// decision task with neither a fallback nor an <c>otherwise</c> task, on a run with the circuit off;
-    /// or a provider the settings file read here names and the engine refuses (a check too). A warning
-    /// while the CLI resolves the settings itself, for a check of a crew a run would refuse (the check
-    /// stays offered: it loads the crew and reports the refusal as a warning), for a provider without its
-    /// key, and for a holder of the tool a lenient runner withholds; information for a crew that goes on
-    /// its relays, its fallbacks and what the settings state.
+    /// a crew that states <c>decision.mode: none</c> and is routed on <c>llm.profile: auto</c>; and, with
+    /// the settings file read here, a provider the engine refuses or a decision profile that bears the
+    /// name of a model profile the environment lays (a check too), a crew routed on
+    /// <c>llm.profile: auto</c> the ladder does not serve (none, or a rung that names a profile neither
+    /// the file defines nor the environment lays: this launcher lays none), a decision profile named
+    /// under the mode none, and a fail-closed guarded profile on a run with the circuit off. A warning
+    /// while the CLI resolves the settings itself, for a check of what only a run refuses (the check
+    /// stays offered: it loads the crew, and reports the engine's line when the load fails), for a
+    /// provider without its key, and for a holder of the tool a lenient runner withholds; information
+    /// for a crew that goes on its relays, its fallbacks and what the settings state.
     /// </summary>
     private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
     {
         if (Target.Target is not { } target
-            || DecisionPreflight.Check(CrewDecisionUsage.Of(target), _settingsDecision, _settingsDecision is not null, Options.NoDecision)
+            || DecisionPreflight.Check(
+                CrewDecisionUsage.Of(target), _settingsDecision, _settingsDecision is not null, Options.NoDecision, _profilesLaidInEnvironment)
                 is not { } finding)
         {
             return [];
         }
 
-        var holders = string.Join(", ", finding.Usage.ToolHolders.Select(holder => $"'{holder}'"));
+        var holders = Quoted(finding.Usage.ToolHolders);
         var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason)));
         var blocks = dryRun ? finding.BlocksValidate : finding.BlocksLaunch;
         return finding.Kind switch
@@ -261,23 +290,30 @@ internal sealed class RunLauncherViewModel
             DecisionPreflightKind.ProfileRefusedByMode => [Say(
                 ValidationCodes.DecisionModeRefused,
                 blocks,
-                string.Join(", ", finding.DecisionProfileHolders.Select(holder => $"'{holder}'"))
-                + " name a decision profile, and the crew states decision.mode: none, which refuses any use of System One: "
+                ModeRefusalText(finding)
+                + ", and the crew states decision.mode: none, which refuses any use of System One: "
                 + "the engine refuses the crew when it loads it.")],
             DecisionPreflightKind.RouteWithoutLadder => [Say(
                 ValidationCodes.DecisionLadder,
                 blocks,
-                string.Join(", ", finding.RoutedHolders.Select(holder => $"'{holder}'"))
+                Quoted(finding.RoutedHolders)
                 + " run on llm.profile: auto, and "
-                + (finding.Status is { HasRouteLadder: true } unknown
-                    ? $"Orkeon:Decision:Route:Ladder names {string.Join(", ", unknown.UnknownRungs.Select(rung => $"'{rung}'"))}, which is no profile of the settings: "
-                      + "unless the run is given that profile another way, the engine refuses the crew when it loads it."
+                + (finding.UnknownRungs.Count > 0
+                    ? $"Orkeon:Decision:Route:Ladder names {Quoted(finding.UnknownRungs)}, a profile neither the settings define "
+                      + "(Llm:Profiles) nor the environment lays: the engine refuses the crew when it loads it."
                     : "the settings give no ladder of two profiles or more in Orkeon:Decision:Route:Ladder: the engine refuses the crew when it loads it."))],
             DecisionPreflightKind.RequiredWithoutModel => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,
                 (dryRun ? CheckOfRequiredText(finding) + "this crew" : "This crew")
                 + $" cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
+            DecisionPreflightKind.ProfileBlockedWithoutModel => [Say(
+                ValidationCodes.DecisionProfileBlocked,
+                blocks,
+                (dryRun ? "A check loads this crew, but a run will fail: " : "")
+                + Quoted(finding.BlockedProfileHolders)
+                + " run on a fail-closed decision profile with a guard stage, and this run goes without the decision models "
+                + "(System One): the guard cannot judge, so the engine blocks every call made through the profile." + reasons)],
             DecisionPreflightKind.RequiredUnknownSettings => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,
@@ -305,6 +341,23 @@ internal sealed class RunLauncherViewModel
 
         ValidationMessage Say(string code, bool error, string text) =>
             error ? ValidationMessage.Error(code, text, target.RunPath) : ValidationMessage.Warning(code, text, target.RunPath);
+    }
+
+    /// <summary>The names of agents, tasks or profiles, each quoted, comma-separated.</summary>
+    private static string Quoted(IEnumerable<string> names) => string.Join(", ", names.Select(name => $"'{name}'"));
+
+    /// <summary>
+    /// What a crew that states <c>decision.mode: none</c> asks System One all the same: a profile to
+    /// pick, a decision profile of the settings, or both.
+    /// </summary>
+    private static string ModeRefusalText(DecisionPreflightFinding finding)
+    {
+        var asks = new List<string>();
+        if (finding.RoutedHolders.Count > 0)
+            asks.Add(Quoted(finding.RoutedHolders) + " run on llm.profile: auto, which System One picks");
+        if (finding.DecisionProfileHolders.Count > 0)
+            asks.Add(Quoted(finding.DecisionProfileHolders) + " name a decision profile");
+        return string.Join("; ", asks);
     }
 
     /// <summary>
@@ -511,6 +564,8 @@ internal sealed class RunLauncherViewModel
         _settingsMountsKnown = false;
         _settingsDecision = null;
         _settingsBridge = null;
+        _settingsCompactionProfile = null;
+        _profilesLaidInEnvironment = [];
 
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -539,10 +594,33 @@ internal sealed class RunLauncherViewModel
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
         _settingsBridge = ToolBridgePreflight.Check(document, _environment);
+        _profilesLaidInEnvironment =
+        [
+            .. _settingsDecision.UnknownRungs.Concat(_settingsDecision.DecisionProfiles)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(LaidInEnvironment),
+        ];
+        _settingsCompactionProfile = document.Compaction.Profile is { } profile && LaidInEnvironment(profile.Trim())
+            ? null
+            : document.Compaction.UnknownProfile();
         SettingsMountsNotice = SettingsMounts.Count == 0
             ? $"'{path}' declares no mount."
             : null;
     }
+
+    /// <summary>
+    /// Whether the environment of this launcher, which the spawned CLI inherits, lays the LLM profile
+    /// <paramref name="profile"/> (<c>ORKEON_Llm__Profiles__&lt;name&gt;__Provider</c> or <c>__Model</c>, with
+    /// or without the prefix): the host then offers it although the settings file does not define it.
+    /// </summary>
+    private bool LaidInEnvironment(string profile) =>
+        LaidProfilePrefixes.Any(prefix =>
+            LaidProfileFields.Any(field =>
+                !string.IsNullOrWhiteSpace(_environment($"{prefix}Llm__Profiles__{profile}__{field}"))));
+
+    private static readonly string[] LaidProfilePrefixes = [DecisionSection.EnvironmentPrefix, ""];
+
+    private static readonly string[] LaidProfileFields = ["Provider", "Model"];
 
     /// <summary>Spawns the run the form describes.</summary>
     /// <param name="dryRun">True for the "Validate" button: <c>--validate</c>, not recorded in the history.</param>

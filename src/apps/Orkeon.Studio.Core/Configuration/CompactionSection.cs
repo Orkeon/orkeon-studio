@@ -40,6 +40,9 @@ public sealed class CompactionSection
     /// <summary>Whether the engine prunes when <c>Prune:Enabled</c> is absent: it does not.</summary>
     public static bool DefaultPruneEnabled { get; } = new ToolResultPruningOptions().Enabled;
 
+    // The key of the pruning's section under the compaction's.
+    private static readonly string PruneKey = PrunePath[(SectionPath.Length + 1)..];
+
     private readonly AppSettingsDocument _document;
 
     internal CompactionSection(AppSettingsDocument document) => _document = document;
@@ -54,8 +57,12 @@ public sealed class CompactionSection
         set => _document.SetBoolean(Key(SectionPath, "Enabled"), value);
     }
 
-    /// <summary>Whether a run of the file compacts: the key, else the engine's default.</summary>
-    public bool IsEnabled => Enabled ?? DefaultEnabled;
+    /// <summary>
+    /// Whether a run of the file compacts, as the binder reads the key: the engine's default when it
+    /// is absent or does not convert (which the start refuses), off when it is written without a value
+    /// (a JSON null, an empty object), else what it says.
+    /// </summary>
+    public bool IsEnabled => SettingsBinding.Bind<ContextCompactionOptions>(DecisionSection.ToConfiguration(_document.Root), SectionPath, []).Enabled;
 
     /// <summary>The share of the window, above 0 and at most 1, that starts a compaction.</summary>
     public double? TriggerShare
@@ -85,8 +92,8 @@ public sealed class CompactionSection
         set => _document.SetBoolean(Key(PrunePath, "Enabled"), value);
     }
 
-    /// <summary>Whether a run of the file prunes: the key, else the engine's default.</summary>
-    public bool IsPruneEnabled => PruneEnabled ?? DefaultPruneEnabled;
+    /// <summary>Whether a run of the file prunes, read as <see cref="IsEnabled"/> is.</summary>
+    public bool IsPruneEnabled => SettingsBinding.Bind<ToolResultPruningOptions>(DecisionSection.ToConfiguration(_document.Root), PrunePath, []).Enabled;
 
     /// <summary>The share of the window, above 0 and at most 1, that starts a pruning.</summary>
     public double? PruneFillShare
@@ -111,42 +118,45 @@ public sealed class CompactionSection
 
     /// <summary>
     /// What the host's start refuses in the two sections, as the engine binds and validates them
-    /// (<c>ContextCompactionOptions.Problems</c>, <c>ToolResultPruningOptions.Problems</c>): a value the
-    /// binder cannot convert, a share outside ]0, 1], a negative count, a <c>Profile</c> that is
-    /// <c>auto</c>, and a key that is no setting of its section. Each with the path of its key, in the
-    /// engine's sentence; empty when the sections are accepted. A <c>Profile</c> the settings do not
+    /// (<c>ContextCompactionOptions.Problems</c>, <c>ToolResultPruningOptions.Problems</c>): a file the
+    /// configuration does not load, when the key it names is the sections'; a value the binder cannot
+    /// convert; a share outside ]0, 1], a negative count, a <c>Profile</c> that is <c>auto</c>, each
+    /// judged on the values that did convert; and a key that is no setting of its section, at any depth,
+    /// or a share that is no finite number. Each with the path of its key, in the engine's sentence and
+    /// the host's order; empty when the sections are accepted. A <c>Profile</c> the settings do not
     /// define is not here: see <see cref="UnknownProfile"/>.
     /// </summary>
     public IReadOnlyList<(string Path, string Problem)> Problems()
     {
         var configuration = DecisionSection.ToConfiguration(_document.Root);
         var problems = new List<(string, string)>();
-        var compaction = new ContextCompactionOptions();
-        var prune = new ToolResultPruningOptions();
-        if (SettingsBinding.TryBind(configuration, SectionPath, compaction, problems))
+        if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
+            problems.Add(load);
+        var compaction = SettingsBinding.Bind<ContextCompactionOptions>(configuration, SectionPath, problems);
+        problems.AddRange(ContextCompactionOptions.Problems(compaction).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
+        if (LlmProfiles.IsAuto(compaction.Profile?.Trim()))
         {
-            problems.AddRange(ContextCompactionOptions.Problems(compaction).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
-            if (LlmProfiles.IsAuto(compaction.Profile?.Trim()))
-            {
-                // The engine's own sentence (CompactionProfileProblem, internal to its composition root).
-                var path = $"{SectionPath}:Profile";
-                problems.Add((path, $"{path} is '{LlmProfiles.Auto}', which picks a profile per task and cannot write a summary: name a profile of Llm:Profiles, or leave the key out for the agent's own."));
-            }
+            // The engine's own sentence (CompactionProfileProblem, internal to its composition root).
+            var path = $"{SectionPath}:Profile";
+            problems.Add((path, $"{path} is '{LlmProfiles.Auto}', which picks a profile per task and cannot write a summary: name a profile of Llm:Profiles, or leave the key out for the agent's own."));
         }
 
-        if (SettingsBinding.TryBind(configuration, PrunePath, prune, problems))
-            problems.AddRange(ToolResultPruningOptions.Problems(prune).Select(problem => (SettingsBinding.PathOf(problem, PrunePath), problem)));
+        var prune = SettingsBinding.Bind<ToolResultPruningOptions>(configuration, PrunePath, problems);
+        problems.AddRange(ToolResultPruningOptions.Problems(prune).Select(problem => (SettingsBinding.PathOf(problem, PrunePath), problem)));
 
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(ContextCompactionOptions), "Prune"));
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, PrunePath, typeof(ToolResultPruningOptions)));
+        // One walk of the section, the pruning's keys met where the keys' order puts them, as the host walks it.
+        problems.AddRange(SettingsBinding.UnknownKeys(
+            configuration, SectionPath, typeof(ContextCompactionOptions), (PruneKey, typeof(ToolResultPruningOptions))));
         return problems;
     }
 
     /// <summary>
     /// The engine's refusal of a <c>Profile</c> that neither the model profiles (<c>Llm:Profiles</c>) nor
     /// the decision profiles (<c>Orkeon:Decision:Profiles</c>) of this file define; null when it is
-    /// defined, is the default, or is left out. A warning, never an error: a run launched from Studio is
-    /// given its model profiles through its environment, which this file does not show.
+    /// defined, is the default, or is left out. A warning of the settings check and of the WPF card: a
+    /// run launched from the WPF app is given Studio's model profiles through its environment, which
+    /// this file does not show. The terminal launcher lays no profile, and makes it an error unless its
+    /// own environment lays the profile.
     /// </summary>
     public (string Path, string Problem)? UnknownProfile()
     {
@@ -161,9 +171,6 @@ public sealed class CompactionSection
             ? null
             : (path, LlmProfiles.UnknownMessage(profile!, path, offered));
     }
-
-    /// <summary>Removes the whole section, the pruning's keys included.</summary>
-    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
 
     // Each key where the file spells it, in whatever letter case, as the configuration reads it.
     private string Key(string section, string key) => _document.PathAsWritten($"{section}:{key}");

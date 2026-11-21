@@ -11,9 +11,12 @@ namespace Orkeon.Studio.Core.Configuration;
 
 /// <summary>
 /// Typed view over the decision models (System One): the circuit's switch and provider name
-/// (<c>Orkeon:Decision:Enabled</c>, <c>Orkeon:Decision:Provider</c>) and the section of each provider
-/// (<c>Orkeon:TypeSafe</c>, <c>Orkeon:Liquid</c>, <c>Orkeon:Kev</c>). Every write lands in place, field by
-/// field, so a key Studio does not model (the decision profiles under <c>Orkeon:Decision:Profiles</c>, a
+/// (<c>Orkeon:Decision:Enabled</c>, <c>Orkeon:Decision:Provider</c>), the ladder of profiles and the
+/// thinking levels System One picks among (<c>Orkeon:Decision:Route:Ladder</c>,
+/// <c>Orkeon:Decision:Effort:Levels</c>) and the section of each provider
+/// (<c>Orkeon:TypeSafe</c>, <c>Orkeon:Liquid</c>, <c>Orkeon:Kev</c>); <see cref="Resolve"/> tells what a
+/// run of the file gets, and the first thing the host's start refuses in it. Every write lands in
+/// place, field by field, so a key Studio does not model (the decision profiles under <c>Orkeon:Decision:Profiles</c>, a
 /// provider's <c>ApiKey</c>) survives an edit. The providers, their sections and their defaults are the
 /// engine's own (<see cref="DecisionProviderDescriptor"/>), read from the <c>Orkeon</c> package.
 /// </summary>
@@ -89,7 +92,7 @@ public sealed class DecisionSection
     /// </summary>
     public bool Exists => _document.GetNode(_document.PathAsWritten(SectionPath)) is not null;
 
-    /// <summary>The switch as written; absent means on, which <see cref="IsEnabled"/> resolves.</summary>
+    /// <summary>The switch as written, null when it reads as no boolean; what a run makes of it is <see cref="IsEnabled"/>.</summary>
     public bool? Enabled
     {
         get => _document.GetBoolean(_document.PathAsWritten(EnabledPath));
@@ -99,8 +102,12 @@ public sealed class DecisionSection
     /// <summary>The path of the switch as the file spells it: where its text is read when it reads as no boolean.</summary>
     public string EnabledPathAsWritten => _document.PathAsWritten(EnabledPath);
 
-    /// <summary>Whether decision tasks ask the decision model: the switch defaults to on.</summary>
-    public bool IsEnabled => Enabled ?? true;
+    /// <summary>
+    /// Whether decision tasks ask the decision model, as the binder reads the switch of the file: on
+    /// when the key is absent or does not convert (which the start refuses), off when it is written
+    /// without a value (a JSON null, an empty object), else what it says.
+    /// </summary>
+    public bool IsEnabled => SettingsBinding.Bind<DecisionCircuitOptions>(ToConfiguration(_document.Root), SectionPath, []).Enabled;
 
     /// <summary>The provider's name as written (<c>typesafe</c>, <c>liquid</c>, <c>kev</c>); null deduces it.</summary>
     public string? Provider
@@ -110,24 +117,31 @@ public sealed class DecisionSection
     }
 
     /// <summary>
-    /// The ladder of profiles as the file writes it, cheapest first; empty when the file has none.
-    /// Setting an empty ladder removes the key.
+    /// The ladder of profiles the file writes, cheapest first, as the binder reads it whatever its shape
+    /// (a list written as an object, an entry that is no text); empty when the file has none. Setting
+    /// an empty ladder removes the key; setting the rungs it already reads writes nothing, so a ladder
+    /// shown and applied untouched stays as the file writes it.
     /// </summary>
     public IReadOnlyList<string> RouteLadder
     {
-        get => _document.GetStringArray(_document.PathAsWritten(RouteLadderPath));
-        set => SetList(RouteLadderPath, value);
+        get => Names(SettingsBinding.Bind<AgentRouteOptions>(ToConfiguration(_document.Root), AgentRouteOptions.SectionName, []).Ladder);
+        set => SetList(RouteLadderPath, value, RouteLadder);
     }
 
     /// <summary>
     /// The thinking levels as the file writes them, cheapest first; empty when the file has none, the
-    /// engine then picking among <see cref="DefaultEffortLevels"/>. Setting an empty list removes the key.
+    /// engine then picking among <see cref="DefaultEffortLevels"/>. Read and written as
+    /// <see cref="RouteLadder"/> is: as the binder reads the key, nothing written when nothing changed.
+    /// Setting an empty list removes the key.
     /// </summary>
     public IReadOnlyList<string> EffortLevels
     {
-        get => _document.GetStringArray(_document.PathAsWritten(EffortLevelsPath));
-        set => SetList(EffortLevelsPath, value);
+        get => Names(SettingsBinding.Bind<AgentEffortOptions>(ToConfiguration(_document.Root), AgentEffortOptions.SectionName, []).Levels);
+        set => SetList(EffortLevelsPath, value, EffortLevels);
     }
+
+    // A list of names as the binder filled it: an entry it read as nothing is an empty name.
+    internal static IReadOnlyList<string> Names(IEnumerable<string?> bound) => [.. bound.Select(name => name ?? string.Empty)];
 
     /// <summary>
     /// The names of a list typed on one line: split on commas, semicolons and line breaks, trimmed,
@@ -159,13 +173,13 @@ public sealed class DecisionSection
         return [.. AgentRouteOptions.Problems(route), .. AgentEffortOptions.Problems(effort)];
     }
 
-    private void SetList(string path, IReadOnlyList<string> values)
+    private void SetList(string path, IReadOnlyList<string> values, IReadOnlyList<string> read)
     {
         ArgumentNullException.ThrowIfNull(values);
         var written = _document.PathAsWritten(path);
         if (values.Count == 0)
             _document.Remove(written);
-        else
+        else if (!values.SequenceEqual(read, StringComparer.Ordinal))
             _document.SetStringArray(written, values);
     }
 
@@ -196,103 +210,124 @@ public sealed class DecisionSection
 
         var configuration = ToConfiguration(_document.Root, environment);
 
-        // The switches as the engine binds them: keys in any case, a value bool.Parse reads, else a refusal.
-        if (!TryReadSwitch(configuration, EnabledPath, out var enabled, out var refusal)
-            || !TryReadSwitch(configuration, StrictToolsPath, out var strictTools, out refusal))
+        // Everything is read first, so a refusal leaves in the status all the file still tells; then the
+        // refusals are looked for in the order the host meets them, and the first one is the status's.
+        var enabledRefusal = ReadCircuitSwitch(configuration, out var enabled);
+        var strictToolsRefusal = ReadStrictTools(configuration, out var strictTools);
+        var guardianRefusal = ReadClosedJudge(configuration, out var closedJudge);
+        var picksRefusal = ReadPicks(configuration, out var ladder, out var unknownRungs);
+        var decisionProfiles = configuration.GetSection(ProfilesPath).GetChildren().Select(profile => profile.Key).ToList();
+        var status = new DecisionStatus(enabled, Provider: null, DecisionProviderSelection.Deduced, [], Refusal: null)
         {
-            return new DecisionStatus(true, Provider: null, DecisionProviderSelection.Deduced, [], refusal);
-        }
+            StrictTools = strictTools,
+            RouteLadder = ladder,
+            UnknownRungs = unknownRungs,
+            DecisionProfiles = decisionProfiles,
+            BlockingProfiles = BlockingProfilesOf(configuration),
+            ClosedJudge = closedJudge,
+        };
+
+        // The file itself: the configuration does not load it.
+        if (_document.LoadRefusal() is { } load)
+            return status with { Refusal = load.Problem, RefusalStage = DecisionRefusalStage.File };
+
+        // While the host is composed, before any section is judged: the runner's switch, the choice of
+        // a provider, the decision profiles.
+        if (strictToolsRefusal is not null)
+            return status with { Refusal = strictToolsRefusal, RefusalStage = DecisionRefusalStage.Composition };
 
         try
         {
             var choice = DecisionProviderChoice.Resolve(configuration, environment);
-            var status = new DecisionStatus(
-                enabled,
-                choice.Provider,
-                choice.How,
-                choice.IgnoredSections,
-                choice.Provider is { } chosen ? RefuseOptions(configuration, chosen) : null)
-            {
-                MissingKeyVariable = choice.Provider is { } provider ? MissingKey(configuration, provider, environment) : null,
-                StrictTools = strictTools,
-            };
-            if (status.Refusal is not null)
-                return status;
-
-            // The ladder and the levels System One picks on, validated at start whatever the circuit.
-            if (!TryReadPicks(configuration, out var ladder, out var unknownRungs, out refusal))
-                return status with { Refusal = refusal };
-
             status = status with
             {
-                RouteLadder = ladder,
-                UnknownRungs = unknownRungs,
-                DecisionProfiles = [.. configuration.GetSection(ProfilesPath).GetChildren().Select(profile => profile.Key)],
+                Provider = choice.Provider,
+                How = choice.How,
+                IgnoredSections = choice.IgnoredSections,
+                MissingKeyVariable = choice.Provider is { } provider ? MissingKey(configuration, provider, environment) : null,
             };
-
-            // A fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
-            // settings' switch named before the missing provider, as the engine names them.
-            if (!TryReadClosedJudge(configuration, out var closedJudge, out refusal))
-                return status with { Refusal = refusal };
-
-            status = status with { ClosedJudge = closedJudge };
-            return closedJudge && !status.CircuitOn
-                ? status with
-                {
-                    Refusal = GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(
-                        enabled ? DecisionCircuitCause.NoProvider : DecisionCircuitCause.Settings).OffReason!),
-                }
-                : status;
         }
         catch (InvalidOperationException ex)
         {
-            return new DecisionStatus(enabled, Provider: null, DecisionProviderSelection.Deduced, [], ex.Message)
+            return status with { Refusal = ex.Message, RefusalStage = DecisionRefusalStage.Composition };
+        }
+
+        if (decisionProfiles.FirstOrDefault(LlmProfiles.IsAuto) is { } reserved)
+        {
+            return status with
             {
-                StrictTools = strictTools,
+                Refusal = LlmProfiles.AutoReservedMessage($"{ProfilesPath}:{reserved}"),
+                RefusalStage = DecisionRefusalStage.Composition,
             };
         }
+
+        // Then the declared sections, in the host's order: the ladder and the levels System One picks
+        // on, validated at start whatever the circuit; the guardian; the circuit's switch; the section
+        // of the provider in use.
+        if (picksRefusal is not null)
+            return status with { Refusal = picksRefusal, RefusalStage = DecisionRefusalStage.Picks };
+        if ((guardianRefusal ?? enabledRefusal) is { } unconverted)
+            return status with { Refusal = unconverted, RefusalStage = DecisionRefusalStage.Switches };
+        if (status.Provider is { } chosen && RefuseOptions(configuration, chosen) is { } options)
+            return status with { Refusal = options, RefusalStage = DecisionRefusalStage.Provider };
+
+        // A decision profile is registered as a profile, after the model profiles: one name for two
+        // refuses the start, in the spelling of the decision profile.
+        var modelProfiles = configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren().Select(profile => profile.Key).ToList();
+        if (decisionProfiles.FirstOrDefault(name => modelProfiles.Contains(name, StringComparer.OrdinalIgnoreCase)) is { } twice)
+            return status with { Refusal = SharedProfileNameRefusal(twice), RefusalStage = DecisionRefusalStage.Profiles };
+
+        // Last, a fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
+        // settings' switch named before the missing provider, as the engine names them.
+        return closedJudge && !status.CircuitOn
+            ? status with
+            {
+                Refusal = GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(
+                    enabled ? DecisionCircuitCause.NoProvider : DecisionCircuitCause.Settings).OffReason!),
+                RefusalStage = DecisionRefusalStage.Judge,
+            }
+            : status;
     }
+
+    /// <summary>The engine's sentence for a name a decision profile and a model profile share: the start is refused.</summary>
+    internal static string SharedProfileNameRefusal(string name) => $"Two LLM profiles are named '{name}'.";
+
+    /// <summary>
+    /// The decision profiles that are fail-closed and carry a guard stage, as the engine binds them
+    /// (<c>DecisionProfilesOptions</c>): <c>FailClosed</c> off when absent or unreadable, a stage's
+    /// <c>Kind</c> trimmed and read in any letter case.
+    /// </summary>
+    private static List<string> BlockingProfilesOf(IConfiguration configuration) =>
+    [
+        .. SettingsBinding.Bind<DecisionProfilesOptions>(configuration, DecisionProfilesOptions.SectionName, []).Profiles
+            .Where(profile => profile.Value is { FailClosed: true } options && options.Stages.Any(stage => string.Equals(
+                stage?.Kind?.Trim(), DecisionProfileServiceCollectionExtensions.GuardKind, StringComparison.OrdinalIgnoreCase)))
+            .Select(profile => profile.Key),
+    ];
 
     /// <summary>
     /// The ladder of profiles and the thinking levels System One picks on, as the engine binds and
-    /// validates them at start (<c>AgentRouteOptions.Problems</c>, <c>AgentEffortOptions.Problems</c>), and
-    /// the reserved profile name <c>auto</c> among the decision profiles; or what the start refuses. The
+    /// validates them at start (<c>AgentRouteOptions.Problems</c>, <c>AgentEffortOptions.Problems</c>);
+    /// the first thing the start refuses in them, or null. The ladder is empty when it is refused. The
     /// rungs that name no profile of these settings are listed apart: the engine refuses them when it
     /// loads a crew that asks for the pick, not at start.
     /// </summary>
-    private static bool TryReadPicks(
-        IConfiguration configuration, out IReadOnlyList<string> ladder, out IReadOnlyList<string> unknownRungs, out string? refusal)
+    private static string? ReadPicks(IConfiguration configuration, out IReadOnlyList<string> ladder, out IReadOnlyList<string> unknownRungs)
     {
         ladder = [];
         unknownRungs = [];
-        var route = new AgentRouteOptions();
-        var effort = new AgentEffortOptions();
-        try
+        var unconverted = new List<(string Path, string Problem)>();
+        var route = SettingsBinding.Bind<AgentRouteOptions>(configuration, AgentRouteOptions.SectionName, unconverted);
+        var effort = SettingsBinding.Bind<AgentEffortOptions>(configuration, AgentEffortOptions.SectionName, unconverted);
+        var routeProblems = unconverted.Select(problem => problem.Problem).Concat(AgentRouteOptions.Problems(route)).ToList();
+        if (routeProblems.Count == 0)
         {
-            configuration.GetSection(AgentRouteOptions.SectionName).Bind(route);
-            configuration.GetSection(AgentEffortOptions.SectionName).Bind(effort);
-        }
-        catch (InvalidOperationException ex)
-        {
-            refusal = ex.Message;
-            return false;
+            ladder = [.. route.Ladder.Select(rung => rung.Trim())];
+            var offered = ProfilesOf(configuration);
+            unknownRungs = [.. ladder.Where(rung => !LlmProfiles.IsDefault(rung) && !offered.Contains(rung, StringComparer.OrdinalIgnoreCase))];
         }
 
-        var problems = AgentRouteOptions.Problems(route).Concat(AgentEffortOptions.Problems(effort)).ToList();
-        problems.AddRange(configuration.GetSection(ProfilesPath).GetChildren()
-            .Where(profile => LlmProfiles.IsAuto(profile.Key))
-            .Select(profile => LlmProfiles.AutoReservedMessage($"{ProfilesPath}:{profile.Key}")));
-        if (problems.Count > 0)
-        {
-            refusal = string.Join(" ", problems);
-            return false;
-        }
-
-        refusal = null;
-        ladder = [.. route.Ladder.Select(rung => rung.Trim())];
-        var offered = ProfilesOf(configuration);
-        unknownRungs = [.. ladder.Where(rung => !LlmProfiles.IsDefault(rung) && !offered.Contains(rung, StringComparer.OrdinalIgnoreCase))];
-        return true;
+        return routeProblems.Concat(AgentEffortOptions.Problems(effort)).FirstOrDefault();
     }
 
     /// <summary>
@@ -310,45 +345,50 @@ public sealed class DecisionSection
 
     /// <summary>
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c> enabled, its
-    /// <c>FailMode</c> left on <c>Closed</c>, the guardian itself on), as the engine binds the section; or
-    /// the binder's refusal of a value it cannot convert.
+    /// <c>FailMode</c> left on <c>Closed</c>, the guardian itself on), as the engine binds the guardian's
+    /// section, the judge's within it; returns the binder's refusal of the first value it cannot
+    /// convert, or null. A key without a value (a JSON null, an empty object) is the binder's
+    /// <c>false</c>, as for every switch it binds: the guardian written so is off.
     /// </summary>
-    private static bool TryReadClosedJudge(IConfiguration configuration, out bool closed, out string? refusal)
+    private static string? ReadClosedJudge(IConfiguration configuration, out bool closed)
     {
-        closed = false;
-        if (!TryReadSwitch(configuration, GuardianEnabledPath, out var guardian, out refusal))
-            return false;
-
-        var judge = new GuardianLlmOptions();
-        try
-        {
-            configuration.GetSection(GuardianLlmOptions.SectionName).Bind(judge);
-        }
-        catch (InvalidOperationException ex)
-        {
-            refusal = ex.Message;
-            return false;
-        }
-
-        closed = guardian && judge is { Enabled: true, FailMode: GuardianJudgeFailMode.Closed };
-        return true;
+        var unconverted = new List<(string Path, string Problem)>();
+        var guardian = SettingsBinding.Bind<Orkeon.Infrastructure.Configuration.GuardianOptions>(
+            configuration, ConfigurationPath.GetParentPath(GuardianEnabledPath)!, unconverted);
+        closed = unconverted.Count == 0 && guardian is { Enabled: true, Llm: { Enabled: true, FailMode: GuardianJudgeFailMode.Closed } };
+        return unconverted.Count > 0 ? unconverted[0].Problem : null;
     }
 
     /// <summary>
-    /// A switch as the engine binds it (on when absent or blank), or the binder's refusal of a text
-    /// <c>bool.Parse</c> does not read.
+    /// The circuit's switch as the engine binds it (<c>DecisionCircuitOptions</c>): on when the key is
+    /// absent, off when it is written without a value (a JSON null, an empty object: the binder gives a
+    /// boolean its <c>false</c>), else what <c>bool.Parse</c> reads. Returns the binder's refusal of any
+    /// other text, the empty one of an empty list or an empty string included, the switch then left on.
     /// </summary>
-    private static bool TryReadSwitch(IConfiguration configuration, string path, out bool value, out string? refusal)
+    private static string? ReadCircuitSwitch(IConfiguration configuration, out bool enabled)
     {
-        var written = configuration[path];
-        value = true;
-        refusal = null;
-        if (string.IsNullOrWhiteSpace(written) || bool.TryParse(written.Trim(), out value))
-            return true;
+        var unconverted = new List<(string Path, string Problem)>();
+        enabled = SettingsBinding.Bind<DecisionCircuitOptions>(configuration, DecisionCircuitOptions.SectionName, unconverted).Enabled;
+        return unconverted.Count > 0 ? unconverted[0].Problem : null;
+    }
 
-        value = true;
-        refusal = $"Failed to convert configuration value '{written}' at '{path}' to type 'System.Boolean'.";
-        return false;
+    /// <summary>
+    /// The runner's strict tool resolution as the host reads it, one value with a default
+    /// (<c>GetValue</c>): on when the key is absent or holds no value, else what <c>bool.Parse</c> reads.
+    /// Returns the refusal of any other text, the switch then left on.
+    /// </summary>
+    private static string? ReadStrictTools(IConfiguration configuration, out bool strictTools)
+    {
+        try
+        {
+            strictTools = configuration.GetValue(StrictToolsPath, defaultValue: true);
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            strictTools = true;
+            return ex.Message;
+        }
     }
 
     /// <summary>
@@ -400,8 +440,10 @@ public sealed class DecisionSection
     }
 
     /// <summary>
-    /// The document as the configuration a run binds, as the JSON provider flattens it: an empty
-    /// object or array is a key without a value, so a section written empty still counts as present.
+    /// The document as the configuration a run binds, as the JSON provider flattens it
+    /// (<see cref="SettingsBinding.Flatten"/>): an empty object is a key without a value, so a section
+    /// written empty still counts as present, and an empty array is an empty text. A file the provider
+    /// refuses to load (<see cref="AppSettingsDocument.LoadRefusal"/>) is flattened all the same.
     /// With <paramref name="environment"/>, the settings of the decision circuit a run also reads from
     /// the environment are laid as the runner lays them: the variables without a prefix under the
     /// file, the <c>ORKEON_</c> ones above it.
@@ -411,7 +453,8 @@ public sealed class DecisionSection
         var data = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         if (environment is not null)
             LayEnvironment(environment, prefix: "", data);
-        Flatten(root, prefix: null, data);
+        foreach (var (key, value) in SettingsBinding.Flatten(root, out _))
+            data[key] = value;
         if (environment is not null)
             LayEnvironment(environment, EnvironmentPrefix, data);
         return new ConfigurationBuilder().AddInMemoryCollection(data).Build();
@@ -447,41 +490,6 @@ public sealed class DecisionSection
         }
     }
 
-    // A number JSON cannot write (an infinity set in memory) has no text: read as a key without a value.
-    private static string? ReadValue(JsonNode node)
-    {
-        try
-        {
-            return AppSettingsDocument.ReadString(node);
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-    }
-
-    private static void Flatten(JsonNode? node, string? prefix, Dictionary<string, string?> data)
-    {
-        switch (node)
-        {
-            case JsonObject obj when obj.Count > 0:
-                foreach (var (key, child) in obj)
-                    Flatten(child, prefix is null ? key : $"{prefix}:{key}", data);
-                break;
-            case JsonArray array when array.Count > 0:
-                for (var i = 0; i < array.Count; i++)
-                    Flatten(array[i], $"{prefix}:{i}", data);
-                break;
-            case JsonObject or JsonArray or null:
-                if (prefix is not null)
-                    data[prefix] = null;
-                break;
-            default:
-                if (prefix is not null)
-                    data[prefix] = ReadValue(node);
-                break;
-        }
-    }
 }
 
 /// <summary>The decision circuit a run of the settings gets, as the engine resolves it.</summary>
@@ -490,9 +498,14 @@ public sealed class DecisionSection
 /// <param name="How">Whether the provider was named or deduced.</param>
 /// <param name="IgnoredSections">The provider sections present but not used.</param>
 /// <param name="Refusal">
-/// The engine's message when it refuses the settings at start (an unknown name, two providers that could
-/// be deduced, a Kev address the key may not travel to, a switch that is neither true nor false, a section
-/// of the provider in use its validation refuses); null otherwise.
+/// The engine's message when it refuses the settings at start (a file that does not load for a key
+/// written twice, an unknown name, two providers that could be deduced, a Kev address the key may not
+/// travel to, a decision profile named <c>auto</c>, a ladder or levels it refuses, a switch or a value of
+/// the guardian that does not convert, a section of the provider in use its validation refuses, a name
+/// a decision profile shares with a model profile, a fail-closed judge left without a circuit); null
+/// otherwise.
+/// One sentence: the first the host meets among those (<see cref="DecisionStatus.RefusalStage"/>).
+/// Under a refusal the other members still hold what the file tells, each as it says.
 /// </param>
 public sealed record DecisionStatus(
     bool Enabled,
@@ -505,6 +518,12 @@ public sealed record DecisionStatus(
     public bool CircuitOn => Enabled && Provider is not null && Refusal is null;
 
     /// <summary>
+    /// Where the host meets <see cref="Refusal"/>, among everything its start judges:
+    /// <see cref="DecisionRefusalStage.None"/> when it refuses nothing here.
+    /// </summary>
+    public DecisionRefusalStage RefusalStage { get; init; }
+
+    /// <summary>
     /// The variable the chosen provider reads its key from, when it needs one and none is in place there
     /// nor in the file: each request then fails. Null when the key is in place, optional, or no provider is chosen.
     /// </summary>
@@ -512,14 +531,16 @@ public sealed record DecisionStatus(
 
     /// <summary>
     /// Whether the runner resolves tools strictly (<c>Orkeon:CrewFactory:StrictTools</c>, on by default):
-    /// on, a holder of <c>system_one_decide</c> without a provider is refused at load, a check included;
-    /// off, the tool is dropped and the crew runs without it.
+    /// on, a crew that states no mode and holds <c>system_one_decide</c> is refused at load once the
+    /// circuit is off (a check loads it and only warns); off, the tool is dropped and the crew runs
+    /// without it.
     /// </summary>
     public bool StrictTools { get; init; } = true;
 
     /// <summary>
     /// The ladder System One picks a profile on (<c>Orkeon:Decision:Route:Ladder</c>), as the run reads
     /// it; empty when the settings give none, and an agent on <c>llm.profile: auto</c> then fails to load.
+    /// Empty too when the start refuses the ladder itself; under any other refusal, the ladder as read.
     /// </summary>
     public IReadOnlyList<string> RouteLadder { get; init; } = [];
 
@@ -533,9 +554,19 @@ public sealed record DecisionStatus(
 
     /// <summary>
     /// The names of the decision profiles the settings define (<c>Orkeon:Decision:Profiles</c>): an agent
-    /// or a task that names one asks System One through the profile's stages.
+    /// or a task that names one asks System One through the profile's stages. Held under a refusal too,
+    /// whatever it is: the names are read before anything is judged.
     /// </summary>
     public IReadOnlyList<string> DecisionProfiles { get; init; } = [];
+
+    /// <summary>
+    /// The decision profiles of <c>Orkeon:Decision:Profiles</c> that block every call once the circuit is
+    /// off: those that are fail-closed (<c>FailClosed: true</c>) and carry a guard stage (a <c>Kind</c>
+    /// that reads <c>guard</c>, trimmed, in any letter case), as the engine builds them without decisions
+    /// (<c>CircuitOffGuardStage</c>). Empty when none is; a <c>FailClosed</c> that reads as no boolean
+    /// counts as off. Held under a refusal too, whatever it is.
+    /// </summary>
+    public IReadOnlyList<string> BlockingProfiles { get; init; } = [];
 
     /// <summary>
     /// Whether the settings give a ladder at all: two rungs or more (a single one already refuses the
@@ -550,7 +581,9 @@ public sealed record DecisionStatus(
     /// <summary>
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c>): it refuses to start
     /// once the circuit is off, a run's own <c>--no-decision</c> included
-    /// (<see cref="RefusalOfRunSwitch"/>).
+    /// (<see cref="RefusalOfRunSwitch"/>). Held under a refusal too, as the file tells it; false when
+    /// the guardian's own settings are what does not convert (<c>Orkeon:Guardian:Enabled</c>, a value of
+    /// <c>Orkeon:Guardian:Llm</c>).
     /// </summary>
     public bool ClosedJudge { get; init; }
 
@@ -561,6 +594,40 @@ public sealed record DecisionStatus(
     public string? RefusalOfRunSwitch => ClosedJudge
         ? GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(DecisionCircuitCause.Switch).OffReason!)
         : null;
+}
+
+/// <summary>
+/// Where the host's start meets a refusal of the decision settings, in the order it judges everything:
+/// a later stage is reached only once the earlier ones, and the sections judged between them, pass.
+/// </summary>
+public enum DecisionRefusalStage
+{
+    /// <summary>Nothing is refused.</summary>
+    None,
+
+    /// <summary>The configuration does not load the file (<see cref="AppSettingsDocument.LoadRefusal"/>).</summary>
+    File,
+
+    /// <summary>
+    /// Refused while the host is composed, before any section is judged: <c>Orkeon:CrewFactory:StrictTools</c>
+    /// that is no boolean, the choice of a provider, a decision profile under a reserved name.
+    /// </summary>
+    Composition,
+
+    /// <summary>The ladder or the thinking levels: judged after the compaction and the skills.</summary>
+    Picks,
+
+    /// <summary>A value of the guardian or the circuit's switch that does not convert: judged before the tool bridge.</summary>
+    Switches,
+
+    /// <summary>The section of the provider in use: the last section judged, before the keys no section carries.</summary>
+    Provider,
+
+    /// <summary>A name two profiles share: said after the keys no section carries.</summary>
+    Profiles,
+
+    /// <summary>A fail-closed LLM judge left without a circuit: said last.</summary>
+    Judge,
 }
 
 /// <summary>

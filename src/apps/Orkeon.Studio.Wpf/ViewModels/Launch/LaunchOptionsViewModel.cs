@@ -268,10 +268,10 @@ public sealed class LaunchOptionsViewModel : ObservableObject
 
     /// <summary>
     /// Whether the run uses the decision models (System One) the settings configure; unticked, the run
-    /// passes <c>--no-decision</c> (once offered, <see cref="OffersDecisionModels"/>): each decision task
-    /// answers from its fallback, or lets its <c>otherwise</c> task run, and one that has neither refuses
-    /// the run; <c>system_one_decide</c> still asks the provider. It only turns the circuit off: the
-    /// settings decide whether there is one to use.
+    /// passes <c>--no-decision</c> (once offered, <see cref="OffersDecisionModels"/>): no consumer asks
+    /// the model. A decision task is answered by its relay or from its fallback, or lets its
+    /// <c>otherwise</c> task run; <c>system_one_decide</c> is withheld; a crew that cannot run without
+    /// the models is refused. It only turns the circuit off: the settings decide whether there is one to use.
     /// </summary>
     public bool UseDecisionModels
     {

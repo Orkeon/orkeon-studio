@@ -90,4 +90,28 @@ public sealed class CompactionAndSkillsViewModelTests
         Assert.Equal("", compaction.ProblemsText);
         Assert.Equal("", skills.ProblemsText);
     }
+
+    /// <summary>
+    /// The two switches written without a value (a JSON null, an empty object) bind to false: the
+    /// form shows them off, as the run gets them, never the default; nothing is rewritten until a
+    /// switch is touched.
+    /// </summary>
+    [Fact]
+    public void Switches_written_without_a_value_are_shown_off_and_kept_until_touched()
+    {
+        var (compaction, _, document, dirty) = Forms("""{"Orkeon":{"Compaction":{"Enabled":null,"Prune":{"Enabled":{}}}}}""");
+        var before = document.ToJson();
+
+        Assert.False(compaction.Enabled);
+        Assert.False(compaction.PruneEnabled);
+        compaction.Enabled = false;
+        compaction.PruneEnabled = false;
+        Assert.Equal(before, document.ToJson());
+        Assert.Empty(dirty);
+
+        compaction.Enabled = true;
+        Assert.True(document.Compaction.IsEnabled);
+        Assert.False(document.Compaction.IsPruneEnabled);
+        Assert.NotEmpty(dirty);
+    }
 }

@@ -172,7 +172,13 @@ public sealed partial class SettingsScreenViewModel
         Profiles.Profiles.CollectionChanged += collectionChanged;
         // A key remembered changes the keys tab: the rows are rebuilt with the profiles, so each
         // new row is followed as it comes.
-        EventHandler keyStored = (_, _) => RefreshTabStates();
+        // A key stored on any screen may be one a decision provider reads: its status is resolved
+        // again first, since the decision tab shows the one it keeps.
+        EventHandler keyStored = (_, _) =>
+        {
+            Config.Decision.RefreshVerdict();
+            RefreshTabStates();
+        };
         Profiles.Secrets.CollectionChanged += (_, e) =>
         {
             foreach (var row in e.NewItems?.OfType<SecretRowViewModel>() ?? [])

@@ -312,10 +312,16 @@ public sealed class RunProgressViewModel : ObservableObject
     /// <summary>Whether any such line arrived: gates the panel's visibility.</summary>
     public bool HasAgentNotes => AgentNotes.Count > 0;
 
-    /// <summary>How many lines <see cref="AgentNotes"/> keeps: the oldest go first.</summary>
+    /// <summary>
+    /// How many lines <see cref="AgentNotes"/> keeps: the oldest go first, the circuit line that opens
+    /// the list excepted, every « circuit-off » or « relay » note below it being read against it.
+    /// </summary>
     internal const int MaxAgentNotes = 200;
 
     private string? _pendingCircuitNote;
+
+    /// <summary>Whether the first line of <see cref="AgentNotes"/> is the run's circuit line, which the cap never evicts.</summary>
+    private bool _circuitNoteOpensTheList;
 
     private void ShowCircuitNote()
     {
@@ -323,6 +329,8 @@ public sealed class RunProgressViewModel : ObservableObject
             return;
 
         _pendingCircuitNote = null;
+        if (AgentNotes.Count == 0)
+            _circuitNoteOpensTheList = true;
         AgentNotes.Add(line);
     }
 
@@ -412,6 +420,7 @@ public sealed class RunProgressViewModel : ObservableObject
         HubMessages.Clear();
         AgentNotes.Clear();
         _pendingCircuitNote = null;
+        _circuitNoteOpensTheList = false;
         AnswerText = string.Empty;
         ReplyText = string.Empty;
         _model = new RunProgressModel(_time);
@@ -471,7 +480,8 @@ public sealed class RunProgressViewModel : ObservableObject
 
         // Every run says what its circuit is, a crew that asks nothing of System One included: the line
         // is shown at once for a crew that states it runs with the models (optional, required), and held
-        // for the others until the run does something it explains (a decision task, a pick, a pruning).
+        // for the others until the run does something it explains: a decision task completed, or any
+        // note of this panel (a profile or a thinking level picked or not, skills, a compaction, a pruning).
         if (_model.DecisionCircuit is { } circuit && !ReferenceEquals(circuit, circuitBefore))
         {
             _pendingCircuitNote = Describe(circuit);
@@ -483,9 +493,10 @@ public sealed class RunProgressViewModel : ObservableObject
             ShowCircuitNote();
         for (var index = notesBefore; index < _model.AgentNotes.Count; index++)
             AgentNotes.Add(Describe(_model.AgentNotes[index]));
-        // A long tool loop prunes or compacts at each turn: the panel keeps the latest lines.
+        // A long tool loop prunes or compacts at each turn: the panel keeps the latest lines, under
+        // the circuit line that explains them.
         while (AgentNotes.Count > MaxAgentNotes)
-            AgentNotes.RemoveAt(0);
+            AgentNotes.RemoveAt(_circuitNoteOpensTheList ? 1 : 0);
 
         // A delta arrives per token, on the UI thread. Re-raising the eleven labels plus the
         // command state for each one would mean thousands of change notifications per

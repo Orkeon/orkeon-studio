@@ -1,4 +1,6 @@
 using Orkeon.Studio.Config.Presentation;
+using Orkeon.Studio.Core.Configuration;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Orkeon.Studio.Config.Views;
@@ -7,11 +9,12 @@ namespace Orkeon.Studio.Config.Views;
 /// The decision models (System One) screen: the provider from a closed list, the circuit's switch, and
 /// for each provider its section, model and address, the profiles and the thinking levels System One
 /// picks among, then what a run of the file gets. A provider name
-/// the engine does not know is a row of its own, so applying the screen keeps it.
+/// the engine does not know is a row of its own, so applying the screen keeps it. Every line of text
+/// above the status takes one row, cut rather than wrapped, so none runs into the field under it.
 /// </summary>
 internal sealed class DecisionSectionView : SectionView
 {
-    private const string EnabledCaption = "Use the decision models (Orkeon:Decision:Enabled)";
+    private const string EnabledCaption = "Use the decision models";
 
     private readonly DecisionForm _form;
     private readonly ListView _provider;
@@ -23,19 +26,28 @@ internal sealed class DecisionSectionView : SectionView
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public DecisionSectionView(DecisionForm form)
-        : base("Decision models")
+        : base("Decision models", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
+        FormLayout.AddLine(this, 0, "Provider (" + DecisionSection.ProviderPath + ")");
         // One row more than the standard choices: a name the engine does not know shows there as written.
+        // The list takes the whole width, under its caption: beside it, its longest row would be cut.
         var rows = DecisionForm.StandardChoices.Count + 1;
-        _provider = FormLayout.AddChoiceList(this, 0, rows, "Provider", _form.ProviderChoices, _form.ProviderChoiceIndex);
-        var y = rows + 1;
+        _provider = new ListView { X = FormLayout.Margin, Y = 1, Width = Dim.Fill(FormLayout.Margin), Height = rows };
+        Add(_provider);
+        FormLayout.SetItems(_provider, _form.ProviderChoices, _form.ProviderChoiceIndex);
+        var y = rows + 2;
+        // Two rows: the caption of a switch the file writes as no boolean says so, and is longer.
         _enabled = FormLayout.AddOptionalSwitch(this, y, EnabledCaption, _form.Enabled);
+        _enabled.Height = 2;
         FormLayout.TrackUnreadable(_enabled, EnabledCaption, () => _form.EnabledAsWritten, () => _form.EnabledAsWritten = null);
+        y += 2;
+        FormLayout.AddLine(this, y, DecisionForm.SectionsNotice);
+        FormLayout.AddLine(this, y + 1, DecisionForm.JsonNotice);
         y += 2;
         foreach (var fields in _form.Providers)
         {
-            var setUp = new CheckBox { X = 1, Y = y, Text = fields.Descriptor.Section + " section (unticked: removed whole)" };
+            var setUp = new CheckBox { X = FormLayout.Margin, Y = y, Height = 1, Text = fields.Descriptor.Section + " section" };
             Add(setUp);
             var model = FormLayout.AddField(this, y + 1, "  Model", fields.Model);
             var address = FormLayout.AddField(this, y + 2, "  API address", fields.BaseAddress);
@@ -43,14 +55,19 @@ internal sealed class DecisionSectionView : SectionView
             y += 3;
         }
 
+        y++;
         _routeLadder = FormLayout.AddField(this, y, "Profiles to pick among", _form.RouteLadder);
         _effortLevels = FormLayout.AddField(this, y + 1, "Thinking levels", _form.EffortLevels);
-        FormLayout.AddNote(this, y + 2, DecisionForm.PicksNotice);
-        FormLayout.AddNote(this, y + 3, DecisionForm.LevelsNotice);
-        y += 5;
-        FormLayout.AddNote(this, y, DecisionForm.KeysNotice);
-        FormLayout.AddNote(this, y + 1, DecisionForm.SectionsNotice);
-        _status = FormLayout.AddText(this, y + 3, _form.Status);
+        y += 2;
+        foreach (var line in (string[])[DecisionForm.PicksNotice, DecisionForm.ListsNotice, DecisionForm.LevelsNotice, DecisionForm.DefaultLevelsNotice])
+            FormLayout.AddLine(this, y++, line);
+
+        y++;
+        foreach (var line in DecisionForm.KeyLines)
+            FormLayout.AddLine(this, y++, line);
+
+        // Last, with nothing under it: the one text of the screen that may take several rows.
+        _status = FormLayout.AddText(this, y + 1, _form.Status);
     }
 
     /// <inheritdoc />

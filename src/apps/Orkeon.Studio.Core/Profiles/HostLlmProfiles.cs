@@ -199,9 +199,12 @@ public static class HostLlmProfiles
     /// removed, switched to « no model » — goes; and every offered setting the change touched, or
     /// whose entry the file lacks, carries without the reference to its key's variable (STUDIO-49)
     /// or with a key its card disagrees with (<see cref="LlmProfilesSection.KeyAgrees(LlmProfileEntry)"/>,
-    /// STUDIO-54), is written, without its key. <c>Orkeon:Rag:LlmProfile</c> follows a rename and
-    /// falls back to the default when its profile goes: the host refuses to start on a profile it
-    /// does not define. Entries written by hand are never touched.
+    /// STUDIO-54), is written, without its key. What names a profile follows a rename:
+    /// <c>Orkeon:Rag:LlmProfile</c>, <c>Orkeon:Compaction:Profile</c> and the rungs of
+    /// <c>Orkeon:Decision:Route:Ladder</c>. When its profile goes, the first falls back to the default
+    /// and the second to the agent's own model (the host refuses to start on a profile it does not
+    /// define); a rung stays, a ladder being refused under two rungs. Entries written by hand are
+    /// never touched.
     /// </summary>
     /// <param name="document">The settings file being edited.</param>
     /// <param name="before">The settings before the change.</param>
@@ -231,14 +234,14 @@ public static class HostLlmProfiles
             && !string.Equals(oldId, newId, StringComparison.OrdinalIgnoreCase))
         {
             changed |= section.Rename(oldId, newId);
-            changed |= MoveRagProfile(document, oldId, newId);
+            changed |= MoveProfileReferences(document, oldId, newId);
         }
 
         var offeredNow = new HashSet<string>(now.Values, StringComparer.OrdinalIgnoreCase);
         foreach (var id in was.Values.Where(id => !offeredNow.Contains(id)))
         {
             changed |= section.Remove(id);
-            changed |= MoveRagProfile(document, id, null);
+            changed |= MoveProfileReferences(document, id, null);
         }
 
         foreach (var (name, id) in now)
@@ -333,13 +336,35 @@ public static class HostLlmProfiles
         return environment;
     }
 
-    /// <summary>Points <c>Orkeon:Rag:LlmProfile</c> from <paramref name="from"/> to <paramref name="to"/> (null: the default) when it names <paramref name="from"/>.</summary>
-    private static bool MoveRagProfile(AppSettingsDocument document, string from, string? to)
+    /// <summary>
+    /// Points what names the profile <paramref name="from"/> to <paramref name="to"/>:
+    /// <c>Orkeon:Rag:LlmProfile</c> (null: the default), <c>Orkeon:Compaction:Profile</c> (null: the
+    /// agent's own model), and, for a rename only, the rungs of <c>Orkeon:Decision:Route:Ladder</c>.
+    /// </summary>
+    private static bool MoveProfileReferences(AppSettingsDocument document, string from, string? to)
     {
-        if (!string.Equals(document.Rag.LlmProfile?.Trim(), from, StringComparison.OrdinalIgnoreCase))
-            return false;
+        bool Names(string? written) => string.Equals(written?.Trim(), from, StringComparison.OrdinalIgnoreCase);
 
-        document.Rag.LlmProfile = to;
-        return true;
+        var changed = false;
+        if (Names(document.Rag.LlmProfile))
+        {
+            document.Rag.LlmProfile = to;
+            changed = true;
+        }
+
+        if (Names(document.Compaction.Profile))
+        {
+            document.Compaction.Profile = to;
+            changed = true;
+        }
+
+        var ladder = document.Decision.RouteLadder;
+        if (to is not null && ladder.Any(Names))
+        {
+            document.Decision.RouteLadder = [.. ladder.Select(rung => Names(rung) ? to : rung)];
+            changed = true;
+        }
+
+        return changed;
     }
 }

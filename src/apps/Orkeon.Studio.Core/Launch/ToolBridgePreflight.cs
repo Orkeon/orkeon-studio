@@ -28,12 +28,23 @@ public enum ToolBridgePreflightKind
 /// <summary>What the launch is told of the tool bridge.</summary>
 /// <param name="Kind">What is said.</param>
 /// <param name="Reason">
-/// The engine's sentence for a refusal (the first value refused, or what is wrong with the token); the
-/// bridge's address for <see cref="ToolBridgePreflightKind.NothingBridged"/>.
+/// The engine's sentence for a refusal (the first thing the start refuses in the two sections: a key
+/// written twice, a value, a key that is no setting; or what is wrong with the token); the bridge's
+/// address for <see cref="ToolBridgePreflightKind.NothingBridged"/>.
 /// </param>
-/// <param name="Path">The key the refusal is about; null when it is about the token.</param>
+/// <param name="Path">
+/// The key a <see cref="ToolBridgePreflightKind.SettingsRefused"/> finding is about; null for the
+/// other kinds.
+/// </param>
 public sealed record ToolBridgePreflightFinding(ToolBridgePreflightKind Kind, string Reason, string? Path = null)
 {
+    /// <summary>
+    /// The environment variable the settings read the token from, for
+    /// <see cref="ToolBridgePreflightKind.TokenRefused"/>: where it must be put for this file to find
+    /// it. Null for the other kinds.
+    /// </summary>
+    public string? TokenVariable { get; init; }
+
     /// <summary>Whether the finding stops the run at start, a check included.</summary>
     public bool BlocksStart => Kind != ToolBridgePreflightKind.NothingBridged;
 }
@@ -54,20 +65,22 @@ public static class ToolBridgePreflight
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(environment);
 
-        var caller = settings.ToolBridge;
-        var refused = caller.Problems().Concat(settings.BridgeServer.Problems()).FirstOrDefault();
+        // The document flattened once and each section bound once, whatever the check goes on to read.
+        var configuration = DecisionSection.ToConfiguration(settings.Root);
+        var caller = settings.ToolBridge.Judge(configuration);
+        var refused = caller.Problems.Concat(settings.BridgeServer.Problems(configuration)).FirstOrDefault();
         if (refused.Problem is not null)
             return new ToolBridgePreflightFinding(ToolBridgePreflightKind.SettingsRefused, refused.Problem, refused.Path);
 
         if (caller.IsEnabled)
         {
-            var variable = caller.EffectiveTokenEnvVar;
+            var variable = caller.TokenEnvVar;
             return ToolBridgeRules.TokenProblem(environment(variable), variable) is { } token
-                ? new ToolBridgePreflightFinding(ToolBridgePreflightKind.TokenRefused, token)
+                ? new ToolBridgePreflightFinding(ToolBridgePreflightKind.TokenRefused, token) { TokenVariable = variable }
                 : null;
         }
 
-        return caller.BoundAddress is { } address
+        return caller.Address is { } address
             ? new ToolBridgePreflightFinding(ToolBridgePreflightKind.NothingBridged, address)
             : null;
     }

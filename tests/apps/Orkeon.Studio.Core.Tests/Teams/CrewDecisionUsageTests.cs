@@ -325,6 +325,51 @@ public sealed class CrewDecisionUsageTests : IDisposable
 
         Assert.True(usage.Unknown);
         Assert.Equal(CrewDecisionMode.None, usage.Mode);
+
+        // The control: the same file without the mode line is read, and its decision task known.
+        File.WriteAllText(path, Crew(DecisionTask));
+        var read = CrewDecisionUsage.Of(new RunTarget { Kind = RunTargetKind.YamlFile, SelectedPath = path, RunPath = path });
+        Assert.False(read.Unknown);
+        Assert.Equal("pick", Assert.Single(read.DecisionTasks).Task);
+    }
+
+    /// <summary>
+    /// Of what a crew that states none may still ask System One, the engine's loader refuses all but a
+    /// profile: thinking, skills, pruning and the tool make the crew unreadable, its error the launch's
+    /// to report, while <c>llm.profile: auto</c> loads and is left to the settings' side
+    /// (<c>DecisionPreflight</c>), the crew factory refusing it with what the host knows.
+    /// </summary>
+    [Theory]
+    [InlineData("llm: { thinking: { effort: auto } }", true)]
+    [InlineData("llm: { thinking: { enabled: auto } }", true)]
+    [InlineData("skills: { auto: true }", true)]
+    [InlineData("compaction: { prune: true }", true)]
+    [InlineData("tools: [system_one_decide]", true)]
+    [InlineData("llm: { profile: auto }", false)]
+    [InlineData("llm: { profile: guarded }", false)]
+    public void A_crew_that_states_none_is_unreadable_for_every_use_but_a_profile(string asks, bool unknown)
+    {
+        var path = Path.Combine(_root, "none.yaml");
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(path, Crew(
+            """
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+            """,
+            $"agents:\n  analyst:\n    role: Analyst\n    goal: read\n    {asks}")
+            .Replace("process: sequential", "process: sequential\ndecision: { mode: none }", StringComparison.Ordinal));
+
+        var usage = CrewDecisionUsage.Of(new RunTarget { Kind = RunTargetKind.YamlFile, SelectedPath = path, RunPath = path });
+
+        Assert.Equal(unknown, usage.Unknown);
+        Assert.Equal(CrewDecisionMode.None, usage.Mode);
+        if (!unknown)
+        {
+            Assert.True(usage.Declared);
+            Assert.Equal(asks.Contains("auto", StringComparison.Ordinal) ? 1 : 0, usage.OtherUses.Count(use => use.Kind == CrewSystemOneUseKind.RouteAuto));
+        }
     }
 
     [Fact]
@@ -348,9 +393,15 @@ public sealed class CrewDecisionUsageTests : IDisposable
                 role: Writer
                 goal: write
                 llm: { profile: default }
+              picker:
+                role: Picker
+                goal: pick
+                llm: { profile: Auto }
             """));
 
-        Assert.Equal(CrewDecisionMode.None, usage.Mode);
+        // The holder on auto is a pick of System One, never a profile the crew names.
+        Assert.Equal(CrewDecisionMode.Optional, usage.Mode);
+        Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "picker"), Assert.Single(usage.OtherUses));
         Assert.Equal(
             [new CrewNamedProfile("analyst", "Strong"), new CrewNamedProfile("read", "guarded")],
             usage.NamedProfiles);
@@ -425,6 +476,52 @@ public sealed class CrewDecisionUsageTests : IDisposable
             """,
             agents));
         Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "judge"), Assert.Single(routed.OtherUses));
+
+        // A relay that also has a task of its own is routed for it: the engine asks a ladder.
+        var relayWithTask = CrewDecisionUsage.OfCrewFile(Crew(DecisionTask + "\n" + """
+                  without: { agent: judge }
+              weigh:
+                description: weigh
+                expected_output: a weight
+                agent: judge
+                dependencies: [read]
+            """, agents).Replace("process: sequential", "process: sequential\ndecision: { mode: optional }", StringComparison.Ordinal));
+        Assert.Equal("judge", relayWithTask.DecisionTasks.Single().RelayAgent);
+        Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "judge"), Assert.Single(relayWithTask.OtherUses));
+    }
+
+    /// <summary>
+    /// The manager of a hierarchical crew has no task of its own: on <c>llm.profile: auto</c> it runs on
+    /// the default profile and asks no ladder. An agent no task is assigned to that is neither a manager
+    /// nor a relay is checked as written: the engine asks a ladder for it.
+    /// </summary>
+    [Fact]
+    public void A_manager_without_a_task_is_not_a_profile_to_pick_and_an_idle_agent_is()
+    {
+        const string task = """
+              read:
+                description: read
+                expected_output: notes
+                agent: analyst
+            """;
+        const string agents = """
+            agents:
+              analyst:
+                role: Analyst
+                goal: read
+              boss:
+                role: Boss
+                goal: lead
+                llm: { profile: auto }
+            """;
+
+        var managed = CrewDecisionUsage.OfCrewFile(
+            Crew(task, agents).Replace("process: sequential", "process: hierarchical\nmanager_agent: boss", StringComparison.Ordinal));
+        Assert.Equal(CrewDecisionMode.None, managed.Mode);
+        Assert.Empty(managed.OtherUses);
+
+        var idle = CrewDecisionUsage.OfCrewFile(Crew(task, agents));
+        Assert.Equal(new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "boss"), Assert.Single(idle.OtherUses));
     }
 
     [Fact]

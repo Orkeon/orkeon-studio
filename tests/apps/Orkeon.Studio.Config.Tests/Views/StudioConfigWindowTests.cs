@@ -8,6 +8,7 @@ using Orkeon.Studio.Core.Validation;
 
 namespace Orkeon.Studio.Config.Tests.Views;
 
+[Collection(TerminalGuiTests.Name)]
 public class StudioConfigWindowTests
 {
     private static async Task<ConfigEditorModel> OpenAsync(string json)
@@ -187,5 +188,31 @@ public class StudioConfigWindowTests
 
         Assert.Contains("appsettings.Development.json", picker.EntriesForTest);
         Assert.DoesNotContain("notes.txt", picker.EntriesForTest);
+    }
+
+    /// <summary>
+    /// The window's own pass (every screen read back, the forms applied, the screens refreshed): the
+    /// model retyped on the LLM screen takes the context window out of the file and out of the context
+    /// screen's field, which a later pass would otherwise write back.
+    /// </summary>
+    [Fact]
+    public async Task A_model_retyped_empties_the_context_window_field_of_the_context_screen()
+    {
+        var model = await OpenAsync("""{ "Llm": { "Model": "old-model", "ContextWindowTokens": 128000 } }""");
+        using var window = new StudioConfigWindow(model);
+        window.ReloadSections();
+        var llm = window.Sections[0].SubViews.OfType<Terminal.Gui.Views.TextField>().First();
+        var context = window.Sections.OfType<ContextSectionView>().Single();
+        var windowField = context.SubViews.OfType<Terminal.Gui.Views.TextField>().ElementAt(4);
+        Assert.Equal("old-model", llm.Text);
+        Assert.Equal("128000", windowField.Text);
+
+        llm.Text = "new-model";
+        window.Validate();
+
+        Assert.Equal("", windowField.Text);
+        window.Validate();
+        Assert.False(model.Document.ContainsPath("Llm:ContextWindowTokens"));
+        Assert.Equal("new-model", model.Document.Llm.Model);
     }
 }

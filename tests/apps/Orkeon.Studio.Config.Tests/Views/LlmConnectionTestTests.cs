@@ -13,6 +13,7 @@ namespace Orkeon.Studio.Config.Tests.Views;
 /// <c>Application.Invoke</c> does not pump outside <c>Application.Init</c>. The screen reads the
 /// environment a test stages (an empty one by default), never the machine's.
 /// </summary>
+[Collection(TerminalGuiTests.Name)]
 public sealed class LlmConnectionTestTests
 {
     private static LlmSectionView View(LlmForm form, FakeLlmEndpointProbe probe, FakeEnvironmentVariables? environment = null) =>

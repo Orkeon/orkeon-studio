@@ -10,7 +10,9 @@ namespace Orkeon.Studio.Config.Presentation;
 /// automatic when absent), and for each provider whether its section is written, its model and its
 /// address, then the ladder of profiles and the thinking levels System One picks among
 /// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), each a comma-separated
-/// list. A field left blank removes its key: the engine gives the provider's default. While a
+/// list. Only what changed since the file was loaded is written: a field left as loaded keeps its key as
+/// the file writes it (a list written as an object, a switch written as text), and a changed field left
+/// blank removes its key, the engine then giving the provider's default. While a
 /// provider's section stays ticked, every key the form does not show (its timeout, its retries, its key
 /// variable, a key written by hand) is kept as it is, and so are the decision profiles; unticking the
 /// section removes it whole, with every key in it. A provider name the engine does not know is shown as
@@ -33,7 +35,7 @@ internal sealed class DecisionForm : ISettingsForm
     public string Title => "Decision models";
 
     /// <summary>Label of the automatic choice, offered first in the list.</summary>
-    public const string AutomaticLabel = "(automatic — deduced from a TypeSafe or Liquid section or key)";
+    public const string AutomaticLabel = "(automatic: deduced from a section or key)";
 
     /// <summary>The choices every file gets: the automatic choice, then each provider's key.</summary>
     public static IReadOnlyList<string> StandardChoices { get; } =
@@ -46,18 +48,29 @@ internal sealed class DecisionForm : ISettingsForm
     public IReadOnlyList<string> ProviderChoices =>
         ProviderAsWritten is { } written ? [.. StandardChoices, written] : StandardChoices;
 
-    /// <summary>Where the keys come from: the environment, never this file.</summary>
-    public static string KeysNotice { get; } =
-        "Keys are read from the environment: " + string.Join(", ", DecisionSection.Providers.Select(d =>
-            d.KeyRequired ? d.DefaultApiKeyVariable : d.DefaultApiKeyVariable + " (optional)"))
-        + ". Kev, a local server, is never deduced: name it.";
+    /// <summary>
+    /// Where the keys come from, one line each: the environment, never this file, under the variable
+    /// each provider reads, and the one provider no key or section ever deduces.
+    /// </summary>
+    public static IReadOnlyList<string> KeyLines { get; } =
+    [
+        "Keys are read from the environment:",
+        .. DecisionSection.Providers.Select(d =>
+            "  " + d.DisplayName + ": " + (d.KeyRequired ? d.DefaultApiKeyVariable : d.DefaultApiKeyVariable + " (optional)")),
+        "Kev is never deduced: name it.",
+    ];
 
-    /// <summary>What this screen does not edit, and what unticking a section takes with it.</summary>
-    public const string SectionsNotice =
-        "Unticking a section removes it whole, with every key in it. Timeouts, retries and the key variable: "
-        + "edit them in the JSON file itself, or in the WPF app.";
+    /// <summary>What unticking a section takes with it.</summary>
+    public const string SectionsNotice = "Unticked section: removed, every key in it.";
 
-    /// <summary>The switch as written; null removes the key (on by default).</summary>
+    /// <summary>What this screen does not edit.</summary>
+    public const string JsonNotice = "Timeouts, retries, key variable: JSON file.";
+
+    /// <summary>
+    /// The switch: null leaves no key (on by default). A key the file writes without a value (a JSON
+    /// null, an empty object) is shown as the run reads it, off, and stays as written until the switch
+    /// is touched.
+    /// </summary>
     public bool? Enabled { get; set; }
 
     /// <summary>The text the switch holds when it reads as no boolean, else null: kept and refused until it changes.</summary>
@@ -84,13 +97,17 @@ internal sealed class DecisionForm : ISettingsForm
     /// </summary>
     public string EffortLevels { get; set; } = "";
 
-    /// <summary>What the two lists are for, and how they are written.</summary>
-    public const string PicksNotice = "For llm.profile: auto and thinking effort auto. Commas, cheapest first.";
+    /// <summary>What the two lists are for.</summary>
+    public const string PicksNotice = "For llm.profile: auto and effort: auto.";
 
-    /// <summary>The levels a list may name, and those that stand when it is blank.</summary>
-    public static string LevelsNotice { get; } =
-        "Levels: " + string.Join(", ", DecisionSection.KnownEffortLevels)
-        + " (blank: " + string.Join(", ", DecisionSection.DefaultEffortLevels) + ").";
+    /// <summary>How the two lists are written.</summary>
+    public const string ListsNotice = "Commas between names, cheapest first.";
+
+    /// <summary>The levels a list may name.</summary>
+    public static string LevelsNotice { get; } = "Levels: " + string.Join(", ", DecisionSection.KnownEffortLevels) + ".";
+
+    /// <summary>The levels that stand when the list is blank.</summary>
+    public static string DefaultLevelsNotice { get; } = "No level: " + string.Join(", ", DecisionSection.DefaultEffortLevels) + ".";
 
     /// <summary>What a run of the file as loaded gets, resolved as the engine resolves it.</summary>
     public string Status { get; private set; } = "";
@@ -119,7 +136,10 @@ internal sealed class DecisionForm : ISettingsForm
     public void SelectProvider(int choiceIndex)
     {
         var choices = ProviderChoices;
-        Provider = choiceIndex >= 1 && choiceIndex < choices.Count ? choices[choiceIndex] : null;
+        var picked = choiceIndex >= 1 && choiceIndex < choices.Count ? choices[choiceIndex] : null;
+        // The row of the name the file already holds, in whatever letter case, changes nothing.
+        if (!string.Equals(picked, Provider, StringComparison.OrdinalIgnoreCase))
+            Provider = picked;
     }
 
     /// <inheritdoc />
@@ -127,16 +147,27 @@ internal sealed class DecisionForm : ISettingsForm
     {
         ArgumentNullException.ThrowIfNull(document);
         var section = document.Decision;
-        Enabled = section.Enabled;
-        EnabledAsWritten = FieldText.UnreadableSwitch(document, section.EnabledPathAsWritten);
+        // A key written without a value reads as no boolean and binds to false: shown off, as the run gets it.
+        Enabled = section.Enabled ?? (section.IsEnabled ? null : false);
+        // An empty object is such a key too: a value the run reads, off, not a text it refuses.
+        EnabledAsWritten = Enabled is null ? FieldText.UnreadableSwitch(document, section.EnabledPathAsWritten) : null;
         Provider = section.Provider;
         ProviderAsWritten = Provider is { Length: > 0 } name && DecisionProviderDescriptor.Find(name) is null ? name : null;
         foreach (var fields in Providers)
             fields.LoadFrom(section.For(fields.Descriptor));
         RouteLadder = string.Join(", ", section.RouteLadder);
         EffortLevels = string.Join(", ", section.EffortLevels);
+        _loaded = Current;
         Status = Describe(section.Resolve(_environment));
     }
+
+    // The fields as the file gave them: a field left as loaded is not written again, so what a field
+    // cannot show whole (a list the file writes as an object, a blank entry in it) stays as written.
+    private Fields _loaded = new(null, null, null, "", "");
+
+    private Fields Current => new(Enabled, EnabledAsWritten, Provider, RouteLadder, EffortLevels);
+
+    private sealed record Fields(bool? Enabled, string? EnabledAsWritten, string? Provider, string RouteLadder, string EffortLevels);
 
     /// <inheritdoc />
     public IReadOnlyList<string> ApplyTo(AppSettingsDocument document)
@@ -151,18 +182,29 @@ internal sealed class DecisionForm : ISettingsForm
                 $"{DecisionSection.ProviderPath}: '{name}' is not one of {string.Join(", ", StandardChoices.Skip(1))}: pick one, or the automatic choice."));
         }
 
-        // The two lists, by the engine's own rules: what its start refuses is never written.
-        errors.AddRange(DecisionSection.PickProblems(DecisionSection.SplitList(RouteLadder), DecisionSection.SplitList(EffortLevels)));
+        // The two lists, by the engine's own rules: what its start refuses is never written. A list
+        // left as loaded is judged as the file holds it, a blank entry included, not as the field shows it.
+        var section = document.Decision;
+        var typed = Current;
+        var ladderChanged = typed.RouteLadder != _loaded.RouteLadder;
+        var levelsChanged = typed.EffortLevels != _loaded.EffortLevels;
+        var ladder = ladderChanged ? DecisionSection.SplitList(RouteLadder) : section.RouteLadder;
+        var levels = levelsChanged ? DecisionSection.SplitList(EffortLevels) : section.EffortLevels;
+        errors.AddRange(DecisionSection.PickProblems(ladder, levels));
         if (errors.Count > 0)
             return errors;
 
-        var section = document.Decision;
-        section.Enabled = Enabled;
-        section.Provider = FieldText.ToStringOrNull(Provider);
+        if (typed.Enabled != _loaded.Enabled || typed.EnabledAsWritten != _loaded.EnabledAsWritten)
+            section.Enabled = Enabled;
+        if (typed.Provider != _loaded.Provider)
+            section.Provider = FieldText.ToStringOrNull(Provider);
         foreach (var fields in Providers)
             fields.ApplyTo(section.For(fields.Descriptor));
-        section.RouteLadder = DecisionSection.SplitList(RouteLadder);
-        section.EffortLevels = DecisionSection.SplitList(EffortLevels);
+        if (ladderChanged)
+            section.RouteLadder = ladder;
+        if (levelsChanged)
+            section.EffortLevels = levels;
+        _loaded = typed;
         Status = Describe(section.Resolve(_environment));
         return [];
     }
@@ -196,11 +238,15 @@ internal sealed class DecisionForm : ISettingsForm
         /// <summary>The API root; blank gives the provider's.</summary>
         public string BaseAddress { get; set; } = "";
 
+        // The two fields as the section gave them: one left as loaded is not written again.
+        private (string Model, string BaseAddress) _loaded = ("", "");
+
         internal void LoadFrom(DecisionProviderSettings settings)
         {
             SetUp = settings.Exists;
             Model = FieldText.FromString(settings.Model);
             BaseAddress = FieldText.FromString(settings.BaseUrl);
+            _loaded = (Model, BaseAddress);
         }
 
         internal void ApplyTo(DecisionProviderSettings settings)
@@ -208,14 +254,19 @@ internal sealed class DecisionForm : ISettingsForm
             if (!SetUp)
             {
                 settings.Remove();
+                // Nothing of it is left: ticked again, both fields are written anew.
+                _loaded = ("", "");
                 return;
             }
 
             // A section the engine already sees (even null-valued) is kept as written: only the fields change it.
             if (!settings.Exists)
                 settings.Create();
-            settings.Model = FieldText.ToStringOrNull(Model);
-            settings.BaseUrl = FieldText.ToStringOrNull(BaseAddress);
+            if (Model != _loaded.Model)
+                settings.Model = FieldText.ToStringOrNull(Model);
+            if (BaseAddress != _loaded.BaseAddress)
+                settings.BaseUrl = FieldText.ToStringOrNull(BaseAddress);
+            _loaded = (Model, BaseAddress);
         }
     }
 }

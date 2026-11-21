@@ -155,6 +155,19 @@ public sealed class AppSettingsDocument
     public string ToJson() =>
         JsonSerializer.Serialize(Root, WriteOptions) + Environment.NewLine;
 
+    /// <summary>
+    /// What makes the configuration refuse the whole file when a run loads it, with the key it names:
+    /// a value written at a key that already holds one, the keys being compared whatever their letter
+    /// case (<c>Enabled</c> and <c>enabled</c> in one object, or <c>Allow: [...]</c> beside
+    /// <c>Allow:0</c>). The sentence is the configuration's own, which the host prints after the file's
+    /// path. Null when the file loads; two objects that differ only by case merge, and load.
+    /// </summary>
+    public (string Path, string Problem)? LoadRefusal()
+    {
+        SettingsBinding.Flatten(Root, out var duplicateKey);
+        return duplicateKey is null ? null : (duplicateKey, $"A duplicate key '{duplicateKey}' was found.");
+    }
+
     /// <summary>Deep-copies the document, including the keys Studio does not model.</summary>
     public AppSettingsDocument Clone() => Parse(Root.ToJsonString());
 

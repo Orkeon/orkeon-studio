@@ -5,10 +5,13 @@ namespace Orkeon.Studio.Config.Presentation;
 /// <summary>
 /// Both sides of the tool bridge, as text fields: the caller's (<c>Orkeon:Tools:Bridge</c>: the address
 /// of the bridge, the tools a run executes there) and the serving one (<c>Orkeon:Bridge</c>: what
-/// <c>orkeon bridge serve</c> listens on and runs for a caller). A list is names separated by commas; a
-/// field left blank removes its key. It stores no token: it names the variable the token is read from.
-/// A value the engine's start refuses is refused at apply, in the engine's words, and nothing is
-/// written. The timeouts, sizes and limits stay in the JSON file as written.
+/// <c>orkeon bridge serve</c> listens on and runs for a caller). A list is names separated by commas.
+/// It stores no token: it names the variable the token is read from. Only a field that changed since
+/// it was loaded is written: one left as loaded keeps its key as the file writes it, and a changed
+/// field left blank removes its key. A value the engine's start refuses in one of the nine keys this
+/// screen shows is refused at apply, in the engine's words, and nothing is then written; a refusal
+/// about any other key (a timeout, a size, a limit) blocks no edit here. Those keys stay in the JSON
+/// file as written.
 /// </summary>
 internal sealed class BridgeForm : ISettingsForm
 {
@@ -21,11 +24,20 @@ internal sealed class BridgeForm : ISettingsForm
     /// <inheritdoc />
     public string Title => "Tool bridge";
 
-    /// <summary>How a list is written, and where the token comes from.</summary>
-    public const string Notice = "Lists: names separated by commas, or * alone. The token is read from the environment.";
+    /// <summary>How a list is written.</summary>
+    public const string Notice = "Lists: names separated by commas, or *.";
+
+    /// <summary>Where a token comes from: the variable a blank field stands for, never this file.</summary>
+    public const string TokenNotice = "Blank token variable: " + ToolBridgeSection.DefaultTokenEnvVar;
 
     /// <summary>What this screen does not edit.</summary>
-    public const string JsonNotice = "Timeouts, sizes and limits: edit them in the JSON file itself.";
+    public const string JsonNotice = "Timeouts, sizes, limits: in the JSON file.";
+
+    /// <summary>The heading of the caller's side.</summary>
+    public const string CallerHeading = "Tools run elsewhere (" + ToolBridgeSection.SectionPath + ")";
+
+    /// <summary>The heading of the serving side.</summary>
+    public const string ServerHeading = "orkeon bridge serve (" + BridgeServerSection.SectionPath + ")";
 
     /// <summary>The bridge's base address; blank, nothing is bridged.</summary>
     public string Address { get; set; } = "";

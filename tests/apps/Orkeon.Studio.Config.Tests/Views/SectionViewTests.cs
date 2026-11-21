@@ -9,6 +9,7 @@ namespace Orkeon.Studio.Config.Tests.Views;
 /// The section screens themselves: each row of the two screens that are lists of text fields reads and
 /// writes its own property of the form, and a screen taller than the terminal scrolls to the field in use.
 /// </summary>
+[Collection(TerminalGuiTests.Name)]
 public sealed class SectionViewTests
 {
     private static List<TextField> Fields(SectionView view) => [.. view.SubViews.OfType<TextField>()];

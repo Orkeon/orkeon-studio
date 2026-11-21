@@ -600,7 +600,8 @@ public sealed class ConfigTabViewModel : ObservableObject
     {
         IsDirty = true;
         // What the decision and compaction cards say depends on the profiles another tab edits: a
-        // ladder rung or a summary profile that names one is judged again whatever was edited.
+        // ladder rung or a summary profile that names one is judged again whatever was edited. The
+        // decision status is resolved once here, and announced only when it changed.
         Decision?.RefreshVerdict();
         Compaction?.RefreshVerdict();
         RefreshRawJson();

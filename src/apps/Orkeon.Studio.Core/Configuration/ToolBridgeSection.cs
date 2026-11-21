@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Microsoft.Extensions.Configuration;
 
 namespace Orkeon.Studio.Core.Configuration;
 
@@ -60,18 +59,27 @@ public sealed class ToolBridgeSection
     public string EffectiveTokenEnvVar =>
         Bound() is { TokenEnvVar: { } named } && !string.IsNullOrWhiteSpace(named) ? named : DefaultTokenEnvVar;
 
-    /// <summary>The tools to bridge, by name, or the lone <c>*</c> for every bridgeable tool the bridge serves.</summary>
+    /// <summary>
+    /// The tools to bridge, by name, or the lone <c>*</c> for every bridgeable tool the bridge serves.
+    /// Read as the binder reads the key, whatever its shape: a list written as an object gives its
+    /// values, an entry that is no text an empty name. Setting an empty list removes the key; setting
+    /// the names it already reads writes nothing, so a list shown and applied untouched stays as the
+    /// file writes it.
+    /// </summary>
     public IReadOnlyList<string> Allow
     {
-        get => _document.GetStringArray(Key("Allow"));
-        set => SetList("Allow", value);
+        get => DecisionSection.Names(Read().Allow);
+        set => SetList("Allow", value, Allow);
     }
 
-    /// <summary>The tools never bridged, by name; a name here wins over <see cref="Allow"/>.</summary>
+    /// <summary>
+    /// The tools never bridged, by name; a name here wins over <see cref="Allow"/>. Read and written
+    /// as <see cref="Allow"/> is.
+    /// </summary>
     public IReadOnlyList<string> Deny
     {
-        get => _document.GetStringArray(Key("Deny"));
-        set => SetList("Deny", value);
+        get => DecisionSection.Names(Read().Deny);
+        set => SetList("Deny", value, Deny);
     }
 
     /// <summary>The <c>Host</c> header sent to the bridge, when it differs from the address's.</summary>
@@ -85,24 +93,37 @@ public sealed class ToolBridgeSection
     /// Whether a run of the file bridges anything, as the engine reads the section: an address, and a
     /// tool allowed. False when the section does not bind, the start being refused then.
     /// </summary>
-    public bool IsEnabled => Bound() is { } values && !string.IsNullOrWhiteSpace(values.Address) && values.Allow.Count > 0;
+    public bool IsEnabled => Bound() is { IsEnabled: true };
 
     /// <summary>The address a run dials, as the engine reads it; null when none is set or the section does not bind.</summary>
     public string? BoundAddress => Bound()?.Address is { } address && !string.IsNullOrWhiteSpace(address) ? address : null;
 
     /// <summary>
     /// What the host's start refuses in the section, each with the path of its key; empty when the
-    /// section is accepted. A value the binder cannot convert stops the start before any rule is read:
-    /// it is then all that is said, the first one only, as the host says it. Then the engine's rules, in
-    /// the engine's words and order, and the keys that are no setting of the section.
+    /// section is accepted. In the host's order, so the first one is what it says: a file the
+    /// configuration does not load, when the key it names is the section's; the values the binder cannot
+    /// convert (the host stops on the first, and says the next once that one is mended); the engine's
+    /// rules, in the engine's words and order, judged on every value that did convert; and the keys
+    /// that are no setting of the section, at any depth.
     /// </summary>
-    public IReadOnlyList<(string Path, string Problem)> Problems()
+    public IReadOnlyList<(string Path, string Problem)> Problems() =>
+        Judge(DecisionSection.ToConfiguration(_document.Root)).Problems;
+
+    /// <summary>
+    /// The section read once off <paramref name="configuration"/>, the document as a run binds it:
+    /// what the start refuses in it (<see cref="Problems"/>) and what a run makes of it
+    /// (<see cref="IsEnabled"/>, <see cref="EffectiveTokenEnvVar"/>, <see cref="BoundAddress"/>), for a
+    /// caller that needs them all of one reading.
+    /// </summary>
+    internal Judgement Judge(Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
-        var configuration = DecisionSection.ToConfiguration(_document.Root);
         var problems = new List<(string, string)>();
-        var values = new Values();
-        if (!SettingsBinding.TryBind(configuration, SectionPath, values, problems))
-            return problems;
+        if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
+            problems.Add(load);
+        var before = problems.Count;
+        var values = SettingsBinding.Bind<Values>(configuration, SectionPath, problems);
+        // A value that does not convert: the section does not bind, and a run makes nothing of it.
+        var bound = problems.Count == before;
 
         void Say(string key, string problem) => problems.Add(($"{SectionPath}:{key}", problem));
         if (!string.IsNullOrWhiteSpace(values.Address)
@@ -124,35 +145,49 @@ public sealed class ToolBridgeSection
         problems.AddRange(ToolBridgeRules.SelectionProblems(SectionPath, values.Allow, values.Deny)
             .Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
         problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
-        return problems;
+        return new Judgement(
+            problems,
+            bound && values.IsEnabled,
+            bound && !string.IsNullOrWhiteSpace(values.TokenEnvVar) ? values.TokenEnvVar : DefaultTokenEnvVar,
+            bound && !string.IsNullOrWhiteSpace(values.Address) ? values.Address : null);
     }
 
-    /// <summary>Removes the whole section.</summary>
-    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
+    /// <summary>One reading of the section (<see cref="Judge"/>).</summary>
+    /// <param name="Problems">What the host's start refuses, as <see cref="ToolBridgeSection.Problems"/> gives it.</param>
+    /// <param name="IsEnabled">As <see cref="ToolBridgeSection.IsEnabled"/>.</param>
+    /// <param name="TokenEnvVar">As <see cref="EffectiveTokenEnvVar"/>.</param>
+    /// <param name="Address">As <see cref="BoundAddress"/>.</param>
+    internal sealed record Judgement(
+        IReadOnlyList<(string Path, string Problem)> Problems, bool IsEnabled, string TokenEnvVar, string? Address);
 
     private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private void SetList(string key, IReadOnlyList<string> values)
+    private void SetList(string key, IReadOnlyList<string> values, IReadOnlyList<string> read)
     {
         ArgumentNullException.ThrowIfNull(values);
         if (values.Count == 0)
             _document.Remove(Key(key));
-        else
+        else if (!values.SequenceEqual(read, StringComparer.Ordinal))
             _document.SetStringArray(Key(key), values);
     }
 
+    // The section as the binder reads it, each value that does not convert left on its default.
+    private Values Read() => SettingsBinding.Bind<Values>(DecisionSection.ToConfiguration(_document.Root), SectionPath, []);
+
     private Values? Bound()
     {
-        var values = new Values();
-        return SettingsBinding.TryBind(DecisionSection.ToConfiguration(_document.Root), SectionPath, values, []) ? values : null;
+        var unconverted = new List<(string Path, string Problem)>();
+        var values = SettingsBinding.Bind<Values>(DecisionSection.ToConfiguration(_document.Root), SectionPath, unconverted);
+        return unconverted.Count == 0 ? values : null;
     }
 
     /// <summary>
     /// The section as the engine's <c>ToolBridgeClientOptions</c> shapes it: the same property names,
-    /// types and defaults, so the binder reads the file here as it does there. Its public properties
-    /// are the section's settings, and nothing else may be public on it.
+    /// types, defaults and order, so the binder reads the file here as it does there. Its public
+    /// properties are the keys the section may carry, the two computed ones included: the engine's
+    /// start takes every readable property of its class for a key. Nothing else may be public on it.
     /// </summary>
     internal sealed class Values
     {
@@ -171,5 +206,10 @@ public sealed class ToolBridgeSection
         public long MaxResponseBytes { get; set; } = DefaultMaxResponseBytes;
 
         public string? HostHeader { get; set; }
+
+        public bool IsDockerHostOverHttp =>
+            Uri.TryCreate(Address, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttp && ToolBridgeRules.IsDockerHost(uri);
+
+        public bool IsEnabled => !string.IsNullOrWhiteSpace(Address) && Allow.Count > 0;
     }
 }

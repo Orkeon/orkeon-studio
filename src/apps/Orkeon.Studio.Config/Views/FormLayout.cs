@@ -14,6 +14,9 @@ internal static class FormLayout
     /// <summary>Width of the caption column, in cells.</summary>
     public const int CaptionWidth = 30;
 
+    /// <summary>The hot-key marker of a view that has none: a rune no text holds, so every underscore shows.</summary>
+    public static readonly System.Text.Rune NoHotKey = new('\uffff');
+
     /// <summary>Left margin of every row.</summary>
     public const int Margin = 1;
 
@@ -33,11 +36,73 @@ internal static class FormLayout
             X = Margin,
             Y = y,
             Width = Dim.Fill(Margin),
+            // No hot key in a line of text: an underscore is part of a variable's name, and shows.
+            HotKeySpecifier = NoHotKey,
             Text = text,
         };
 
         parent.Add(label);
     }
+
+    /// <summary>
+    /// The cells a line of text gets on a section screen in a terminal of 80 columns: what is left of
+    /// them once the window's border, the section list, the screen's own border, its scroll bar and
+    /// the two margins are taken.
+    /// </summary>
+    public const int NarrowWidth = 43;
+
+    /// <summary>
+    /// Adds a line of fixed text that takes one row and no more: what does not fit is cut, never
+    /// wrapped onto the row below, where a field sits. Its text is written to fit
+    /// <see cref="NarrowWidth"/>. The label is owned by <paramref name="parent"/> and never read back.
+    /// </summary>
+    [SuppressMessage("Reliability", "CA2000",
+        Justification = "Ownership transfers to the parent view: Terminal.Gui disposes the subviews " +
+                        "it was given when the parent is disposed, which is why no reference is returned.")]
+    public static void AddLine(View parent, int y, string text)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+
+        var label = new Label
+        {
+            X = Margin,
+            Y = y,
+            Width = Dim.Fill(Margin),
+            Height = 1,
+            // No hot key in a line of text: an underscore is part of a variable's name, and shows.
+            HotKeySpecifier = NoHotKey,
+            Text = text,
+        };
+
+        parent.Add(label);
+    }
+
+    /// <summary>
+    /// Adds a line of text that takes one row and no more, as <see cref="AddLine"/> does, and whose
+    /// content changes as the form is edited: what it is given fits <see cref="NarrowWidth"/>.
+    /// </summary>
+    public static Label AddChangingLine(View parent, int y, string text)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+
+        var label = new Label
+        {
+            X = Margin,
+            Y = y,
+            Width = Dim.Fill(Margin),
+            Height = 1,
+            // No hot key in a line of text: an underscore is part of a variable's name, and shows.
+            HotKeySpecifier = NoHotKey,
+            Text = text,
+        };
+
+        parent.Add(label);
+        return label;
+    }
+
+    /// <summary>A caption that says the engine's default beside it: what an empty field stands for.</summary>
+    public static string CaptionWithDefault(string caption, object engineDefault) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{caption} [{engineDefault}]");
 
     /// <summary>Adds a full-width line of text whose content changes as the form is edited.</summary>
     public static Label AddText(View parent, int y, string text)
@@ -49,6 +114,8 @@ internal static class FormLayout
             X = Margin,
             Y = y,
             Width = Dim.Fill(Margin),
+            // No hot key in a line of text: an underscore is part of a variable's name, and shows.
+            HotKeySpecifier = NoHotKey,
             Text = text,
         };
 

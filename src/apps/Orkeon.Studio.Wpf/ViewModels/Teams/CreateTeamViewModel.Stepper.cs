@@ -205,6 +205,7 @@ public sealed partial class CreateTeamViewModel
     private void ForgetRunOutcome()
     {
         _stoppedByUser = false;
+        _statusHoldsError = false;
         RaiseSessionStateChanged();
     }
 

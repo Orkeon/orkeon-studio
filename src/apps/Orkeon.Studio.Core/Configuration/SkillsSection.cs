@@ -56,24 +56,22 @@ public sealed class SkillsSection
 
     /// <summary>
     /// What the host's start refuses in the section, as the engine binds and validates it
-    /// (<c>AgentSkillsOptions.Problems</c>): a value the binder cannot convert, a library that is no
-    /// absolute virtual path, a size too small, a key that is no setting of the section. Each with the
-    /// path of its key; empty when accepted.
+    /// (<c>AgentSkillsOptions.Problems</c>): a file the configuration does not load, when the key it
+    /// names is the section's; a value the binder cannot convert; a library that is no absolute virtual
+    /// path, a size too small, each judged on the values that did convert; a key that is no setting of
+    /// the section, at any depth. Each with the path of its key, in the host's order; empty when accepted.
     /// </summary>
     public IReadOnlyList<(string Path, string Problem)> Problems()
     {
         var configuration = DecisionSection.ToConfiguration(_document.Root);
         var problems = new List<(string, string)>();
-        var skills = new AgentSkillsOptions();
-        if (SettingsBinding.TryBind(configuration, SectionPath, skills, problems))
-            problems.AddRange(AgentSkillsOptions.Problems(skills).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
-
+        if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
+            problems.Add(load);
+        var skills = SettingsBinding.Bind<AgentSkillsOptions>(configuration, SectionPath, problems);
+        problems.AddRange(AgentSkillsOptions.Problems(skills).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
         problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentSkillsOptions)));
         return problems;
     }
-
-    /// <summary>Removes the whole section.</summary>
-    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
 
     // Each key where the file spells it, in whatever letter case, as the configuration reads it.
     private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");

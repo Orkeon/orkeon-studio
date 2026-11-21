@@ -143,6 +143,8 @@ public sealed class MainWindowViewModel : ObservableObject
             // The decision circuit of the settings file as saved, keys read where Settings stores them.
             MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
             MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
+            MachineBridgeTokenVariable = () => (_savedSettings ?? Config.Document).ToolBridge.EffectiveTokenEnvVar,
+            OfferedLlmProfiles = OfferedLlmProfiles,
             KeyStore = keyStore,
             Clipboard = seams.Clipboard,
             Clock = seams.Clock,
@@ -294,6 +296,8 @@ public sealed class MainWindowViewModel : ObservableObject
                 DeclaredMounts = declaredMounts,
                 MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
             MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
+            MachineBridgeTokenVariable = () => (_savedSettings ?? Config.Document).ToolBridge.EffectiveTokenEnvVar,
+            OfferedLlmProfiles = OfferedLlmProfiles,
                 KeyStore = keyStore,
                 Clock = seams.Clock,
                 // No teams root: a trial stamps no last run (STUDIO-31, D-05). It still reads the
@@ -556,6 +560,7 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 Launch.RefreshDecision();
                 Run.Trial.RefreshDecision();
+                CreateTeam.RefreshDecisionNotice();
             }
         };
         // The bridge's token stored: the launch a missing token blocked is judged again at once.
@@ -927,6 +932,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         Teams.RefreshSettings();
         CreateTeam.ScheduleOffer.RefreshNotice();
+        CreateTeam.RefreshDecisionNotice();
         Launch.RefreshTeamDescription();
         Run.Trial.RefreshTeamDescription();
         Launch.RefreshLlmSettings();
@@ -1091,6 +1097,14 @@ public sealed class MainWindowViewModel : ObservableObject
         };
         return profile is null ? profiles.LaunchEnvironment() : profiles.LaunchEnvironmentOf(profile);
     }
+
+    /// <summary>
+    /// The ids of the host profiles <see cref="TeamEnvironment"/> lays in every run's environment, whatever
+    /// the settings file the run reads: a rung of the decision ladder that names one is served. None
+    /// while the settings screen is not built yet.
+    /// </summary>
+    private IReadOnlyCollection<string> OfferedLlmProfiles() =>
+        Settings is { } settings ? [.. HostLlmProfiles.Offered(settings.Profiles.Set).Values] : [];
 
     /// <summary>
     /// « Remember for this team » (STUDIO-73): the team's companion file takes the model, and its

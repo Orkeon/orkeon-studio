@@ -45,6 +45,9 @@ internal sealed class StudioConfigWindow : Window
             Y = 0,
             Width = 30,
             Height = Dim.Fill(4),
+            // A stop of the window's Tab order, not a group apart: Tab then walks the section list, the
+            // screen shown and the buttons in turn, and nothing is left for a key few know (F6).
+            TabStop = TabBehavior.TabStop,
         };
         _navigationFrame.Add(_navigation);
 
@@ -54,6 +57,10 @@ internal sealed class StudioConfigWindow : Window
             Y = 0,
             Width = Dim.Fill(),
             Height = Dim.Fill(4),
+            // A view takes the focus only inside a superview that can: without this no field of any
+            // screen is ever reached, by Tab or by a click.
+            CanFocus = true,
+            TabStop = TabBehavior.TabStop,
         };
 
         _sectionViews.Add(new LlmSectionView(_model.Llm, _model.LlmProbe));

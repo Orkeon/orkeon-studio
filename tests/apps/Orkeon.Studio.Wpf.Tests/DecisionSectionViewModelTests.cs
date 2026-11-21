@@ -301,4 +301,132 @@ public sealed class DecisionSectionViewModelTests
         Assert.Contains("a route needs two or more", form.StatusText, StringComparison.Ordinal);
         Assert.Equal("", form.RouteLadderNote);
     }
+
+    /// <summary>
+    /// The status is resolved once per change, and what follows from it is announced only when it
+    /// changed: an edit elsewhere in the document that leaves the decision models as they were reads
+    /// the status again, finds it the same, and wakes no binding and no launcher.
+    /// </summary>
+    [Fact]
+    public void An_edit_elsewhere_that_changes_nothing_of_the_status_announces_nothing()
+    {
+        var (form, document, keys) = Form("""
+            {"Llm":{"Model":"small","Profiles":{"strong":{"Model":"big"}}},
+             "Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]},"Profiles":{"triage":{"FailClosed":true}}},"Liquid":{},"Kev":{}}}
+            """);
+        var first = form.Status;
+        var raised = new List<string?>();
+        form.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        // Every bound property, read as a binding reads them: the status kept, not resolved again.
+        keys.Peeks.Clear();
+        _ = (form.Status, form.IsOn, form.IsRefused, form.StatusText, form.IgnoredText, form.HasIgnored, form.TabSubtitle, form.TabState, form.RouteLadderNote);
+        Assert.Empty(keys.Peeks);
+        Assert.Same(first, form.Status);
+
+        // An edit elsewhere: one resolution, the same status, nothing announced.
+        document.SetString("Orkeon:Rag:Profile", "quality");
+        form.RefreshVerdict();
+        var perResolution = keys.Peeks.Count;
+        Assert.True(perResolution > 0);
+        Assert.Empty(raised);
+        Assert.Same(first, form.Status);
+
+        form.RefreshVerdict();
+        Assert.Equal(2 * perResolution, keys.Peeks.Count);
+        Assert.Empty(raised);
+    }
+
+    /// <summary>
+    /// A profile added in the model settings changes what a ladder rung names: the note under the ladder
+    /// goes, and the form says so, the status first.
+    /// </summary>
+    [Fact]
+    public void A_profile_added_elsewhere_clears_the_ladder_note()
+    {
+        var (form, document, _) = Form("""{"Llm":{"Model":"small"},"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}},"Liquid":{}}}""");
+        Assert.Contains("strong", form.RouteLadderNote, StringComparison.Ordinal);
+        var raised = new List<string?>();
+        form.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        document.SetString("Llm:Profiles:strong:Model", "big");
+        form.RefreshVerdict();
+
+        Assert.Equal("", form.RouteLadderNote);
+        Assert.Contains(nameof(DecisionSectionViewModel.RouteLadderNote), raised);
+        Assert.Contains(nameof(DecisionSectionViewModel.Status), raised);
+    }
+
+    /// <summary>
+    /// The same through the settings editor, as the model settings write a profile (the mirror of a
+    /// setting into Llm:Profiles): any edit of the document judges the ladder and the summary's profile again.
+    /// </summary>
+    [Fact]
+    public void A_profile_mirrored_by_the_model_settings_clears_the_ladder_note_and_the_compaction_warning()
+    {
+        var tab = new ConfigTabViewModel(new StudioServices { Directories = new FakeDirectoryProbe("/data") });
+        tab.SetDocument(AppSettingsDocument.Parse("""{"Llm":{"Model":"small"},"Orkeon":{"Liquid":{}}}"""));
+        tab.Decision.RouteLadderText = "default, strong";
+        tab.Compaction.Profile = "strong";
+        Assert.Contains("strong", tab.Decision.RouteLadderNote, StringComparison.Ordinal);
+        Assert.Contains("strong", tab.Compaction.ProfileWarning, StringComparison.Ordinal);
+        var decision = new List<string?>();
+        var compaction = new List<string?>();
+        tab.Decision.PropertyChanged += (_, e) => decision.Add(e.PropertyName);
+        tab.Compaction.PropertyChanged += (_, e) => compaction.Add(e.PropertyName);
+
+        var strong = new ModelProfile { Name = "strong", Provider = "Other OpenAI-compatible", BaseUrl = "https://llm.example.com/v1", Model = "big", KeyEnvName = "STRONG_API_KEY" };
+        tab.Llm.MirrorModelProfiles(ModelProfileSet.Empty, ModelProfileSet.Empty.Upsert(strong));
+
+        Assert.NotNull(tab.Document.Llm.Profiles.Get("strong"));
+        Assert.Equal("", tab.Decision.RouteLadderNote);
+        Assert.Contains(nameof(DecisionSectionViewModel.RouteLadderNote), decision);
+        Assert.Equal("", tab.Compaction.ProfileWarning);
+        Assert.Contains(nameof(CompactionSectionViewModel.ProfileWarning), compaction);
+
+        // An edit that changes nothing of the decision models announces nothing of them.
+        decision.Clear();
+        tab.Rag.Provider = "qdrant";
+        Assert.Empty(decision);
+    }
+
+    /// <summary>A key stored through a card is a change of the status: resolved again, and announced.</summary>
+    [Fact]
+    public void A_key_staged_outside_the_form_is_seen_at_the_next_verdict()
+    {
+        var (form, _, keys) = Form("""{"Orkeon":{"Liquid":{}}}""");
+        Assert.Equal(DecisionProviderDescriptor.Liquid.DefaultApiKeyVariable, form.Status.MissingKeyVariable);
+        var raised = new List<string?>();
+        form.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        keys.Stage(DecisionProviderDescriptor.Liquid.DefaultApiKeyVariable, "secret");
+        form.RefreshVerdict();
+
+        Assert.Null(form.Status.MissingKeyVariable);
+        Assert.Contains(nameof(DecisionSectionViewModel.Status), raised);
+    }
+
+    /// <summary>
+    /// A switch the file writes without a value (a JSON null, an empty object) binds to false: the
+    /// form shows the circuit off, and its status too, as the run gets it; the key is left as written
+    /// until the switch is touched, and switching on removes it.
+    /// </summary>
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    public void A_switch_written_without_a_value_is_shown_off_and_kept_until_touched(string value)
+    {
+        var (form, document, _) = Form("{\"Orkeon\":{\"Decision\":{\"Enabled\":" + value + "},\"Liquid\":{\"ApiKey\":\"k\"}}}");
+        var before = document.ToJson();
+
+        Assert.False(form.Enabled);
+        Assert.False(form.Status.Enabled);
+        form.Enabled = false;
+        Assert.Equal(before, document.ToJson());
+
+        form.Enabled = true;
+        Assert.True(document.Decision.IsEnabled);
+        Assert.Null(document.Decision.Enabled);
+        Assert.True(form.Enabled);
+    }
 }

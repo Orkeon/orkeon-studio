@@ -15,11 +15,12 @@ internal sealed class RateLimitingSectionView : SectionView
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public RateLimitingSectionView(RateLimitingForm form)
-        : base("Rate limiting")
+        : base("Rate limiting", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
 
-        FormLayout.AddNote(this, 0, "Leave a field empty to drop the key and let the runtime default apply.");
+        FormLayout.AddLine(this, 0, "An empty field drops its key: the runtime");
+        FormLayout.AddLine(this, 1, "default then applies.");
         _maxConcurrent = FormLayout.AddField(this, 2, "Max concurrent requests", _form.MaxConcurrentRequests);
         _global = FormLayout.AddField(this, 3, "Global requests / minute", _form.GlobalRequestsPerMinute);
         _provider = FormLayout.AddField(this, 4, "Provider requests / minute", _form.ProviderRequestsPerMinute);

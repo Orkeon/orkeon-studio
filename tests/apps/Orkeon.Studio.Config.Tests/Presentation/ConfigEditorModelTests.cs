@@ -31,6 +31,40 @@ public sealed class ConfigEditorModelTests : IDisposable
             new FakeLlmEndpointProbe());
     }
 
+    /// <summary>
+    /// The context window describes the model the Llm section holds: an apply that leaves the model as
+    /// it is keeps the window, as the file writes it; the model changed on the LLM screen, the window goes
+    /// with it, and the context screen stops showing it, so no later apply writes it back.
+    /// </summary>
+    [Fact]
+    public async Task The_model_changed_on_the_llm_screen_takes_the_context_window_with_it()
+    {
+        var path = PathIn("appsettings.json");
+        await File.WriteAllTextAsync(path, """{ "Llm": { "Model": "old-model", "ContextWindowTokens": "128000" } }""", TestContext.Current.CancellationToken);
+        var model = CreateModel();
+        Assert.Null(await model.OpenAsync(path, TestContext.Current.CancellationToken));
+        Assert.Equal("128000", model.Context.ContextWindowTokens);
+
+        Assert.Empty(model.ApplyForms());
+        Assert.Empty(model.ApplyForms());
+        Assert.Equal("128000", model.Document.GetWritten("Llm:ContextWindowTokens"));
+
+        model.Llm.Model = "new-model";
+        Assert.Empty(model.ApplyForms());
+
+        Assert.Equal("new-model", model.Document.Llm.Model);
+        Assert.False(model.Document.ContainsPath("Llm:ContextWindowTokens"));
+        Assert.Equal("", model.Context.ContextWindowTokens);
+        Assert.Empty(model.ApplyForms());
+        Assert.False(model.Document.ContainsPath("Llm:ContextWindowTokens"));
+
+        // A window typed for the new model, in the same apply as another change of model, is the one kept.
+        model.Llm.Model = "third-model";
+        model.Context.ContextWindowTokens = "64000";
+        Assert.Empty(model.ApplyForms());
+        Assert.Equal(64000, model.Document.Llm.ContextWindowTokens);
+    }
+
     [Fact]
     public void An_empty_mount_list_is_advice_while_editing_and_an_error_when_saving()
     {

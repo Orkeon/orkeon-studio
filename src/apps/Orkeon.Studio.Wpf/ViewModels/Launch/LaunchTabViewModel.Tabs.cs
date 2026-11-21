@@ -102,7 +102,7 @@ public sealed partial class LaunchTabViewModel
 
             if (!value && _activeTab == CommandTab)
                 ActiveTab = OptionsTab;
-            OnPropertiesChanged(nameof(OptionsNextLabel), nameof(ExitTooltip));
+            OnPropertiesChanged(nameof(OptionsNextLabel), nameof(ExitTooltip), nameof(ShowsBridgeSettingsAction));
         }
     }
 

@@ -179,4 +179,126 @@ public sealed class CompactionAndSkillsSectionTests
             Orkeon.Application.Interfaces.Ports.LlmProfiles.UnknownMessage("missing", "Orkeon:Compaction:Profile", []),
             warning.Text);
     }
+
+    /// <summary>
+    /// The summary's profile against the profiles of the file: left out, the default in any letter case
+    /// and <c>auto</c> (which the start refuses in its own words) are no unknown profile; a profile of
+    /// either section is known whatever its letter case and the spaces around it; any other is unknown.
+    /// </summary>
+    [Theory]
+    [InlineData("null", false)]
+    [InlineData("\"\"", false)]
+    [InlineData("[]", false)]
+    [InlineData("\"default\"", false)]
+    [InlineData("\" Default \"", false)]
+    [InlineData("\"auto\"", false)]
+    [InlineData("\" AUTO \"", false)]
+    [InlineData("\"cheap\"", false)]
+    [InlineData("\" CHEAP \"", false)]
+    [InlineData("\"guarded\"", false)]
+    [InlineData("\"cheaper\"", true)]
+    [InlineData("\"defaults\"", true)]
+    public void A_summary_profile_is_unknown_when_no_section_of_the_file_defines_it(string written, bool unknown)
+    {
+        var document = AppSettingsDocument.Parse($$"""
+            { "llm": { "Model": "small", "profiles": { "Cheap": { "Model": "tiny" } } },
+              "Orkeon": { "Decision": { "Profiles": { "Guarded": { "Target": "default" } } }, "Compaction": { "profile": {{written}} } } }
+            """);
+
+        var problem = document.Compaction.UnknownProfile();
+
+        Assert.Equal(unknown, problem is not null);
+        if (problem is { } said)
+        {
+            Assert.Equal("Orkeon:Compaction:Profile", said.Path);
+            Assert.Contains("Cheap", said.Problem, StringComparison.Ordinal);
+            Assert.Contains("Guarded", said.Problem, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// A section's context window goes when its model changes, whoever writes the model: the election
+    /// of a setting, a preset, a form through the section's own <c>Model</c>. It stays when the model
+    /// written is the one the section holds, in whatever letter case the file spells its keys and with
+    /// whatever spaces around the model: no twin key is written beside the file's.
+    /// </summary>
+    [Fact]
+    public void A_context_window_goes_with_its_model_whoever_writes_the_model()
+    {
+        const string Json = """{ "llm": { "model": " x ", "ContextWindowTokens": 200000, "baseUrl": "http://localhost:11434" } }""";
+        var entry = new LlmProfileEntry { Id = "default", Model = "x", BaseUrl = "http://localhost:11434" };
+
+        // The election of a setting with the same model: the window stays, the keys stay where they are.
+        var elected = AppSettingsDocument.Parse(Json);
+        elected.Llm.Set(entry);
+        Assert.Equal(200000, elected.Llm.ContextWindowTokens);
+        Assert.Equal("x", elected.Llm.Model);
+        Assert.Null(elected.LoadRefusal());
+        Assert.DoesNotContain("\"Model\"", elected.ToJson(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Llm\"", elected.ToJson(), StringComparison.Ordinal);
+
+        // The election of a setting with another model.
+        elected.Llm.Set(entry with { Model = "y" });
+        Assert.Null(elected.Llm.ContextWindowTokens);
+        Assert.Equal("y", elected.GetString("llm:model"));
+
+        // A form, which writes the section's Model: the same model, then none over it, then another.
+        var form = AppSettingsDocument.Parse(Json);
+        form.Llm.Model = "x";
+        Assert.Equal(200000, form.Llm.ContextWindowTokens);
+        form.Llm.Model = "z";
+        Assert.Null(form.Llm.ContextWindowTokens);
+        Assert.Equal("z", form.GetString("llm:model"));
+        Assert.False(form.ContainsPath("llm:ContextWindowTokens"));
+
+        // A model that is only spaces is no model: writing none over it changes nothing.
+        var blank = AppSettingsDocument.Parse("""{ "Llm": { "Model": "  ", "ContextWindowTokens": 200000, "BaseUrl": "http://localhost:11434" } }""");
+        blank.Llm.Set(entry with { Model = null });
+        Assert.Equal(200000, blank.Llm.ContextWindowTokens);
+        blank.Llm.Model = null;
+        Assert.Equal(200000, blank.Llm.ContextWindowTokens);
+
+        // A preset.
+        var preset = AppSettingsDocument.Parse(Json);
+        Orkeon.Studio.Core.Presets.LlmPresets.Apply(preset, new Orkeon.Studio.Core.Presets.LlmPresetPlan
+        {
+            Preset = "ollama", BaseUrl = "http://localhost:11434", Model = "qwen3",
+        });
+        Assert.Null(preset.Llm.ContextWindowTokens);
+        Assert.Equal("qwen3", preset.GetString("llm:model"));
+    }
+
+    /// <summary>
+    /// A profile is named by more than the crews: the summary's profile and the rungs of the ladder
+    /// follow the rename of a model setting, as the knowledge base's profile does; when the setting
+    /// goes, the summary falls back to the agent's own model and the ladder is left as it is.
+    /// </summary>
+    [Fact]
+    public void The_summary_profile_and_the_ladder_follow_the_rename_of_a_model_setting()
+    {
+        var before = Orkeon.Studio.Core.Profiles.ModelProfileSet.Empty
+            .Upsert(new Orkeon.Studio.Core.Profiles.ModelProfile { Name = "Deep Seek", Provider = "DeepSeek", BaseUrl = "https://api.deepseek.com", Model = "deepseek-v4-flash" })
+            .Upsert(new Orkeon.Studio.Core.Profiles.ModelProfile { Name = "Local", Provider = "Ollama", BaseUrl = "http://localhost:11434", Model = "qwen3" });
+        var document = AppSettingsDocument.CreateEmpty();
+        Orkeon.Studio.Core.Profiles.HostLlmProfiles.Mirror(document, Orkeon.Studio.Core.Profiles.ModelProfileSet.Empty, before);
+        document.Compaction.Profile = "Deep-Seek";
+        document.Decision.RouteLadder = ["local", " deep-seek ", "default"];
+        document.Rag.LlmProfile = "deep-seek";
+
+        var renamed = before.Upsert(before.Find("Deep Seek")! with { Name = "Reasoner" }, previousName: "Deep Seek");
+        Assert.True(Orkeon.Studio.Core.Profiles.HostLlmProfiles.Mirror(document, before, renamed, "Deep Seek", "Reasoner"));
+
+        Assert.Equal("reasoner", document.Compaction.Profile);
+        Assert.Equal(["local", "reasoner", "default"], document.Decision.RouteLadder);
+        Assert.Equal("reasoner", document.Rag.LlmProfile);
+        Assert.Null(document.Compaction.UnknownProfile());
+        Assert.Empty(document.Decision.Resolve(_ => null).UnknownRungs);
+
+        var removed = renamed.Remove("Reasoner");
+        Assert.True(Orkeon.Studio.Core.Profiles.HostLlmProfiles.Mirror(document, renamed, removed));
+
+        Assert.Null(document.Compaction.Profile);
+        Assert.Null(document.Rag.LlmProfile);
+        Assert.Equal(["local", "reasoner", "default"], document.Decision.RouteLadder);
+    }
 }

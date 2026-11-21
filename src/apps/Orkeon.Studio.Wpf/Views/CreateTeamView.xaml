@@ -388,6 +388,10 @@
       <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource InkMutedBrush}" Margin="4,0,0,0"
                  VerticalAlignment="Center" Text="{Binding Profiles.StudioProfileName}"/>
     </StackPanel>
+    <!-- What the assistant itself asks of the decision models on this run, as the engine states it:
+         its calls and what they spent, or that it works without them and why. -->
+    <TextBlock Style="{StaticResource MetaText}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding AssistantDecisionLine}"
+               Visibility="{Binding AssistantDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
     <!-- §F.5: «Votre solution est prête.» and friends as a faint line, not raw mono. C03: while
          the failure banner is up it says the failure itself — the line would only repeat it. -->
     <TextBlock Margin="0,6,0,0" Text="{Binding StatusMessage}">

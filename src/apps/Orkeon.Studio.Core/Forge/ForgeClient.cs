@@ -94,16 +94,23 @@ public sealed record ForgeStartRequest
 
     /// <summary>
     /// The decision mode of the crew a new session designs (<c>--crew-decision</c>): one of
-    /// <see cref="ForgeCrewDecisions.All"/>. Null passes nothing, the engine then designing a crew that
-    /// asks nothing of System One. A new session's only: a resumed one keeps the mode it was created
-    /// with, which the engine refuses to change.
+    /// <see cref="ForgeCrewDecisions.All"/>. Only <see cref="ForgeCrewDecisions.Optional"/> and
+    /// <see cref="ForgeCrewDecisions.Required"/> are passed: null, <see cref="ForgeCrewDecisions.None"/>
+    /// and a text that is no mode pass nothing, the engine then designing a crew that asks nothing of
+    /// System One, so <c>--crew-decision none</c> is never on a command line. A new session's only: a
+    /// resumed one keeps the mode it was created with, which the engine refuses to change, and a
+    /// reopen takes none.
     /// </summary>
     public string? CrewDecision { get; init; }
 
     /// <summary>
-    /// The assistant asks System One nothing for its own work on this run (<c>--no-decision</c>). Never
-    /// stored: each run decides for itself, a resume included. Not passed with <see cref="Adopt"/>,
-    /// which asks System One nothing, nor on a reopen.
+    /// The assistant asks System One nothing for its own work on this run (<c>--no-decision</c>). The
+    /// engine never stores it: each run decides for itself. Passed on the two commands
+    /// <see cref="ForgeArgumentsBuilder.Build"/> shapes a cycle with, a new session
+    /// (<c>forge &lt;need&gt;</c>) and a resume (<c>forge resume</c>), except with <see cref="Adopt"/>,
+    /// which asks System One nothing and refuses the switch. Never passed on a reopen
+    /// (<c>forge reopen</c>), whose command line is fixed; <c>forge rephrase</c>, <c>forge promote</c>
+    /// and the schedule verbs are built from other requests and never carry it either.
     /// </summary>
     public bool NoDecision { get; init; }
 }
@@ -292,14 +299,19 @@ public static class ForgeArgumentsBuilder
             arguments.Add("--adopt");
 
         // The mode of the crew, a new session's only, like the need: a resume keeps the mode it was
-        // created with, and the engine refuses another. A value it does not know is not passed.
-        if (string.IsNullOrWhiteSpace(request.ResumeSlug) && ForgeCrewDecisions.Normalize(request.CrewDecision) is { } crewDecision)
+        // created with, and the engine refuses another. A value it does not know is not passed, nor
+        // is "none", the engine's own default: the command line stays the one an engine that predates
+        // the option reads.
+        if (string.IsNullOrWhiteSpace(request.ResumeSlug)
+            && ForgeCrewDecisions.Normalize(request.CrewDecision) is { } crewDecision
+            && crewDecision != ForgeCrewDecisions.None)
         {
             arguments.Add("--crew-decision");
             arguments.Add(crewDecision);
         }
 
-        // The assistant's own circuit, this run's: an adoption asks System One nothing, and refuses the switch.
+        // The assistant's own circuit, this run's, on a new session and on a resume: an adoption asks
+        // System One nothing, and refuses the switch. A reopen returned above with its fixed argv.
         if (request.NoDecision && !request.Adopt)
             arguments.Add("--no-decision");
 

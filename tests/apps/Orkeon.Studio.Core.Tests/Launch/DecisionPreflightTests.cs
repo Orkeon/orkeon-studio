@@ -200,16 +200,14 @@ public sealed class DecisionPreflightTests
         Assert.True(none.BlocksLaunch);
         Assert.False(none.BlocksValidate);
 
-        // A ladder is there, one rung of which names no profile of the file: a warning, the run being
-        // given Studio's own model profiles besides.
-        var unknownRung = On with { RouteLadder = ["default", "strong"], UnknownRungs = ["strong"] };
-        var warned = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, unknownRung, settingsKnown: true, noDecision: false));
-        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, warned.Kind);
-        Assert.False(warned.BlocksLaunch);
+        Assert.Empty(none.UnknownRungs);
+        Assert.Equal(DecisionPreflightSeverity.BlocksLaunch, none.Severity);
 
         var machine = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, On, settingsKnown: false, noDecision: false));
         Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, machine.Kind);
         Assert.False(machine.BlocksLaunch);
+        Assert.Equal(DecisionPreflightSeverity.Warning, machine.Severity);
+        Assert.True(machine.OnStandInSettings);
 
         // No settings read: nothing is known of the ladder, nothing is said.
         Assert.Null(DecisionPreflight.Check(picks, null, settingsKnown: false, noDecision: false));
@@ -217,6 +215,199 @@ public sealed class DecisionPreflightTests
         // Thinking on auto needs no ladder.
         var thinking = picks with { OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.EffortAuto, "writer")] };
         Assert.Null(DecisionPreflight.Check(thinking, On, settingsKnown: true, noDecision: false));
+    }
+
+    /// <summary>
+    /// A rung the file does not define is refused at load unless the launch lays that profile in the
+    /// run's environment: blocked on the file the run reads, warned of on the machine's, and nothing
+    /// is said of a rung the launch offers, in whatever letter case.
+    /// </summary>
+    [Fact]
+    public void A_rung_neither_the_file_defines_nor_the_launch_offers_stops_a_crew_on_profile_auto()
+    {
+        var picks = new CrewDecisionUsage(CrewDecisionMode.Optional, [], [])
+        {
+            OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst")],
+        };
+        var ladder = On with { RouteLadder = ["default", "strong", "cheap"], UnknownRungs = ["strong", "cheap"] };
+
+        var nothingLaid = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, ladder, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, nothingLaid.Kind);
+        Assert.Equal(["strong", "cheap"], nothingLaid.UnknownRungs);
+        Assert.True(nothingLaid.BlocksLaunch);
+        Assert.False(nothingLaid.BlocksValidate);
+
+        var oneLaid = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(picks, ladder, settingsKnown: true, noDecision: false, offeredProfiles: ["Strong"]));
+        Assert.Equal(["cheap"], oneLaid.UnknownRungs);
+        Assert.True(oneLaid.BlocksLaunch);
+
+        Assert.Null(DecisionPreflight.Check(picks, ladder, settingsKnown: true, noDecision: false, offeredProfiles: ["cheap", "strong", "other"]));
+
+        var machine = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, ladder, settingsKnown: false, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, machine.Kind);
+        Assert.False(machine.BlocksLaunch);
+        Assert.True(machine.OnStandInSettings);
+
+        // The rungs trouble no crew that picks no profile.
+        Assert.Null(DecisionPreflight.Check(CrewDecisionUsage.None, ladder, settingsKnown: true, noDecision: false));
+    }
+
+    /// <summary>
+    /// A crew that states none refuses a profile System One picks, whatever the settings: the engine
+    /// judges the mode before the ladder, with one or without, and Studio blocks even on a file it has
+    /// not read.
+    /// </summary>
+    [Fact]
+    public void A_crew_that_states_none_is_refused_for_a_holder_on_profile_auto_whatever_the_ladder()
+    {
+        var none = new CrewDecisionUsage(CrewDecisionMode.None, [], [])
+        {
+            Declared = true,
+            OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst")],
+            NamedProfiles = [new CrewNamedProfile("writer", "guarded")],
+        };
+        var ladder = On with { RouteLadder = ["default", "strong"] };
+
+        foreach (var (status, known) in new (DecisionStatus?, bool)[] { (ladder, true), (On, true), (NoProvider, true), (ladder, false), (null, false) })
+        {
+            var refused = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(none, status, known, noDecision: false));
+            Assert.Equal(DecisionPreflightKind.ProfileRefusedByMode, refused.Kind);
+            Assert.Equal(["analyst"], refused.RoutedHolders);
+            Assert.Empty(refused.DecisionProfileHolders);
+            Assert.True(refused.BlocksLaunch);
+            Assert.False(refused.BlocksValidate);
+            Assert.False(refused.OnStandInSettings);
+        }
+
+        // A decision profile beside it is named too once the settings define it.
+        var both = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(none, ladder with { DecisionProfiles = ["guarded"] }, settingsKnown: true, noDecision: false));
+        Assert.Equal(["analyst"], both.RoutedHolders);
+        Assert.Equal(["writer"], both.DecisionProfileHolders);
+
+        // A decision profile alone is a matter of the settings: the machine's file only warns.
+        var named = none with { OtherUses = [] };
+        var machine = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(named, On with { DecisionProfiles = ["guarded"] }, settingsKnown: false, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.ProfileRefusedByMode, machine.Kind);
+        Assert.False(machine.BlocksLaunch);
+        Assert.True(machine.OnStandInSettings);
+    }
+
+    /// <summary>
+    /// A fail-closed decision profile with a guard stage blocks every call once the circuit is off: the
+    /// crew that names it needs the models, whatever turns them off. A check loads the crew.
+    /// </summary>
+    [Fact]
+    public void A_fail_closed_guarded_profile_stops_the_launch_once_the_circuit_is_off()
+    {
+        var names = new CrewDecisionUsage(CrewDecisionMode.None, [], [])
+        {
+            NamedProfiles = [new CrewNamedProfile("analyst", "Guarded"), new CrewNamedProfile("writer", "strong")],
+        };
+        DecisionStatus Guarded(DecisionStatus status) => status with { DecisionProfiles = ["guarded", "soft"], BlockingProfiles = ["guarded"] };
+
+        Assert.Null(DecisionPreflight.Check(names, Guarded(On), settingsKnown: true, noDecision: false));
+
+        foreach (var (status, noDecision, reason) in new[]
+        {
+            (Guarded(NoProvider), false, DecisionOffReason.NoProvider),
+            (Guarded(SwitchedOff), false, DecisionOffReason.SettingsSwitch),
+            (Guarded(On), true, DecisionOffReason.RunSwitch),
+        })
+        {
+            var blocked = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(names, status, settingsKnown: true, noDecision));
+            Assert.Equal(DecisionPreflightKind.ProfileBlockedWithoutModel, blocked.Kind);
+            Assert.Equal(["analyst"], blocked.BlockedProfileHolders);
+            Assert.Equal([reason], blocked.Reasons);
+            Assert.True(blocked.BlocksLaunch);
+            Assert.False(blocked.BlocksValidate);
+            Assert.Equal(DecisionPreflightSeverity.BlocksLaunch, blocked.Severity);
+        }
+
+        // The profile is one of the machine's file, which only stands in: a warning, the run's switch included.
+        foreach (var (status, noDecision) in new[] { (Guarded(NoProvider), false), (Guarded(On), true) })
+        {
+            var warned = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(names, status, settingsKnown: false, noDecision));
+            Assert.Equal(DecisionPreflightKind.ProfileBlockedWithoutModel, warned.Kind);
+            Assert.False(warned.BlocksLaunch);
+            Assert.Equal(DecisionPreflightSeverity.Warning, warned.Severity);
+            Assert.True(warned.OnStandInSettings);
+        }
+
+        // A decision profile that does not block has its stages skipped: information, as before.
+        var soft = names with { NamedProfiles = [new CrewNamedProfile("analyst", "soft")] };
+        Assert.Equal(
+            DecisionPreflightKind.OptionalWithoutModel,
+            DecisionPreflight.Check(soft, Guarded(NoProvider), settingsKnown: true, noDecision: false)?.Kind);
+    }
+
+    /// <summary>
+    /// One finding is returned, the heaviest: a warning never hides what blocks the launch, nor what
+    /// blocks the launch what blocks a check too.
+    /// </summary>
+    [Fact]
+    public void A_finding_that_blocks_is_never_hidden_by_one_that_does_not()
+    {
+        var routedAndRequired = DeclaredRequired with
+        {
+            OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst")],
+        };
+        var unknownRung = NoProvider with { RouteLadder = ["default", "strong"], UnknownRungs = ["strong"] };
+
+        // The machine's ladder only warns; the run's own switch on a required crew blocks.
+        var required = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(routedAndRequired, unknownRung, settingsKnown: false, noDecision: true));
+        Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, required.Kind);
+        Assert.True(required.BlocksLaunch);
+        Assert.False(required.OnStandInSettings);
+
+        // The rung offered by the launch, the crew is still refused for the circuit of its file.
+        Assert.Equal(
+            DecisionPreflightKind.RequiredWithoutModel,
+            DecisionPreflight.Check(routedAndRequired, unknownRung, settingsKnown: true, noDecision: false, offeredProfiles: ["strong"])?.Kind);
+
+        // Both block on the file the run reads: the load (the ladder) comes before the run's entry.
+        Assert.Equal(
+            DecisionPreflightKind.RouteWithoutLadder,
+            DecisionPreflight.Check(routedAndRequired, unknownRung, settingsKnown: true, noDecision: false)?.Kind);
+
+        // A refused provider of the machine's file warns; the run's switch on a required crew blocks.
+        Assert.Equal(
+            DecisionPreflightKind.RequiredWithoutModel,
+            DecisionPreflight.Check(DeclaredRequired, Refused, settingsKnown: false, noDecision: true)?.Kind);
+
+        // A refused provider of the file the run reads blocks a check too: nothing comes before it.
+        var refused = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(routedAndRequired, Refused, settingsKnown: true, noDecision: true));
+        Assert.Equal(DecisionPreflightKind.ProviderRefused, refused.Kind);
+        Assert.Equal(DecisionPreflightSeverity.BlocksValidate, refused.Severity);
+
+        // A warning comes before information: the key that is missing, the tool withheld.
+        var lenient = NoProvider with { StrictTools = false };
+        var withheld = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, lenient, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.ToolWithheld, withheld.Kind);
+        Assert.Equal(DecisionPreflightSeverity.Warning, withheld.Severity);
+        Assert.Equal(
+            DecisionPreflightSeverity.Information,
+            DecisionPreflight.Check(Optional, NoProvider, settingsKnown: true, noDecision: false)?.Severity);
+    }
+
+    /// <summary>
+    /// What is read on the machine's settings while the CLI picks the file is told apart from what holds
+    /// whatever the file: the run's own switch.
+    /// </summary>
+    [Fact]
+    public void A_finding_read_on_settings_that_stand_in_is_told_apart_from_a_fact()
+    {
+        var lenient = NoProvider with { StrictTools = false };
+
+        Assert.True(DecisionPreflight.Check(Required, lenient, settingsKnown: false, noDecision: false)!.OnStandInSettings);
+        Assert.False(DecisionPreflight.Check(Required, lenient, settingsKnown: true, noDecision: false)!.OnStandInSettings);
+        Assert.True(DecisionPreflight.Check(Optional, NoProvider, settingsKnown: false, noDecision: false)!.OnStandInSettings);
+        Assert.True(DecisionPreflight.Check(Optional, NoProvider, settingsKnown: false, noDecision: true)!.OnStandInSettings);
+        // The run's switch alone: a fact, whatever file the CLI picks.
+        Assert.False(DecisionPreflight.Check(Optional, On, settingsKnown: false, noDecision: true)!.OnStandInSettings);
+        Assert.False(DecisionPreflight.Check(Optional, null, settingsKnown: false, noDecision: true)!.OnStandInSettings);
     }
 
     [Fact]
@@ -242,7 +433,7 @@ public sealed class DecisionPreflightTests
         Assert.Equal(
             [DecisionOffReason.NoProvider, DecisionOffReason.SettingsSwitch, DecisionOffReason.RunSwitch],
             finding?.Reasons);
-        Assert.Equal(DecisionOffReason.NoProvider, finding?.OffReason);
+        Assert.Equal(DecisionOffReason.NoProvider, finding?.Reasons[0]);
     }
 
     [Fact]
@@ -288,7 +479,7 @@ public sealed class DecisionPreflightTests
     {
         var off = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, NoProvider, settingsKnown: false, noDecision: false));
         Assert.Equal(DecisionPreflightKind.RequiredUnknownSettings, off.Kind);
-        Assert.Equal(DecisionOffReason.NoProvider, off.OffReason);
+        Assert.Equal(DecisionOffReason.NoProvider, off.Reasons[0]);
         Assert.False(off.BlocksLaunch);
 
         var refused = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, Refused, settingsKnown: false, noDecision: false));
@@ -305,9 +496,9 @@ public sealed class DecisionPreflightTests
     [Fact]
     public void The_reason_the_run_goes_without_the_model_is_said()
     {
-        Assert.Equal(DecisionOffReason.RunSwitch, DecisionPreflight.Check(Unanswered, On, settingsKnown: true, noDecision: true)?.OffReason);
-        Assert.Equal(DecisionOffReason.SettingsSwitch, DecisionPreflight.Check(Unanswered, SwitchedOff, settingsKnown: true, noDecision: false)?.OffReason);
-        Assert.Equal(DecisionOffReason.NoProvider, DecisionPreflight.Check(Required, NoProvider, settingsKnown: true, noDecision: false)?.OffReason);
+        Assert.Equal(DecisionOffReason.RunSwitch, DecisionPreflight.Check(Unanswered, On, settingsKnown: true, noDecision: true)?.Reasons[0]);
+        Assert.Equal(DecisionOffReason.SettingsSwitch, DecisionPreflight.Check(Unanswered, SwitchedOff, settingsKnown: true, noDecision: false)?.Reasons[0]);
+        Assert.Equal(DecisionOffReason.NoProvider, DecisionPreflight.Check(Required, NoProvider, settingsKnown: true, noDecision: false)?.Reasons[0]);
     }
 
     [Theory]
@@ -362,7 +553,49 @@ public sealed class DecisionPreflightTests
         Assert.True(refused.BlocksLaunch);
         Assert.False(refused.BlocksValidate);
         Assert.False(DecisionPreflight.Check(none, guarded, settingsKnown: false, noDecision: false)!.BlocksLaunch);
-        // A crew that states none and names no decision profile is told nothing.
+        // A crew that states none and names no decision profile is told nothing, the provider's key included.
         Assert.Null(DecisionPreflight.Check(none, On, settingsKnown: true, noDecision: true));
+        Assert.Null(DecisionPreflight.Check(none, On with { MissingKeyVariable = "LIQUID_API_KEY" }, settingsKnown: true, noDecision: false));
+    }
+
+    /// <summary>
+    /// A model profile the launch lays in the run's environment is a profile beside those of the file: a
+    /// decision profile of the same name, in whatever letter case, refuses the start as two of the file
+    /// do (the engine: « Two LLM profiles are named 'x'. »), a check included and whatever the crew.
+    /// Blocked on the file the run reads, warned of on the machine's; a refusal the host meets earlier
+    /// stays the one said, and a fail-closed judge, met later, gives way.
+    /// </summary>
+    [Fact]
+    public void A_decision_profile_named_as_a_profile_the_launch_lays_refuses_the_start()
+    {
+        var plain = new CrewDecisionUsage(CrewDecisionMode.None, [], []);
+        var guarded = On with { DecisionProfiles = ["guarded"] };
+
+        var refused = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(plain, guarded, settingsKnown: true, noDecision: false, offeredProfiles: ["fast", "Guarded"]));
+        Assert.Equal(DecisionPreflightKind.ProviderRefused, refused.Kind);
+        Assert.Equal("Two LLM profiles are named 'guarded'.", refused.Status?.Refusal);
+        Assert.Equal(DecisionRefusalStage.Profiles, refused.Status?.RefusalStage);
+        Assert.True(refused.BlocksLaunch);
+        Assert.True(refused.BlocksValidate);
+
+        var machine = Assert.IsType<DecisionPreflightFinding>(
+            DecisionPreflight.Check(plain, guarded, settingsKnown: false, noDecision: false, offeredProfiles: ["guarded"]));
+        Assert.Equal(DecisionPreflightKind.ProviderRefused, machine.Kind);
+        Assert.Equal(DecisionPreflightSeverity.Warning, machine.Severity);
+
+        // Another name, or nothing laid: nothing to say.
+        Assert.Null(DecisionPreflight.Check(plain, guarded, settingsKnown: true, noDecision: false, offeredProfiles: ["fast"]));
+        Assert.Null(DecisionPreflight.Check(plain, guarded, settingsKnown: true, noDecision: false));
+
+        var earlier = guarded with { Refusal = "Both TypeSafe and Liquid are configured", RefusalStage = DecisionRefusalStage.Composition };
+        Assert.Equal(
+            "Both TypeSafe and Liquid are configured",
+            DecisionPreflight.Check(plain, earlier, settingsKnown: true, noDecision: false, offeredProfiles: ["guarded"])?.Status?.Refusal);
+
+        var judge = guarded with { Refusal = "the judge", RefusalStage = DecisionRefusalStage.Judge };
+        Assert.Equal(
+            "Two LLM profiles are named 'guarded'.",
+            DecisionPreflight.Check(plain, judge, settingsKnown: true, noDecision: false, offeredProfiles: ["guarded"])?.Status?.Refusal);
     }
 }

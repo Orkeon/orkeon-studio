@@ -302,57 +302,6 @@ public class RunProgressViewModelTests
 
         Assert.Equal(TimeSpan.FromSeconds(30), panel.Model.Elapsed);
     }
-}
-
-/// <summary>
-/// The argv the launch form composes once the screen watches a run rather than tailing it.
-/// </summary>
-public class LaunchOptionsObservationTests
-{
-    [Fact]
-    public void Watching_is_the_default_and_streaming_is_not()
-    {
-        var options = new LaunchOptionsViewModel();
-
-        Assert.True(options.WatchProgress);
-        Assert.False(options.StreamGeneratedText);
-        Assert.True(options.CanStreamGeneratedText);
-    }
-
-    [Fact]
-    public void Turning_watching_off_takes_streaming_with_it()
-    {
-        var options = new LaunchOptionsViewModel { WatchProgress = false, StreamGeneratedText = true };
-
-        Assert.False(options.CanStreamGeneratedText);
-
-        var built = options.ToOptions();
-        Assert.False(built.Events);
-        Assert.False(built.Stream);
-        Assert.Null(built.ClientName);
-    }
-
-    [Fact]
-    public void A_watched_run_names_studio_on_the_hub()
-    {
-        var built = new LaunchOptionsViewModel { StreamGeneratedText = true }.ToOptions();
-
-        Assert.True(built.Events);
-        Assert.True(built.Stream);
-        Assert.Equal(LaunchOptionsViewModel.StudioClientName, built.ClientName);
-    }
-
-    [Fact]
-    public void A_dry_run_asks_for_no_stream_at_all()
-    {
-        // Validation reports a verdict, not progress: a stream with nothing in it would only
-        // make the screen look like it is watching something.
-        var built = new LaunchOptionsViewModel().ToOptions(validate: true);
-
-        Assert.False(built.Events);
-        Assert.False(built.Stream);
-        Assert.Null(built.ClientName);
-    }
 
     [Fact]
     public void The_decision_models_and_what_was_done_around_the_agents_are_listed_one_line_each()
@@ -433,5 +382,153 @@ public class LaunchOptionsObservationTests
 
         Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
         Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", System.Globalization.CultureInfo.CurrentCulture), panel.AgentNotes[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>A crew that states it runs with the models has its circuit said at once, before any note explains anything with it.</summary>
+    [Theory]
+    [InlineData("optional")]
+    [InlineData("required")]
+    public void The_circuit_of_a_crew_that_asks_for_the_models_is_said_at_once(string mode)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"{{mode}}","circuit":"off","cause":"settings"}""");
+
+        Assert.True(panel.HasAgentNotes);
+        Assert.Equal([$"Decision models off: the settings switch them off (team mode: {mode})."], panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_run_with_the_decision_models_says_so()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"on"}""");
+
+        Assert.Equal(["Decision models on (team mode: required)."], panel.AgentNotes);
+    }
+
+    /// <summary>A decision task is something the circuit explains: the line held for a crew that states no mode is said with it.</summary>
+    [Fact]
+    public void A_decision_task_releases_the_circuit_line_held_for_a_crew_that_states_no_mode()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"switch"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","success":true}""");
+        Assert.Empty(panel.AgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"pick","success":true,"isDecision":true,"defaulted":true}""");
+
+        Assert.Equal(["Decision models off: this run goes without them (team mode: unspecified)."], panel.AgentNotes);
+
+        // Said once: a second decision task adds nothing.
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"again","success":true,"isDecision":true,"defaulted":true}""");
+        Assert.Single(panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_new_run_drops_the_circuit_line_the_previous_one_still_held()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"no-provider"}""");
+        Assert.Empty(panel.AgentNotes);
+
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"write","agentRole":"Writer","cut":1,"dropped":0,"freedTokens":900}""");
+
+        // The note of the new run stands alone: the held line was the previous run's.
+        Assert.Equal(["Writer: 1 tool results pruned, about 900 tokens freed."], panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_compaction_that_succeeded_says_what_it_freed_in_the_cultures_figures()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.compacted","taskId":"read","agentRole":"Analyst","outcome":"compacted","tokensBefore":152000,"tokensAfter":41000}""");
+
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Assert.Equal(
+            [$"Analyst: context compacted, from {152000.ToString("N0", culture)} to {41000.ToString("N0", culture)} tokens."],
+            panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// The circuit line explains every « circuit-off » or « relay » note below it: the cap that keeps
+    /// the latest notes never evicts it.
+    /// </summary>
+    [Fact]
+    public void A_long_run_keeps_its_circuit_line_above_the_latest_notes()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn + 1}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        // The oldest notes went, from under it: the second line is the 27th pruning.
+        Assert.StartsWith("A: " + 27.ToString("N0", culture), panel.AgentNotes[1], StringComparison.Ordinal);
+        Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", culture), panel.AgentNotes[^1], StringComparison.Ordinal);
+    }
+}
+
+/// <summary>
+/// The argv the launch form composes once the screen watches a run rather than tailing it.
+/// </summary>
+public class LaunchOptionsObservationTests
+{
+    [Fact]
+    public void Watching_is_the_default_and_streaming_is_not()
+    {
+        var options = new LaunchOptionsViewModel();
+
+        Assert.True(options.WatchProgress);
+        Assert.False(options.StreamGeneratedText);
+        Assert.True(options.CanStreamGeneratedText);
+    }
+
+    [Fact]
+    public void Turning_watching_off_takes_streaming_with_it()
+    {
+        var options = new LaunchOptionsViewModel { WatchProgress = false, StreamGeneratedText = true };
+
+        Assert.False(options.CanStreamGeneratedText);
+
+        var built = options.ToOptions();
+        Assert.False(built.Events);
+        Assert.False(built.Stream);
+        Assert.Null(built.ClientName);
+    }
+
+    [Fact]
+    public void A_watched_run_names_studio_on_the_hub()
+    {
+        var built = new LaunchOptionsViewModel { StreamGeneratedText = true }.ToOptions();
+
+        Assert.True(built.Events);
+        Assert.True(built.Stream);
+        Assert.Equal(LaunchOptionsViewModel.StudioClientName, built.ClientName);
+    }
+
+    [Fact]
+    public void A_dry_run_asks_for_no_stream_at_all()
+    {
+        // Validation reports a verdict, not progress: a stream with nothing in it would only
+        // make the screen look like it is watching something.
+        var built = new LaunchOptionsViewModel().ToOptions(validate: true);
+
+        Assert.False(built.Events);
+        Assert.False(built.Stream);
+        Assert.Null(built.ClientName);
     }
 }

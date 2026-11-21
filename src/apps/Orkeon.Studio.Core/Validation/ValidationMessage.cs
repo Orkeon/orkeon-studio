@@ -153,10 +153,21 @@ public static class ValidationCodes
     public const string DecisionRequired = "STUDIO-DECISION-REQUIRED";
 
     /// <summary>
+    /// An agent or a task names a decision profile of the settings that is fail-closed and carries a
+    /// guard stage, and the run goes without the decision models: the guard cannot judge, so the engine
+    /// blocks every call made through the profile. An error for a run on the file it reads; a warning
+    /// for a check, which loads the crew, and while the CLI resolves the settings: never an error for a
+    /// check.
+    /// </summary>
+    public const string DecisionProfileBlocked = "STUDIO-DECISION-PROFILE-BLOCKED";
+
+    /// <summary>
     /// The engine refuses the decision settings: a provider it does not know or cannot deduce, a ladder of
-    /// profiles or a list of thinking levels its rules refuse, a decision profile named <c>auto</c>, or a
-    /// fail-closed LLM judge while the circuit is off. The host stops before it loads the crew, a check
-    /// included. An error when the file is the one the run reads; a warning otherwise.
+    /// profiles or a list of thinking levels its rules refuse, a decision profile named <c>auto</c> or
+    /// named as a model profile of the settings or of the run's environment is, or a
+    /// fail-closed LLM judge while the circuit is off, the run's own <c>--no-decision</c> included. The
+    /// host stops before it loads the crew, a check included. An error when the file is the one the run
+    /// reads; a warning otherwise.
     /// </summary>
     public const string DecisionProviderRefused = "STUDIO-DECISION-PROVIDER";
 
@@ -182,14 +193,19 @@ public static class ValidationCodes
 
     /// <summary>
     /// An agent or a task is on <c>llm.profile: auto</c> and the settings give no ladder of profiles for
-    /// System One to pick on (<c>Orkeon:Decision:Route:Ladder</c>), or a rung of it names no profile: the
-    /// engine refuses the crew at load.
+    /// System One to pick on (<c>Orkeon:Decision:Route:Ladder</c>), or a rung of it names a profile
+    /// neither the settings define nor the launch lays in the run's environment: the engine refuses the
+    /// crew at load. An error when the file is the one the run reads (a warning for a check, which
+    /// stays offered and reports the engine's line); a warning otherwise.
     /// </summary>
     public const string DecisionLadder = "STUDIO-DECISION-LADDER";
 
     /// <summary>
-    /// The crew states <c>decision.mode: none</c> and an agent or a task names a decision profile of the
-    /// settings: the mode refuses any use of System One, and the engine refuses the crew at load.
+    /// The crew states <c>decision.mode: none</c> and an agent or a task is routed on
+    /// <c>llm.profile: auto</c>, or names a decision profile of the settings: the mode refuses any use of
+    /// System One, and the engine refuses the crew at load. An error for a holder on <c>auto</c>, whatever
+    /// the settings, and for a decision profile of the file the run reads (a warning for a check, which
+    /// stays offered and reports the engine's line); a warning otherwise.
     /// </summary>
     public const string DecisionModeRefused = "STUDIO-DECISION-MODE";
 

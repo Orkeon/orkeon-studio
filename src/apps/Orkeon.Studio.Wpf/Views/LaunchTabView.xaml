@@ -329,6 +329,7 @@
                                 Visibility="{Binding IsBlockedByBridge, Converter={StaticResource BooleanToVisibility}}">
                   <controls:Alert.Actions>
                     <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenBridgeSettingsCommand}"
+                            Visibility="{Binding ShowsBridgeSettingsAction, Converter={StaticResource BooleanToVisibility}}"
                             Content="{Binding [Studio.Run.OpenBridgeSettings], Source={x:Static services:I18n.Instance}}"/>
                   </controls:Alert.Actions>
                 </controls:Alert>
@@ -337,6 +338,7 @@
                                 Visibility="{Binding HasBridgeWarning, Converter={StaticResource BooleanToVisibility}}">
                   <controls:Alert.Actions>
                     <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenBridgeSettingsCommand}"
+                            Visibility="{Binding ShowsBridgeSettingsAction, Converter={StaticResource BooleanToVisibility}}"
                             Content="{Binding [Studio.Run.OpenBridgeSettings], Source={x:Static services:I18n.Instance}}"/>
                   </controls:Alert.Actions>
                 </controls:Alert>

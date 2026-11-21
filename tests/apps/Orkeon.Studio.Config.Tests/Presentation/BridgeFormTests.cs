@@ -72,7 +72,7 @@ public sealed class BridgeFormTests
         var before = document.ToJson();
         var form = new BridgeForm(_ => null);
         form.LoadFrom(document);
-        typeof(BridgeForm).GetProperty(field)!.SetValue(form, value);
+        Set(form, field, value);
 
         var errors = form.ApplyTo(document);
 
@@ -108,7 +108,8 @@ public sealed class BridgeFormTests
         var document = AppSettingsDocument.Parse("""{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":{"0":"*"}}}}}""");
         var form = new BridgeForm(_ => "0123456789abcdef0123456789abcdef");
         form.LoadFrom(document);
-        Assert.Equal("", form.Allow);
+        // Shown as the engine reads it, a list; kept as the file writes it, an object.
+        Assert.Equal("*", form.Allow);
 
         form.HostHeader = "desk.example:7410";
         Assert.Empty(form.ApplyTo(document));
@@ -116,5 +117,64 @@ public sealed class BridgeFormTests
         Assert.True(document.ContainsPath("Orkeon:Tools:Bridge:Allow:0"));
         Assert.True(document.ToolBridge.IsEnabled);
         Assert.Equal("desk.example:7410", document.ToolBridge.HostHeader);
+    }
+
+    // A theory names its field by text: a misspelt row says so, instead of a null reference.
+    private static void Set(object form, string field, string value)
+    {
+        var property = form.GetType().GetProperty(field);
+        Assert.True(property is not null, $"{form.GetType().Name} has no field named '{field}': the theory's row is misspelt.");
+        property.SetValue(form, value);
+    }
+
+    /// <summary>
+    /// A key the screen does not show that the binder cannot read stops the engine's binding, not the
+    /// rules on the fields shown: a refused address or host is still refused, and nothing is written.
+    /// </summary>
+    [Theory]
+    [InlineData("Address", "not a url")]
+    [InlineData("HostHeader", "a b c")]
+    public void A_refused_field_is_refused_even_beside_an_unreadable_key_the_screen_does_not_show(string field, string value)
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":["*"],"ConnectTimeout":"soon"}}}}""");
+        var before = document.ToJson();
+        var form = new BridgeForm(_ => null);
+        form.LoadFrom(document);
+        Set(form, field, value);
+
+        Assert.NotEmpty(form.ApplyTo(document));
+        Assert.Equal(before, document.ToJson());
+    }
+
+    /// <summary>
+    /// Applied twice to its document: a value set, then blanked, is written then removed; a refused
+    /// apply writes nothing and keeps the text for a correction, which is then written.
+    /// </summary>
+    [Fact]
+    public void A_second_apply_writes_what_changed_since_the_first()
+    {
+        var document = AppSettingsDocument.Parse("{}");
+        var form = new BridgeForm(_ => null);
+        form.LoadFrom(document);
+
+        form.ServeTokenEnvVar = "DESK_TOKEN";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("DESK_TOKEN", document.BridgeServer.TokenEnvVar);
+        var written = document.ToJson();
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal(written, document.ToJson());
+
+        form.ServeTokenEnvVar = "";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath("Orkeon:Bridge:TokenEnvVar"));
+
+        form.Address = "http://desk.example:7410/";
+        Assert.NotEmpty(form.ApplyTo(document));
+        Assert.Equal("http://desk.example:7410/", form.Address);
+        Assert.False(document.ContainsPath("Orkeon:Tools:Bridge:Address"));
+
+        form.Address = "https://desk.example:7410/";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("https://desk.example:7410/", document.ToolBridge.Address);
     }
 }

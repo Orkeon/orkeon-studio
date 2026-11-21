@@ -151,8 +151,15 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
     /// <summary>One card per provider, in the engine's order.</summary>
     public IReadOnlyList<DecisionProviderCardViewModel> Providers { get; }
 
-    /// <summary>The circuit a run of this file gets, over the keys in place.</summary>
-    public DecisionStatus Status => Section.Resolve(_keyStore.Peek);
+    // The status as last resolved: a resolution reads the whole document and probes the environment
+    // for each provider, so it is done once per change and never per bound property.
+    private DecisionStatus? _status;
+
+    /// <summary>
+    /// The circuit a run of this file gets, over the keys in place: resolved when the section, the
+    /// document or a key changes (<see cref="RefreshVerdict"/>), and kept until then.
+    /// </summary>
+    public DecisionStatus Status => _status ??= Section.Resolve(_keyStore.Peek);
 
     /// <summary>Whether a run of this file asks the decision model.</summary>
     public bool IsOn => Status.CircuitOn;
@@ -199,29 +206,66 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
     }
 
     /// <summary>
-    /// Reads the status again after an edit made elsewhere in the document: a profile added, renamed or
-    /// removed changes what a ladder rung names.
+    /// Resolves the status again after a change made outside this form: an edit elsewhere in the
+    /// document (a profile added, renamed or removed changes what a ladder rung names), or a key stored
+    /// on another screen. What follows from the status is announced only when it changed.
     /// </summary>
-    public void RefreshVerdict() => OnSectionChanged();
+    public void RefreshVerdict()
+    {
+        var resolved = Section.Resolve(_keyStore.Peek);
+        if (_status is { } known && Same(known, resolved))
+            return;
+
+        _status = resolved;
+        OnStatusChanged();
+    }
 
     /// <inheritdoc />
     public override void Refresh()
     {
+        // The document was replaced or rewritten: nothing kept of the one before, and every binding reads again.
+        _status = null;
         base.Refresh();
         foreach (var card in Providers)
             card.Refresh();
     }
 
     /// <inheritdoc />
-    protected override void OnSectionChanged() => OnPropertiesChanged(
-        nameof(Exists), nameof(Status), nameof(IsOn), nameof(IsRefused), nameof(StatusText),
-        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState),
-        nameof(RouteLadderText), nameof(RouteLadderNote), nameof(EffortLevelsText));
+    protected override void OnSectionChanged()
+    {
+        OnPropertiesChanged(nameof(Exists), nameof(RouteLadderText), nameof(EffortLevelsText));
+        RefreshVerdict();
+    }
+
+    // Everything the status decides, the status itself first: the shell judges the launchers again on it.
+    private void OnStatusChanged() => OnPropertiesChanged(
+        nameof(Status), nameof(IsOn), nameof(IsRefused), nameof(StatusText),
+        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState), nameof(RouteLadderNote));
+
+    /// <summary>
+    /// Whether two resolutions say the same thing. A record compares its lists by reference, and each
+    /// resolution builds its own: they are compared item by item, then everything else as the record does.
+    /// </summary>
+    private static bool Same(DecisionStatus known, DecisionStatus resolved) =>
+        known.IgnoredSections.SequenceEqual(resolved.IgnoredSections)
+        && known.RouteLadder.SequenceEqual(resolved.RouteLadder)
+        && known.UnknownRungs.SequenceEqual(resolved.UnknownRungs)
+        && known.DecisionProfiles.SequenceEqual(resolved.DecisionProfiles)
+        && known.BlockingProfiles.SequenceEqual(resolved.BlockingProfiles)
+        && known == resolved with
+        {
+            IgnoredSections = known.IgnoredSections,
+            RouteLadder = known.RouteLadder,
+            UnknownRungs = known.UnknownRungs,
+            DecisionProfiles = known.DecisionProfiles,
+            BlockingProfiles = known.BlockingProfiles,
+        };
 
     private void RefreshTexts()
     {
         OnPropertiesChanged(nameof(ProviderChoices), nameof(SelectedProvider), nameof(EffortLevelsHint));
-        OnSectionChanged();
+        // The status is the same, its words are not.
+        OnStatusChanged();
         foreach (var card in Providers)
             card.RefreshTexts();
     }

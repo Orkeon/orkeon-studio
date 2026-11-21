@@ -153,10 +153,23 @@ public sealed class AppSettingsValidator
     /// </summary>
     private static void ValidateEngineSections(AppSettingsDocument document, List<ValidationMessage> messages)
     {
+        // What every check of a section says of a key the configuration refuses as written twice.
+        const string KeyWrittenTwice = "the configuration refuses a key written twice";
+
+        // A file the configuration does not load is said once, whichever section holds the key it names,
+        // and not again where the check of a section already said it of its own keys, in its own words.
+        var load = document.LoadRefusal();
+        if (load is { } refused
+            && !messages.Any(said => said.Severity == ValidationSeverity.Error && said.Text.Contains(KeyWrittenTwice, StringComparison.Ordinal)))
+        {
+            messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, refused.Problem, refused.Path));
+        }
+
         foreach (var (path, problem) in document.Compaction.Problems()
             .Concat(document.Skills.Problems())
             .Concat(document.ToolBridge.Problems())
-            .Concat(document.BridgeServer.Problems()))
+            .Concat(document.BridgeServer.Problems())
+            .Where(found => load is null || found != load.Value))
             messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path));
 
         // Like Orkeon:Rag:LlmProfile: the profile may come from the environment a run is launched with.
@@ -618,14 +631,10 @@ public sealed class AppSettingsValidator
 
         // A window of zero or less would leave the agent's loop no room: the host refuses to start.
         if (Written(section, LlmProfilesSection.ContextWindowTokensKey) is { } windowNode
-            && AppSettingsDocument.ReadInt32(windowNode) is <= 0 and var window)
+            && LlmSection.ContextWindowProblem(sectionPath, AppSettingsDocument.ReadInt32(windowNode)) is { } window)
         {
             messages.Add(ValidationMessage.Error(
-                ValidationCodes.InvalidFieldType,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"{sectionPath}:{LlmProfilesSection.ContextWindowTokensKey}: {window} is not a number of tokens above zero. Leave the key out for the model's documented window."),
-                $"{sectionPath}:{LlmProfilesSection.ContextWindowTokensKey}"));
+                ValidationCodes.InvalidFieldType, window, $"{sectionPath}:{LlmProfilesSection.ContextWindowTokensKey}"));
         }
 
         if (Child(section, "BaseUrl") is JsonValue baseUrlNode

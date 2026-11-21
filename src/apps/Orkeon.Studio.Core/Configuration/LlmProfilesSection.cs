@@ -37,11 +37,14 @@ public sealed class LlmProfilesSection
 
     internal LlmProfilesSection(AppSettingsDocument document) => _document = document;
 
+    // The section where the file spells it, in whatever letter case: what the run binds.
+    private string Section => _document.PathAsWritten(SectionPath);
+
     /// <summary>True when the section holds at least one profile.</summary>
-    public bool Exists => _document.SectionExists(SectionPath);
+    public bool Exists => _document.SectionExists(Section);
 
     /// <summary>The profile ids as the document spells them, in document order.</summary>
-    public IReadOnlyList<string> Ids => _document.ObjectKeys(SectionPath);
+    public IReadOnlyList<string> Ids => _document.ObjectKeys(Section);
 
     /// <summary>Whether <paramref name="id"/> designates the default profile: blank, or <see cref="DefaultProfile"/>.</summary>
     public static bool IsDefault(string? id) =>
@@ -63,7 +66,7 @@ public sealed class LlmProfilesSection
         if (Find(id) is not { } key)
             return null;
 
-        return ReadEntry(_document, $"{SectionPath}:{key}", key);
+        return ReadEntry(_document, $"{Section}:{key}", key);
     }
 
     /// <summary>
@@ -82,12 +85,12 @@ public sealed class LlmProfilesSection
                 $"'{DefaultProfile}' is the reserved name of the default profile, the {LlmSection.SectionPath} section itself.",
                 nameof(entry));
 
-        var before = _document.GetNode(SectionPath)?.ToJsonString();
+        var before = _document.GetNode(Section)?.ToJsonString();
         var id = entry.Id.Trim();
         if (Find(id) is { } existing && !string.Equals(existing, id, StringComparison.Ordinal))
             Rename(existing, id);
 
-        var path = $"{SectionPath}:{id}";
+        var path = $"{Section}:{id}";
         WriteEntry(_document, path, entry);
 
         // An entry that pins nothing still exists: the runtime must see the profile, and builds
@@ -95,7 +98,7 @@ public sealed class LlmProfilesSection
         if (_document.GetNode(path) is null)
             _document.SetNode(path, new JsonObject());
 
-        return !string.Equals(before, _document.GetNode(SectionPath)?.ToJsonString(), StringComparison.Ordinal);
+        return !string.Equals(before, _document.GetNode(Section)?.ToJsonString(), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -107,7 +110,7 @@ public sealed class LlmProfilesSection
     public bool KeyAgrees(LlmProfileEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        return Find(entry.Id) is { } key && KeyAgrees(_document, $"{SectionPath}:{key}", entry);
+        return Find(entry.Id) is { } key && KeyAgrees(_document, $"{Section}:{key}", entry);
     }
 
     /// <summary>
@@ -130,7 +133,7 @@ public sealed class LlmProfilesSection
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(entry);
 
-        var apiKey = document.GetString($"{path}:ApiKey");
+        var apiKey = document.GetString(document.PathAsWritten($"{path}:ApiKey"));
         return entry.ApiKeyPlaceholder is not null
             ? !string.IsNullOrWhiteSpace(apiKey)
             : !string.Equals(apiKey, LlmProviderDefaultModels.DockerModelRunnerApiKeyPlaceholder, StringComparison.Ordinal);
@@ -145,55 +148,77 @@ public sealed class LlmProfilesSection
     /// </summary>
     public const string ContextWindowTokensKey = "ContextWindowTokens";
 
-    /// <summary>The fields Studio models of the section of the <c>Llm</c> shape at <paramref name="path"/>.</summary>
-    internal static LlmProfileEntry ReadEntry(AppSettingsDocument document, string path, string id) => new()
+    /// <summary>
+    /// Writes the <c>Model</c> of the section of the <c>Llm</c> shape at <paramref name="path"/>, on
+    /// the key the file spells in whatever letter case, and takes the section's
+    /// <see cref="ContextWindowTokensKey"/> out when the model changes: a window stated for the model the
+    /// section held does not describe the one it gets, and the engine would measure the new model's
+    /// context against it. The one place a model is written, so the rule holds for every writer: the
+    /// election, a preset, a form. The models are compared trimmed, a blank one being none: writing the
+    /// model the section already holds, or none over a blank one, keeps the window.
+    /// </summary>
+    internal static void SetModel(AppSettingsDocument document, string path, string? model)
     {
-        Id = id,
-        BaseUrl = document.GetString($"{path}:BaseUrl"),
-        Model = document.GetString($"{path}:Model"),
-        ApiKeyEnvVar = document.GetString($"{path}:{ConfigurationKeys.LlmApiKeyEnvVar}"),
-        Temperature = document.GetDouble($"{path}:Temperature"),
-        TimeoutSeconds = document.GetInt32($"{path}:TimeoutSeconds"),
-        StreamIdleSeconds = document.GetInt32($"{path}:StreamIdleSeconds"),
-        CallMode = document.GetString($"{path}:CallMode"),
-        MaxTokens = document.GetInt32($"{path}:MaxTokens"),
-        ThinkingEnabled = document.GetBoolean($"{path}:{ConfigurationKeys.ThinkingSection}:Enabled"),
-        ThinkingEffort = document.GetString($"{path}:{ConfigurationKeys.ThinkingSection}:Effort"),
-    };
+        var key = document.PathAsWritten($"{path}:Model");
+        if (!string.Equals(document.GetString(key)?.Trim() ?? string.Empty, model?.Trim() ?? string.Empty, StringComparison.Ordinal))
+            document.Remove(document.PathAsWritten($"{path}:{ContextWindowTokensKey}"));
+        document.SetString(key, model);
+    }
+
+    /// <summary>
+    /// The fields Studio models of the section of the <c>Llm</c> shape at <paramref name="path"/>, each
+    /// read on the key the file spells, in whatever letter case.
+    /// </summary>
+    internal static LlmProfileEntry ReadEntry(AppSettingsDocument document, string path, string id)
+    {
+        string Key(string key) => document.PathAsWritten($"{path}:{key}");
+        return new()
+        {
+            Id = id,
+            BaseUrl = document.GetString(Key("BaseUrl")),
+            Model = document.GetString(Key("Model")),
+            ApiKeyEnvVar = document.GetString(Key(ConfigurationKeys.LlmApiKeyEnvVar)),
+            Temperature = document.GetDouble(Key("Temperature")),
+            TimeoutSeconds = document.GetInt32(Key("TimeoutSeconds")),
+            StreamIdleSeconds = document.GetInt32(Key("StreamIdleSeconds")),
+            CallMode = document.GetString(Key("CallMode")),
+            MaxTokens = document.GetInt32(Key("MaxTokens")),
+            ThinkingEnabled = document.GetBoolean(Key($"{ConfigurationKeys.ThinkingSection}:Enabled")),
+            ThinkingEffort = document.GetString(Key($"{ConfigurationKeys.ThinkingSection}:Effort")),
+        };
+    }
 
     /// <summary>
     /// Writes <paramref name="entry"/>'s fields into the section of the <c>Llm</c> shape at
-    /// <paramref name="path"/>, one by one — a null field removes its key, a key the entry does
-    /// not model stays, a key is never written. The section's <c>ApiKey</c> is made to agree
+    /// <paramref name="path"/>, one by one, each on the key the file spells in whatever letter case — a
+    /// null field removes its key, a key the entry does not model stays, a key is never written. The
+    /// section's <c>ApiKey</c> is made to agree
     /// (<see cref="KeyAgrees(AppSettingsDocument, string, LlmProfileEntry)"/>, STUDIO-54): a Docker
     /// Model Runner setting writes its placeholder where no key is set, any other setting takes that
-    /// placeholder out, and every other <c>ApiKey</c> stays (STUDIO-49). Shared by a profile's entry
-    /// and the default section (the election), which have the same shape.
+    /// placeholder out, and every other <c>ApiKey</c> stays (STUDIO-49). A model that changes takes the
+    /// section's context window with it (<see cref="SetModel"/>). Shared by a profile's entry and the
+    /// default section (the election), which have the same shape.
     /// </summary>
     internal static void WriteEntry(AppSettingsDocument document, string path, LlmProfileEntry entry)
     {
-        var thinking = $"{path}:{ConfigurationKeys.ThinkingSection}";
-        // A window stated for the model the section held does not describe the one it gets: the engine
-        // would measure the new model's context against it. It goes with the model it was written for.
-        if (!string.Equals(document.GetString($"{path}:Model"), entry.Model, StringComparison.Ordinal))
-            document.Remove($"{path}:{ContextWindowTokensKey}");
-        document.SetString($"{path}:BaseUrl", entry.BaseUrl);
-        document.SetString($"{path}:Model", entry.Model);
-        document.SetString($"{path}:{ConfigurationKeys.LlmApiKeyEnvVar}", entry.ApiKeyEnvVar);
-        document.SetDouble($"{path}:Temperature", entry.Temperature);
-        document.SetInt32($"{path}:TimeoutSeconds", entry.TimeoutSeconds);
-        document.SetInt32($"{path}:StreamIdleSeconds", entry.StreamIdleSeconds);
-        document.SetString($"{path}:CallMode", entry.CallMode);
-        document.SetInt32($"{path}:MaxTokens", entry.MaxTokens);
-        document.SetBoolean($"{thinking}:Enabled", entry.ThinkingEnabled);
-        document.SetString($"{thinking}:Effort", entry.ThinkingEffort);
-        if (document.GetNode(thinking) is JsonObject { Count: 0 })
-            document.Remove(thinking);
+        string Key(string key) => document.PathAsWritten($"{path}:{key}");
+        document.SetString(Key("BaseUrl"), entry.BaseUrl);
+        SetModel(document, path, entry.Model);
+        document.SetString(Key(ConfigurationKeys.LlmApiKeyEnvVar), entry.ApiKeyEnvVar);
+        document.SetDouble(Key("Temperature"), entry.Temperature);
+        document.SetInt32(Key("TimeoutSeconds"), entry.TimeoutSeconds);
+        document.SetInt32(Key("StreamIdleSeconds"), entry.StreamIdleSeconds);
+        document.SetString(Key("CallMode"), entry.CallMode);
+        document.SetInt32(Key("MaxTokens"), entry.MaxTokens);
+        document.SetBoolean(Key($"{ConfigurationKeys.ThinkingSection}:Enabled"), entry.ThinkingEnabled);
+        document.SetString(Key($"{ConfigurationKeys.ThinkingSection}:Effort"), entry.ThinkingEffort);
+        if (document.GetNode(Key(ConfigurationKeys.ThinkingSection)) is JsonObject { Count: 0 })
+            document.Remove(Key(ConfigurationKeys.ThinkingSection));
 
         // The placeholder where the server checks no key and the dialect wants one; out from under
         // any other card, where it would pass before the variable the setting names.
         if (!KeyAgrees(document, path, entry))
-            document.SetString($"{path}:ApiKey", entry.ApiKeyPlaceholder);
+            document.SetString(Key("ApiKey"), entry.ApiKeyPlaceholder);
     }
 
     /// <summary>
@@ -207,11 +232,12 @@ public sealed class LlmProfilesSection
         if (Find(id) is not { } key)
             return false;
 
-        _document.Remove($"{SectionPath}:{key}");
+        _document.Remove($"{Section}:{key}");
         if (Ids.Count == 0)
-            _document.Remove(SectionPath);
-        if (_document.GetNode(LlmSection.SectionPath) is JsonObject { Count: 0 })
-            _document.Remove(LlmSection.SectionPath);
+            _document.Remove(Section);
+        var llm = _document.PathAsWritten(LlmSection.SectionPath);
+        if (_document.GetNode(llm) is JsonObject { Count: 0 })
+            _document.Remove(llm);
         return true;
     }
 
@@ -233,9 +259,9 @@ public sealed class LlmProfilesSection
         if (Find(target) is { } taken && !string.Equals(taken, source, StringComparison.Ordinal))
             return false;
 
-        var copy = _document.GetNode($"{SectionPath}:{source}")!.DeepClone();
-        _document.Remove($"{SectionPath}:{source}");
-        _document.SetNode($"{SectionPath}:{target}", copy);
+        var copy = _document.GetNode($"{Section}:{source}")!.DeepClone();
+        _document.Remove($"{Section}:{source}");
+        _document.SetNode($"{Section}:{target}", copy);
         return true;
     }
 }

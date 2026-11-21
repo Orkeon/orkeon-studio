@@ -18,7 +18,10 @@ namespace Orkeon.Studio.Core.Tests.Launch;
 /// <see cref="DecisionPreflight"/> for the load. A rule the engine changes fails here.
 /// </summary>
 /// <remarks>
-/// The host reads the machine's environment, so Studio's side reads it too: both see the same keys.
+/// The host reads the machine's environment: every variable as a setting, the <c>ORKEON_</c> ones above
+/// the file, and the providers' keys. A key there would give every "no provider" row a provider, and a
+/// setting there would change what a row writes: the suite refuses to run on such a machine, naming
+/// the variable, rather than pass on nothing or fail on a row that is right.
 /// What only a run decides (a crew that states <c>required</c>, refused before its first task; a
 /// decision task with no answer) is not a load, and is left to the other suites.
 /// </remarks>
@@ -26,9 +29,59 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "orkeon-start-oracle-" + Guid.NewGuid().ToString("N"));
 
+    public EngineStartAndLoadOracleTests()
+    {
+        var read = VariablesTheHostWouldRead(Environment.GetEnvironmentVariables().Keys.Cast<string>());
+        Assert.True(
+            read.Count == 0,
+            $"The environment of this machine sets {string.Join(", ", read)}: the engine's host reads them as a decision provider's key "
+            + "or as settings, above or under the file of each row. Unset them to run this suite.");
+    }
+
     public void Dispose()
     {
-        try { Directory.Delete(_root, recursive: true); } catch (IOException) { /* best-effort */ }
+        try
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Best-effort.
+        }
+    }
+
+    /// <summary>
+    /// The variables, among <paramref name="names"/>, the host of a row would read: the key of a decision
+    /// provider (the variable each provider reads by default), a setting of a section these rows write
+    /// (<c>Orkeon__…</c>, <c>Llm__…</c>), and any setting under the prefix (<c>ORKEON_…__…</c>). The
+    /// configuration compares its keys whatever their letter case.
+    /// </summary>
+    private static List<string> VariablesTheHostWouldRead(IEnumerable<string> names)
+    {
+        var keys = DecisionSection.Providers.Select(provider => provider.DefaultApiKeyVariable).ToList();
+        return
+        [
+            .. names
+                .Where(name => keys.Contains(name, StringComparer.Ordinal)
+                    || name.StartsWith("Orkeon__", StringComparison.OrdinalIgnoreCase)
+                    || name.StartsWith("Llm__", StringComparison.OrdinalIgnoreCase)
+                    || (name.StartsWith(DecisionSection.EnvironmentPrefix, StringComparison.OrdinalIgnoreCase)
+                        && name.Contains("__", StringComparison.Ordinal)))
+                .Order(StringComparer.Ordinal),
+        ];
+    }
+
+    [Fact]
+    public void The_variables_the_host_would_read_are_told_from_the_others()
+    {
+        Assert.Equal(
+            ["KEV_API_KEY", "LIQUID_API_KEY", "ORKEON_Llm__Profiles__x__Model", "ORKEON_Orkeon__Decision__Enabled", "Orkeon__Decision__Provider", "TYPESAFE_API_KEY", "llm__Model", "orkeon__typesafe__model"],
+            VariablesTheHostWouldRead(
+            [
+                "PATH", "HOME", "ORKEON_BRIDGE_TOKEN", "ORKEON_CLI_DIR", "DEEPSEEK_API_KEY", "Orkeon__Decision__Provider",
+                "orkeon__typesafe__model", "ORKEON_Orkeon__Decision__Enabled", "ORKEON_Llm__Profiles__x__Model", "llm__Model",
+                "TYPESAFE_API_KEY", "LIQUID_API_KEY", "KEV_API_KEY",
+            ]));
     }
 
     private const string Provider = "\"TypeSafe\": { \"ApiKey\": \"studio-oracle-tests\" }";
@@ -64,19 +117,39 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         }
     }
 
-    /// <summary>What Studio says the start refuses in <paramref name="settings"/>, the first refusal first.</summary>
-    private static List<string> StudioRefusals(string settings)
+    /// <summary>
+    /// What Studio says the start refuses in <paramref name="settings"/>, in the order the host meets
+    /// it, so the first is the one the host raises: the file it does not load, and nothing else then;
+    /// what is refused while the host is composed; the values and the rules of each section, in the
+    /// order the host declares them (the compaction, the skills, the ladder and the levels, the
+    /// guardian and the circuit's switch, the caller's bridge, the serving one, the provider in use);
+    /// the keys no section carries; a name two profiles share; and last the fail-closed judge.
+    /// </summary>
+    private static List<string> StudioRefusals(string settings, Func<string, string?>? environment = null)
     {
         var document = AppSettingsDocument.Parse(settings);
-        var refusals = new List<string>();
-        if (document.Decision.Resolve(MachineEnvironment).Refusal is { } decision)
-            refusals.Add(decision);
-        refusals.AddRange(document.Compaction.Problems()
-            .Concat(document.Skills.Problems())
-            .Concat(document.ToolBridge.Problems())
-            .Concat(document.BridgeServer.Problems())
-            .Select(problem => problem.Problem));
-        return refusals;
+        var status = document.Decision.Resolve(environment ?? MachineEnvironment);
+        if (status.RefusalStage == DecisionRefusalStage.File)
+            return [status.Refusal!];
+
+        string[] Decision(params DecisionRefusalStage[] stages) =>
+            status.Refusal is { } refusal && stages.Contains(status.RefusalStage) ? [refusal] : [];
+        static bool OfTheWalk(string problem) =>
+            problem.Contains(" is not a setting: ", StringComparison.Ordinal)
+            || problem.EndsWith(", which is not a finite number.", StringComparison.Ordinal);
+        List<string> context = [.. document.Compaction.Problems().Concat(document.Skills.Problems()).Select(problem => problem.Problem)];
+        List<string> bridge = [.. document.ToolBridge.Problems().Concat(document.BridgeServer.Problems()).Select(problem => problem.Problem)];
+        return
+        [
+            .. Decision(DecisionRefusalStage.Composition),
+            .. context.Where(problem => !OfTheWalk(problem)),
+            .. Decision(DecisionRefusalStage.Picks, DecisionRefusalStage.Switches),
+            .. bridge.Where(problem => !OfTheWalk(problem)),
+            .. Decision(DecisionRefusalStage.Provider),
+            .. context.Where(OfTheWalk),
+            .. bridge.Where(OfTheWalk),
+            .. Decision(DecisionRefusalStage.Profiles, DecisionRefusalStage.Judge),
+        ];
     }
 
     public static TheoryData<string, string> StartSettings => new()
@@ -104,6 +177,59 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         { "a misspelt bridge key", "\"Bridge\": { \"Port\": 7410 }" },
         { "a caller's address over http", "\"Tools\": { \"Bridge\": { \"Address\": \"http://desk.example:7410/\" } }" },
         { "a serving bridge as the card writes it", "\"Bridge\": { \"Allow\": [\"*\"], \"Deny\": [\"shell_command\"] }" },
+        // A key that is no setting, on the caller's side and at any depth; the engine's computed keys are settings to it.
+        { "a misspelt caller key", "\"Tools\": { \"Bridge\": { \"Adress\": \"https://desk.example:7410/\" } }" },
+        { "the caller's computed keys", "\"Tools\": { \"Bridge\": { \"IsEnabled\": true, \"IsDockerHostOverHttp\": false } }" },
+        { "a key under a share", "\"Compaction\": { \"TriggerShare\": { \"x\": 1 } }" },
+        { "a key under the skills library", "\"Skills\": { \"Library\": { \"a\": 1 } }" },
+        { "a list in a list of names", "\"Bridge\": { \"Allow\": [[\"a*\"]] }" },
+        { "an object in a list of names", "\"Bridge\": { \"Allow\": [{ \"a\": 1 }] }" },
+        { "a key under a denied name", "\"Bridge\": { \"Deny\": { \"x\": { \"y\": 1 } } }" },
+        { "a key under a count", "\"Bridge\": { \"MaxSessions\": { \"a\": 1 } }" },
+        { "a misspelt pruning key beside a misspelt compaction key", "\"Compaction\": { \"Tx\": 1, \"Prune\": { \"Hx\": 1 } }" },
+        { "a share that is no finite number", "\"Compaction\": { \"Prune\": { \"FillShare\": \"NaN\" } }" },
+        // A value the binder cannot convert: a text, a boolean on a number, an empty list.
+        { "a count that is no number", "\"Bridge\": { \"MaxSessions\": \"many\" }" },
+        { "a boolean on a number", "\"Compaction\": { \"KeepRecentTurns\": true }" },
+        { "an empty list on a switch of the compaction", "\"Compaction\": { \"Enabled\": [] }" },
+        { "an empty list on a timeout", "\"Bridge\": { \"StopTimeout\": [] }" },
+        { "an empty list on the circuit's switch", "\"Decision\": { \"Enabled\": [] }" },
+        { "an empty text on the circuit's switch", "\"Decision\": { \"Enabled\": \"\" }" },
+        { "an empty object on the circuit's switch", "\"Decision\": { \"Enabled\": {} }" },
+        { "a null on the circuit's switch", "\"Decision\": { \"Enabled\": null }" },
+        { "a fail-closed judge, the circuit's switch written without a value", Provider + ", \"Decision\": { \"Enabled\": null }, \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        { "a fail-closed judge, the circuit's switch an empty object", Provider + ", \"Decision\": { \"Enabled\": {} }, \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        { "a fail-closed judge under a guardian written without a value", "\"Guardian\": { \"Enabled\": null, \"Llm\": { \"Enabled\": true } }" },
+        { "a fail-closed judge, strict tools written without a value", "\"CrewFactory\": { \"StrictTools\": null }, \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        { "a share and a size written without a value", "\"Compaction\": { \"TriggerShare\": null }, \"Skills\": { \"MaxSkillChars\": {} }" },
+        { "a count written without a value", "\"Bridge\": { \"MaxSessions\": null }" },
+        { "a list on the summary's profile", "\"Compaction\": { \"Profile\": [\"a\"] }" },
+        { "an empty list on the guardian's switch", "\"Guardian\": { \"Enabled\": [] }" },
+        { "an empty list on strict tools", "\"CrewFactory\": { \"StrictTools\": [] }" },
+        { "empty lists of names", "\"Bridge\": { \"Allow\": [], \"Deny\": [] }, \"Decision\": { \"Route\": { \"Ladder\": [] } }" },
+        // A file the configuration does not load, and its neighbour that it does.
+        { "a key written twice in two letter cases", "\"Compaction\": { \"Enabled\": true, \"enabled\": false }" },
+        { "a list beside its first item", "\"Bridge\": { \"Allow\": [\"a\"], \"Allow:0\": \"b\" }" },
+        { "a value under two spellings of a section", "\"Compaction\": { \"Enabled\": true }, \"compaction\": { \"Enabled\": true }" },
+        { "two spellings of a section with keys of their own", "\"Compaction\": { \"Prune\": { \"Enabled\": true } }, \"compaction\": { \"Enabled\": true }" },
+        // Two refusals: the host raises the first it meets.
+        { "a fail-closed judge with no provider and a share out of bounds", "\"Guardian\": { \"Llm\": { \"Enabled\": true } }, \"Compaction\": { \"TriggerShare\": 2 }" },
+        { "a fail-closed judge with no provider and a misspelt key", "\"Guardian\": { \"Llm\": { \"Enabled\": true } }, \"Skills\": { \"Libary\": \"/x\" }" },
+        { "a share out of bounds and a misspelt key", "\"Compaction\": { \"TrigerShare\": 1, \"TriggerShare\": 2 }" },
+        { "a misspelt key and a count out of bounds", "\"Compaction\": { \"TrigerShare\": 1 }, \"Bridge\": { \"MaxSessions\": 0 }" },
+        { "a count that is no number and a misspelt key", "\"Bridge\": { \"MaxSessions\": \"many\", \"Port\": 1 }" },
+        { "a count that is no number and a prefix that is no address", "\"Bridge\": { \"Prefix\": \"not a url\", \"MaxSessions\": \"many\" }" },
+        { "a timeout that is no time and an address that is none", "\"Tools\": { \"Bridge\": { \"ConnectTimeout\": \"soon\", \"Address\": \"not a url\", \"Allow\": [\"a\"] } }" },
+        { "a ladder of one rung that is auto", "\"Decision\": { \"Route\": { \"Ladder\": [\"auto\"] } }" },
+        { "a ladder of one rung and levels out of order", "\"Decision\": { \"Effort\": { \"Levels\": [\"high\", \"low\"] }, \"Route\": { \"Ladder\": [\"default\"] } }" },
+        { "levels out of order and a share out of bounds", "\"Decision\": { \"Effort\": { \"Levels\": [\"high\", \"low\"] } }, \"Skills\": { \"MaxSkillChars\": 0 }" },
+        { "a switch that is no boolean and a count out of bounds", "\"Decision\": { \"Enabled\": \"x\" }, \"Bridge\": { \"MaxSessions\": 0 }" },
+        { "the guardian's switch and the circuit's, neither a boolean", "\"Decision\": { \"Enabled\": \"x\" }, \"Guardian\": { \"Enabled\": \"z\" }" },
+        { "a provider's timeout of zero and a count out of bounds", Provider.Replace("}", ", \"TimeoutSeconds\": 0 }", StringComparison.Ordinal) + ", \"Bridge\": { \"MaxSessions\": 0 }" },
+        { "a provider's timeout of zero and a misspelt key", Provider.Replace("}", ", \"TimeoutSeconds\": 0 }", StringComparison.Ordinal) + ", \"Skills\": { \"Libary\": \"/x\" }" },
+        { "strict tools that are no boolean and an unknown provider", "\"CrewFactory\": { \"StrictTools\": \"y\" }, \"Decision\": { \"Provider\": \"nope\" }" },
+        { "an unknown provider and a share out of bounds", "\"Decision\": { \"Provider\": \"nope\" }, \"Compaction\": { \"TriggerShare\": 2 }" },
+        { "a decision profile named auto and a share out of bounds", "\"Decision\": { \"Profiles\": { \"auto\": { \"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" } } ] } } }, \"Compaction\": { \"TriggerShare\": 2 }" },
     };
 
     /// <summary>
@@ -125,6 +251,28 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             Assert.Contains(studio[0], refusal, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A decision profile is a profile to the engine: a name it shares with a model profile refuses the
+    /// start, after the keys no section carries and before the fail-closed judge.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(", \"Skills\": { \"Libary\": \"/x\" }")]
+    [InlineData(", \"Guardian\": { \"Llm\": { \"Enabled\": true } }")]
+    public void The_host_refuses_a_name_two_profiles_share_as_Studio_says(string beside)
+    {
+        var settings = Settings(DecisionProfile.Replace("guarded", "strong", StringComparison.Ordinal) + beside, Strong.Replace("strong", "Strong", StringComparison.Ordinal));
+
+        var (host, refusal) = Start(settings);
+        host?.Dispose();
+        var studio = StudioRefusals(settings);
+
+        Assert.NotNull(refusal);
+        Assert.NotEmpty(studio);
+        Assert.Contains(studio[0], refusal, StringComparison.Ordinal);
+        Assert.Contains("Two LLM profiles are named 'strong'.", studio);
+    }
+
     private const string Agents = """
         agents:
           analyst: { role: Analyst, goal: read }
@@ -140,6 +288,11 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
 
     private const string DecisionProfile =
         "\"Decision\": { \"Profiles\": { \"guarded\": { \"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" } } ] } } }";
+
+    private const string Ladder = "\"Decision\": { \"Route\": { \"Ladder\": [\"default\", \"strong\"] } }";
+
+    private const string RelayedPick =
+        "\n  pick:\n    description: is it ready\n    expected_output: an answer\n    dependencies: [read]\n    decision:\n      questions:\n        go: { noul: the work is ready }\n      without: { agent: judge }";
 
     private const string Strong = ", \"Profiles\": { \"strong\": { \"Provider\": \"mock\", \"Model\": \"mock\", \"Responses\": \"/crew/responses.jsonl\" } }";
 
@@ -188,13 +341,51 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             "a crew that asks nothing, no provider", "", "",
             Crew(Agents, OneTask)
         },
+        {
+            "an agent on profile auto in a crew that states none, a ladder of two profiles", Provider + ", " + Ladder, Strong,
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: auto } }", OneTask, "decision: { mode: none }\n")
+        },
+        {
+            "an agent on profile auto in a crew that states none, no ladder", Provider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: auto } }", OneTask, "decision: { mode: none }\n")
+        },
+        {
+            "a task on profile auto in a crew that states none, a ladder of two profiles", Provider + ", " + Ladder, Strong,
+            Crew(Agents, "tasks:\n  read: { description: read, expected_output: notes, agent: analyst, llm_override: { profile: auto } }", "decision: { mode: none }\n")
+        },
+        {
+            "an agent on profile auto, a ladder with a rung the host is not offered", Provider + ", " + Ladder, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: auto } }", OneTask)
+        },
+        {
+            "a relay on profile auto that also has a task of its own, no ladder", Provider, "",
+            Crew(
+                "agents:\n  analyst: { role: Analyst, goal: read }\n  judge: { role: Judge, goal: judge, llm: { profile: auto } }",
+                OneTask + RelayedPick + "\n  weigh: { description: weigh, expected_output: a weight, agent: judge, dependencies: [read] }",
+                "decision: { mode: optional }\n")
+        },
+        {
+            "a hierarchical manager on profile auto with no task, no ladder", Provider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read }\n  boss: { role: Boss, goal: lead, llm: { profile: auto } }", OneTask)
+                .Replace("process: sequential", "process: hierarchical\nmanager_agent: boss", StringComparison.Ordinal)
+        },
+        {
+            "an agent on profile auto no task is assigned to, neither a manager nor a relay, no ladder", Provider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read }\n  idle: { role: Idle, goal: wait, llm: { profile: auto } }", OneTask)
+        },
+        {
+            "a fail-closed guarded profile, no provider", DecisionProfile.Replace("\"Target\"", "\"FailClosed\": true, \"Target\"", StringComparison.Ordinal), "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: guarded } }", OneTask)
+        },
     };
 
     /// <summary>
     /// The engine loads the crew exactly when Studio does not block the launch for the load: a tool
-    /// withheld under strict tools, a profile to pick with no ladder, a decision profile under the mode
-    /// none. A crew that states <c>required</c> loads, the tool withheld with a warning: Studio blocks
-    /// it for the run the engine then refuses, which is no load.
+    /// withheld under strict tools, a profile to pick with no ladder or on a rung the host is not
+    /// offered, a profile to pick or a decision profile under the mode none. A crew that states
+    /// <c>required</c> loads, the tool withheld with a warning, and so does a crew on a fail-closed
+    /// guarded profile with the circuit off: Studio blocks them for the run the engine then refuses or
+    /// blocks, which is no load.
     /// </summary>
     [Theory]
     [MemberData(nameof(Loads))]
@@ -224,7 +415,13 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
 
         var status = AppSettingsDocument.Parse(settings).Decision.Resolve(MachineEnvironment);
         var finding = DecisionPreflight.Check(CrewDecisionUsage.OfCrewFile(yaml), status, settingsKnown: true, noDecision: false);
-        var blocksForTheLoad = finding is { BlocksLaunch: true, RefusedByMode: false };
+        var blocksForTheLoad = finding is
+        {
+            BlocksLaunch: true, RefusedByMode: false, Kind: not DecisionPreflightKind.ProfileBlockedWithoutModel,
+        };
+        // What Studio blocks for the run alone is said all the same.
+        if (what.StartsWith("a fail-closed guarded profile", StringComparison.Ordinal))
+            Assert.True(finding is { Kind: DecisionPreflightKind.ProfileBlockedWithoutModel, BlocksLaunch: true }, what);
 
         Assert.True(
             (loadRefusal is not null) == blocksForTheLoad,

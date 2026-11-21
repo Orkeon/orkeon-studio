@@ -125,8 +125,11 @@ public sealed partial record CrewDecisionUsage(
     public bool Declared { get; init; }
 
     /// <summary>
-    /// What the crew lets System One pick, in the crew's order: with the circuit off each falls back to
-    /// what the crew or the host states, and the run goes on.
+    /// What the crew lets System One pick, in the crew's order. With the circuit off each falls back to
+    /// what the crew or the host states; the engine still refuses some at load whatever the circuit: a
+    /// profile to pick (<see cref="CrewSystemOneUseKind.RouteAuto"/>) on a host whose ladder does not
+    /// serve it, and that one or a decision profile in a crew that states <c>decision.mode: none</c>
+    /// (<c>DecisionPreflight</c>).
     /// </summary>
     public IReadOnlyList<CrewSystemOneUse> OtherUses { get; init; } = [];
 
@@ -145,7 +148,7 @@ public sealed partial record CrewDecisionUsage(
     public bool Unknown { get; init; }
 
     /// <summary>A crew nothing is known of (<see cref="Unknown"/>).</summary>
-    public static CrewDecisionUsage Unreadable { get; } = new(CrewDecisionMode.None, [], []) { Unknown = true };
+    private static CrewDecisionUsage Unreadable { get; } = new(CrewDecisionMode.None, [], []) { Unknown = true };
 
     /// <summary>The decision tasks that have no answer once the circuit is off, in the crew's order.</summary>
     public IReadOnlyList<string> TasksWithoutAnswer =>
@@ -157,7 +160,11 @@ public sealed partial record CrewDecisionUsage(
             ? Unreadable
             : EngineCrewReader.Read(target, Judge, None, Unreadable);
 
-    /// <summary>The same, of a single-file crew's text.</summary>
+    /// <summary>
+    /// What a single-file crew's text asks of the decision models. Unlike <see cref="Of"/>, a text the
+    /// engine refuses reads <see cref="None"/>, not <see cref="Unreadable"/>: the caller (the forge,
+    /// which wrote the text) has nothing to launch and reports the refusal itself.
+    /// </summary>
     public static CrewDecisionUsage OfCrewFile(string yaml) => EngineCrewReader.ReadText(yaml, Judge, None);
 
     /// <summary>

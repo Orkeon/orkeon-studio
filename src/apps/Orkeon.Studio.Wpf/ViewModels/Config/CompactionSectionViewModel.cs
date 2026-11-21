@@ -122,15 +122,9 @@ public sealed class CompactionSectionViewModel : DocumentSectionViewModel
     /// </summary>
     public void RefreshVerdict() => OnPropertiesChanged(nameof(ProblemsText), nameof(ProfileWarning));
 
-    private IEnumerable<string> WindowProblem()
-    {
-        if (Document.Llm.ContextWindowTokens is <= 0 and var window)
-        {
-            yield return string.Create(
-                CultureInfo.InvariantCulture,
-                $"{LlmSection.SectionPath}:{LlmProfilesSection.ContextWindowTokensKey}: {window} is not a number of tokens above zero. Leave the key out for the model's documented window.");
-        }
-    }
+    // The one sentence of Core, which the validator says too.
+    private IEnumerable<string> WindowProblem() =>
+        LlmSection.ContextWindowProblem(LlmSection.SectionPath, Document.Llm.ContextWindowTokens) is { } problem ? [problem] : [];
 
     /// <inheritdoc />
     protected override void OnSectionChanged() => OnPropertiesChanged(

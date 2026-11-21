@@ -115,7 +115,7 @@ public sealed class RunDecisionAndNotesTests
         Assert.Equal(21000, pruned.TokensAfter);
 
         // Results dropped left the context as those cut did: both are counted.
-        var dropped = Fold("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"read","agentRole":"Analyst","cut":0,"dropped":4,"freedTokens":9000}""");
+        var dropped = Fold("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"read","agentRole":"Analyst","cut":1,"dropped":3,"freedTokens":9000}""");
         Assert.Equal(4, dropped.AgentNotes[0].Count);
     }
 

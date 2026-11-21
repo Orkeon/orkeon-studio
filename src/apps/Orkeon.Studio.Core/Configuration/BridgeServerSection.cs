@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using Microsoft.Extensions.Configuration;
 
 namespace Orkeon.Studio.Core.Configuration;
 
@@ -73,33 +72,46 @@ public sealed class BridgeServerSection
         set => _document.SetString(Key("TokenEnvVar"), Blank(value));
     }
 
-    /// <summary>The tools served, by name, or the lone <c>*</c> for every bridgeable Orkeon tool.</summary>
+    /// <summary>
+    /// The tools served, by name, or the lone <c>*</c> for every bridgeable Orkeon tool. Read as the
+    /// binder reads the key, whatever its shape: a list written as an object gives its values, an entry
+    /// that is no text an empty name. Setting an empty list removes the key; setting the names it
+    /// already reads writes nothing, so a list shown and applied untouched stays as the file writes it.
+    /// </summary>
     public IReadOnlyList<string> Allow
     {
-        get => _document.GetStringArray(Key("Allow"));
-        set => SetList("Allow", value);
+        get => DecisionSection.Names(Read().Allow);
+        set => SetList("Allow", value, Allow);
     }
 
-    /// <summary>The tools never served, by name; a name here wins over <see cref="Allow"/>.</summary>
+    /// <summary>
+    /// The tools never served, by name; a name here wins over <see cref="Allow"/>. Read and written
+    /// as <see cref="Allow"/> is.
+    /// </summary>
     public IReadOnlyList<string> Deny
     {
-        get => _document.GetStringArray(Key("Deny"));
-        set => SetList("Deny", value);
+        get => DecisionSection.Names(Read().Deny);
+        set => SetList("Deny", value, Deny);
     }
 
     /// <summary>
     /// What the host's start refuses in the section, each with the path of its key; empty when the
-    /// section is accepted. A value the binder cannot convert stops the start before any rule is read:
-    /// it is then all that is said, the first one only, as the host says it. Then the engine's rules, in
-    /// the engine's words and order, and the keys that are no setting of the section.
+    /// section is accepted. In the host's order, so the first one is what it says: a file the
+    /// configuration does not load, when the key it names is the section's; the values the binder cannot
+    /// convert (the host stops on the first, and says the next once that one is mended); the engine's
+    /// rules, in the engine's words and order, judged on every value that did convert; and the keys
+    /// that are no setting of the section, at any depth.
     /// </summary>
-    public IReadOnlyList<(string Path, string Problem)> Problems()
+    public IReadOnlyList<(string Path, string Problem)> Problems() =>
+        Problems(DecisionSection.ToConfiguration(_document.Root));
+
+    /// <summary>The same, read off <paramref name="configuration"/>: the document as a run binds it, flattened once by the caller.</summary>
+    internal IReadOnlyList<(string Path, string Problem)> Problems(Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
-        var configuration = DecisionSection.ToConfiguration(_document.Root);
         var problems = new List<(string, string)>();
-        var values = new Values();
-        if (!SettingsBinding.TryBind(configuration, SectionPath, values, problems))
-            return problems;
+        if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
+            problems.Add(load);
+        var values = SettingsBinding.Bind<Values>(configuration, SectionPath, problems);
 
         void Say(string key, string problem) => problems.Add(($"{SectionPath}:{key}", problem));
         foreach (var (key, value) in new[]
@@ -132,21 +144,21 @@ public sealed class BridgeServerSection
         return problems;
     }
 
-    /// <summary>Removes the whole section.</summary>
-    public void Remove() => _document.Remove(_document.PathAsWritten(SectionPath));
-
     private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private void SetList(string key, IReadOnlyList<string> values)
+    private void SetList(string key, IReadOnlyList<string> values, IReadOnlyList<string> read)
     {
         ArgumentNullException.ThrowIfNull(values);
         if (values.Count == 0)
             _document.Remove(Key(key));
-        else
+        else if (!values.SequenceEqual(read, StringComparer.Ordinal))
             _document.SetStringArray(Key(key), values);
     }
+
+    // The section as the binder reads it, each value that does not convert left on its default.
+    private Values Read() => SettingsBinding.Bind<Values>(DecisionSection.ToConfiguration(_document.Root), SectionPath, []);
 
     /// <summary>
     /// The section as the engine's <c>ToolBridgeServerOptions</c> shapes it: the same property names,

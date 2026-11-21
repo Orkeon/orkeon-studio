@@ -18,7 +18,9 @@ namespace Orkeon.Studio.Config.Views;
 /// blocks the screen, and its verdict changes nothing about what can be saved. It presents the key
 /// a run presents, and refuses without a request an endpoint that needs one when none resolves
 /// (STUDIO-54). Below, the named profiles of <c>Llm:Profiles</c> and the one the RAG calls,
-/// read-only (STUDIO-48).
+/// read-only (STUDIO-48). Every line of text takes one row, so none runs into the field under it;
+/// the status, last and under the button, is the one text that may take several: the notice of the
+/// base URL's reading, whole, then the verdict of the connection test.
 /// </summary>
 internal sealed class LlmSectionView : SectionView
 {
@@ -38,7 +40,7 @@ internal sealed class LlmSectionView : SectionView
     private readonly Label _notice;
     private readonly Label _apiKeyWarning;
     private readonly Button _testConnection;
-    private readonly Label _testResult;
+    private readonly Label _status;
     private readonly ListView _profiles;
     private readonly Label _ragLlmProfile;
 
@@ -50,7 +52,7 @@ internal sealed class LlmSectionView : SectionView
     /// <param name="probe">Runs the optional connectivity test.</param>
     /// <param name="environment">Where the test reads the key a run reads; the machine's environment by default.</param>
     public LlmSectionView(LlmForm form, ILlmEndpointProbe probe, IEnvironmentVariables? environment = null)
-        : base("LLM")
+        : base("LLM", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
         _probe = probe ?? throw new ArgumentNullException(nameof(probe));
@@ -58,29 +60,35 @@ internal sealed class LlmSectionView : SectionView
 
         _model = FormLayout.AddField(this, 0, "Model", _form.Model);
         _baseUrl = FormLayout.AddField(this, 1, "Base URL", _form.BaseUrl);
-        _provider = FormLayout.AddText(this, 2, _form.ReadAsLine);
-        _notice = FormLayout.AddText(this, 3, _form.NoticeLine ?? "");
-        _apiKeyEnvVar = FormLayout.AddField(this, 4, "API key variable (Llm:ApiKeyEnvVar)", _form.ApiKeyEnvVar);
+        _provider = FormLayout.AddChangingLine(this, 2, _form.ReadAsLine);
+        _notice = FormLayout.AddChangingLine(this, 3, LlmForm.ReadingNotice);
+        _apiKeyEnvVar = FormLayout.AddField(this, 4, "API key variable", _form.ApiKeyEnvVar);
         _apiKey = FormLayout.AddField(this, 5, "API key (stored in the file)", _form.ApiKey, secret: true);
-        FormLayout.AddNote(this, 6, LlmForm.ApiKeyRecommendation);
-        _apiKeyWarning = FormLayout.AddText(this, 7, "");
-        _temperature = FormLayout.AddField(this, 9, "Temperature", _form.Temperature);
-        _maxTokens = FormLayout.AddField(this, 10, "Max tokens", _form.MaxTokens);
-        _timeout = FormLayout.AddField(this, 11, "Timeout (seconds)", _form.TimeoutSeconds);
-        _thinking = FormLayout.AddField(this, 12, "Thinking (true / false, blank = provider default)", _form.ThinkingEnabled);
-        _streamIdle = FormLayout.AddField(this, 13, "Stream idle (seconds, blank = none)", _form.StreamIdleSeconds);
+        var y = 6;
+        foreach (var line in LlmForm.ApiKeyRecommendationLines)
+            FormLayout.AddLine(this, y++, line);
+        _apiKeyWarning = FormLayout.AddChangingLine(this, y++, "");
+        _temperature = FormLayout.AddField(this, y++, "Temperature", _form.Temperature);
+        _maxTokens = FormLayout.AddField(this, y++, "Max tokens", _form.MaxTokens);
+        _timeout = FormLayout.AddField(this, y++, "Timeout (seconds)", _form.TimeoutSeconds);
+        _thinking = FormLayout.AddField(this, y++, "Thinking (true/false/blank)", _form.ThinkingEnabled);
+        _streamIdle = FormLayout.AddField(this, y++, "Stream idle (s, blank: none)", _form.StreamIdleSeconds);
+        FormLayout.AddLine(this, y++, LlmForm.ThinkingNotice);
 
-        _testConnection = new Button { X = FormLayout.Margin, Y = 14, Text = "Test connection" };
+        y++;
+        foreach (var line in LlmForm.ProfilesNotice)
+            FormLayout.AddLine(this, y++, line);
+        ProfileLines = ProfileLinesOf(_form);
+        _profiles = FormLayout.AddChoiceList(this, y, 4, "Profiles in this file", ProfileLines, 0);
+        y += 4;
+        _ragLlmProfile = FormLayout.AddChangingLine(this, y, _form.RagLlmProfileLine);
+
+        _testConnection = new Button { X = FormLayout.Margin, Y = y + 2, Text = "Test connection" };
         _testConnection.OnAccept(() => TestConnection());
         Add(_testConnection);
-        _testResult = FormLayout.AddText(this, 15, "");
-
-        FormLayout.AddNote(this, 17,
-            "Named profiles (Llm:Profiles) — a crew picks one with llm: { profile: <name> }; each names the " +
-            "variable holding its key (key: …). Read-only here: Studio's model settings write them.");
-        ProfileLines = ProfileLinesOf(_form);
-        _profiles = FormLayout.AddChoiceList(this, 18, 4, "Profiles in this file", ProfileLines, 0);
-        _ragLlmProfile = FormLayout.AddText(this, 23, _form.RagLlmProfileLine);
+        // Last, with nothing under it: the one text of the screen that may take several rows.
+        _status = FormLayout.AddText(this, y + 4, "");
+        ShowReading();
 
         // The provider is inferred from the endpoint, so it follows every keystroke in it.
         _baseUrl.TextChanged += (_, _) =>
@@ -141,7 +149,7 @@ internal sealed class LlmSectionView : SectionView
     }
 
     /// <summary>
-    /// The verdict of the last probe — the text the result label carries. Set before the UI
+    /// The verdict of the last probe — the text the status carries under the notice. Set before the UI
     /// thread is asked to render it, so it is readable the moment the probe returns.
     /// </summary>
     internal string TestResult { get; private set; } = "";
@@ -164,12 +172,12 @@ internal sealed class LlmSectionView : SectionView
         {
             // Two spellings that disagree come first: setting one more key would not help (STUDIO-56).
             TestResult = key.IsConflict ? LlmForm.KeyConflictLine(key) : LlmForm.KeyMissingLine;
-            _testResult.Text = TestResult;
+            ShowStatus();
             return Task.CompletedTask;
         }
 
         TestResult = "Testing the connection…";
-        _testResult.Text = TestResult;
+        ShowStatus();
         return TestConnectionAsync(request);
     }
 
@@ -191,33 +199,40 @@ internal sealed class LlmSectionView : SectionView
         }
 
         TestResult = message;
-        RenderTestResult(message);
+        RenderTestResult();
     }
 
     /// <summary>
-    /// Puts the verdict on the label. The probe answers on a background thread, so the update
+    /// Puts the verdict on the status. The probe answers on a background thread, so the update
     /// is marshalled onto the UI thread — except when no main loop is running (a screen built
     /// outside <c>Application.Init</c>, which is how these views are exercised headlessly),
     /// where <c>Invoke</c> would throw and there is no other thread to defer to anyway.
     /// </summary>
-    private void RenderTestResult(string message)
+    private void RenderTestResult()
     {
         if (TerminalApp.Initialized)
-            TerminalApp.Invoke(() => _testResult.Text = message);
+            TerminalApp.Invoke(ShowStatus);
         else
-            _testResult.Text = message;
+            ShowStatus();
     }
 
     private void RefreshApiKeyWarning() =>
-        _apiKeyWarning.Text = _form.StoresApiKeyInClearText
-            ? "WARNING: this key will be written in clear text into the saved file."
-            : "";
+        _apiKeyWarning.Text = _form.StoresApiKeyInClearText ? LlmForm.ClearTextWarning : "";
 
+    // The reading on its row; its notice, a sentence of several rows, whole in the status, and the
+    // row under the reading says where to read it.
     private void ShowReading()
     {
         _provider.Text = _form.ReadAsLine;
-        _notice.Text = _form.NoticeLine ?? "";
+        _notice.Text = _form.NoticeLine is null ? LlmForm.ReadingNotice : LlmForm.NoticeBelow;
+        ShowStatus();
     }
+
+    /// <summary>The status as shown: the notice of the base URL's reading, then the verdict of the last probe.</summary>
+    internal string StatusText => _status.Text ?? "";
+
+    private void ShowStatus() =>
+        _status.Text = string.Join('\n', new[] { _form.NoticeLine, TestResult }.Where(line => !string.IsNullOrEmpty(line)));
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
@@ -239,7 +254,7 @@ internal sealed class LlmSectionView : SectionView
             _notice.Dispose();
             _apiKeyWarning.Dispose();
             _testConnection.Dispose();
-            _testResult.Dispose();
+            _status.Dispose();
             _profiles.Dispose();
             _ragLlmProfile.Dispose();
         }

@@ -200,4 +200,62 @@ public sealed class ToolBridgeSectionTests
         Assert.StartsWith(path + " is not a setting: ", problem.Problem, StringComparison.Ordinal);
         Assert.Equal(ToolBridgePreflightKind.SettingsRefused, ToolBridgePreflight.Check(document, _ => null)?.Kind);
     }
+
+    /// <summary>
+    /// A list of names is shown as the binder reads it, whatever shape the file gives it: a list
+    /// written as an object by its values in the order of their keys, an entry that is no text as the
+    /// empty name the engine then refuses. Applying what is shown writes nothing, so the object stays
+    /// an object; a change writes a list, and an empty list removes the key.
+    /// </summary>
+    [Fact]
+    public void A_list_of_names_is_read_as_the_binder_reads_it_and_written_only_when_changed()
+    {
+        var document = AppSettingsDocument.Parse(
+            """
+            { "Orkeon": {
+                "Tools": { "Bridge": { "Address": "https://desk.example:7410/", "Allow": { "1": "b*", "0": "a*" }, "Deny": [null, "c*", 3] } },
+                "Bridge": { "allow": { "first": "*" }, "Deny": [] } } }
+            """);
+        var before = document.ToJson();
+        var (caller, server) = (document.ToolBridge, document.BridgeServer);
+
+        Assert.Equal(["a*", "b*"], caller.Allow);
+        Assert.Equal(["", "c*", "3"], caller.Deny);
+        Assert.Equal(["*"], server.Allow);
+        Assert.Empty(server.Deny);
+        Assert.True(caller.IsEnabled);
+
+        caller.Allow = ["a*", "b*"];
+        caller.Deny = ["", "c*", "3"];
+        server.Allow = ["*"];
+        Assert.Equal(before, document.ToJson());
+
+        caller.Allow = ["a*"];
+        server.Allow = [];
+        server.Deny = [];
+        Assert.Equal("""["a*"]""", document.GetNode("Orkeon:Tools:Bridge:Allow")!.ToJsonString());
+        Assert.False(document.ContainsPath("Orkeon:Bridge:allow"));
+        Assert.False(document.ContainsPath("Orkeon:Bridge:Deny"));
+    }
+
+    /// <summary>
+    /// A value that does not convert elsewhere in the section hides no list: the names are still read,
+    /// and the address written beside it is still judged.
+    /// </summary>
+    [Fact]
+    public void A_value_that_does_not_convert_hides_neither_the_lists_nor_the_rules()
+    {
+        var document = AppSettingsDocument.Parse(
+            """{ "Orkeon": { "Tools": { "Bridge": { "ConnectTimeout": "soon", "Allow": ["browser_open"] } } } }""");
+        var caller = document.ToolBridge;
+
+        Assert.Equal(["browser_open"], caller.Allow);
+        Assert.Equal("Orkeon:Tools:Bridge:ConnectTimeout", Assert.Single(caller.Problems()).Path);
+
+        caller.Address = "not a url";
+
+        Assert.Equal(["Orkeon:Tools:Bridge:ConnectTimeout", "Orkeon:Tools:Bridge:Address"], caller.Problems().Select(problem => problem.Path));
+        Assert.False(caller.IsEnabled);
+        Assert.Null(caller.BoundAddress);
+    }
 }
