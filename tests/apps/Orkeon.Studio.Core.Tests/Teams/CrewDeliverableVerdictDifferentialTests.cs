@@ -51,10 +51,13 @@ public sealed class CrewDeliverableVerdictDifferentialTests(CrewDeliverableVerdi
             var settingsPath = Path.Combine(_root, "appsettings.json");
             // The engine's mock model, over no response: no key, no network, and nothing here calls it.
             // RaggableTree stays on, as a run's default: it registers edit_batch and structural_rewrite.
+            // A decision provider is configured (a key nothing sends): without one the circuit is off and
+            // the engine withholds system_one_decide from the crews below.
             await File.WriteAllTextAsync(Path.Combine(_root, "responses.jsonl"), "", TestContext.Current.CancellationToken);
             await File.WriteAllTextAsync(settingsPath, """
                 {
-                  "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl" }
+                  "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl" },
+                  "Orkeon": { "TypeSafe": { "ApiKey": "studio-differential-tests" } }
                 }
                 """, TestContext.Current.CancellationToken);
 

@@ -126,9 +126,15 @@ public static class RunCostOperations
     /// <summary>A decision model answering typed questions: a route, a guard, a verification, a rerank.</summary>
     public const string Decision = "decision";
 
+    /// <summary>
+    /// The <c>without:</c> relay agent of a decision task answering in place of the decision model, in
+    /// an <c>optional</c> crew run with the decision circuit off: an LLM call, not a System One one.
+    /// </summary>
+    public const string Relay = "relay";
+
     private static readonly HashSet<string> Machinery = new(StringComparer.Ordinal)
     {
-        Manager, Planning, Rag, Memory, Judge, Decision,
+        Manager, Planning, Rag, Memory, Judge, Decision, Relay,
     };
 
     /// <summary>

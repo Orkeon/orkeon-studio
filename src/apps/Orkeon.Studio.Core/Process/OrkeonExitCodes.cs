@@ -1,4 +1,5 @@
 using System.Globalization;
+using Orkeon.Constants.Cli;
 
 namespace Orkeon.Studio.Core.Process;
 
@@ -28,7 +29,8 @@ public enum RunOutcome
 /// The exit-code contract of the <c>orkeon</c> CLI, mirrored from
 /// <c>Orkeon.Scripting.Cli.Program</c> (<c>ExitOk</c>/<c>ExitScriptError</c>/
 /// <c>ExitRuntimeError</c>/<c>ExitCancelled</c>). Studio does not reference the CLI
-/// assembly, so the four values are restated here and asserted by tests.
+/// assembly, so the four values are restated here and asserted by tests. The code of a refused
+/// System One crew comes from <c>Orkeon.Constants.Cli</c>, which carries it.
 /// </summary>
 public static class OrkeonExitCodes
 {
@@ -44,12 +46,19 @@ public static class OrkeonExitCodes
     /// <summary>Interrupted — the code the CLI returns after SIGINT/SIGTERM.</summary>
     public const int Cancelled = 130;
 
+    /// <summary>
+    /// The crew requires System One (<c>decision.mode: required</c>) and the decision circuit is
+    /// off: the run was refused before its first task.
+    /// </summary>
+    public const int DecisionUnavailable = RunExitCodes.DecisionUnavailable;
+
     /// <summary>Maps a raw exit code onto its outcome; anything unmapped becomes <see cref="RunOutcome.Unknown"/>.</summary>
     public static RunOutcome Classify(int exitCode) => exitCode switch
     {
         Success => RunOutcome.Success,
         ScriptError => RunOutcome.ScriptError,
         RuntimeError => RunOutcome.RuntimeError,
+        DecisionUnavailable => RunOutcome.ScriptError,
         Cancelled => RunOutcome.Cancelled,
         _ => RunOutcome.Unknown,
     };
@@ -61,6 +70,7 @@ public static class OrkeonExitCodes
         ScriptError => "Script or configuration error (exit code 1) — check the crew file and the settings it resolved.",
         RuntimeError => "Runtime error (exit code 2) — the run started but failed; the last stderr lines say why.",
         Cancelled => "Interrupted (exit code 130).",
+        DecisionUnavailable => "Refused (exit code 69): the crew requires System One and the decision models are off or unavailable.",
         _ => string.Create(
             CultureInfo.InvariantCulture,
             $"Unexpected exit code {exitCode} — orkeon ended in a way Studio does not recognise; check the output above."),

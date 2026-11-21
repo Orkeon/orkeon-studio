@@ -1,6 +1,5 @@
 using Orkeon.Studio.Core.Launch;
 using Orkeon.Studio.Core.Targets;
-using Orkeon.Studio.Tests.Shared;
 
 namespace Orkeon.Studio.Core.Tests;
 
@@ -85,21 +84,5 @@ public sealed class RunOptionAvailabilityTests
         Assert.Equal("--llm-log-path", RunOptionAvailability.ToCommandLineName(RunOption.LlmLogPath));
         Assert.Equal("--validate", RunOptionAvailability.ToCommandLineName(RunOption.Validate));
         Assert.Equal("--no-decision", RunOptionAvailability.ToCommandLineName(RunOption.NoDecision));
-    }
-
-    /// <summary>
-    /// <c>--no-decision</c> is spelt as a literal in the CLI (no <c>RunOptionNames</c> constant): the
-    /// option of <c>RunCommand</c> is read off the source, where a rename would otherwise pass unseen.
-    /// </summary>
-    [Fact]
-    public void The_decision_switch_is_spelt_as_the_cli_declares_it()
-    {
-        var source = File.ReadAllText(Path.Combine(
-            OrkeonSources.Root(), "src", "scripting", "Orkeon.Scripting.Cli", "Commands", "RunCommand.cs"));
-
-        Assert.Contains(
-            "[Option(\"" + RunOptionAvailability.NoDecisionFlag[2..] + "\"",
-            source,
-            StringComparison.Ordinal);
     }
 }

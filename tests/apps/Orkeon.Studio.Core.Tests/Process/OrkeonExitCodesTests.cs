@@ -17,6 +17,14 @@ public sealed class OrkeonExitCodesTests
         Assert.Equal(130, OrkeonExitCodes.Cancelled);
     }
 
+    [Fact]
+    public void A_refused_System_One_crew_has_the_code_of_the_cli_and_reads_as_a_rejection()
+    {
+        Assert.Equal(69, OrkeonExitCodes.DecisionUnavailable);
+        Assert.Equal(RunOutcome.ScriptError, OrkeonExitCodes.Classify(69));
+        Assert.Contains("System One", OrkeonExitCodes.Describe(69), StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(0, RunOutcome.Success)]
     [InlineData(1, RunOutcome.ScriptError)]
