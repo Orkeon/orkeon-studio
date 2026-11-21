@@ -1603,7 +1603,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         {
             BlocksLaunch: false,
             Kind: DecisionPreflightKind.RequiredUnknownSettings or DecisionPreflightKind.ProviderRefused
-                or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolWithheld,
+                or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolWithheld
+                or DecisionPreflightKind.RouteWithoutLadder,
         };
 
     /// <summary>The warning of <see cref="HasDecisionWarning"/>.</summary>
@@ -1683,6 +1684,11 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 return _strings.Format(
                     finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionProvider : StudioStringKeys.RunWarnDecisionProvider,
                     finding.Status?.Refusal ?? "");
+            case DecisionPreflightKind.RouteWithoutLadder:
+                return _strings.Format(
+                    finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionLadder : StudioStringKeys.RunWarnDecisionLadder,
+                    Quoted(finding.RoutedHolders),
+                    LadderFault(finding.Status));
             case DecisionPreflightKind.RequiredWithoutModel:
                 return _strings.Format(StudioStringKeys.RunBlockedDecisionRequired, DecisionNeeds(finding), reasons).TrimEnd();
             case DecisionPreflightKind.RequiredUnknownSettings:
@@ -1702,6 +1708,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                     .Prepend(_strings.Format(StudioStringKeys.RunInfoDecisionFallback, reasons).TrimEnd()));
         }
     }
+
+    /// <summary>What is wrong with the ladder a profile is picked on: none, or the rungs that name no profile.</summary>
+    private string LadderFault(DecisionStatus? status) =>
+        status is { UnknownRungs.Count: > 0 } unknown
+            ? _strings.Format(StudioStringKeys.RunDecisionLadderUnknownRungs, Quoted(unknown.UnknownRungs))
+            : _strings[StudioStringKeys.RunDecisionLadderMissing];
 
     /// <summary>
     /// What the crew needs of the decision models that this run may not give, joined with « ; »: its

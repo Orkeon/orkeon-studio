@@ -197,6 +197,27 @@ public sealed class AppSettingsValidatorRunRulesTests
         Assert.Equal($"Llm:Profiles:{id}", error.Path);
     }
 
+    /// <summary>
+    /// <c>auto</c> is the name of System One's pick of a profile (<c>llm.profile: auto</c>): a profile
+    /// that bears it stops the run at start, in any letter case.
+    /// </summary>
+    [Theory]
+    [InlineData("auto")]
+    [InlineData("Auto")]
+    public void An_entry_named_auto_is_refused_at_its_path(string id)
+    {
+        var document = AppSettingsDocument.Parse($$"""
+            { "Llm": { "BaseUrl": "http://localhost:11434", "Model": "qwen3",
+                       "Profiles": { "{{id}}": { "BaseUrl": "http://localhost:11500", "Model": "qwen3:32b" } } } }
+            """);
+
+        var error = Assert.Single(Errors(document));
+
+        Assert.Equal(ValidationCodes.LlmProfileReservedName, error.Code);
+        Assert.Equal($"Llm:Profiles:{id}", error.Path);
+        Assert.Contains("reserved profile name", error.Text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_placeholder_rule_and_the_variable_rule_are_studio_core_functions()
     {

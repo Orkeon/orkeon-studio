@@ -79,7 +79,8 @@ public static class ValidationCodes
 
     /// <summary>
     /// An entry of <c>Llm:Profiles</c> named <c>default</c> (or blank) — the <c>Llm</c> section's own
-    /// name, which the run refuses at start (STUDIO-55).
+    /// name — or <c>auto</c>, the name of System One's pick of a profile: the run refuses both at start
+    /// (STUDIO-55).
     /// </summary>
     public const string LlmProfileReservedName = "STUDIO-LLM-PROFILE-NAME";
 
@@ -176,6 +177,13 @@ public static class ValidationCodes
     /// the tool and runs the crew without it. A warning.
     /// </summary>
     public const string DecisionToolDropped = "STUDIO-DECISION-TOOL-DROPPED";
+
+    /// <summary>
+    /// An agent or a task is on <c>llm.profile: auto</c> and the settings give no ladder of profiles for
+    /// System One to pick on (<c>Orkeon:Decision:Route:Ladder</c>), or a rung of it names no profile: the
+    /// engine refuses the crew at load.
+    /// </summary>
+    public const string DecisionLadder = "STUDIO-DECISION-LADDER";
 
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";

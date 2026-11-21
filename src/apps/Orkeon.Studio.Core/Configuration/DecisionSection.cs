@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Orkeon.Application.Crew.Execution;
+using Orkeon.Application.Crew.Routing;
+using Orkeon.Application.Interfaces.Ports;
 using Orkeon.Infrastructure.Decision;
 using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Infrastructure.LLMs.Decision;
@@ -31,6 +33,27 @@ public sealed class DecisionSection
     /// tool no registration gives is refused at load; off, the tool is dropped with a log line.
     /// </summary>
     public const string StrictToolsPath = "Orkeon:CrewFactory:StrictTools";
+
+    /// <summary>
+    /// Configuration path of the ladder System One picks a profile on for an agent on
+    /// <c>llm.profile: auto</c>: two or more profile names, cheapest first.
+    /// </summary>
+    public const string RouteLadderPath = LlmProfiles.RouteLadderKey;
+
+    /// <summary>
+    /// Configuration path of the thinking levels System One picks among for <c>thinking: { effort: auto }</c>,
+    /// cheapest first; empty, the engine's three (<see cref="DefaultEffortLevels"/>).
+    /// </summary>
+    public const string EffortLevelsPath = AgentEffortOptions.LevelsKey;
+
+    /// <summary>Configuration path of the decision profiles, each a name a crew may put in <c>llm.profile</c>.</summary>
+    public const string ProfilesPath = SectionPath + ":Profiles";
+
+    /// <summary>The thinking levels the engine picks among when <see cref="EffortLevelsPath"/> lists none.</summary>
+    public static IReadOnlyList<string> DefaultEffortLevels => AgentEffortOptions.DefaultLevels;
+
+    /// <summary>Every thinking level the engine knows, cheapest first.</summary>
+    public static IReadOnlyList<string> KnownEffortLevels => Orkeon.Domain.SharedKernel.ValueObjects.LlmThinkingConfig.Levels;
 
     /// <summary>
     /// Configuration path of the guardian's switch (on by default): off, no guard runs, the LLM judge of
@@ -86,6 +109,49 @@ public sealed class DecisionSection
         set => _document.SetString(_document.PathAsWritten(ProviderPath), string.IsNullOrWhiteSpace(value) ? null : value.Trim());
     }
 
+    /// <summary>
+    /// The ladder of profiles as the file writes it, cheapest first; empty when the file has none.
+    /// Setting an empty ladder removes the key.
+    /// </summary>
+    public IReadOnlyList<string> RouteLadder
+    {
+        get => _document.GetStringArray(_document.PathAsWritten(RouteLadderPath));
+        set => SetList(RouteLadderPath, value);
+    }
+
+    /// <summary>
+    /// The thinking levels as the file writes them, cheapest first; empty when the file has none, the
+    /// engine then picking among <see cref="DefaultEffortLevels"/>. Setting an empty list removes the key.
+    /// </summary>
+    public IReadOnlyList<string> EffortLevels
+    {
+        get => _document.GetStringArray(_document.PathAsWritten(EffortLevelsPath));
+        set => SetList(EffortLevelsPath, value);
+    }
+
+    /// <summary>
+    /// The names of a list typed on one line: split on commas, semicolons and line breaks, trimmed,
+    /// blanks dropped.
+    /// </summary>
+    public static IReadOnlyList<string> SplitList(string? text) =>
+        (text ?? string.Empty).Split([',', ';', '\n', '\r'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>
+    /// How many rungs of the ladder are probed in the environment (<c>…__Route__Ladder__0</c> and on): a
+    /// ladder a variable gives beyond them is not seen.
+    /// </summary>
+    internal const int MaxProbedRungs = 8;
+
+    private void SetList(string path, IReadOnlyList<string> values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        var written = _document.PathAsWritten(path);
+        if (values.Count == 0)
+            _document.Remove(written);
+        else
+            _document.SetStringArray(written, values);
+    }
+
     /// <summary>The settings of the provider <paramref name="descriptor"/> names.</summary>
     public DecisionProviderSettings For(DecisionProviderDescriptor descriptor)
     {
@@ -136,6 +202,12 @@ public sealed class DecisionSection
             if (status.Refusal is not null)
                 return status;
 
+            // The ladder and the levels System One picks on, validated at start whatever the circuit.
+            if (!TryReadPicks(configuration, out var ladder, out var unknownRungs, out refusal))
+                return status with { Refusal = refusal };
+
+            status = status with { RouteLadder = ladder, UnknownRungs = unknownRungs };
+
             // A fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
             // settings' switch named before the missing provider, as the engine names them.
             if (!TryReadClosedJudge(configuration, out var closedJudge, out refusal))
@@ -157,6 +229,51 @@ public sealed class DecisionSection
                 StrictTools = strictTools,
             };
         }
+    }
+
+    /// <summary>
+    /// The ladder of profiles and the thinking levels System One picks on, as the engine binds and
+    /// validates them at start (<c>AgentRouteOptions.Problems</c>, <c>AgentEffortOptions.Problems</c>), and
+    /// the reserved profile name <c>auto</c> among the decision profiles; or what the start refuses. The
+    /// rungs that name no profile of these settings are listed apart: the engine refuses them when it
+    /// loads a crew that asks for the pick, not at start.
+    /// </summary>
+    private static bool TryReadPicks(
+        IConfiguration configuration, out IReadOnlyList<string> ladder, out IReadOnlyList<string> unknownRungs, out string? refusal)
+    {
+        ladder = [];
+        unknownRungs = [];
+        var route = new AgentRouteOptions();
+        var effort = new AgentEffortOptions();
+        try
+        {
+            configuration.GetSection(AgentRouteOptions.SectionName).Bind(route);
+            configuration.GetSection(AgentEffortOptions.SectionName).Bind(effort);
+        }
+        catch (InvalidOperationException ex)
+        {
+            refusal = ex.Message;
+            return false;
+        }
+
+        var problems = AgentRouteOptions.Problems(route).Concat(AgentEffortOptions.Problems(effort)).ToList();
+        problems.AddRange(configuration.GetSection(ProfilesPath).GetChildren()
+            .Where(profile => LlmProfiles.IsAuto(profile.Key))
+            .Select(profile => LlmProfiles.AutoReservedMessage($"{ProfilesPath}:{profile.Key}")));
+        if (problems.Count > 0)
+        {
+            refusal = string.Join(" ", problems);
+            return false;
+        }
+
+        refusal = null;
+        ladder = [.. route.Ladder.Select(rung => rung.Trim())];
+        var offered = configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren()
+            .Concat(configuration.GetSection(ProfilesPath).GetChildren())
+            .Select(profile => profile.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        unknownRungs = [.. ladder.Where(rung => !LlmProfiles.IsDefault(rung) && !offered.Contains(rung))];
+        return true;
     }
 
     /// <summary>
@@ -274,6 +391,14 @@ public sealed class DecisionSection
         yield return EnabledPath;
         yield return ProviderPath;
         yield return StrictToolsPath;
+        yield return GuardianEnabledPath;
+        yield return GuardianLlmOptions.SectionName + ":Enabled";
+        yield return GuardianLlmOptions.SectionName + ":FailMode";
+        // A list is one variable per item: the first rungs and levels a variable could give.
+        for (var rung = 0; rung < MaxProbedRungs; rung++)
+            yield return $"{RouteLadderPath}:{rung}";
+        for (var level = 0; level < KnownEffortLevels.Count; level++)
+            yield return $"{EffortLevelsPath}:{level}";
         foreach (var provider in Providers)
         {
             foreach (var field in ProviderFields)
@@ -346,6 +471,24 @@ public sealed record DecisionStatus(
     /// off, the tool is dropped and the crew runs without it.
     /// </summary>
     public bool StrictTools { get; init; } = true;
+
+    /// <summary>
+    /// The ladder System One picks a profile on (<c>Orkeon:Decision:Route:Ladder</c>), as the run reads
+    /// it; empty when the settings give none, and an agent on <c>llm.profile: auto</c> then fails to load.
+    /// </summary>
+    public IReadOnlyList<string> RouteLadder { get; init; } = [];
+
+    /// <summary>
+    /// The rungs of <see cref="RouteLadder"/> that name no profile of these settings: the engine refuses
+    /// them when it loads a crew with an agent on <c>llm.profile: auto</c>.
+    /// </summary>
+    public IReadOnlyList<string> UnknownRungs { get; init; } = [];
+
+    /// <summary>
+    /// Whether the ladder serves a crew with an agent or a task on <c>llm.profile: auto</c>: two rungs or
+    /// more, each a profile of these settings. Otherwise the engine refuses such a crew at load.
+    /// </summary>
+    public bool ServesRouteAuto => RouteLadder.Count >= 2 && UnknownRungs.Count == 0;
 
     /// <summary>
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c>): it refuses to start

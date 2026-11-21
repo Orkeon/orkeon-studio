@@ -16,7 +16,9 @@ public sealed record DecisionProviderChoiceItem(string? Key, string Label);
 /// <summary>
 /// The decision models (System One) form: the circuit's switch (<c>Orkeon:Decision:Enabled</c>), the
 /// provider's name (<c>Orkeon:Decision:Provider</c>, automatic when absent), one card per provider the
-/// engine knows, and the status line a run of the file gets, resolved as the engine resolves it
+/// engine knows, the ladder of profiles and the thinking levels System One picks among
+/// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), and the status line a run
+/// of the file gets, resolved as the engine resolves it
 /// (<see cref="DecisionSection.Resolve"/>) over the keys in place. The keys go to the user environment
 /// through <see cref="IApiKeyStore"/>, never to the file. Every field is read and written where the file
 /// spells its key, in whatever letter case, as the configuration reads it.
@@ -109,6 +111,43 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
         }
     }
 
+    /// <summary>
+    /// The ladder System One picks a profile on, comma-separated, cheapest first; emptied, the key is
+    /// removed. What the engine refuses in it is said by the status line.
+    /// </summary>
+    public string RouteLadderText
+    {
+        get => string.Join(", ", Section.RouteLadder);
+        set => SetValue(RouteLadderText, Joined(value), v => Section.RouteLadder = DecisionSection.SplitList(v));
+    }
+
+    /// <summary>The rungs that name no profile of these settings, as a warning; empty when each names one.</summary>
+    public string RouteLadderNote =>
+        Status is { Refusal: null, UnknownRungs: { Count: > 0 } unknown }
+            ? _strings.Format(StudioStringKeys.SettingsDecisionLadderUnknown, string.Join(", ", unknown))
+            : string.Empty;
+
+    /// <summary>
+    /// The thinking levels System One picks among, comma-separated, cheapest first; emptied, the key is
+    /// removed and the engine's own three stand.
+    /// </summary>
+    public string EffortLevelsText
+    {
+        get => string.Join(", ", Section.EffortLevels);
+        set => SetValue(EffortLevelsText, Joined(value), v => Section.EffortLevels = DecisionSection.SplitList(v));
+    }
+
+    /// <summary>The levels the engine picks among when the list is empty: the field's watermark.</summary>
+    public static string EffortLevelsDefault => string.Join(", ", DecisionSection.DefaultEffortLevels);
+
+    /// <summary>How the levels are written, naming every level the engine knows.</summary>
+    public string EffortLevelsHint => _strings.Format(
+        StudioStringKeys.SettingsDecisionEffortLevelsHint,
+        string.Join(", ", DecisionSection.KnownEffortLevels),
+        EffortLevelsDefault);
+
+    private static string Joined(string? text) => string.Join(", ", DecisionSection.SplitList(text));
+
     /// <summary>One card per provider, in the engine's order.</summary>
     public IReadOnlyList<DecisionProviderCardViewModel> Providers { get; }
 
@@ -170,11 +209,12 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
     /// <inheritdoc />
     protected override void OnSectionChanged() => OnPropertiesChanged(
         nameof(Exists), nameof(Status), nameof(IsOn), nameof(IsRefused), nameof(StatusText),
-        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState));
+        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState),
+        nameof(RouteLadderText), nameof(RouteLadderNote), nameof(EffortLevelsText));
 
     private void RefreshTexts()
     {
-        OnPropertiesChanged(nameof(ProviderChoices), nameof(SelectedProvider));
+        OnPropertiesChanged(nameof(ProviderChoices), nameof(SelectedProvider), nameof(EffortLevelsHint));
         OnSectionChanged();
         foreach (var card in Providers)
             card.RefreshTexts();

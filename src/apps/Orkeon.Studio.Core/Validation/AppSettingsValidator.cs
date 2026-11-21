@@ -801,6 +801,15 @@ public sealed class AppSettingsValidator
                 path));
         }
 
+        if (Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id))
+        {
+            // The name of the pick itself (llm.profile: auto): the run refuses to start.
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.LlmProfileReservedName,
+                Orkeon.Application.Interfaces.Ports.LlmProfiles.AutoReservedMessage(path),
+                path));
+        }
+
         if (entry is JsonObject shape)
             ValidateLlmShape(shape, path, messages);
         else

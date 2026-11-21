@@ -226,4 +226,38 @@ public sealed class DecisionFormTests
 
         Assert.Contains(model.Forms, f => f is DecisionForm);
     }
+
+    [Fact]
+    public void The_ladder_and_the_levels_are_typed_as_comma_separated_lists()
+    {
+        var document = AppSettingsDocument.Parse("""
+            {"Llm":{"Model":"small","Profiles":{"strong":{"Model":"big"}}},
+             "Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}},"Liquid":{}}}
+            """);
+        var form = Form();
+        form.LoadFrom(document);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Equal("", form.EffortLevels);
+
+        form.RouteLadder = "";
+        form.EffortLevels = " low,medium ";
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        Assert.Equal(["low", "medium"], document.Decision.EffortLevels);
+    }
+
+    [Fact]
+    public void Levels_the_engine_refuses_are_said_by_the_status_line()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{}}}""");
+        var form = Form();
+        form.LoadFrom(document);
+
+        form.EffortLevels = "high, low";
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.StartsWith("Refused at start", form.Status, StringComparison.Ordinal);
+        Assert.Contains("cheapest first", form.Status, StringComparison.Ordinal);
+    }
 }

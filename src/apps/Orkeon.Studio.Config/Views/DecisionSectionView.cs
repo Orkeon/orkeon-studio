@@ -5,7 +5,8 @@ namespace Orkeon.Studio.Config.Views;
 
 /// <summary>
 /// The decision models (System One) screen: the provider from a closed list, the circuit's switch, and
-/// for each provider its section, model and address, then what a run of the file gets. A provider name
+/// for each provider its section, model and address, the profiles and the thinking levels System One
+/// picks among, then what a run of the file gets. A provider name
 /// the engine does not know is a row of its own, so applying the screen keeps it.
 /// </summary>
 internal sealed class DecisionSectionView : SectionView
@@ -16,6 +17,8 @@ internal sealed class DecisionSectionView : SectionView
     private readonly ListView _provider;
     private readonly CheckBox _enabled;
     private readonly List<(DecisionForm.ProviderFields Fields, CheckBox SetUp, TextField Model, TextField Address)> _providers = [];
+    private readonly TextField _routeLadder;
+    private readonly TextField _effortLevels;
     private readonly Label _status;
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
@@ -40,6 +43,10 @@ internal sealed class DecisionSectionView : SectionView
             y += 3;
         }
 
+        _routeLadder = FormLayout.AddField(this, y, "Profiles to pick among", _form.RouteLadder);
+        _effortLevels = FormLayout.AddField(this, y + 1, "Thinking levels", _form.EffortLevels);
+        FormLayout.AddNote(this, y + 2, DecisionForm.PicksNotice);
+        y += 4;
         FormLayout.AddNote(this, y, DecisionForm.KeysNotice);
         FormLayout.AddNote(this, y + 1, DecisionForm.SectionsNotice);
         _status = FormLayout.AddText(this, y + 3, _form.Status);
@@ -61,6 +68,8 @@ internal sealed class DecisionSectionView : SectionView
             address.Text = fields.BaseAddress;
         }
 
+        _routeLadder.Text = _form.RouteLadder;
+        _effortLevels.Text = _form.EffortLevels;
         _status.Text = _form.Status;
     }
 
@@ -78,6 +87,9 @@ internal sealed class DecisionSectionView : SectionView
             fields.Model = model.Text ?? "";
             fields.BaseAddress = address.Text ?? "";
         }
+
+        _form.RouteLadder = _routeLadder.Text ?? "";
+        _form.EffortLevels = _effortLevels.Text ?? "";
     }
 
     /// <summary>Test-only: the status line, what a run of the file gets.</summary>
@@ -100,6 +112,8 @@ internal sealed class DecisionSectionView : SectionView
                 address.Dispose();
             }
 
+            _routeLadder.Dispose();
+            _effortLevels.Dispose();
             _status.Dispose();
         }
 

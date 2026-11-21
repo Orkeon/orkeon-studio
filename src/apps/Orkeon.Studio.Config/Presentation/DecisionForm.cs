@@ -8,7 +8,9 @@ namespace Orkeon.Studio.Config.Presentation;
 /// The decision models (System One): the circuit's switch (<c>Orkeon:Decision:Enabled</c>, tri-state:
 /// removing the key and writing <c>false</c> differ), the provider's name (<c>Orkeon:Decision:Provider</c>,
 /// automatic when absent), and for each provider whether its section is written, its model and its
-/// address. A field left blank removes its key: the engine gives the provider's default. While a
+/// address, then the ladder of profiles and the thinking levels System One picks among
+/// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), each a comma-separated
+/// list. A field left blank removes its key: the engine gives the provider's default. While a
 /// provider's section stays ticked, every key the form does not show (its timeout, its retries, its key
 /// variable, a key written by hand) is kept as it is, and so are the decision profiles; unticking the
 /// section removes it whole, with every key in it. A provider name the engine does not know is shown as
@@ -70,6 +72,24 @@ internal sealed class DecisionForm : ISettingsForm
     /// <summary>The fields of each provider, in the engine's order.</summary>
     public IReadOnlyList<ProviderFields> Providers { get; }
 
+    /// <summary>
+    /// The profiles System One picks among for an agent on <c>llm.profile: auto</c>, comma-separated,
+    /// cheapest first; blank removes the key, and a crew that asks for the pick is then refused at load.
+    /// </summary>
+    public string RouteLadder { get; set; } = "";
+
+    /// <summary>
+    /// The thinking levels System One picks among for <c>thinking: { effort: auto }</c>, comma-separated,
+    /// cheapest first; blank removes the key, the engine's own three then standing.
+    /// </summary>
+    public string EffortLevels { get; set; } = "";
+
+    /// <summary>What the two lists are for, and how they are written.</summary>
+    public static string PicksNotice { get; } =
+        "System One picks among these for llm.profile: auto and thinking: { effort: auto }. Commas between names, "
+        + "cheapest first; levels among " + string.Join(", ", DecisionSection.KnownEffortLevels)
+        + " (blank: " + string.Join(", ", DecisionSection.DefaultEffortLevels) + ").";
+
     /// <summary>What a run of the file as loaded gets, resolved as the engine resolves it.</summary>
     public string Status { get; private set; } = "";
 
@@ -111,6 +131,8 @@ internal sealed class DecisionForm : ISettingsForm
         ProviderAsWritten = Provider is { Length: > 0 } name && DecisionProviderDescriptor.Find(name) is null ? name : null;
         foreach (var fields in Providers)
             fields.LoadFrom(section.For(fields.Descriptor));
+        RouteLadder = string.Join(", ", section.RouteLadder);
+        EffortLevels = string.Join(", ", section.EffortLevels);
         Status = Describe(section.Resolve(_environment));
     }
 
@@ -135,6 +157,8 @@ internal sealed class DecisionForm : ISettingsForm
         section.Provider = FieldText.ToStringOrNull(Provider);
         foreach (var fields in Providers)
             fields.ApplyTo(section.For(fields.Descriptor));
+        section.RouteLadder = DecisionSection.SplitList(RouteLadder);
+        section.EffortLevels = DecisionSection.SplitList(EffortLevels);
         Status = Describe(section.Resolve(_environment));
         return [];
     }

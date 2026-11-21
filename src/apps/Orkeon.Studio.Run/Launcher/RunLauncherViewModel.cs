@@ -232,6 +232,15 @@ internal sealed class RunLauncherViewModel
                 ValidationCodes.DecisionProviderRefused,
                 blocks,
                 $"The settings name a decision provider the engine refuses, so the CLI will not start: {finding.Status?.Refusal}")],
+            DecisionPreflightKind.RouteWithoutLadder => [Say(
+                ValidationCodes.DecisionLadder,
+                blocks,
+                string.Join(", ", finding.RoutedHolders.Select(holder => $"'{holder}'"))
+                + " run on llm.profile: auto, and "
+                + (finding.Status is { UnknownRungs.Count: > 0 } unknown
+                    ? $"Orkeon:Decision:Route:Ladder names {string.Join(", ", unknown.UnknownRungs.Select(rung => $"'{rung}'"))}, which is no profile of the settings"
+                    : "the settings give no ladder of two profiles or more in Orkeon:Decision:Route:Ladder")
+                + ": the engine refuses the crew when it loads it.")],
             DecisionPreflightKind.RequiredWithoutModel => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,

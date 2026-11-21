@@ -612,6 +612,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
@@ -922,6 +923,10 @@
   <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} use system_one_decide, which the engine withholds without the decision models</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on</value></data>
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>it states decision.mode: required, so the engine refuses the run before its first task</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.</value></data>
+  <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.</value></data>
+  <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>the settings give no ladder of two profiles or more to pick on</value></data>
+  <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>the ladder names {0}, which is no model profile of the settings</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.</value></data>
   <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}</value></data>
   <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>This run goes without the decision models (System One): the team answers without them. {0}</value></data>
@@ -2124,6 +2129,13 @@
   <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>Provider</value></data>
   <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>Automatic</value></data>
   <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>Automatic: the engine takes the only provider set up below, or whose key is in place. With two, it refuses to start: name one.</value></data>
+  <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>What System One picks</value></data>
+  <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>A team may let System One pick, for each task, a model profile (llm.profile: auto) and a thinking level (thinking: { effort: auto }). These two lists say what it picks among.</value></data>
+  <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Profiles to pick among</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Two model profiles or more, cheapest first, separated by commas: « default » or a profile of Settings › Models. Left empty, a team that asks for the pick is refused when it loads.</value></data>
+  <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Thinking levels to pick among</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Among {0}, cheapest first, separated by commas, in lower case. Left empty: {1}.</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} answers the decision tasks.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} answers the decision tasks, deduced from its section or its key.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>No provider is set up: the runs go without the decision models.</value></data>

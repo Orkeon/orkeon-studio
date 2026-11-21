@@ -14,6 +14,15 @@ public enum DecisionPreflightKind
     ProviderRefused,
 
     /// <summary>
+    /// An agent or a task of the crew is on <c>llm.profile: auto</c> and the settings give no ladder that
+    /// serves it (<c>Orkeon:Decision:Route:Ladder</c>: two profiles or more, each a profile of the
+    /// settings): the engine refuses the crew at load, whatever the circuit. The launch is blocked when
+    /// the settings are those of the file the run reads, warned of otherwise; a check stays offered and
+    /// reports the engine's line.
+    /// </summary>
+    RouteWithoutLadder,
+
+    /// <summary>
     /// The crew cannot run without the decision models (<see cref="CrewDecisionMode.Required"/>) and this
     /// run goes without them. A crew that states <c>decision.mode: required</c> is refused before its
     /// first task (exit code 69). A crew that states no mode is refused for an agent or a task that holds
@@ -87,7 +96,14 @@ public sealed record DecisionPreflightFinding(
     /// </summary>
     public bool BlocksLaunch =>
         Kind == DecisionPreflightKind.RequiredWithoutModel
-        || (Kind == DecisionPreflightKind.ProviderRefused && SettingsKnown);
+        || (Kind is DecisionPreflightKind.ProviderRefused or DecisionPreflightKind.RouteWithoutLadder && SettingsKnown);
+
+    /// <summary>
+    /// The agents and tasks on <c>llm.profile: auto</c>, in the crew's order: those a
+    /// <see cref="DecisionPreflightKind.RouteWithoutLadder"/> finding is about.
+    /// </summary>
+    public IReadOnlyList<string> RoutedHolders =>
+        [.. Usage.OtherUses.Where(use => use.Kind == CrewSystemOneUseKind.RouteAuto).Select(use => use.Holder)];
 
     /// <summary>
     /// Whether the finding blocks a check (<c>--validate</c>) too: only a refused provider of the file the
@@ -147,6 +163,10 @@ public static class DecisionPreflight
 
         if (status?.Refusal is not null)
             return Say(DecisionPreflightKind.ProviderRefused);
+
+        // A profile to pick with no ladder to pick it on: the engine refuses the crew at load.
+        if (status is { ServesRouteAuto: false } && usage.OtherUses.Any(use => use.Kind == CrewSystemOneUseKind.RouteAuto))
+            return Say(DecisionPreflightKind.RouteWithoutLadder);
 
         if (usage.Mode == CrewDecisionMode.None)
             return null;

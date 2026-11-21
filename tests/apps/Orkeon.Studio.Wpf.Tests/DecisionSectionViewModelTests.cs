@@ -266,4 +266,39 @@ public sealed class DecisionSectionViewModelTests
         Assert.Equal("Done", screen.DecisionTabState);
         Assert.Equal(DecisionProviderDescriptor.TypeSafe.Key, config.Document.Decision.Provider);
     }
+
+    [Fact]
+    public void The_ladder_and_the_levels_are_typed_as_lists_and_remove_their_key_when_emptied()
+    {
+        var (form, document, _) = Form("""{"Llm":{"Model":"small","Profiles":{"strong":{"Model":"big"}}}}""");
+        Assert.Equal("", form.RouteLadderText);
+
+        form.RouteLadderText = "default ,strong";
+        form.EffortLevelsText = "low; high";
+
+        Assert.Equal("default, strong", form.RouteLadderText);
+        Assert.Equal(["default", "strong"], document.Decision.RouteLadder);
+        Assert.Equal(["low", "high"], document.Decision.EffortLevels);
+        Assert.Equal("", form.RouteLadderNote);
+
+        form.RouteLadderText = " ";
+        form.EffortLevelsText = "";
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        Assert.False(document.ContainsPath(DecisionSection.EffortLevelsPath));
+    }
+
+    [Fact]
+    public void A_rung_that_names_no_profile_is_warned_of_and_a_refused_ladder_is_said_by_the_status()
+    {
+        var (form, _, _) = Form();
+
+        form.RouteLadderText = "default, strong";
+        Assert.Contains("strong", form.RouteLadderNote, StringComparison.Ordinal);
+        Assert.False(form.IsRefused);
+
+        form.RouteLadderText = "default";
+        Assert.True(form.IsRefused);
+        Assert.Contains("a route needs two or more", form.StatusText, StringComparison.Ordinal);
+        Assert.Equal("", form.RouteLadderNote);
+    }
 }

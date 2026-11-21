@@ -173,8 +173,46 @@ public sealed class DecisionPreflightTests
             OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst")],
         };
 
-        Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, DecisionPreflight.Check(picks, On, settingsKnown: true, noDecision: true)?.Kind);
-        Assert.Null(DecisionPreflight.Check(picks, On, settingsKnown: true, noDecision: false));
+        var served = On with { RouteLadder = ["default", "strong"] };
+        Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, DecisionPreflight.Check(picks, served, settingsKnown: true, noDecision: true)?.Kind);
+        Assert.Null(DecisionPreflight.Check(picks, served, settingsKnown: true, noDecision: false));
+    }
+
+    /// <summary>
+    /// A profile to pick with no ladder to pick it on: the engine refuses the crew when it loads it,
+    /// whatever the circuit. Blocked on the file the run reads, warned of on the machine's.
+    /// </summary>
+    [Fact]
+    public void A_crew_on_profile_auto_is_stopped_without_a_ladder_that_serves_it()
+    {
+        var picks = new CrewDecisionUsage(CrewDecisionMode.Optional, [], [])
+        {
+            OtherUses =
+            [
+                new CrewSystemOneUse(CrewSystemOneUseKind.RouteAuto, "analyst"),
+                new CrewSystemOneUse(CrewSystemOneUseKind.EffortAuto, "writer"),
+            ],
+        };
+
+        var none = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, On, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, none.Kind);
+        Assert.Equal(["analyst"], none.RoutedHolders);
+        Assert.True(none.BlocksLaunch);
+        Assert.False(none.BlocksValidate);
+
+        var unknownRung = On with { RouteLadder = ["default", "strong"], UnknownRungs = ["strong"] };
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, DecisionPreflight.Check(picks, unknownRung, settingsKnown: true, noDecision: false)?.Kind);
+
+        var machine = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(picks, On, settingsKnown: false, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.RouteWithoutLadder, machine.Kind);
+        Assert.False(machine.BlocksLaunch);
+
+        // No settings read: nothing is known of the ladder, nothing is said.
+        Assert.Null(DecisionPreflight.Check(picks, null, settingsKnown: false, noDecision: false));
+
+        // Thinking on auto needs no ladder.
+        var thinking = picks with { OtherUses = [new CrewSystemOneUse(CrewSystemOneUseKind.EffortAuto, "writer")] };
+        Assert.Null(DecisionPreflight.Check(thinking, On, settingsKnown: true, noDecision: false));
     }
 
     [Fact]

@@ -1599,6 +1599,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>Los ajustes indican un proveedor de decisión que el motor rechaza (un nombre desconocido, o dos proveedores que podría deducir): la CLI se detiene antes de cargar el equipo.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Esta ejecución prescinde de los modelos de decisión (System One): cada tarea de decisión la responde su relevo, responde con su respuesta de reserva o deja que se ejecute su tarea «otherwise», y lo que System One habría elegido vuelve a lo que indican el equipo o los ajustes.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>El proveedor de decisión que usa la ejecución necesita una clave y no hay ninguna, ni en su variable ni en el archivo de configuración: cada solicitud que recibe falla.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Un agente o una tarea deja que System One elija su perfil (llm.profile: auto) y los ajustes no dan ninguna escala de dos perfiles de modelo o más donde elegir, o un peldaño no nombra ningún perfil: el motor rechaza el equipo al cargarlo.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agente o una tarea usa system_one_decide y la ejecución prescinde de los modelos de decisión: con Orkeon:CrewFactory:StrictTools en false, el motor retiene la herramienta y ejecuta el equipo sin ella.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Una línea de carpeta añadida empieza por «-»: el motor la leería como una opción.</value>
@@ -2435,6 +2436,10 @@
   <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} usan system_one_decide, que el motor retiene sin los modelos de decisión</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>la tarea de decisión {0} no tiene ni respuesta de reserva ni tarea «otherwise», así que necesita los modelos de decisión activados</value></data>
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>declara decision.mode: required, así que el motor rechaza la ejecución antes de su primera tarea</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} dejan que System One elija su perfil (llm.profile: auto), y {1}: el motor rechaza el equipo al cargarlo. Defina la escala en Ajustes › Modelos de decisión.</value></data>
+  <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} dejan que System One elija su perfil (llm.profile: auto), y en los ajustes de esta máquina {1}: salvo que el archivo de configuración que elija la CLI diga otra cosa, el motor rechaza el equipo al cargarlo.</value></data>
+  <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>los ajustes no dan ninguna escala de dos perfiles o más donde elegir</value></data>
+  <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>la escala nombra {0}, que no es un perfil de modelo de los ajustes</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} no tiene clave: la variable {1} está vacía y el archivo de configuración no contiene ninguna, así que cada solicitud que recibe falla, y con ella cada tarea de decisión que lo consulta. Guarde la clave en Ajustes › Modelos de decisión.</value></data>
   <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} usan system_one_decide, y esta ejecución prescinde de los modelos de decisión: con Orkeon:CrewFactory:StrictTools en false, el motor retiene la herramienta y ejecuta el equipo sin ella. {1}</value></data>
   <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Esta ejecución prescinde de los modelos de decisión (System One): el equipo responde sin ellos. {0}</value></data>
@@ -3839,6 +3844,13 @@
   <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>Proveedor</value></data>
   <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>Automático</value></data>
   <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>Automático: el motor toma el único proveedor configurado abajo, o cuya clave está disponible. Si hay dos, se niega a arrancar: indique uno.</value></data>
+  <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>Lo que elige System One</value></data>
+  <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>Un equipo puede dejar que System One elija, para cada tarea, un perfil de modelo (llm.profile: auto) y un nivel de reflexión (thinking: { effort: auto }). Estas dos listas indican entre qué elige.</value></data>
+  <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Perfiles entre los que elegir</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Dos perfiles de modelo o más, el más barato primero, separados por comas: «default» o un perfil de Ajustes › Modelos. Si se deja vacía, un equipo que pida esta elección se rechaza al cargarlo.</value></data>
+  <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: ningún perfil de modelo de estos ajustes lleva ese nombre, así que un equipo que pida esta elección se rechaza al cargarlo.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Niveles de reflexión entre los que elegir</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Entre {0}, el más barato primero, separados por comas, en minúsculas. Si se deja vacía: {1}.</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} responde a las tareas de decisión.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} responde a las tareas de decisión, deducido de su sección o de su clave.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>No hay ningún proveedor configurado: las ejecuciones prescinden de los modelos de decisión.</value></data>

@@ -1599,6 +1599,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>设置指定了引擎拒绝的决策提供方（未知名称，或可推断出两个提供方）：CLI 会在加载团队前停止。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其配置档（llm.profile: auto），而设置中没有包含两个或更多模型配置档的梯级，或某一级未对应任何配置档：引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
@@ -2435,6 +2436,10 @@
   <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，没有决策模型时引擎会扣留该工具</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>决策任务 {0} 既无后备答案也无“otherwise”任务，因此需要开启决策模型</value></data>
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>它声明了 decision.mode: required，因此引擎会在第一个任务之前拒绝运行</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其配置档（llm.profile: auto），而{1}：引擎在加载团队时会拒绝它。请在“设置 › 决策模型”中设置梯级。</value></data>
+  <data name="Studio.Run.WarnDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其配置档（llm.profile: auto），而在本机设置中{1}：除非 CLI 选用的设置文件另有规定，否则引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>设置中没有可供选择的、包含两个或更多配置档的梯级</value></data>
+  <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>梯级中包含 {0}，它不是设置中的模型配置档</value></data>
   <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此它收到的每个请求都会失败，询问它的每个决策任务也随之失败。请在“设置 › 决策模型”中保存密钥。</value></data>
   <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，而本次运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。{1}</value></data>
   <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：团队在没有它们的情况下作答。{0}</value></data>
@@ -3839,6 +3844,13 @@
   <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>提供方</value></data>
   <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>自动</value></data>
   <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>自动：引擎选用下方唯一已配置的提供方，或其密钥已就绪的提供方。若有两个，它将拒绝启动：请指定一个。</value></data>
+  <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>System One 选择的内容</value></data>
+  <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>团队可以让 System One 为每个任务选择模型配置档（llm.profile: auto）和思考级别（thinking: { effort: auto }）。这两个列表规定了可选范围。</value></data>
+  <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>可选的配置档</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>两个或更多模型配置档，由低价到高价，用逗号分隔：“default”或“设置 › 模型”中的配置档。留空时，要求此选择的团队在加载时会被拒绝。</value></data>
+  <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}：这些设置中没有以此命名的模型配置档，因此要求此选择的团队在加载时会被拒绝。</value></data>
+  <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>可选的思考级别</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>从 {0} 中选取，由低到高，用逗号分隔，小写。留空时：{1}。</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} 回答决策任务。</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} 回答决策任务（由其配置段或密钥推断）。</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>未配置提供方：运行将不使用决策模型。</value></data>

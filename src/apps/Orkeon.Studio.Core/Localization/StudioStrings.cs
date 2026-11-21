@@ -682,6 +682,18 @@ public static class StudioStringKeys
     /// <summary>Why a team needs the decision models: it states decision.mode: required.</summary>
     public const string RunDecisionNeedMode = "Studio.Run.DecisionNeedMode";
 
+    /// <summary>A launch refused: {0} the agents and tasks on llm.profile: auto, {1} what is wrong with the ladder (<see cref="RunDecisionLadderMissing"/> or <see cref="RunDecisionLadderUnknownRungs"/>).</summary>
+    public const string RunBlockedDecisionLadder = "Studio.Run.BlockedDecisionLadder";
+
+    /// <summary>The same as <see cref="RunBlockedDecisionLadder"/>, while the CLI picks the settings file itself: a warning.</summary>
+    public const string RunWarnDecisionLadder = "Studio.Run.WarnDecisionLadder";
+
+    /// <summary>What is wrong with the ladder: there is none of two profiles or more.</summary>
+    public const string RunDecisionLadderMissing = "Studio.Run.DecisionLadderMissing";
+
+    /// <summary>What is wrong with the ladder: {0} the rungs that name no profile of the settings.</summary>
+    public const string RunDecisionLadderUnknownRungs = "Studio.Run.DecisionLadderUnknownRungs";
+
     /// <summary>A warning: {0} the provider, {1} the empty key variable.</summary>
     public const string RunWarnDecisionKeyMissing = "Studio.Run.WarnDecisionKeyMissing";
 
@@ -2547,6 +2559,27 @@ public static class StudioStringKeys
     /// <summary>How the automatic choice deduces the provider.</summary>
     public const string SettingsDecisionProviderHint = "Studio.Settings.DecisionProviderHint";
 
+    /// <summary>The title of the card of what System One picks among: the ladder of profiles and the thinking levels.</summary>
+    public const string SettingsDecisionPicksTitle = "Studio.Settings.DecisionPicksTitle";
+
+    /// <summary>What the two lists of the card are for.</summary>
+    public const string SettingsDecisionPicksIntro = "Studio.Settings.DecisionPicksIntro";
+
+    /// <summary>The label of the ladder of profiles (Orkeon:Decision:Route:Ladder).</summary>
+    public const string SettingsDecisionLadder = "Studio.Settings.DecisionLadder";
+
+    /// <summary>How the ladder is written, and what an empty one does.</summary>
+    public const string SettingsDecisionLadderHint = "Studio.Settings.DecisionLadderHint";
+
+    /// <summary>A warning under the ladder: {0} the rungs that name no profile of the settings.</summary>
+    public const string SettingsDecisionLadderUnknown = "Studio.Settings.DecisionLadderUnknown";
+
+    /// <summary>The label of the thinking levels (Orkeon:Decision:Effort:Levels).</summary>
+    public const string SettingsDecisionEffortLevels = "Studio.Settings.DecisionEffortLevels";
+
+    /// <summary>How the levels are written: {0} every level the engine knows, {1} the ones it picks among when the list is empty.</summary>
+    public const string SettingsDecisionEffortLevelsHint = "Studio.Settings.DecisionEffortLevelsHint";
+
     /// <summary>The status line of a named provider; {0} is its name.</summary>
     public const string SettingsDecisionStatusNamed = "Studio.Settings.DecisionStatusNamed";
 
@@ -3265,6 +3298,10 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which the engine withholds without the decision models",
         [StudioStringKeys.RunDecisionNeedAnswer] = "the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on",
         [StudioStringKeys.RunDecisionNeedMode] = "it states decision.mode: required, so the engine refuses the run before its first task",
+        [StudioStringKeys.RunBlockedDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. Set the ladder in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and on this machine's settings {1}: unless the settings file the CLI picks says otherwise, the engine refuses the team when it loads it.",
+        [StudioStringKeys.RunDecisionLadderMissing] = "the settings give no ladder of two profiles or more to pick on",
+        [StudioStringKeys.RunDecisionLadderUnknownRungs] = "the ladder names {0}, which is no model profile of the settings",
         [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
         [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}",
         [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): the team answers without them. {0}",
@@ -3613,6 +3650,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-LADDER"] = "An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
@@ -4256,6 +4294,13 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsDecisionProvider] = "Provider",
         [StudioStringKeys.SettingsDecisionProviderAuto] = "Automatic",
         [StudioStringKeys.SettingsDecisionProviderHint] = "Automatic: the engine takes the only provider set up below, or whose key is in place. With two, it refuses to start: name one.",
+        [StudioStringKeys.SettingsDecisionPicksTitle] = "What System One picks",
+        [StudioStringKeys.SettingsDecisionPicksIntro] = "A team may let System One pick, for each task, a model profile (llm.profile: auto) and a thinking level (thinking: { effort: auto }). These two lists say what it picks among.",
+        [StudioStringKeys.SettingsDecisionLadder] = "Profiles to pick among",
+        [StudioStringKeys.SettingsDecisionLadderHint] = "Two model profiles or more, cheapest first, separated by commas: « default » or a profile of Settings › Models. Left empty, a team that asks for the pick is refused when it loads.",
+        [StudioStringKeys.SettingsDecisionLadderUnknown] = "{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.",
+        [StudioStringKeys.SettingsDecisionEffortLevels] = "Thinking levels to pick among",
+        [StudioStringKeys.SettingsDecisionEffortLevelsHint] = "Among {0}, cheapest first, separated by commas, in lower case. Left empty: {1}.",
         [StudioStringKeys.SettingsDecisionStatusNamed] = "{0} answers the decision tasks.",
         [StudioStringKeys.SettingsDecisionStatusDeduced] = "{0} answers the decision tasks, deduced from its section or its key.",
         [StudioStringKeys.SettingsDecisionStatusNone] = "No provider is set up: the runs go without the decision models.",

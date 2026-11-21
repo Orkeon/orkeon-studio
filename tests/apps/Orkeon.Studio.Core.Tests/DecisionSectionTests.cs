@@ -225,4 +225,78 @@ public sealed class DecisionSectionTests
         Assert.Null(status.Refusal);
         Assert.Contains("--no-decision", status.RefusalOfRunSwitch, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void The_ladder_and_the_levels_are_written_as_lists_and_removed_when_emptied()
+    {
+        var document = AppSettingsDocument.Parse("""{ "Orkeon": { "Decision": { "Provider": "liquid" } } }""");
+        var section = document.Decision;
+        Assert.Empty(section.RouteLadder);
+        Assert.Empty(section.EffortLevels);
+
+        section.RouteLadder = DecisionSection.SplitList(" default , strong;\n");
+        section.EffortLevels = ["low", "high"];
+
+        var reparsed = AppSettingsDocument.Parse(document.ToJson());
+        Assert.Equal(["default", "strong"], reparsed.Decision.RouteLadder);
+        Assert.Equal(["low", "high"], reparsed.Decision.EffortLevels);
+        Assert.Equal("liquid", reparsed.Decision.Provider);
+
+        section.RouteLadder = [];
+        section.EffortLevels = [];
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        Assert.False(document.ContainsPath(DecisionSection.EffortLevelsPath));
+    }
+
+    /// <summary>The start refuses what the engine's own rules refuse in the two lists, whatever the circuit.</summary>
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["default"] } } } }""", "a route needs two or more")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "auto"] } } } }""", "the name of the route itself")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["fast", "FAST"] } } } }""", "more than once")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Effort": { "Levels": ["low", "extreme"] } } } }""", "is not a thinking level")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Effort": { "Levels": ["high", "low"] } } } }""", "cheapest first")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Profiles": { "auto": { "Target": "default" } } } } }""", "is a reserved profile name")]
+    public void A_ladder_levels_or_a_decision_profile_the_engine_refuses_stop_the_start(string json, string reason)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.Contains(reason, status.Refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_ladder_serves_when_each_of_its_two_rungs_or_more_is_a_profile_of_the_settings()
+    {
+        var served = AppSettingsDocument.Parse("""
+            { "Llm": { "Model": "small", "Profiles": { "strong": { "Model": "big" } } },
+              "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "Strong"] } } } }
+            """).Decision.Resolve(_ => null);
+        Assert.Null(served.Refusal);
+        Assert.Equal(["default", "Strong"], served.RouteLadder);
+        Assert.Empty(served.UnknownRungs);
+        Assert.True(served.ServesRouteAuto);
+
+        var unknown = AppSettingsDocument.Parse("""
+            { "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "strong"] } } } }
+            """).Decision.Resolve(_ => null);
+        Assert.Null(unknown.Refusal);
+        Assert.Equal(["strong"], unknown.UnknownRungs);
+        Assert.False(unknown.ServesRouteAuto);
+
+        Assert.False(AppSettingsDocument.Parse("{}").Decision.Resolve(_ => null).ServesRouteAuto);
+    }
+
+    [Fact]
+    public void A_ladder_of_the_environment_is_read_above_the_file()
+    {
+        var environment = new Dictionary<string, string?>
+        {
+            ["ORKEON_Orkeon__Decision__Route__Ladder__0"] = "default",
+            ["ORKEON_Orkeon__Decision__Route__Ladder__1"] = "default",
+        };
+
+        var status = AppSettingsDocument.Parse("{}").Decision.Resolve(name => environment.GetValueOrDefault(name));
+
+        // One variable per rung, as the configuration reads a list: the ladder is seen, and refused.
+        Assert.Contains("more than once", status.Refusal, StringComparison.Ordinal);
+    }
 }
