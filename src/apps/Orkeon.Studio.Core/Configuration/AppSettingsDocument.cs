@@ -49,6 +49,8 @@ public sealed class AppSettingsDocument
         Decision = new DecisionSection(this);
         Compaction = new CompactionSection(this);
         Skills = new SkillsSection(this);
+        ToolBridge = new ToolBridgeSection(this);
+        BridgeServer = new BridgeServerSection(this);
     }
 
     /// <summary>The mutable JSON tree backing this document — the raw-edit surface of the UIs.</summary>
@@ -92,6 +94,12 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over <c>Orkeon:Skills</c>: the library of skills and their sizes.</summary>
     public SkillsSection Skills { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Tools:Bridge</c>: the tools of a run that execute on another machine.</summary>
+    public ToolBridgeSection ToolBridge { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Bridge</c>: the tools <c>orkeon bridge serve</c> runs for a caller.</summary>
+    public BridgeServerSection BridgeServer { get; }
 
     /// <summary>Creates an empty document (<c>{}</c>).</summary>
     public static AppSettingsDocument CreateEmpty() => new(new JsonObject());

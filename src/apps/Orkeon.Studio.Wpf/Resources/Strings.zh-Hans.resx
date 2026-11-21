@@ -1601,6 +1601,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其配置档（llm.profile: auto），而设置中没有包含两个或更多模型配置档的梯级，或某一级未对应任何配置档：引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>某项设置的值会在启动时被引擎拒绝（比例超出范围、大小过小或名称未知）：使用该值时任何运行都无法启动。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>运行会把工具桥接到另一台机器，而工具桥的令牌不在其环境变量中，或短于 16 个字符：运行拒绝启动。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>设置中指定了工具桥的地址，但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
@@ -1675,6 +1677,22 @@
   <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>一个提示词中全部技能的字符数</value></data>
   <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>默认模型的上下文窗口（令牌数）</value></data>
   <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>留空：使用引擎为该模型记录的窗口。上下文压缩以此为基准。其他模型配置档的窗口是其配置节中的 ContextWindowTokens 键，可在 JSON 选项卡中设置。</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>工具桥：在另一台机器上运行的工具</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>运行中的某些工具（例如浏览器）可以在另一台机器上执行，由那里的“orkeon bridge serve”运行。地址为空或未允许任何工具时，不会桥接任何内容。</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>工具桥地址</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>例如 https://host:7410/。地址以“/”结尾，并使用 https，除非主机是本机或 host.docker.internal。</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>要桥接的工具</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>用逗号分隔的名称，或单独一个 * 表示工具桥提供的所有工具。</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>从不桥接的工具</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>保存令牌的环境变量</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host 标头（与地址不同时）</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>超时、大小和限制沿用引擎的默认值；可在 JSON 选项卡中修改。</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>工具桥：本机为另一台机器运行的工具</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>“orkeon bridge serve”为另一台机器上持有相同令牌的调用方运行此处允许的工具。未允许任何工具时不提供任何服务。Studio 不会启动工具桥：请在终端中运行该命令。</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>监听地址</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>提供的工具</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>用逗号分隔的名称，或单独一个 * 表示所有可桥接的 Orkeon 工具。</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>从不提供的工具</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>顺利完成，没有错误。</value>
   </data>
@@ -3871,6 +3889,7 @@
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}：这些设置中没有以此命名的模型配置档，因此要求此选择的团队在加载时会被拒绝。</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>可选的思考级别</value></data>
   <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>从 {0} 中选取，由低到高，用逗号分隔，小写。留空时：{1}。</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>工具桥</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} 回答决策任务。</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} 回答决策任务（由其配置段或密钥推断）。</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>未配置提供方：运行将不使用决策模型。</value></data>
@@ -4146,6 +4165,9 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>某个智能体的文件系统范围与此次运行的文件夹不符。</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>这些设置中的工具桥会在启动时中止运行：{0}</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} 请为您的用户账户设置该变量，然后重新启动 Studio。</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>这些设置指定了工具桥（{0}），但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>未允许</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>允许此文件夹</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

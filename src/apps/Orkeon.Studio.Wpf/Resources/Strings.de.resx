@@ -1601,6 +1601,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Der Entscheidungsanbieter, den die Ausführung nutzt, braucht einen Schlüssel, und keiner ist vorhanden, weder in seiner Variablen noch in der Einstellungsdatei: Jede Anfrage an ihn scheitert.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Ein Agent oder eine Aufgabe lässt System One sein Profil wählen (llm.profile: auto), und die Einstellungen geben keine Leiter aus zwei oder mehr Modellprofilen vor, oder eine Sprosse nennt kein Profil: Die Engine lehnt das Team beim Laden ab.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Eine Einstellung enthält einen Wert, den die Engine beim Start ablehnt (ein Anteil außerhalb seiner Grenzen, eine zu kleine Größe, ein unbekannter Name): Keine Ausführung würde damit starten.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>Die Ausführung überbrückt Werkzeuge zu einem anderen Rechner, und das Token der Brücke steht nicht in seiner Umgebungsvariablen oder ist kürzer als 16 Zeichen: Die Ausführung verweigert den Start.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>Die Einstellungen nennen die Adresse einer Werkzeugbrücke und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe verwendet system_one_decide, und die Ausführung verzichtet auf die Entscheidungsmodelle: Mit Orkeon:CrewFactory:StrictTools auf false hält die Engine das Werkzeug zurück und führt das Team ohne es aus.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Eine hinzugefügte Ordnerzeile beginnt mit „-“: Die Engine würde sie als Option lesen.</value>
@@ -1675,6 +1677,22 @@
   <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Zeichen aller Fähigkeiten eines Prompts</value></data>
   <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Kontextfenster des Standardmodells (Tokens)</value></data>
   <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Leer: das Fenster, das die Engine für das Modell dokumentiert. Daran wird die Verdichtung eines Kontexts gemessen. Das Fenster eines anderen Modellprofils ist der Schlüssel ContextWindowTokens seines Abschnitts, im JSON-Tab.</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>Werkzeugbrücke: Werkzeuge, die auf einem anderen Rechner laufen</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>Manche Werkzeuge einer Ausführung, etwa ein Browser, können auf einem anderen Rechner laufen, auf dem „orkeon bridge serve“ sie ausführt. Nichts wird überbrückt, solange die Adresse leer ist oder kein Werkzeug erlaubt ist.</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Adresse der Brücke</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Zum Beispiel https://host:7410/. Sie endet mit „/“ und verwendet https, außer der Host ist dieser Rechner oder host.docker.internal.</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Zu überbrückende Werkzeuge</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Durch Kommas getrennte Namen oder * allein für jedes Werkzeug, das die Brücke bereitstellt.</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Werkzeuge, die nie überbrückt werden</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Umgebungsvariable, die das Token enthält</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host-Header, wenn er von dem der Adresse abweicht</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>Zeitlimits, Größen und Grenzen behalten die Standardwerte der Engine; ändern Sie sie im JSON-Tab.</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>Werkzeugbrücke: Werkzeuge, die dieser Rechner für einen anderen ausführt</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>„orkeon bridge serve“ führt die hier erlaubten Werkzeuge für einen Aufrufer auf einem anderen Rechner aus, der dasselbe Token besitzt. Nichts wird bereitgestellt, solange kein Werkzeug erlaubt ist. Studio startet die Brücke nicht: Führen Sie den Befehl in einem Terminal aus.</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Adresse, auf der sie lauscht</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Bereitgestellte Werkzeuge</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Durch Kommas getrennte Namen oder * allein für jedes überbrückbare Orkeon-Werkzeug.</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Werkzeuge, die nie bereitgestellt werden</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>Ohne Fehler beendet.</value>
   </data>
@@ -3871,6 +3889,7 @@
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: Kein Modellprofil dieser Einstellungen trägt diesen Namen, daher wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Denkstufen zur Auswahl</value></data>
   <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Aus {0}, die günstigste zuerst, durch Kommas getrennt, in Kleinbuchstaben. Bleibt die Liste leer: {1}.</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>die Werkzeugbrücke</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben, abgeleitet aus seinem Abschnitt oder seinem Schlüssel.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>Es ist kein Anbieter eingerichtet: Die Ausführungen verzichten auf die Entscheidungsmodelle.</value></data>
@@ -4146,6 +4165,9 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>Der Dateisystembereich eines Agenten passt nicht zu den Ordnern dieser Ausführung.</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>Die Werkzeugbrücke dieser Einstellungen stoppt die Ausführung beim Start: {0}</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Legen Sie die Variable für Ihr Benutzerkonto fest und starten Sie Studio dann neu.</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>Diese Einstellungen nennen eine Werkzeugbrücke ({0}) und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Nicht erlaubt</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Diesen Ordner erlauben</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

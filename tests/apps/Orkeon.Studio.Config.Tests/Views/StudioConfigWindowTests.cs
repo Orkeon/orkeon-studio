@@ -44,7 +44,7 @@ public class StudioConfigWindowTests
         var titles = window.Sections.Select(section => section.Title).ToList();
 
         Assert.Equal(
-            ["LLM", "Rate limiting", "RAG", "Decision models", "Context & skills", MountEditorModel.SectionTitle, "Logging", "LLM logging", "Raw JSON (read-only)"],
+            ["LLM", "Rate limiting", "RAG", "Decision models", "Context & skills", "Tool bridge", MountEditorModel.SectionTitle, "Logging", "LLM logging", "Raw JSON (read-only)"],
             titles);
         Assert.Equal(0, window.CurrentSection);
         Assert.True(window.Sections[0].Visible);

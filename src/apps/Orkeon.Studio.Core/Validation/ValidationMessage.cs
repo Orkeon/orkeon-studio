@@ -191,6 +191,18 @@ public static class ValidationCodes
     /// </summary>
     public const string EngineSettingRefused = "STUDIO-SETTING-REFUSED";
 
+    /// <summary>
+    /// The run bridges tools (<c>Orkeon:Tools:Bridge</c> names an address and allows a tool) and the
+    /// bridge's token is not in its environment variable, or is shorter than the engine accepts: the
+    /// run refuses to start.
+    /// </summary>
+    public const string BridgeToken = "STUDIO-BRIDGE-TOKEN";
+
+    /// <summary>
+    /// The settings name a bridge's address and allow no tool on it: nothing is bridged. Information.
+    /// </summary>
+    public const string BridgeIdle = "STUDIO-BRIDGE-IDLE";
+
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";
 

@@ -137,7 +137,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             OnPropertiesChanged(nameof(BinaryStatus), nameof(ValidationSummary),
                 nameof(CliBanner), nameof(TeamMetaLine), nameof(TeamDescription), nameof(OpenResultLabel), nameof(ArchivedTargetMessage),
                 nameof(TeamSettingsLine), nameof(CrewLlmWarning),
-                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo));
+                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo), nameof(BridgeMessage), nameof(BridgeInfo));
             // The « Default (X) » entry is worded in the language: the list and its selection move with it.
             RaiseRunLlmChanged();
             RaiseRunStateChanged();
@@ -727,12 +727,34 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     // offers the restore instead of a button that would run it anyway.
     private bool CanLaunch() => CanValidate() && !IsBlockedByFileSystemScope && !IsBlockedByDecision;
 
+    private ToolBridgePreflightFinding? _bridgeFinding;
+
+    /// <summary>
+    /// Whether the tool bridge of the file the run reads stops it at start, a check included
+    /// (<see cref="ToolBridgePreflight"/>): a value of one of its two sections the host refuses, or tools
+    /// to bridge with no token in its environment variable.
+    /// </summary>
+    public bool IsBlockedByBridge => _bridgeFinding?.BlocksStart == true;
+
+    /// <summary>Why the tool bridge stops the run, in the engine's words; empty when it does not.</summary>
+    public string BridgeMessage => _bridgeFinding is { BlocksStart: true } finding
+        ? _strings.Format(
+            StudioStringKeys.RunBlockedBridge,
+            finding.Kind == ToolBridgePreflightKind.TokenRefused ? _strings.Format(StudioStringKeys.RunBridgeTokenRefused, finding.Reason) : finding.Reason)
+        : "";
+
+    /// <summary>Whether the settings name a bridge that bridges nothing: an address, no tool allowed.</summary>
+    public bool HasBridgeInfo => _bridgeFinding is { Kind: ToolBridgePreflightKind.NothingBridged };
+
+    /// <summary>The information of <see cref="HasBridgeInfo"/>.</summary>
+    public string BridgeInfo => HasBridgeInfo ? _strings.Format(StudioStringKeys.RunInfoBridgeIdle, _bridgeFinding!.Reason) : "";
+
     // A check (--validate) loads the crew and starts no agent: of the scope refusals, only a malformed
     // declaration fails it (#349).
     private bool CanValidate() =>
         IsBinaryAvailable && !IsRunning && Target.IsResolved && !IsBlockedByUndeclaredFolders && !IsBlockedByUnknownMountIds
         && !IsTargetArchived && !_fileSystemScopeRefusals.Any(refusal => refusal.Kind == FileSystemScopeRefusalKind.Load)
-        && _decisionFinding?.BlocksValidate != true;
+        && _decisionFinding?.BlocksValidate != true && !IsBlockedByBridge;
 
     private async Task<ProcessRunResult?> LaunchAsync(bool validate, CancellationToken cancellationToken)
     {
@@ -758,6 +780,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         if (RefusesDecision(validate))
             return null;
+
+        if (IsBlockedByBridge)
+        {
+            StatusMessage = BridgeMessage;
+            return null;
+        }
 
         var options = BuildOptions(validate);
         // The team's file counts as a pin here (STUDIO-62): a launch that reads another file
@@ -1648,8 +1676,13 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         Options.OffersDecisionModels = UsesDecisionModels;
         var finding = DecisionPreflight.Check(_decisionUsage, status, _settingsDecisionKnown, Options.SwitchesDecisionOff);
         _decisionFinding = finding;
+        // The bridge is judged on the very file the run reads, never on the machine's standing in for it.
+        _bridgeFinding = _settingsDecisionKnown && _settingsDecisionDocument is { } read
+            ? ToolBridgePreflight.Check(read, _keyStore.Peek)
+            : null;
         OnPropertiesChanged(nameof(UsesDecisionModels), nameof(IsBlockedByDecision), nameof(DecisionMessage),
             nameof(HasDecisionWarning), nameof(DecisionWarning), nameof(HasDecisionInfo), nameof(DecisionInfo),
+            nameof(IsBlockedByBridge), nameof(BridgeMessage), nameof(HasBridgeInfo), nameof(BridgeInfo),
             nameof(ShowsDecisionSettingsAction));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();

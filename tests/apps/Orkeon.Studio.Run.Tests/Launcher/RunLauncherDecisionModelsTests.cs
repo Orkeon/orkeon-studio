@@ -221,4 +221,40 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         Assert.Contains("task 'pick' answers go = no", info.Text, StringComparison.Ordinal);
         Assert.False(launcher.HasBlockingErrors());
     }
+
+    /// <summary>
+    /// The tool bridge of the pinned settings file: tools to bridge with no token in its variable are an
+    /// error of the launch and of a check; an address with no tool allowed is said, and blocks nothing.
+    /// </summary>
+    [Fact]
+    public void A_bridge_without_its_token_is_an_error_and_an_address_without_a_tool_is_information()
+    {
+        var fixture = new LauncherFixture().WithInstalledCli();
+        var launcher = Pin(fixture, Crew(decideTool: false), """{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":["*"]}}}}""");
+
+        foreach (var dryRun in new[] { false, true })
+        {
+            var error = Assert.Single(launcher.Validate(dryRun), m => m.Code == ValidationCodes.BridgeToken);
+            Assert.Equal(ValidationSeverity.Error, error.Severity);
+            Assert.Contains("ORKEON_BRIDGE_TOKEN, which is not set", error.Text, StringComparison.Ordinal);
+            Assert.True(launcher.HasBlockingErrors(dryRun));
+        }
+
+        var idle = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: false), """{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/"}}}}""");
+        var info = Assert.Single(idle.Validate(), m => m.Code == ValidationCodes.BridgeIdle);
+        Assert.Equal(ValidationSeverity.Information, info.Severity);
+        Assert.False(idle.HasBlockingErrors());
+    }
+
+    [Fact]
+    public void A_bridge_setting_the_engine_refuses_is_an_error_at_its_key()
+    {
+        var launcher = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: false), """{"Orkeon":{"Bridge":{"Allow":["browser_*"]}}}""");
+
+        var error = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.EngineSettingRefused);
+
+        Assert.Equal(ValidationSeverity.Error, error.Severity);
+        Assert.Equal("Orkeon:Bridge:Allow", error.Path);
+        Assert.Contains("not a pattern", error.Text, StringComparison.Ordinal);
+    }
 }

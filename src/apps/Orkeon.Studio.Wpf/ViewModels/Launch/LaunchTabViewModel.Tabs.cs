@@ -472,7 +472,10 @@ public sealed partial class LaunchTabViewModel
                 return _strings[StudioStringKeys.RunBlockedScope];
             }
 
-            return IsBlockedByDecision ? DecisionMessage : null;
+            if (IsBlockedByDecision)
+                return DecisionMessage;
+
+            return IsBlockedByBridge ? BridgeMessage : null;
         }
     }
 
@@ -482,7 +485,7 @@ public sealed partial class LaunchTabViewModel
     /// </summary>
     private bool IsTeamRefused =>
         IsBlockedByUndeclaredFolders || IsBlockedByUnknownMountIds || IsBlockedByFileSystemScope || IsTargetArchived
-        || IsBlockedByDecision;
+        || IsBlockedByDecision || IsBlockedByBridge;
 
     /// <summary>The beat of the status bar moves the durations between the run's events.</summary>
     internal void RefreshClock() =>
@@ -545,7 +548,7 @@ public sealed partial class LaunchTabViewModel
                 break;
             case nameof(TeamHeadline) or nameof(TeamMetaLine) or nameof(IsTargetArchived)
                 or nameof(IsBlockedByUndeclaredFolders) or nameof(IsBlockedByUnknownMountIds)
-                or nameof(IsBlockedByFileSystemScope) or nameof(IsBlockedByDecision):
+                or nameof(IsBlockedByFileSystemScope) or nameof(IsBlockedByDecision) or nameof(IsBlockedByBridge):
                 RaiseTeamTabChanged();
                 break;
             case nameof(RunLlmChoice):

@@ -324,6 +324,12 @@
                             Content="{Binding [Studio.Run.OpenDecisionSettings], Source={x:Static services:I18n.Instance}}"/>
                   </controls:Alert.Actions>
                 </controls:Alert>
+                <!-- The tool bridge of the file the run reads: a value its start refuses, or tools to bridge with no token. -->
+                <controls:Alert Tone="Danger" Margin="0,14,0,0" Message="{Binding BridgeMessage}"
+                                Visibility="{Binding IsBlockedByBridge, Converter={StaticResource BooleanToVisibility}}"/>
+                <!-- A bridge's address with no tool allowed on it: nothing is bridged. -->
+                <controls:Alert Tone="Info" Margin="0,14,0,0" Message="{Binding BridgeInfo}"
+                                Visibility="{Binding HasBridgeInfo, Converter={StaticResource BooleanToVisibility}}"/>
                 <!-- Orkeon #392: a task must write a file no agent that may run it can write, or a decision declares one. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding DeliverableWriterWarning}"
                                 Visibility="{Binding HasDeliverableWriterWarning, Converter={StaticResource BooleanToVisibility}}"/>

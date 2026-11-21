@@ -614,6 +614,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>A setting holds a value the engine refuses at start (a share outside its bounds, a size too small, a name it does not know): no run would start with it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>The run bridges tools to another machine and the bridge's token is not in its environment variable, or is shorter than 16 characters: the run refuses to start.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>The settings name a tool bridge's address and allow no tool on it: nothing is bridged, every tool runs on this machine.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>An added folder line starts with '-': the engine would read it as an option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.</value></data>
@@ -652,6 +654,22 @@
   <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Characters of all the skills of a prompt</value></data>
   <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Context window of the default model (tokens)</value></data>
   <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Empty: the window the engine documents for the model. A context is compacted against it. The window of another model profile is the ContextWindowTokens key of its section, in the JSON tab.</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>Tool bridge: tools that run on another machine</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>Some tools of a run, a browser for instance, can execute on another machine, where « orkeon bridge serve » runs them. Nothing is bridged while the address is empty or no tool is allowed.</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Address of the bridge</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>For example https://host:7410/. It ends with « / », and uses https unless the host is this machine or host.docker.internal.</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Tools to bridge</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Names separated by commas, or * alone for every tool the bridge serves.</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Tools never bridged</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Environment variable that holds the token</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host header, when it differs from the address's</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>The timeouts, sizes and limits keep the engine's defaults; change them in the JSON tab.</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>Tool bridge: tools this machine runs for another</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>« orkeon bridge serve » runs the tools allowed here for a caller on another machine, which holds the same token. Nothing is served while no tool is allowed. Studio does not start the bridge: run the command in a terminal.</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Address it listens on</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Tools served</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Names separated by commas, or * alone for every bridgeable Orkeon tool.</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Tools never served</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Finished without errors.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Failed (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrupted before the end.</value></data>
@@ -2156,6 +2174,7 @@
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Thinking levels to pick among</value></data>
   <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Among {0}, cheapest first, separated by commas, in lower case. Left empty: {1}.</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>the tool bridge</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} answers the decision tasks.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} answers the decision tasks, deduced from its section or its key.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>No provider is set up: the runs go without the decision models.</value></data>
@@ -2430,6 +2449,9 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>An agent's file-system scope does not fit the folders of this run.</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>The tool bridge of these settings stops the run at start: {0}</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Set the variable for your user account, then start Studio again.</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Not allowed</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Allow this folder</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

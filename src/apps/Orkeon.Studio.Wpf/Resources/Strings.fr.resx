@@ -614,6 +614,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Le fournisseur de décision qu'utilise l'exécution demande une clé et aucune n'est en place, ni dans sa variable ni dans le fichier de réglages : chaque requête qu'il reçoit échoue.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Un agent ou une tâche laisse System One choisir son profil (llm.profile: auto) et les réglages ne donnent aucune échelle d'au moins deux profils de modèle où choisir, ou un échelon ne nomme aucun profil : le moteur refuse l'équipe au chargement.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Un réglage contient une valeur que le moteur refuse au démarrage (une part hors de ses bornes, une taille trop petite, un nom qu'il ne connaît pas) : aucune exécution ne démarrerait avec elle.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>L'exécution ponte des outils vers une autre machine et le jeton du pont n'est pas dans sa variable d'environnement, ou fait moins de 16 caractères : l'exécution refuse de démarrer.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>Les réglages nomment l'adresse d'un pont d'outils sans y autoriser aucun outil : rien n'est ponté, chaque outil s'exécute sur cette machine.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Un agent ou une tâche utilise system_one_decide et l'exécution se passe des modèles de décision : avec Orkeon:CrewFactory:StrictTools à false, le moteur retient l'outil et exécute l'équipe sans lui.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve"><value>Une ligne de dossier ajoutée commence par « - » : le moteur la lirait comme une option.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID" xml:space="preserve"><value>Un identifiant de dossier n'est pas valide : ce sont les 26 caractères avant « | » d'un dossier déclaré.</value></data>
@@ -652,6 +654,22 @@
   <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Caractères de l'ensemble des compétences d'un prompt</value></data>
   <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Fenêtre de contexte du modèle par défaut (tokens)</value></data>
   <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Vide : la fenêtre que le moteur documente pour le modèle. La compaction d'un contexte se mesure à elle. La fenêtre d'un autre profil de modèle est la clé ContextWindowTokens de sa section, dans l'onglet JSON.</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>Pont d'outils : des outils exécutés sur une autre machine</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>Certains outils d'une exécution, un navigateur par exemple, peuvent s'exécuter sur une autre machine, où « orkeon bridge serve » les fait tourner. Rien n'est ponté tant que l'adresse est vide ou qu'aucun outil n'est autorisé.</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Adresse du pont</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Par exemple https://host:7410/. Elle se termine par « / » et utilise https, sauf si l'hôte est cette machine ou host.docker.internal.</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Outils à ponter</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules, ou * seul pour tous les outils que le pont sert.</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Outils jamais pontés</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Variable d'environnement qui contient le jeton</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>En-tête Host, quand il diffère de celui de l'adresse</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>Les délais, tailles et limites gardent les valeurs par défaut du moteur ; modifiez-les dans l'onglet JSON.</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>Pont d'outils : des outils que cette machine exécute pour une autre</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>« orkeon bridge serve » exécute les outils autorisés ici pour un appelant sur une autre machine, qui détient le même jeton. Rien n'est servi tant qu'aucun outil n'est autorisé. Studio ne démarre pas le pont : lancez la commande dans un terminal.</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Adresse d'écoute</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Outils servis</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules, ou * seul pour tous les outils Orkeon pontables.</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Outils jamais servis</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Terminée sans erreur.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Échouée (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrompue avant la fin.</value></data>
@@ -2156,6 +2174,7 @@
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0} : aucun profil de modèle de ces réglages ne porte ce nom, une équipe qui demande ce choix est donc refusée au chargement.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Niveaux de réflexion parmi lesquels choisir</value></data>
   <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Parmi {0}, du moins coûteux au plus coûteux, séparés par des virgules, en minuscules. Laissée vide : {1}.</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>le pont d'outils</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} répond aux tâches de décision.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} répond aux tâches de décision, déduit de sa section ou de sa clé.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>Aucun fournisseur n'est configuré : les exécutions se passent des modèles de décision.</value></data>
@@ -2430,6 +2449,9 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>La portée fichiers d'un agent ne tient pas dans les dossiers de cette exécution.</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>Le pont d'outils de ces réglages arrête l'exécution au démarrage : {0}</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Définissez la variable pour votre compte utilisateur, puis relancez Studio.</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>Ces réglages nomment un pont d'outils ({0}) sans y autoriser aucun outil : rien n'est ponté, chaque outil s'exécute sur cette machine.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Non autorisé</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Autoriser ce dossier</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">

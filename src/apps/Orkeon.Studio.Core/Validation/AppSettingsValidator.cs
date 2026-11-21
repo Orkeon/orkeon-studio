@@ -156,11 +156,15 @@ public sealed class AppSettingsValidator
     /// </summary>
     /// <summary>
     /// The sections the engine validates at start with rules of its own, judged by those very rules: the
-    /// compaction and the pruning of a context, and the skills. One error per refused value, at its key.
+    /// compaction and the pruning of a context, the skills, and both sides of the tool bridge (which every
+    /// host validates, the serving command or not). One error per refused value, at its key.
     /// </summary>
     private static void ValidateEngineSections(AppSettingsDocument document, List<ValidationMessage> messages)
     {
-        foreach (var (path, problem) in document.Compaction.Problems().Concat(document.Skills.Problems()))
+        foreach (var (path, problem) in document.Compaction.Problems()
+            .Concat(document.Skills.Problems())
+            .Concat(document.ToolBridge.Problems())
+            .Concat(document.BridgeServer.Problems()))
             messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path));
     }
 

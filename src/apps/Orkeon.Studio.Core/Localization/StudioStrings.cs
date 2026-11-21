@@ -816,6 +816,15 @@ public static class StudioStringKeys
     public const string RunBlockedFolders = "Studio.Run.BlockedFolders";
     public const string RunBlockedScope = "Studio.Run.BlockedScope";
 
+    /// <summary>A launch refused by the tool bridge of the settings the run reads: {0} is the reason, the engine's sentence or <see cref="RunBridgeTokenRefused"/>.</summary>
+    public const string RunBlockedBridge = "Studio.Run.BlockedBridge";
+
+    /// <summary>The reason of <see cref="RunBlockedBridge"/> when the token is missing or too short: {0} is the engine's sentence, which names the variable.</summary>
+    public const string RunBridgeTokenRefused = "Studio.Run.BridgeTokenRefused";
+
+    /// <summary>Information: the settings name a bridge's address, {0}, and allow no tool on it.</summary>
+    public const string RunInfoBridgeIdle = "Studio.Run.InfoBridgeIdle";
+
     /// <summary>"Not allowed" (UX lot 08).</summary>
     public const string RunFolderNotAllowed = "Studio.Run.FolderNotAllowed";
 
@@ -2580,6 +2589,9 @@ public static class StudioStringKeys
     /// <summary>How the levels are written: {0} every level the engine knows, {1} the ones it picks among when the list is empty.</summary>
     public const string SettingsDecisionEffortLevelsHint = "Studio.Settings.DecisionEffortLevelsHint";
 
+    /// <summary>Who reads the token the key row stores: the tool bridge.</summary>
+    public const string SettingsBridgeTokenUsedBy = "Studio.Settings.BridgeTokenUsedBy";
+
     /// <summary>The status line of a named provider; {0} is its name.</summary>
     public const string SettingsDecisionStatusNamed = "Studio.Settings.DecisionStatusNamed";
 
@@ -3388,6 +3400,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedNoTeam] = "Choose a team first.",
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
         [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
+        [StudioStringKeys.RunBlockedBridge] = "The tool bridge of these settings stops the run at start: {0}",
+        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Set the variable for your user account, then start Studio again.",
+        [StudioStringKeys.RunInfoBridgeIdle] = "These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
         [StudioStringKeys.RunFolderNotAllowed] = "Not allowed",
         [StudioStringKeys.RunAllowThisFolder] = "Allow this folder",
         [StudioStringKeys.RunBlockedArchived] = "This team is archived: restore it to launch it.",
@@ -3652,6 +3667,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-LADDER"] = "An agent or a task lets System One pick its profile (llm.profile: auto) and the settings give no ladder of two model profiles or more to pick on, or a rung names no profile: the engine refuses the team when it loads it.",
         ["Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED"] = "A setting holds a value the engine refuses at start (a share outside its bounds, a size too small, a name it does not know): no run would start with it.",
+        ["Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN"] = "The run bridges tools to another machine and the bridge's token is not in its environment variable, or is shorter than 16 characters: the run refuses to start.",
+        ["Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE"] = "The settings name a tool bridge's address and allow no tool on it: nothing is bridged, every tool runs on this machine.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
@@ -4302,6 +4319,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsDecisionLadderUnknown] = "{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.",
         [StudioStringKeys.SettingsDecisionEffortLevels] = "Thinking levels to pick among",
         [StudioStringKeys.SettingsDecisionEffortLevelsHint] = "Among {0}, cheapest first, separated by commas, in lower case. Left empty: {1}.",
+        [StudioStringKeys.SettingsBridgeTokenUsedBy] = "the tool bridge",
         [StudioStringKeys.SettingsDecisionStatusNamed] = "{0} answers the decision tasks.",
         [StudioStringKeys.SettingsDecisionStatusDeduced] = "{0} answers the decision tasks, deduced from its section or its key.",
         [StudioStringKeys.SettingsDecisionStatusNone] = "No provider is set up: the runs go without the decision models.",

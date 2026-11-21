@@ -132,6 +132,7 @@ internal sealed class RunLauncherViewModel
 
     /// <summary>The decision circuit of the settings file read here; null while the CLI resolves the file.</summary>
     private DecisionStatus? _settingsDecision;
+    private ToolBridgePreflightFinding? _settingsBridge;
 
     /// <summary>Options the form leaves enabled for the detected target.</summary>
     public IReadOnlyList<RunOption> AvailableOptions => LaunchOptionsModel.AvailableOptions(Target.Target);
@@ -200,6 +201,7 @@ internal sealed class RunLauncherViewModel
         messages.AddRange(ValidateFileSystemScopes(dryRun));
         messages.AddRange(ValidateDeliverableWriters());
         messages.AddRange(ValidateDecisionModels(dryRun));
+        messages.AddRange(ValidateToolBridge());
         return messages;
     }
 
@@ -214,6 +216,30 @@ internal sealed class RunLauncherViewModel
     /// key, and for a holder of the tool a lenient runner withholds; information for a crew that goes on
     /// its relays, its fallbacks and what the settings state.
     /// </summary>
+    /// <summary>
+    /// What the tool bridge of the settings file read here does to the run (<see cref="ToolBridgePreflight"/>):
+    /// an error when the host would refuse to start, a check included (a value of one of the bridge's
+    /// two sections it refuses, or tools to bridge with no token in its environment variable);
+    /// information when an address is named and no tool allowed. Nothing while the CLI resolves the
+    /// settings itself.
+    /// </summary>
+    private List<ValidationMessage> ValidateToolBridge() => _settingsBridge switch
+    {
+        null => [],
+        { Kind: ToolBridgePreflightKind.SettingsRefused } refused => [ValidationMessage.Error(
+            ValidationCodes.EngineSettingRefused,
+            "The tool bridge of the settings stops the run at start: " + refused.Reason,
+            refused.Path)],
+        { Kind: ToolBridgePreflightKind.TokenRefused } token => [ValidationMessage.Error(
+            ValidationCodes.BridgeToken,
+            "The tool bridge refuses the start: " + token.Reason,
+            ToolBridgeSection.SectionPath)],
+        var idle => [ValidationMessage.Information(
+            ValidationCodes.BridgeIdle,
+            $"The settings name a tool bridge ({idle.Reason}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
+            ToolBridgeSection.SectionPath)],
+    };
+
     private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
     {
         if (Target.Target is not { } target
@@ -477,6 +503,7 @@ internal sealed class RunLauncherViewModel
         var path = ResolvedSettingsPath;
         _settingsMountsKnown = false;
         _settingsDecision = null;
+        _settingsBridge = null;
 
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -504,6 +531,7 @@ internal sealed class RunLauncherViewModel
         SettingsMounts = document.Mounts.RawEntries;
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
+        _settingsBridge = ToolBridgePreflight.Check(document, _environment);
         SettingsMountsNotice = SettingsMounts.Count == 0
             ? $"'{path}' declares no mount."
             : null;

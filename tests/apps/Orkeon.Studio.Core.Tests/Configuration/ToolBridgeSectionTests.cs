@@ -1,0 +1,166 @@
+using System.Text.Json;
+using Orkeon.Studio.Core.Configuration;
+using Orkeon.Studio.Core.Launch;
+using Orkeon.Studio.Core.Validation;
+using Orkeon.Studio.Tests.Shared;
+
+namespace Orkeon.Studio.Core.Tests.Configuration;
+
+/// <summary>
+/// The tool bridge's two sections as Studio reads and writes them, their defaults against the engine's
+/// settings catalogue, and what a launch is told of the bridge.
+/// </summary>
+public sealed class ToolBridgeSectionTests
+{
+    private const string Token = "0123456789abcdef0123456789abcdef";
+
+    [Fact]
+    public void Every_key_is_written_in_place_and_removed_when_emptied()
+    {
+        var document = AppSettingsDocument.Parse("""{ "Orkeon": { "Tools": { "Bridge": { "MaxFileBytes": 1048576 }, "Shell": { "Enabled": true } } } }""");
+        var caller = document.ToolBridge;
+        caller.Address = " https://desk.example:7410/ ";
+        caller.Allow = ["*"];
+        caller.Deny = ["shell_command"];
+        caller.TokenEnvVar = "MY_BRIDGE_TOKEN";
+        caller.HostHeader = "desk.example:7410";
+        var server = document.BridgeServer;
+        server.Prefix = "https://0.0.0.0:7410/";
+        server.Allow = ["browser_open", "browser_click"];
+
+        var reparsed = AppSettingsDocument.Parse(document.ToJson());
+        Assert.Equal("https://desk.example:7410/", reparsed.ToolBridge.Address);
+        Assert.Equal(["*"], reparsed.ToolBridge.Allow);
+        Assert.Equal(["shell_command"], reparsed.ToolBridge.Deny);
+        Assert.Equal("MY_BRIDGE_TOKEN", reparsed.ToolBridge.EffectiveTokenEnvVar);
+        Assert.Equal(1048576, reparsed.ToolBridge.MaxFileBytes);
+        Assert.True(reparsed.ToolBridge.IsEnabled);
+        Assert.Equal("https://0.0.0.0:7410/", reparsed.BridgeServer.Prefix);
+        Assert.True(reparsed.BridgeServer.IsServing);
+        // The neighbours Studio models elsewhere stay.
+        Assert.True(reparsed.GetBoolean("Orkeon:Tools:Shell:Enabled"));
+        Assert.Empty(reparsed.ToolBridge.Problems());
+        Assert.Empty(reparsed.BridgeServer.Problems());
+
+        caller.Address = "";
+        caller.Allow = [];
+        caller.TokenEnvVar = null;
+        Assert.False(document.ContainsPath("Orkeon:Tools:Bridge:Address"));
+        Assert.False(document.ContainsPath("Orkeon:Tools:Bridge:Allow"));
+        Assert.Equal(ToolBridgeSection.DefaultTokenEnvVar, caller.EffectiveTokenEnvVar);
+        Assert.False(caller.IsEnabled);
+    }
+
+    /// <summary>
+    /// The engine's options classes are internal: the defaults Studio shows are copied, and pinned here
+    /// against the engine's own settings catalogue, key by key. A key the catalogue adds to either
+    /// section fails here too, so the rules restated for it are looked at.
+    /// </summary>
+    [Fact]
+    public void The_defaults_are_those_of_the_engines_settings_catalogue()
+    {
+        var catalogue = Path.Combine(
+            OrkeonSources.Root(), "src", "hosting", "Orkeon.Hosting", "Settings", "Catalog", "library.json");
+        using var library = JsonDocument.Parse(File.ReadAllText(catalogue));
+        var settings = library.RootElement.GetProperty("settings").EnumerateArray()
+            .Where(setting => setting.TryGetProperty("section", out var section)
+                && section.GetString() is ToolBridgeSection.SectionPath or BridgeServerSection.SectionPath)
+            .ToDictionary(setting => setting.GetProperty("path").GetString()!, setting => setting, StringComparer.Ordinal);
+
+        string Default(string path) => settings[path].GetProperty("default").ToString();
+
+        Assert.Equal(
+            [
+                "Orkeon:Bridge:Allow", "Orkeon:Bridge:Deny", "Orkeon:Bridge:HeartbeatWindow", "Orkeon:Bridge:MaxCallsPerSession",
+                "Orkeon:Bridge:MaxConcurrentCalls", "Orkeon:Bridge:MaxFileBytes", "Orkeon:Bridge:MaxRequestBytes",
+                "Orkeon:Bridge:MaxRunsPerSession", "Orkeon:Bridge:MaxSessions", "Orkeon:Bridge:Prefix",
+                "Orkeon:Bridge:RequestReadTimeout", "Orkeon:Bridge:StopTimeout", "Orkeon:Bridge:TokenEnvVar",
+                "Orkeon:Tools:Bridge:Address", "Orkeon:Tools:Bridge:Allow", "Orkeon:Tools:Bridge:ConnectTimeout",
+                "Orkeon:Tools:Bridge:Deny", "Orkeon:Tools:Bridge:HostHeader", "Orkeon:Tools:Bridge:MaxFileBytes",
+                "Orkeon:Tools:Bridge:MaxResponseBytes", "Orkeon:Tools:Bridge:TokenEnvVar",
+            ],
+            settings.Keys.Order(StringComparer.Ordinal));
+
+        Assert.Equal(ToolBridgeSection.DefaultTokenEnvVar, Default("Orkeon:Tools:Bridge:TokenEnvVar"));
+        Assert.Equal(ToolBridgeSection.DefaultConnectTimeout, Default("Orkeon:Tools:Bridge:ConnectTimeout"));
+        Assert.Equal(ToolBridgeSection.DefaultMaxFileBytes, settings["Orkeon:Tools:Bridge:MaxFileBytes"].GetProperty("default").GetInt64());
+        Assert.Equal(ToolBridgeSection.DefaultMaxResponseBytes, settings["Orkeon:Tools:Bridge:MaxResponseBytes"].GetProperty("default").GetInt64());
+        Assert.Equal(ToolBridgeSection.DefaultTokenEnvVar, Default("Orkeon:Bridge:TokenEnvVar"));
+        Assert.Equal(ToolBridgeSection.DefaultMaxFileBytes, settings["Orkeon:Bridge:MaxFileBytes"].GetProperty("default").GetInt64());
+        Assert.Equal(BridgeServerSection.DefaultMaxRequestBytes, settings["Orkeon:Bridge:MaxRequestBytes"].GetProperty("default").GetInt64());
+        Assert.Equal(BridgeServerSection.DefaultHeartbeatWindow, Default("Orkeon:Bridge:HeartbeatWindow"));
+        Assert.Equal(BridgeServerSection.DefaultRequestReadTimeout, Default("Orkeon:Bridge:RequestReadTimeout"));
+        Assert.Equal(BridgeServerSection.DefaultStopTimeout, Default("Orkeon:Bridge:StopTimeout"));
+        Assert.Equal(BridgeServerSection.DefaultMaxSessions, settings["Orkeon:Bridge:MaxSessions"].GetProperty("default").GetInt32());
+        Assert.Equal(BridgeServerSection.DefaultMaxConcurrentCalls, settings["Orkeon:Bridge:MaxConcurrentCalls"].GetProperty("default").GetInt32());
+        Assert.Equal(BridgeServerSection.DefaultMaxCallsPerSession, settings["Orkeon:Bridge:MaxCallsPerSession"].GetProperty("default").GetInt32());
+        Assert.Equal(BridgeServerSection.DefaultMaxRunsPerSession, settings["Orkeon:Bridge:MaxRunsPerSession"].GetProperty("default").GetInt32());
+        // The prefix depends on the platform: the catalogue states both in a note.
+        var note = settings["Orkeon:Bridge:Prefix"].GetProperty("defaultNote").GetString();
+        Assert.Contains(BridgeServerSection.DefaultPrefixElsewhere, note, StringComparison.Ordinal);
+        Assert.Contains(BridgeServerSection.DefaultPrefixWindows, note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_refused_value_of_either_side_is_an_error_of_the_settings_check_at_its_key()
+    {
+        var messages = new AppSettingsValidator().Validate(AppSettingsDocument.Parse("""
+            { "Orkeon": { "Tools": { "Bridge": { "Address": "http://desk.example:7410/" } }, "Bridge": { "MaxSessions": 0 } } }
+            """));
+
+        var errors = messages.Where(m => m.Code == ValidationCodes.EngineSettingRefused).ToList();
+        Assert.Equal(["Orkeon:Tools:Bridge:Address", "Orkeon:Bridge:MaxSessions"], errors.Select(m => m.Path));
+        Assert.Contains("requires https", errors[0].Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_launch_is_told_nothing_without_a_bridge_and_that_nothing_is_bridged_without_a_tool()
+    {
+        Assert.Null(ToolBridgePreflight.Check(AppSettingsDocument.CreateEmpty(), _ => null));
+
+        var idle = Assert.IsType<ToolBridgePreflightFinding>(ToolBridgePreflight.Check(
+            AppSettingsDocument.Parse("""{ "Orkeon": { "Tools": { "Bridge": { "Address": "https://desk.example:7410/" } } } }"""),
+            _ => null));
+        Assert.Equal(ToolBridgePreflightKind.NothingBridged, idle.Kind);
+        Assert.Equal("https://desk.example:7410/", idle.Reason);
+        Assert.False(idle.BlocksStart);
+    }
+
+    [Fact]
+    public void A_launch_that_bridges_tools_needs_the_token_in_the_variable_the_section_names()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Orkeon": { "Tools": { "Bridge": { "Address": "https://desk.example:7410/", "Allow": ["*"], "TokenEnvVar": "DESK_TOKEN" } } } }
+            """);
+
+        var missing = Assert.IsType<ToolBridgePreflightFinding>(ToolBridgePreflight.Check(document, _ => null));
+        Assert.Equal(ToolBridgePreflightKind.TokenRefused, missing.Kind);
+        Assert.Contains("DESK_TOKEN, which is not set", missing.Reason, StringComparison.Ordinal);
+        Assert.True(missing.BlocksStart);
+
+        var tooShort = ToolBridgePreflight.Check(document, name => name == "DESK_TOKEN" ? "short" : null);
+        Assert.Contains("shorter than 16 characters", tooShort?.Reason, StringComparison.Ordinal);
+
+        Assert.Null(ToolBridgePreflight.Check(document, name => name == "DESK_TOKEN" ? Token : null));
+        // The default variable is not the one read once the section names another.
+        Assert.NotNull(ToolBridgePreflight.Check(document, name => name == ToolBridgeSection.DefaultTokenEnvVar ? Token : null));
+    }
+
+    [Fact]
+    public void A_value_the_start_refuses_stops_the_launch_whichever_side_holds_it()
+    {
+        var caller = Assert.IsType<ToolBridgePreflightFinding>(ToolBridgePreflight.Check(
+            AppSettingsDocument.Parse("""{ "Orkeon": { "Tools": { "Bridge": { "Address": "desk.example", "Allow": ["*"] } } } }"""),
+            _ => Token));
+        Assert.Equal(ToolBridgePreflightKind.SettingsRefused, caller.Kind);
+        Assert.Equal("Orkeon:Tools:Bridge:Address", caller.Path);
+        Assert.True(caller.BlocksStart);
+
+        // Every host validates the serving section too, the run bridging anything or not.
+        var server = Assert.IsType<ToolBridgePreflightFinding>(ToolBridgePreflight.Check(
+            AppSettingsDocument.Parse("""{ "Orkeon": { "Bridge": { "Allow": ["browser_*"] } } }"""),
+            _ => null));
+        Assert.Equal(ToolBridgePreflightKind.SettingsRefused, server.Kind);
+        Assert.Equal("Orkeon:Bridge:Allow", server.Path);
+    }
+}

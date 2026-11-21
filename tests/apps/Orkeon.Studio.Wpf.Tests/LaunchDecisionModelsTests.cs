@@ -384,4 +384,46 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.True(tab.IsBlockedByDecision);
         Assert.Equal(tab.DecisionMessage, tab.StatusMessage);
     }
+
+    /// <summary>
+    /// The tool bridge of the file the run reads: tools to bridge with no token in its variable stop the
+    /// run at start, a check included; the token stored, the launch is offered again.
+    /// </summary>
+    [Fact]
+    public void A_bridge_without_its_token_stops_the_launch_and_the_check_until_the_token_is_in_place()
+    {
+        var keys = new FakeApiKeyStore();
+        var tab = Launcher(
+            NewTeam(),
+            """{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":["*"]}}}}""",
+            keys: keys);
+
+        Assert.True(tab.IsBlockedByBridge);
+        Assert.Contains("ORKEON_BRIDGE_TOKEN, which is not set", tab.BridgeMessage, StringComparison.Ordinal);
+        Assert.False(tab.RunCommand.CanExecute(null));
+        Assert.False(tab.ValidateCommand.CanExecute(null));
+        Assert.Equal(tab.BridgeMessage, tab.LaunchBlockedReason);
+
+        keys.Stage("ORKEON_BRIDGE_TOKEN", "0123456789abcdef0123456789abcdef");
+        tab.RefreshDecision();
+
+        Assert.False(tab.IsBlockedByBridge);
+        Assert.Equal("", tab.BridgeMessage);
+        Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void A_bridge_setting_the_engine_refuses_stops_the_launch_and_an_address_without_a_tool_only_informs()
+    {
+        var refused = Launcher(NewTeam(), """{"Orkeon":{"Bridge":{"MaxSessions":0}}}""");
+        Assert.True(refused.IsBlockedByBridge);
+        Assert.Contains("Orkeon:Bridge:MaxSessions must lie between 1 and 1024", refused.BridgeMessage, StringComparison.Ordinal);
+        Assert.False(refused.HasBridgeInfo);
+
+        var idle = Launcher(NewTeam(name: "idle"), """{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/"}}}}""");
+        Assert.False(idle.IsBlockedByBridge);
+        Assert.True(idle.HasBridgeInfo);
+        Assert.Contains("https://desk.example:7410/", idle.BridgeInfo, StringComparison.Ordinal);
+        Assert.True(idle.RunCommand.CanExecute(null));
+    }
 }

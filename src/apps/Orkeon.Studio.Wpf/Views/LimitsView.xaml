@@ -1,5 +1,5 @@
 <!-- The "Limites & journaux" settings tab (design v3, expert only): rate limits, the RAG
-     index, the logging sections, the compaction of a context and the skills. DataContext: ConfigTabViewModel (bound as Settings.Config).
+     index, the logging sections, the compaction of a context, the skills and both sides of the tool bridge. DataContext: ConfigTabViewModel (bound as Settings.Config).
      Card titles are plain language (T-08); the literal configuration key rides each title's tooltip — technical
      identifiers, identical in every language, hence not routed through I18n. Every field whose engine default is
      a value carries it as a watermark through Tag (STUDIO-22); the switches are one-click booleans. -->
@@ -17,7 +17,7 @@
         <ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
       <!-- RateLimiting -->
@@ -188,6 +188,58 @@
           <TextBox Style="{StaticResource Input}" Text="{Binding Skills.MaxBlockChars, UpdateSourceTrigger=LostFocus, TargetNullValue=''}" Tag="{x:Static config:SkillsSectionViewModel.MaxBlockCharsDefault}"/>
           <controls:Alert Margin="0,12,0,0" Tone="Danger" Message="{Binding Skills.ProblemsText}"
                           Visibility="{Binding Skills.ProblemsText, Converter={StaticResource StringPresentToVisibility}}"/>
+        </StackPanel>
+      </Border>
+      <!-- Orkeon:Tools:Bridge: the tools of a run that execute on another machine (the caller's side) -->
+      <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <controls:LucideIcon Kind="plug-zap" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+            <TextBlock Style="{StaticResource CardTitle}" ToolTip="Orkeon:Tools:Bridge" TextWrapping="Wrap"
+                     Text="{Binding [Studio.Settings.CardBridgeCaller], Source={x:Static services:I18n.Instance}}"/>
+          </StackPanel>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeCallerIntro], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.LblBridgeAddress], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding ToolBridge.Address, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeAddressHint], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeAllow], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding ToolBridge.AllowText, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeAllowHint], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeDeny], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding ToolBridge.DenyText, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeTokenVar], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding ToolBridge.TokenEnvVar, UpdateSourceTrigger=LostFocus}" Tag="{x:Static config:ToolBridgeSectionViewModel.TokenEnvVarDefault}"/>
+          <!-- the token: stored in the user environment under that variable, never in the file -->
+          <ContentControl Margin="0,12,0,0" Content="{Binding ToolBridge.Token}" ContentTemplate="{StaticResource KeyRowTemplate}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeHostHeader], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding ToolBridge.HostHeader, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeAdvancedHint], Source={x:Static services:I18n.Instance}}"/>
+          <controls:Alert Margin="0,12,0,0" Tone="Danger" Message="{Binding ToolBridge.ProblemsText}"
+                          Visibility="{Binding ToolBridge.ProblemsText, Converter={StaticResource StringPresentToVisibility}}"/>
+        </StackPanel>
+      </Border>
+
+      <!-- Orkeon:Bridge: the tools orkeon bridge serve runs on this machine for a caller (the serving side) -->
+      <Border Grid.Row="3" Grid.Column="2" Style="{StaticResource Card}" Margin="0,16,0,0" VerticalAlignment="Top">
+        <StackPanel>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <controls:LucideIcon Kind="plug-zap" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+            <TextBlock Style="{StaticResource CardTitle}" ToolTip="Orkeon:Bridge" TextWrapping="Wrap"
+                     Text="{Binding [Studio.Settings.CardBridgeServer], Source={x:Static services:I18n.Instance}}"/>
+          </StackPanel>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,10" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeServerIntro], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.LblBridgePrefix], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding BridgeServer.Prefix, UpdateSourceTrigger=LostFocus}" Tag="{x:Static config:BridgeServerSectionViewModel.PrefixDefault}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeServeAllow], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding BridgeServer.AllowText, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeServeAllowHint], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeServeDeny], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding BridgeServer.DenyText, UpdateSourceTrigger=LostFocus}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,10,0,0" Text="{Binding [Studio.Settings.LblBridgeTokenVar], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMono}" Text="{Binding BridgeServer.TokenEnvVar, UpdateSourceTrigger=LostFocus}" Tag="{x:Static config:ToolBridgeSectionViewModel.TokenEnvVarDefault}"/>
+          <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.BridgeAdvancedHint], Source={x:Static services:I18n.Instance}}"/>
+          <controls:Alert Margin="0,12,0,0" Tone="Danger" Message="{Binding BridgeServer.ProblemsText}"
+                          Visibility="{Binding BridgeServer.ProblemsText, Converter={StaticResource StringPresentToVisibility}}"/>
         </StackPanel>
       </Border>
     </Grid>

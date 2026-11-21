@@ -71,6 +71,8 @@ public sealed class ConfigTabViewModel : ObservableObject
         Mcp = new McpSectionViewModel(() => _document, MarkDirty, _strings);
         // The decision models: their keys go to the store of the model keys, never to the document.
         Decision = new DecisionSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
+        ToolBridge = new ToolBridgeSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
+        BridgeServer = new BridgeServerSectionViewModel(() => _document, MarkDirty);
 
         Mounts = new MountsEditorViewModel(seams.Directories, Picker, requireAtLeastOne: true, _strings, seams.Clipboard);
         Mounts.Changed += OnMountsChanged;
@@ -215,6 +217,12 @@ public sealed class ConfigTabViewModel : ObservableObject
 
     /// <summary>The <c>Orkeon:Skills</c> form.</summary>
     public SkillsSectionViewModel Skills { get; }
+
+    /// <summary>The <c>Orkeon:Tools:Bridge</c> form: the tools of a run that execute on another machine.</summary>
+    public ToolBridgeSectionViewModel ToolBridge { get; }
+
+    /// <summary>The <c>Orkeon:Bridge</c> form: the tools <c>orkeon bridge serve</c> runs for a caller.</summary>
+    public BridgeServerSectionViewModel BridgeServer { get; }
 
     /// <summary>The <c>Orkeon:Tools:Shell</c> form of the Tools tab (STUDIO-21).</summary>
     public ShellToolsSectionViewModel ShellTools { get; }
@@ -369,6 +377,8 @@ public sealed class ConfigTabViewModel : ObservableObject
         LlmLogging.Refresh();
         Compaction.Refresh();
         Skills.Refresh();
+        ToolBridge.Refresh();
+        BridgeServer.Refresh();
         ShellTools.Refresh();
         Mcp.Refresh();
         Decision.Refresh();
