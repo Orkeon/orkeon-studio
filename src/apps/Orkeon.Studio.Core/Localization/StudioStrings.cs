@@ -177,6 +177,15 @@ public static class StudioStringKeys
     /// <summary>"The assistant is not running any more — …"</summary>
     public const string WizardAssistantNotRunning = "Studio.Create.AssistantNotRunning";
 
+    /// <summary>The choice of a team that asks nothing of the decision models: the engine's default.</summary>
+    public const string WizardCrewDecisionNone = "Studio.Create.CrewDecisionNone";
+
+    /// <summary>The choice of a team that runs with the decision models or without them.</summary>
+    public const string WizardCrewDecisionOptional = "Studio.Create.CrewDecisionOptional";
+
+    /// <summary>The choice of a team that cannot run without the decision models.</summary>
+    public const string WizardCrewDecisionRequired = "Studio.Create.CrewDecisionRequired";
+
     /// <summary>"Rewriting your request…" — the status line while <c>forge rephrase</c> runs (STUDIO-57).</summary>
     public const string WizardRephrasing = "Studio.Create.Rephrasing";
 
@@ -3475,6 +3484,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DiagSettingsFileOk] = "The settings file is valid.",
         [StudioStringKeys.DiagSettingsFileInvalid] = "The settings file has errors: Studio cannot save it.",
         [StudioStringKeys.WizardAssistantNotRunning] = "The assistant is not running — start the composition (step 1, Composer) or resume the session; your question was kept.",
+        [StudioStringKeys.WizardCrewDecisionNone] = "No: the team never asks them",
+        [StudioStringKeys.WizardCrewDecisionOptional] = "When available: the team runs with or without them",
+        [StudioStringKeys.WizardCrewDecisionRequired] = "Always: the team cannot run without them",
         [StudioStringKeys.WizardRephrasing] = "Rewriting your request…",
         [StudioStringKeys.WizardRephrased] = "Request rewritten — « Back to my words » restores what you typed.",
         [StudioStringKeys.WizardRephraseFailed] = "The request could not be rewritten: {0}",

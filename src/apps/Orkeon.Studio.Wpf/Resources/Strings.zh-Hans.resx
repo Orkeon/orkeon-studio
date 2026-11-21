@@ -2345,6 +2345,13 @@
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve">
     <value>助手当前未在运行——请启动组建（第 1 步「组建」）或恢复会话；您的问题已保留。</value>
   </data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>否：团队从不询问它们</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>可用时使用：团队无论有无它们都能运行</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>始终：团队离不开它们</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>团队是否使用决策模型（System One）？</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>它们以概率回答问题：走哪条路径、某项工作是否就绪。此选择在组建团队时确定并随团队保留；选择“可用时使用”时，试运行会执行两次，先使用它们，再不使用。</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>组建时不询问决策模型</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>助手在组建团队时自身也可能询问它们。未配置决策模型或想要对比时，请勾选此项。</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>助手仍在处理「{0}」——请先停止它，或等它完成，再打开一个团队。</value>
   </data>

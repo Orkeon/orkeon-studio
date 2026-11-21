@@ -152,7 +152,21 @@ public sealed record ForgeVerdictView(
 
     /// <summary>Cache-missed prompt tokens of the last trial.</summary>
     public long? CacheMissTokens { get; init; }
+
+    /// <summary>
+    /// The verdict of each pass of the trial, in the engine's order: one pass for a crew that asks
+    /// nothing of System One or cannot run without it, two for one that runs either way, with the
+    /// decision models (<c>on</c>) then without them (<c>off</c>). Empty from an engine that predates
+    /// the passes.
+    /// </summary>
+    public IReadOnlyList<ForgeVerdictPassView> Passes { get; init; } = [];
 }
+
+/// <summary>The verdict of one pass of a trial.</summary>
+/// <param name="Circuit">Whether the pass ran with the decision models: <c>on</c> or <c>off</c>.</param>
+/// <param name="Passing">Whether the pass met the acceptance.</param>
+/// <param name="Score">Its score, from 0 to 1.</param>
+public sealed record ForgeVerdictPassView(string Circuit, bool Passing, double Score);
 
 /// <summary>
 /// One line of the ✔/✘ checklist: a criterion's statement, whether it held — null when the
@@ -233,6 +247,39 @@ public sealed class ForgeSessionModel
 
     /// <summary>Whether this run resumed an existing session.</summary>
     public bool Resumed { get; private set; }
+
+    /// <summary>
+    /// The decision mode of the crew the session designs (<see cref="ForgeCrewDecisions"/>), as the
+    /// engine states it at <c>session.started</c>; null from an engine that predates the modes.
+    /// </summary>
+    public string? CrewDecision { get; private set; }
+
+    /// <summary>
+    /// Whether the assistant asks System One for its own work on this run: <c>on</c> or <c>off</c>; null
+    /// from an engine that predates it.
+    /// </summary>
+    public string? ForgeCircuit { get; private set; }
+
+    /// <summary>Why the assistant goes without System One (<c>switch</c>, <c>settings</c>, <c>no-provider</c>); null when it does not.</summary>
+    public string? ForgeCircuitCause { get; private set; }
+
+    /// <summary>How many questions the assistant asked System One on this run.</summary>
+    public int SystemOneAnswers { get; private set; }
+
+    /// <summary>
+    /// The tokens the assistant's own System One calls spent, already in <see cref="TokensSpent"/>;
+    /// null until the engine says, and from one that predates it.
+    /// </summary>
+    public long? SystemOneTokens { get; private set; }
+
+    /// <summary>The pass of the trial under way, from 1; null when the engine names none.</summary>
+    public int? TrialPass { get; private set; }
+
+    /// <summary>How many passes the trial under way runs; null when the engine names none.</summary>
+    public int? TrialPasses { get; private set; }
+
+    /// <summary>Whether the pass under way runs with the decision models: <c>on</c> or <c>off</c>; null when the engine does not say.</summary>
+    public string? TrialCircuit { get; private set; }
 
     /// <summary>
     /// The use case the session is composed from (STUDIO-40), from <c>session.started</c> — live,
@@ -503,6 +550,10 @@ public sealed class ForgeSessionModel
                 ProposedFoldersAreDefaults = false;
                 ReferenceUseCaseId = ReadReferenceId(orkeonEvent);
                 Resumed = orkeonEvent.GetBool("resumed") ?? false;
+                CrewDecision = ForgeCrewDecisions.Normalize(orkeonEvent.GetString("crewDecision"));
+                ForgeCircuit = orkeonEvent.GetString("forgeCircuit");
+                ForgeCircuitCause = orkeonEvent.GetString("forgeCircuitCause");
+                SystemOneAnswers = 0;
                 EngineVersion = orkeonEvent.GetString("engine");
                 FinishedStatus = null;
                 break;
@@ -562,6 +613,10 @@ public sealed class ForgeSessionModel
             case ForgeEventKinds.RunStarted:
                 RunNumber = (int)(orkeonEvent.GetInt64("run") ?? 0);
                 RunInProgress = true;
+                // A crew that runs either way is tried twice, with the decision models then without.
+                TrialPass = (int?)orkeonEvent.GetInt64("pass");
+                TrialPasses = (int?)orkeonEvent.GetInt64("passes");
+                TrialCircuit = orkeonEvent.GetString("circuit");
                 _activity.Clear();
                 _mailActions.Clear();
                 break;
@@ -586,6 +641,7 @@ public sealed class ForgeSessionModel
                 PromptTokens = orkeonEvent.GetInt64("promptTokens") ?? PromptTokens;
                 CompletionTokens = orkeonEvent.GetInt64("completionTokens") ?? CompletionTokens;
                 EstimatedTokens = orkeonEvent.GetInt64("estimatedTokens") ?? EstimatedTokens;
+                SystemOneTokens = orkeonEvent.GetInt64("systemOneTokens") ?? SystemOneTokens;
                 TokensRemaining = orkeonEvent.GetInt64("budgetRemaining");
                 break;
 
@@ -593,6 +649,10 @@ public sealed class ForgeSessionModel
                 RunInProgress = false;
                 _mailActions.Clear();
                 _mailActions.AddRange(ReadMailActions(orkeonEvent.Root));
+                break;
+
+            case ForgeEventKinds.SystemOneAnswered:
+                SystemOneAnswers++;
                 break;
 
             case ForgeEventKinds.VerdictReady:
@@ -1245,7 +1305,28 @@ public sealed class ForgeSessionModel
             CompletionTokens = orkeonEvent.GetInt64("completionTokens"),
             CacheHitTokens = orkeonEvent.GetInt64("cacheHitTokens"),
             CacheMissTokens = orkeonEvent.GetInt64("cacheMissTokens"),
+            Passes = ReadPasses(orkeonEvent.Root),
         };
+    }
+
+    private static List<ForgeVerdictPassView> ReadPasses(JsonElement root)
+    {
+        var passes = new List<ForgeVerdictPassView>();
+        if (!root.TryGetProperty("passes", out var raw) || raw.ValueKind != JsonValueKind.Array)
+            return passes;
+
+        foreach (var pass in raw.EnumerateArray())
+        {
+            if (pass.ValueKind != JsonValueKind.Object || ReadString(pass, "circuit") is not { Length: > 0 } circuit)
+                continue;
+
+            passes.Add(new ForgeVerdictPassView(
+                circuit,
+                pass.TryGetProperty("passing", out var passing) && passing.ValueKind == JsonValueKind.True,
+                pass.TryGetProperty("score", out var score) && score.ValueKind == JsonValueKind.Number ? score.GetDouble() : 0.0));
+        }
+
+        return passes;
     }
 
     private static string? ReadString(JsonElement element, string name) =>

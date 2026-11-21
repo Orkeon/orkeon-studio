@@ -74,6 +74,14 @@ public static class ForgeEventKinds
     /// <summary>The diagnosis produced its verdict.</summary>
     public const string VerdictReady = "verdict.ready";
 
+    /// <summary>
+    /// The assistant asked System One a question for its own work (which process, how well a need is
+    /// covered, an estimate, the criteria): <c>stage</c>, <c>use</c>, <c>circuit</c>, <c>questions</c>,
+    /// <c>answers</c>, <c>model</c> and its tokens. Absent from an engine that predates it, and from a
+    /// run started with <c>--no-decision</c>.
+    /// </summary>
+    public const string SystemOneAnswered = "systemone.answered";
+
     /// <summary>The engine waits for a human arbitration.</summary>
     public const string DecisionNeeded = "decision.needed";
 

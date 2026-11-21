@@ -894,6 +894,13 @@
   <data name="Studio.Settings.MailCredentialsDirectoryDefault" xml:space="preserve"><value>credentials, beside your settings file</value></data>
   <data name="Studio.Settings.MailCredentialsDirectoryHint" xml:space="preserve"><value>A path on this machine, not one of the authorized folders. A relative path starts from the settings file that names it.</value></data>
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve"><value>The assistant is not running — start the composition (step 1, Composer) or resume the session; your question was kept.</value></data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>No: the team never asks them</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>When available: the team runs with or without them</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Always: the team cannot run without them</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Should the team use the decision models (System One)?</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>They answer a question with a probability: which path to take, whether a piece of work is ready. The choice is made when the team is composed and stays with it; with « When available », the trial runs twice, with them then without.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Compose without asking the decision models</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>The assistant itself may ask them while it composes the team. Tick this when they are not set up, or to compare.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve"><value>The assistant is still busy with « {0} » — stop it, or let it finish, before opening a team.</value></data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve"><value>Copy</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve"><value>Temperature (optional)</value></data>

@@ -441,6 +441,10 @@ public sealed record CreateTeamDependencies
     /// </summary>
     public Func<string, Task>? PrepareSchedule { get; init; }
 }
+/// <summary>One entry of the wizard's decision-mode list.</summary>
+/// <param name="Mode">The mode as the engine spells it (<see cref="ForgeCrewDecisions"/>).</param>
+/// <param name="Label">What the list shows.</param>
+public sealed record WizardCrewDecisionChoice(string Mode, string Label);
 
 /// <summary>
 /// The "create a team" wizard (design v3): four steps — Describe, Compose, Try,
@@ -642,6 +646,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         RemoveReferenceUseCaseCommand = new RelayCommand(RemoveReferenceUseCase, () => HasReferenceUseCase);
         Gallery.PropertyChanged += (_, e) => OnGalleryPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnUseCaseLanguageChanged();
+        _strings.CultureChanged += (_, _) => OnPropertiesChanged(nameof(CrewDecisionChoices), nameof(SelectedCrewDecision));
 
         Profiles.PropertyChanged += (_, e) => OnProfilesPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnAdoptProfileLanguageChanged();
@@ -1275,6 +1280,48 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
     /// <summary>Whether the reference chip shows.</summary>
     public bool HasReferenceUseCase => _referenceUseCaseId is not null;
+
+    private string _crewDecision = ForgeCrewDecisions.None;
+    private bool _designWithoutSystemOne;
+
+    /// <summary>
+    /// What the team to compose asks of the decision models (System One), in the engine's order: nothing,
+    /// them when they are available, or them always. Worded in the interface's language.
+    /// </summary>
+    public IReadOnlyList<WizardCrewDecisionChoice> CrewDecisionChoices =>
+    [
+        new(ForgeCrewDecisions.None, _strings[StudioStringKeys.WizardCrewDecisionNone]),
+        new(ForgeCrewDecisions.Optional, _strings[StudioStringKeys.WizardCrewDecisionOptional]),
+        new(ForgeCrewDecisions.Required, _strings[StudioStringKeys.WizardCrewDecisionRequired]),
+    ];
+
+    /// <summary>
+    /// The entry of <see cref="CrewDecisionChoices"/> a new creation is composed with
+    /// (<c>orkeon forge --crew-decision</c>). A session keeps the mode it was created with: once the
+    /// engine has stated it, the list shows that one.
+    /// </summary>
+    public WizardCrewDecisionChoice SelectedCrewDecision
+    {
+        get => CrewDecisionChoices.First(choice => choice.Mode == _crewDecision);
+        set
+        {
+            // A null comes from the list rebuilt under its selection, never from a pick.
+            if (value is null || value.Mode == _crewDecision)
+                return;
+            _crewDecision = value.Mode;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Whether the assistant composes without asking the decision models for its own work
+    /// (<c>orkeon forge --no-decision</c>): each run of the assistant, a resume included.
+    /// </summary>
+    public bool DesignWithoutSystemOne
+    {
+        get => _designWithoutSystemOne;
+        set => SetProperty(ref _designWithoutSystemOne, value);
+    }
 
     /// <summary>« Inspired by: Competitive watch » — the title in the UI's language.</summary>
     public string ReferenceUseCaseLabel => _referenceUseCaseId is { } id
@@ -2765,7 +2812,15 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
         // The assistant converses in the interface's language and names the team in it (#119),
         // every run: a resume is a new process, and it must not fall back on the default.
-        request = request with { Language = _uiLanguage() };
+        request = request with
+        {
+            Language = _uiLanguage(),
+            // The engine's own default is not passed: the command line stays the one an engine that
+            // predates the option reads. The builder keeps the mode to a new session and the switch
+            // off an adoption.
+            CrewDecision = _crewDecision == ForgeCrewDecisions.None ? null : _crewDecision,
+            NoDecision = _designWithoutSystemOne,
+        };
 
         IsEngineRunning = true;
         // UX lot 05 (011-012): a new run takes back the interrupted brief's « Resume ».
@@ -3324,6 +3379,13 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
     private void SyncFromModel()
     {
+        // The mode the session was created with, once the engine states it: the list shows it.
+        if (_model.CrewDecision is { } stated && stated != _crewDecision)
+        {
+            _crewDecision = stated;
+            OnPropertyChanged(nameof(SelectedCrewDecision));
+        }
+
         // A fresh engine error must reach the status line (review D3): a refused blueprint
         // edit (FORGE-BLUEPRINT-INVALID) is otherwise invisible in novice mode — the editor
         // closes and nothing says why nothing changed. Recoverable OR NOT: the unrecoverable

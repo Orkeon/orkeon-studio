@@ -2345,6 +2345,13 @@
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve">
     <value>El asistente no se está ejecutando — inicie la composición (paso 1, Componer) o reanude la sesión; su pregunta se ha conservado.</value>
   </data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>No: el equipo nunca los consulta</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>Cuando estén disponibles: el equipo se ejecuta con o sin ellos</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Siempre: el equipo no puede ejecutarse sin ellos</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>¿Debe el equipo usar los modelos de decisión (System One)?</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Responden a una pregunta con una probabilidad: qué camino seguir, si un trabajo está listo. La elección se hace al componer el equipo y se queda con él; con «Cuando estén disponibles», la prueba se ejecuta dos veces, con ellos y luego sin ellos.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Componer sin consultar los modelos de decisión</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>El propio asistente puede consultarlos mientras compone el equipo. Marque esto cuando no estén configurados, o para comparar.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>El asistente sigue ocupado con « {0} » — deténgalo, o deje que termine, antes de abrir un equipo.</value>
   </data>

@@ -894,6 +894,13 @@
   <data name="Studio.Settings.MailCredentialsDirectoryDefault" xml:space="preserve"><value>credentials, à côté de votre fichier de réglages</value></data>
   <data name="Studio.Settings.MailCredentialsDirectoryHint" xml:space="preserve"><value>Un chemin de cette machine, pas un des dossiers autorisés. Un chemin relatif part du fichier de réglages qui le nomme.</value></data>
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve"><value>L'assistant n'est pas en cours d'exécution — lancez la composition (étape 1, Composer) ou reprenez la session ; votre question a été conservée.</value></data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>Non : l'équipe ne les interroge jamais</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>Quand ils sont disponibles : l'équipe s'exécute avec ou sans eux</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Toujours : l'équipe ne peut pas s'exécuter sans eux</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>L'équipe doit-elle utiliser les modèles de décision (System One) ?</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Ils répondent à une question par une probabilité : quelle voie suivre, si un travail est prêt. Le choix se fait à la composition de l'équipe et lui reste attaché ; avec « Quand ils sont disponibles », l'essai s'exécute deux fois, avec eux puis sans eux.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Composer sans interroger les modèles de décision</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>L'assistant lui-même peut les interroger pendant qu'il compose l'équipe. Cochez ceci quand ils ne sont pas configurés, ou pour comparer.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve"><value>L'assistant est encore occupé avec « {0} » — arrêtez-le, ou laissez-le finir, avant d'ouvrir une équipe.</value></data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve"><value>Copier</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve"><value>Température (optionnel)</value></data>

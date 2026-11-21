@@ -2345,6 +2345,13 @@
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve">
     <value>Der Assistent läuft nicht — starten Sie die Komposition (Schritt 1, Zusammenstellen) oder setzen Sie die Sitzung fort; Ihre Frage wurde aufbewahrt.</value>
   </data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>Nein: Das Team fragt sie nie</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>Wenn verfügbar: Das Team läuft mit oder ohne sie</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Immer: Das Team kann nicht ohne sie laufen</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Soll das Team die Entscheidungsmodelle (System One) verwenden?</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Sie beantworten eine Frage mit einer Wahrscheinlichkeit: welcher Weg zu nehmen ist, ob eine Arbeit fertig ist. Die Wahl wird beim Zusammenstellen des Teams getroffen und bleibt bei ihm; mit „Wenn verfügbar“ läuft der Probelauf zweimal, mit ihnen und dann ohne sie.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Zusammenstellen, ohne die Entscheidungsmodelle zu fragen</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>Der Assistent selbst kann sie befragen, während er das Team zusammenstellt. Aktivieren Sie dies, wenn sie nicht eingerichtet sind, oder zum Vergleichen.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>Der Assistent ist noch mit „{0}“ beschäftigt — stoppen Sie ihn, oder lassen Sie ihn fertig werden, bevor Sie ein Team öffnen.</value>
   </data>
