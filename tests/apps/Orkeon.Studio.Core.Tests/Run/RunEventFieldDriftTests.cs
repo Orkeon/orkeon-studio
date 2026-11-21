@@ -4,12 +4,17 @@ using Orkeon.Studio.Tests.Shared;
 namespace Orkeon.Studio.Core.Tests.Run;
 
 /// <summary>
-/// Orkeon #392 and the iteration cap: Studio reads the fields <c>task.completed</c> and
-/// <c>run.finished</c> carry about a task cut short and a deliverable not written
-/// (<c>endedOnIterationCap</c>, <c>deliverableMissing</c>, <c>cappedTasks</c>,
-/// <c>missingDeliverables</c>), and reads an absent one as « nothing to say ». A field the engine
-/// renames or drops would silence the warning without failing a test: this guard reads the
-/// engine's emitters and fails when a field Studio reads is no longer in the event it reads it from.
+/// The fields Studio reads in the events of a run and of the forge, each held to the engine's emitter:
+/// on <c>task.completed</c>, the task and its outcome, a task cut short and a deliverable not written
+/// (Orkeon #392: <c>endedOnIterationCap</c>, <c>deliverableMissing</c>) and where a decision task's
+/// answer came from (<c>decisionSource</c>); on <c>run.decision</c>, the mode, the circuit and the
+/// cause that turned it off; on <c>agent.route</c>, <c>agent.effort</c> and <c>agent.skills</c>, what
+/// System One picked for an agent and why; on <c>agent.compacted</c> and <c>agent.pruned</c>, what a
+/// context lost; on <c>run.finished</c>, the run's counts (<c>cappedTasks</c>,
+/// <c>missingDeliverables</c>); and the forge's own <c>task.completed</c>. Studio reads an absent field
+/// as « nothing to say »: one the engine renames or drops would silence a warning or a line of the
+/// run's view without failing a test. This guard reads the engine's emitters and fails when a field
+/// Studio reads is no longer in the event it reads it from.
 /// </summary>
 /// <remarks>
 /// Text-level, comments stripped first, like the other source-reading guards of the repository:

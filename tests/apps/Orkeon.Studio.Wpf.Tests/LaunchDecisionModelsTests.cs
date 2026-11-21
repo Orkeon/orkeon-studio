@@ -361,6 +361,63 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.False(tab.ValidateCommand.CanExecute(null));
     }
 
+    /// <summary>
+    /// Settings known to be the run's are those of a pinned or team file, which the Settings screen does
+    /// not edit: what blocks names that file. Only what is judged on the machine's settings, while the
+    /// CLI picks the file, sends to Settings › Decision models.
+    /// </summary>
+    [Fact]
+    public void What_a_pinned_file_blocks_names_the_file_to_fix_and_not_the_settings_screen()
+    {
+        const string ToSettings = "Settings › Decision models";
+
+        var refused = Launcher(NewTeam(decisionTask: true), """{"Orkeon":{"Decision":{"Provider":"acme"}}}""");
+        Assert.EndsWith($"Fix it in {PinnedSettings}.", refused.DecisionMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(ToSettings, refused.DecisionMessage, StringComparison.Ordinal);
+
+        var profile = Launcher(NewTeam(decisionTask: true, name: "profile"), """{"Orkeon":{"Decision":{"Profiles":{"p":{"Target":"default"}}}}}""");
+        Assert.True(profile.IsBlockedByDecision);
+        Assert.Contains("Orkeon:Decision:Profiles:p:Stages: a decision profile needs at least one stage.", profile.DecisionMessage, StringComparison.Ordinal);
+        Assert.EndsWith($"Fix it in {PinnedSettings}.", profile.DecisionMessage, StringComparison.Ordinal);
+
+        var noLadder = Launcher(TeamOf("llm: { profile: auto }"), Liquid);
+        Assert.EndsWith($"Set the ladder (Orkeon:Decision:Route:Ladder) in {PinnedSettings}.", noLadder.DecisionMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(ToSettings, noLadder.DecisionMessage, StringComparison.Ordinal);
+
+        var machineLadder = Launcher(TeamOf("llm: { profile: auto }", name: "machine"), pinnedJson: null, MachineOn);
+        Assert.EndsWith("Set the ladder in Settings › Decision models.", machineLadder.DecisionWarning, StringComparison.Ordinal);
+
+        var off = Launcher(NewTeam(decideTool: true, name: "off"), """{"Orkeon":{"Liquid":{},"Decision":{"Enabled":false}}}""");
+        Assert.True(off.IsBlockedByDecision);
+        Assert.Contains($"set Orkeon:Decision:Enabled to true in {PinnedSettings}.", off.DecisionMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(ToSettings, off.DecisionMessage, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A name a decision profile and a model profile share is mended by renaming one of the two, in the
+    /// file or in Studio's model settings: the message says so, and sends to no screen that cannot.
+    /// </summary>
+    [Fact]
+    public void A_name_two_profiles_share_says_to_rename_one_of_them()
+    {
+        static LaunchTabDependencies Laid(LaunchTabDependencies seams) => seams with { OfferedLlmProfiles = () => ["Guarded"] };
+
+        var laid = Launcher(TeamOf("llm: { profile: guarded }"), GuardedSettings(failClosed: false, provider: true), machine: null, keys: null, wire: Laid);
+        var inFile = Launcher(
+            TeamOf("llm: { profile: guarded }", name: "file"),
+            GuardedSettings(failClosed: false, provider: true).Replace("{\"Orkeon\":", "{\"Llm\":{\"Profiles\":{\"GUARDED\":{\"Provider\":\"mock\"}}},\"Orkeon\":", StringComparison.Ordinal));
+
+        foreach (var tab in new[] { laid, inFile })
+        {
+            Assert.True(tab.IsBlockedByDecision);
+            Assert.Contains("Two LLM profiles are named 'guarded'.", tab.DecisionMessage, StringComparison.Ordinal);
+            Assert.Contains("rename one of the two", tab.DecisionMessage, StringComparison.Ordinal);
+            Assert.EndsWith($"The decision profile is under Orkeon:Decision:Profiles in {PinnedSettings}.", tab.DecisionMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain("Fix it in", tab.DecisionMessage, StringComparison.Ordinal);
+            Assert.DoesNotContain("Settings ›", tab.DecisionMessage, StringComparison.Ordinal);
+        }
+    }
+
     [Fact]
     public void While_the_cli_picks_the_settings_file_the_machines_file_warns_and_never_blocks()
     {
@@ -486,7 +543,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         var plain = Launcher(team, Liquid);
         Assert.False(plain.UsesDecisionModels);
 
-        var tab = Launcher(team, """{"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Profiles":{"guarded":{"Target":"default"}}}}}""");
+        var tab = Launcher(team, """{"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Profiles":{"guarded":{"Target":"default","Stages":[{"Kind":"guard","Risks":{"x":"y"}}]}}}}}""");
         Assert.True(tab.UsesDecisionModels);
         Assert.False(tab.HasDecisionInfo);
 

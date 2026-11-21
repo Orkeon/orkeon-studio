@@ -18,7 +18,9 @@ namespace Orkeon.Studio.Config.Views;
 /// blocks the screen, and its verdict changes nothing about what can be saved. It presents the key
 /// a run presents, and refuses without a request an endpoint that needs one when none resolves
 /// (STUDIO-54). Below, the named profiles of <c>Llm:Profiles</c> and the one the RAG calls,
-/// read-only (STUDIO-48). Every line of text takes one row, so none runs into the field under it;
+/// read-only (STUDIO-48). Every line of text takes one row, so none runs into the field under it: a
+/// line that names something of the file (the provider read, a profile, the RAG's profile) is cut with
+/// an ellipsis when it is longer than the row;
 /// the status, last and under the button, is the one text that may take several: the notice of the
 /// base URL's reading, whole, then the verdict of the connection test.
 /// </summary>
@@ -45,7 +47,7 @@ internal sealed class LlmSectionView : SectionView
     private readonly Label _ragLlmProfile;
 
     /// <summary>The line the profile list shows when the file names no profile.</summary>
-    internal const string NoProfileLine = "(none — every agent runs on the default above)";
+    internal const string NoProfileLine = "(none: every agent runs on the default)";
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     /// <param name="form">The section's values, as text.</param>
@@ -79,8 +81,9 @@ internal sealed class LlmSectionView : SectionView
         foreach (var line in LlmForm.ProfilesNotice)
             FormLayout.AddLine(this, y++, line);
         ProfileLines = ProfileLinesOf(_form);
-        _profiles = FormLayout.AddChoiceList(this, y, 4, "Profiles in this file", ProfileLines, 0);
-        y += 4;
+        // Under its caption, on the whole width: a profile's line is long, and cut with an ellipsis past it.
+        _profiles = FormLayout.AddChoiceListBelow(this, y, 4, "Profiles in this file", ProfileLines, 0);
+        y += 5;
         _ragLlmProfile = FormLayout.AddChangingLine(this, y, _form.RagLlmProfileLine);
 
         _testConnection = new Button { X = FormLayout.Margin, Y = y + 2, Text = "Test connection" };
@@ -121,7 +124,7 @@ internal sealed class LlmSectionView : SectionView
         ShowReading();
         ProfileLines = ProfileLinesOf(_form);
         FormLayout.SetItems(_profiles, ProfileLines);
-        _ragLlmProfile.Text = _form.RagLlmProfileLine;
+        FormLayout.SetLine(_ragLlmProfile, _form.RagLlmProfileLine);
         RefreshApiKeyWarning();
     }
 
@@ -129,7 +132,7 @@ internal sealed class LlmSectionView : SectionView
     internal IReadOnlyList<string> ProfileLines { get; private set; }
 
     /// <summary>The RAG line as shown.</summary>
-    internal string RagLlmProfileText => _ragLlmProfile.Text ?? "";
+    internal string RagLlmProfileText => FormLayout.LineOf(_ragLlmProfile);
 
     private static IReadOnlyList<string> ProfileLinesOf(LlmForm form) =>
         form.Profiles.Count > 0 ? form.Profiles : [NoProfileLine];
@@ -217,14 +220,14 @@ internal sealed class LlmSectionView : SectionView
     }
 
     private void RefreshApiKeyWarning() =>
-        _apiKeyWarning.Text = _form.StoresApiKeyInClearText ? LlmForm.ClearTextWarning : "";
+        FormLayout.SetLine(_apiKeyWarning, _form.StoresApiKeyInClearText ? LlmForm.ClearTextWarning : "");
 
     // The reading on its row; its notice, a sentence of several rows, whole in the status, and the
     // row under the reading says where to read it.
     private void ShowReading()
     {
-        _provider.Text = _form.ReadAsLine;
-        _notice.Text = _form.NoticeLine is null ? LlmForm.ReadingNotice : LlmForm.NoticeBelow;
+        FormLayout.SetLine(_provider, _form.ReadAsLine);
+        FormLayout.SetLine(_notice, _form.NoticeLine is null ? LlmForm.ReadingNotice : LlmForm.NoticeBelow);
         ShowStatus();
     }
 

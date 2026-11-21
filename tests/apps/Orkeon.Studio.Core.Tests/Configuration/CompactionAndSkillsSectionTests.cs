@@ -163,7 +163,7 @@ public sealed class CompactionAndSkillsSectionTests
     public void A_summary_profile_may_be_a_decision_profile_and_an_unknown_one_only_warns()
     {
         var guarded = AppSettingsDocument.Parse("""
-            { "Orkeon": { "Decision": { "Profiles": { "Guarded": { "Target": "default" } } }, "Compaction": { "Profile": "guarded" } } }
+            { "Orkeon": { "Decision": { "Profiles": { "Guarded": { "Target": "default", "Stages": [ { "Kind": "guard", "Risks": { "x": "y" } } ] } } }, "Compaction": { "Profile": "guarded" } } }
             """);
         Assert.Empty(guarded.Compaction.Problems());
         Assert.Null(guarded.Compaction.UnknownProfile());

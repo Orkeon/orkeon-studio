@@ -833,6 +833,9 @@
                           IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
                            Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
+                <!-- The mode of the session on screen, when the list shows the pick of the next composition instead. -->
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding SessionCrewDecisionLine}"
+                           Visibility="{Binding SessionCrewDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
                 <!-- What the chosen mode meets on this machine, before anything is composed. -->
                 <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
                                 Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>

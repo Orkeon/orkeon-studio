@@ -480,6 +480,71 @@ public class RunProgressViewModelTests
         Assert.StartsWith("A: " + 27.ToString("N0", culture), panel.AgentNotes[1], StringComparison.Ordinal);
         Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", culture), panel.AgentNotes[^1], StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The circuit line is the first of the list wherever the run was when it stated its circuit: a
+    /// statement that follows notes goes above them, the cap never evicts it, and a second statement
+    /// takes the place of the first.
+    /// </summary>
+    [Fact]
+    public void A_circuit_stated_after_notes_is_put_first_and_stays_there()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"Early","cut":1,"dropped":0,"freedTokens":1}""");
+        Assert.Single(panel.AgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+
+        Assert.Equal(2, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        Assert.StartsWith("Early: ", panel.AgentNotes[1], StringComparison.Ordinal);
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn + 2}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        Assert.StartsWith("A: ", panel.AgentNotes[1], StringComparison.Ordinal);
+
+        panel.TryApply("""{"v":2,"seq":900,"ts":"t","kind":"run.decision","mode":"optional","circuit":"on"}""");
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models on (team mode: optional).", panel.AgentNotes[0]);
+        Assert.DoesNotContain("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// Every cause the engine defines for a circuit that is off is said in a sentence, the trial's
+    /// included; a word it does not define is shown as written.
+    /// </summary>
+    [Theory]
+    [InlineData("switch", "this run goes without them")]
+    [InlineData("settings", "the settings switch them off")]
+    [InlineData("no-provider", "no decision provider is configured")]
+    [InlineData("trial", "this pass of the trial runs without them")]
+    [InlineData("maintenance", "maintenance")]
+    public void The_cause_of_a_circuit_off_is_said_in_a_sentence(string cause, string said)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"{{cause}}"}""");
+
+        Assert.Equal([$"Decision models off: {said} (team mode: optional)."], panel.AgentNotes);
+    }
+
+    /// <summary>The causes the theory above walks are the engine's, all of them.</summary>
+    [Fact]
+    public void The_causes_said_are_all_the_engine_defines()
+    {
+        var engine = typeof(Orkeon.Constants.Protocol.DecisionCircuitCauses)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(field => field.IsLiteral)
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(["no-provider", "settings", "switch", "trial"], engine);
+    }
 }
 
 /// <summary>

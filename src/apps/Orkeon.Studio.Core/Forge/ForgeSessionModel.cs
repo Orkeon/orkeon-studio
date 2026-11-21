@@ -106,6 +106,13 @@ public sealed record ForgeTaskProgress(
     /// on this machine, the <c>off</c> one alone; null for a crew of any other mode.
     /// </summary>
     public string? Circuit { get; init; }
+
+    /// <summary>
+    /// Whether the trial the task ran in takes two passes, as the <c>run.started</c> of its pass said:
+    /// kept with the task, so that a trial that stops during its first pass still says which pass its
+    /// lines come from once <see cref="ForgeSessionModel.TrialPasses"/> is forgotten.
+    /// </summary>
+    public bool InTwoPassTrial { get; init; }
 }
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
@@ -229,6 +236,11 @@ public sealed record ForgeMailActionView(
     /// </summary>
     public string? Circuit { get; init; }
 
+    /// <summary>
+    /// Whether the trial the action was simulated in takes two passes, as the <c>run.started</c> of its
+    /// pass said: kept with the action, like <see cref="ForgeTaskProgress.InTwoPassTrial"/>.
+    /// </summary>
+    public bool InTwoPassTrial { get; init; }
 
     /// <summary>The one-line reading of the action.</summary>
     public string Line
@@ -707,6 +719,7 @@ public sealed class ForgeSessionModel
                     orkeonEvent.GetBool("deliverableMissing") ?? false)
                 {
                     Circuit = orkeonEvent.GetString("circuit"),
+                    InTwoPassTrial = TrialPasses > 1,
                 });
                 break;
 
@@ -728,7 +741,9 @@ public sealed class ForgeSessionModel
                 if (TrialPass is not > 1)
                     _mailActions.Clear();
                 var finishedCircuit = orkeonEvent.GetString("circuit");
-                _mailActions.AddRange(ReadMailActions(orkeonEvent.Root).Select(action => action with { Circuit = finishedCircuit }));
+                var twoPasses = TrialPasses > 1;
+                _mailActions.AddRange(ReadMailActions(orkeonEvent.Root).Select(
+                    action => action with { Circuit = finishedCircuit, InTwoPassTrial = twoPasses }));
                 break;
 
             case ForgeEventKinds.SystemOneAnswered:
@@ -785,9 +800,13 @@ public sealed class ForgeSessionModel
                     orkeonEvent.GetString("code") ?? "",
                     orkeonEvent.GetString("message") ?? "",
                     orkeonEvent.GetBool("recoverable") ?? false);
-                // An error ends the trial it interrupts: the bench that crashed on the first pass of
-                // two never starts the second.
-                EndTrial();
+                // The engine says a fatal error last before session.finished: the trial it interrupts
+                // is over, and the bench that failed on the first pass of two never starts the second.
+                // A recoverable one says nothing about the run: the engine may carry on (an invalid
+                // edit, asked again) or stop (a spent budget), and then session.finished, or the end of
+                // the process, ends the trial.
+                if (!LastError.Recoverable)
+                    EndTrial();
                 break;
 
             default:
@@ -922,7 +941,8 @@ public sealed class ForgeSessionModel
             ? $"{finding.Statement} — {evidence}"
             : finding.Statement;
         // UX lot 05 (019, 020): a major or blocking finding fails the criterion — the engine
-        // judges such a verdict not passing; only a minor one is a remark on a criterion met.
+        // judges such a verdict not passing. A minor one is a remark on a criterion met, and an
+        // info one a fact of the trial itself: neither fails anything (ForgeFindingView.IsRemark).
         return new ForgeChecklistItem(criterion.Statement, false, detail, IsRemark: finding.IsRemark);
     }
 

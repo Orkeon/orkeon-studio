@@ -184,7 +184,7 @@ public sealed class SectionScreenLayoutTests
     /// On every screen that is a form (the LLM, the rate limiting, the RAG, the decision models, the
     /// context, the bridge, the LLM logging), in a terminal of 80 columns as in a wider one: no widget
     /// lies over another (a note that wraps, or a caption wider than its column, would lie over a
-    /// field), and no line of one row is cut.
+    /// field), and no line of one row is cut, nor an item of a list, nor the caption of a switch.
     /// </summary>
     [Theory]
     [InlineData(Llm, 80, 24)]
@@ -217,12 +217,121 @@ public sealed class SectionScreenLayoutTests
             }
         }
 
-        // The status, last, may take several rows (a screen without one ends on a caption, which fits
-        // all the same); every other line of text has one, and fits in it.
+        AssertNoLineIsCut(screen, $"{screen.Title} at {columns}x{rows}");
+    }
+
+    /// <summary>
+    /// The status, last, may take several rows (a screen without one ends on a caption, which fits all
+    /// the same); every other line of text has one row and fits in it, and so do each item of a list
+    /// and the caption of a switch of one row, beside its mark.
+    /// </summary>
+    private static void AssertNoLineIsCut(View screen, string where)
+    {
         var lines = screen.SubViews.OfType<Label>().ToList();
         Assert.All(lines.Take(lines.Count - 1), line => Assert.True(
             line.Frame.Height == 1 && line.Text.Length <= line.Frame.Width,
-            $"{screen.Title} at {columns}x{rows}: '{line.Text}' ({line.Text.Length} cells) in {line.Frame}"));
+            $"{where}: '{line.Text}' ({line.Text.Length} cells) in {line.Frame}"));
+        Assert.All(screen.SubViews.OfType<ListView>(), list => Assert.All(Items(list), item => Assert.True(
+            item.Length <= list.Viewport.Width, $"{where}: the item '{item}' ({item.Length} cells) in a list of {list.Viewport.Width}")));
+        Assert.All(screen.SubViews.OfType<CheckBox>().Where(box => box.Frame.Height == 1), box => Assert.True(
+            box.Text.Length + 2 <= box.Frame.Width, $"{where}: the switch '{box.Text}' ({box.Text.Length} cells) in {box.Frame}"));
+    }
+
+    private static List<string> Items(ListView list) =>
+        [.. (list.Source?.ToList() ?? Array.Empty<object>()).Cast<object?>().Select(item => item?.ToString() ?? "")];
+
+    private static async Task<Orkeon.Studio.Config.Presentation.ConfigEditorModel> OpenAsync(string json)
+    {
+        var directory = Directory.CreateTempSubdirectory("studio-config-layout").FullName;
+        try
+        {
+            var path = Path.Combine(directory, "appsettings.json");
+            await File.WriteAllTextAsync(path, json, TestContext.Current.CancellationToken);
+            var model = HeadlessEditor.NewModel();
+            Assert.Null(await model.OpenAsync(path, TestContext.Current.CancellationToken));
+            return model;
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (IOException)
+            {
+                // Best-effort.
+            }
+        }
+    }
+
+    private static bool IsCutOnPurpose(string text) =>
+        text.EndsWith('\u2026') || text.Contains("\u2026 \u2014 '", StringComparison.Ordinal);
+
+    private const string LongNames = """
+        {
+          "Llm": {
+            "BaseUrl": "https://api.deepseek.com/v1",
+            "Profiles": {
+              "a-profile-with-a-very-long-name-indeed-and-then-some-more": {
+                "Model": "a-model-with-a-long-name-too", "BaseUrl": "https://api.example.com/v1", "ApiKeyEnvVar": "A_VERY_LONG_VARIABLE_FOR_THE_KEY"
+              }
+            }
+          },
+          "LlmLogging": { "FullEmbeddingLog": "whenever-the-operator-feels-like-it" },
+          "Orkeon": { "Rag": {
+            "LlmProfile": "a-profile-with-a-very-long-name-indeed-and-then-some-more",
+            "Retrieval": { "Hybrid": { "Enabled": "perhaps" } },
+            "WebFallback": { "Enabled": "a-text-that-is-no-boolean-and-goes-on-and-on-well-past-the-row" } } }
+        }
+        """;
+
+    /// <summary>
+    /// What a line shows of the file (a profile's name, the profile the RAG calls, the text a switch
+    /// holds) may be of any length: at 80 columns it is cut on purpose, its end an ellipsis, and never
+    /// by the edge of the screen; a wider terminal shows more of it, a wide enough one the whole.
+    /// </summary>
+    [Theory]
+    [InlineData(Llm)]
+    [InlineData(Rag)]
+    [InlineData(LlmLogging)]
+    public async Task A_line_that_names_something_long_of_the_file_is_cut_on_purpose_with_an_ellipsis(int section)
+    {
+        using var editor = new HeadlessEditor(80, 24, section, await OpenAsync(LongNames));
+        editor.Window.ReloadSections();
+        editor.Layout();
+        editor.Layout();
+        var screen = editor.Section;
+
+        AssertNoLineIsCut(screen, $"{screen.Title} with long names at 80x24");
+        var shown = screen.SubViews.Where(view => view is Label or CheckBox).Select(view => view.Text)
+            .Concat(screen.SubViews.OfType<ListView>().SelectMany(Items)).ToList();
+        Assert.True(shown.Any(IsCutOnPurpose), "says " + string.Join(" | ", shown));
+        // What the file holds stays in sight on a switch: its caption gives way first.
+        if (section == Rag)
+            Assert.True(shown.Any(text => text.EndsWith("'perhaps': not true or false", StringComparison.Ordinal)), "says " + string.Join(" | ", shown));
+
+        // Two passes, as the main loop runs them: the screen takes its new width, then its lines theirs.
+        editor.Resize(260, 60);
+        editor.Layout();
+        editor.Layout();
+        AssertNoLineIsCut(screen, $"{screen.Title} with long names at 260x60");
+        var wide = screen.SubViews.Where(view => view is Label or CheckBox).Select(view => view.Text)
+            .Concat(screen.SubViews.OfType<ListView>().SelectMany(Items)).ToList();
+        Assert.False(wide.Any(IsCutOnPurpose), "says " + string.Join(" | ", wide.Where(IsCutOnPurpose)));
+
+        editor.Resize(80, 24);
+        editor.Layout();
+        editor.Layout();
+        AssertNoLineIsCut(screen, $"{screen.Title} with long names back at 80x24");
+    }
+
+    /// <summary>The RAG screen's profiles sit under their caption, on the whole width: the first choice shows whole at 80 columns.</summary>
+    [Fact]
+    public void The_rag_screen_shows_its_first_profile_choice_whole_at_80_columns()
+    {
+        using var editor = new HeadlessEditor(80, 24, Rag);
+
+        Assert.Contains(Orkeon.Studio.Config.Presentation.RagForm.UnsetProfileLabel, editor.Screen(), StringComparison.Ordinal);
     }
 
     /// <summary>

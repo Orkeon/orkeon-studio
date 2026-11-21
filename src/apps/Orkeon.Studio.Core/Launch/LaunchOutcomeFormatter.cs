@@ -40,7 +40,7 @@ public static class LaunchOutcomeFormatter
 
         return result.Outcome == RunOutcome.NotStarted
             ? strings.Format(CultureInfo.InvariantCulture, StudioStringKeys.LaunchNothingRan, strings[StudioStringKeys.LaunchExitNotStarted])
-            : strings.Format(CultureInfo.InvariantCulture, StudioStringKeys.LaunchExitCode, result.ExitCode, strings[OutcomeKey(result.Outcome)]);
+            : strings.Format(CultureInfo.InvariantCulture, StudioStringKeys.LaunchExitCode, result.ExitCode, strings[OutcomeKey(result)]);
     }
 
     /// <summary>Describes a dry run (<c>--validate</c>) as the verdict the spec asks for (English).</summary>
@@ -86,6 +86,17 @@ public static class LaunchOutcomeFormatter
             ? strings.Format(CultureInfo.InvariantCulture, StudioStringKeys.LaunchNothingRan, result.Description)
             : strings.Format(CultureInfo.InvariantCulture, StudioStringKeys.LaunchExitCode, result.ExitCode, result.Description);
     }
+
+    /// <summary>
+    /// The sentence of a finished run. A code with a cause of its own says it, and what to do: the
+    /// engine's refusal of a crew that requires System One while the decision circuit is off is
+    /// classified a script error, whose general sentence (the team file, the settings it uses)
+    /// names neither the decision models nor where they are set up.
+    /// </summary>
+    private static string OutcomeKey(ProcessRunResult result) =>
+        result.ExitCode == OrkeonExitCodes.DecisionUnavailable
+            ? StudioStringKeys.LaunchExitDecisionUnavailable
+            : OutcomeKey(result.Outcome);
 
     private static string OutcomeKey(RunOutcome outcome) => outcome switch
     {

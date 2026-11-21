@@ -41,7 +41,7 @@ public sealed class DecisionFormTests
     public void Apply_writes_in_place_and_keeps_what_the_form_does_not_show()
     {
         var document = AppSettingsDocument.Parse("""
-            {"Orkeon":{"Decision":{"Profiles":{"triage":{"Llm":"fast"}}},"Liquid":{"TimeoutSeconds":60},"TypeSafe":{}}}
+            {"Orkeon":{"Decision":{"Profiles":{"triage":{"Target":"fast","Stages":[{"Kind":"verify","EscalateTo":"strong"}]}}},"Liquid":{"TimeoutSeconds":60},"TypeSafe":{}}}
             """);
         var form = Form();
         form.LoadFrom(document);
@@ -129,6 +129,46 @@ public sealed class DecisionFormTests
         form.LoadFrom(document);
         Assert.Null(form.ProviderAsWritten);
         Assert.Equal(DecisionForm.StandardChoices, form.ProviderChoices);
+    }
+
+    /// <summary>
+    /// A successful apply loads the form again from the document, as the context and the bridge forms
+    /// do: the row of the unknown name leaves the list, on the screen too, and a list shows as stored.
+    /// A refused apply leaves everything as typed.
+    /// </summary>
+    [Fact]
+    public void A_successful_apply_reloads_the_form_and_the_screen_follows()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Decision":{"Provider":"acme"}}}""");
+        var form = Form();
+        form.LoadFrom(document);
+        using var view = new DecisionSectionView(form);
+        view.Load();
+
+        form.RouteLadder = "alone";
+        Assert.NotEmpty(form.ApplyTo(document));
+        view.Refresh();
+        Assert.Equal("alone", form.RouteLadder);
+        Assert.Equal("acme", form.ProviderAsWritten);
+        Assert.Equal((DecisionForm.StandardChoices.Count + 1, DecisionForm.StandardChoices.Count), view.ProviderRowsForTest);
+
+        form.SelectProvider(1);
+        form.RouteLadder = " default ;strong";
+        Assert.Empty(form.ApplyTo(document));
+        view.Refresh();
+
+        Assert.Null(form.ProviderAsWritten);
+        Assert.Equal(DecisionForm.StandardChoices, form.ProviderChoices);
+        Assert.Equal((DecisionForm.StandardChoices.Count, 1), view.ProviderRowsForTest);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Equal(["default", "strong"], document.Decision.RouteLadder);
+
+        // The screen shows what the form now holds, and hands it back unchanged.
+        view.Apply();
+        Assert.Equal("typesafe", form.Provider);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("typesafe", document.GetString(DecisionSection.ProviderPath));
     }
 
     [Fact]

@@ -654,8 +654,15 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         Gallery.PropertyChanged += (_, e) => OnGalleryPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnUseCaseLanguageChanged();
         _strings.CultureChanged += (_, _) => OnPropertiesChanged(
-            nameof(CrewDecisionChoices), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice), nameof(TrialPassLine), nameof(VerdictPassesLine),
-            nameof(AssistantDecisionLine), nameof(MailActionLines));
+            nameof(CrewDecisionChoices), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice), nameof(SessionCrewDecisionLine),
+            nameof(TrialPassLine), nameof(VerdictPassesLine), nameof(AssistantDecisionLine), nameof(MailActionLines));
+        // The activity lines and the checklist hold sentences, and the name of the pass each comes
+        // from: built again in the new language, from the session they were read off.
+        _strings.CultureChanged += (_, _) =>
+        {
+            SyncActivity();
+            SyncChecklist();
+        };
 
         Profiles.PropertyChanged += (_, e) => OnProfilesPropertyChanged(e.PropertyName);
         _strings.CultureChanged += (_, _) => OnAdoptProfileLanguageChanged();
@@ -1302,12 +1309,29 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     private bool _designWithoutSystemOne;
 
     /// <summary>
-    /// The mode the list shows: the user's pick while it can be chosen, the session's own otherwise.
+    /// The mode the list shows: the user's pick while it can be chosen, the session's own otherwise,
+    /// and the pick again, the one just sent, while the engine starts and no session has spoken yet.
     /// A session read off the disk that predates the modes states none: it shows as « No » until an
     /// engine run states the mode it derives from the crew.
     /// </summary>
     private string ShownCrewDecision =>
-        CanChooseCrewDecision ? _crewDecisionPick : _model.CrewDecision ?? ForgeCrewDecisions.None;
+        CanChooseCrewDecision || string.IsNullOrEmpty(_model.Slug) ? _crewDecisionPick : SessionCrewDecision;
+
+    /// <summary>The mode of the session on screen, as it states it: none for one that predates the modes.</summary>
+    private string SessionCrewDecision => _model.CrewDecision ?? ForgeCrewDecisions.None;
+
+    /// <summary>
+    /// The mode of the session on screen, said under the list when the list is not showing it: the
+    /// list is the user's to change (« Compose the team » would start another session, with the pick)
+    /// while a session holds the screen with a mode of its own, which its trial and its adoption keep.
+    /// Empty whenever the list shows the session's mode, or no session exists.
+    /// </summary>
+    public string SessionCrewDecisionLine =>
+        CanChooseCrewDecision && !string.IsNullOrEmpty(_model.Slug) && SessionCrewDecision != _crewDecisionPick
+            ? _strings.Format(
+                StudioStringKeys.WizardCrewDecisionSession,
+                CrewDecisionChoices.First(choice => choice.Mode == SessionCrewDecision).Label)
+            : string.Empty;
     private readonly Func<Orkeon.Studio.Core.Configuration.DecisionStatus?> _machineDecisionStatus;
 
     /// <summary>
@@ -1370,11 +1394,12 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
             if (!IsWithModels(circuit))
             {
+                // Every cause the engine defines has its sentence; the switch has the wizard's own,
+                // which names the box the user ticked. Another word is said as the engine wrote it.
                 var why = _model.ForgeCircuitCause switch
                 {
                     Orkeon.Constants.Protocol.DecisionCircuitCauses.Switch => _strings[StudioStringKeys.WizardAssistantDecisionCauseSwitch],
-                    Orkeon.Constants.Protocol.DecisionCircuitCauses.Settings => _strings[StudioStringKeys.RunNoteCauseSettings],
-                    Orkeon.Constants.Protocol.DecisionCircuitCauses.NoProvider => _strings[StudioStringKeys.RunNoteCauseNoProvider],
+                    var cause when Orkeon.Studio.Core.Run.DecisionCircuitCauseKeys.KeyOf(cause) is { } key => _strings[key],
                     { Length: > 0 } other => other,
                     _ => null,
                 };
@@ -1452,21 +1477,25 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                 return;
             _crewDecisionPick = value.Mode;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CrewDecisionNotice));
+            OnPropertiesChanged(nameof(CrewDecisionNotice), nameof(SessionCrewDecisionLine));
         }
     }
 
     /// <summary>
-    /// Whether the mode can be chosen: no session exists yet, or « Compose the team » would start a
-    /// new one (<see cref="CanCompose"/>). A session keeps the mode it was created with, and the
-    /// engine refuses another: while one holds the screen and nothing can be composed, the list is
-    /// locked on its mode.
+    /// Whether the mode can be chosen: the engine is at rest and no session exists yet, or « Compose
+    /// the team » would start a new one (<see cref="CanCompose"/>). An enabled list always shows the
+    /// pick, which is what the next « Compose the team » sends. A session keeps the mode it was created
+    /// with, and the engine refuses another: while one holds the screen and nothing can be composed,
+    /// the list is locked on its mode. While the engine runs the list is locked too, a pick changed
+    /// then reaching nothing: on the pick just sent until the session states its mode.
     /// </summary>
-    public bool CanChooseCrewDecision => string.IsNullOrEmpty(_model.Slug) || CanCompose;
+    public bool CanChooseCrewDecision => !IsEngineRunning && (string.IsNullOrEmpty(_model.Slug) || CanCompose);
 
     /// <summary>The list follows what « Compose the team » would do, and the session's stated mode.</summary>
     private void RaiseCrewDecisionChanged() =>
-        OnPropertiesChanged(nameof(CanChooseCrewDecision), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice));
+        OnPropertiesChanged(
+            nameof(CanChooseCrewDecision), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice),
+            nameof(SessionCrewDecisionLine));
 
     /// <summary>
     /// The mode and the assistant's switch go back to the engine's defaults: they belonged to the
@@ -1476,7 +1505,9 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     {
         _crewDecisionPick = ForgeCrewDecisions.None;
         _designWithoutSystemOne = false;
-        OnPropertiesChanged(nameof(SelectedCrewDecision), nameof(DesignWithoutSystemOne));
+        OnPropertiesChanged(
+            nameof(SelectedCrewDecision), nameof(DesignWithoutSystemOne),
+            nameof(SessionCrewDecisionLine));
     }
 
     /// <summary>
@@ -2371,7 +2402,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// <summary>One line per simulated mail action of the last run: «kind → who — subject — body» (body cut at 300).</summary>
     public IReadOnlyList<string> MailActionLines =>
     [
-        .. _model.MailActions.Select(action => IsTwoPassTrial && action.Circuit is { Length: > 0 } circuit
+        .. _model.MailActions.Select(action => (action.InTwoPassTrial || IsTwoPassTrial) && action.Circuit is { Length: > 0 } circuit
             ? WithPass(action.Line, circuit)
             : action.Line),
     ];
@@ -3581,6 +3612,13 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// <summary>Whether the status line holds an error of the run under way: a warning that follows does not replace it.</summary>
     private bool _statusHoldsError;
 
+    /// <summary>
+    /// The warning the status line took during the run of the engine under way, or just ended: the
+    /// « ready » sentence that closes the run is followed by it instead of replacing it. Forgotten
+    /// with the run's outcome (<see cref="ForgetRunOutcome"/>).
+    /// </summary>
+    private string? _runWarning;
+
     private void SyncFromModel()
     {
         // The list shows the mode the session states once the engine has stated it, and what that
@@ -3596,7 +3634,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             // of this run keeps the line: it says why the run stopped, the warning only what it skipped.
             if (!_statusHoldsError
                 && warning.Code is not (ForgeWarningCodes.SessionNotRenamed or ForgeWarningCodes.LauncherTooLong))
-                StatusMessage = warning.Message is { Length: > 0 } ? $"{warning.Code}: {warning.Message}" : warning.Code;
+            {
+                _runWarning = warning.Message is { Length: > 0 } ? $"{warning.Code}: {warning.Message}" : warning.Code;
+                StatusMessage = _runWarning;
+            }
         }
 
         // A fresh engine error must reach the status line (review D3): a refused blueprint
@@ -3645,6 +3686,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         // enough in it to act on — with a generic apology.
         StatusMessage = _saveError ?? _model.FinishedStatus switch
         {
+            // A warning of the run that ends ready stays readable after the sentence that closes it.
+            "ready" when _runWarning is { } said => $"{_strings[StudioStringKeys.ForgeStatusReady]} {said}",
             "ready" => _strings[StudioStringKeys.ForgeStatusReady],
             "failed" when _model.LastError is null && _lastStderr is null
                 => _strings[StudioStringKeys.ForgeStatusFailed],
@@ -3762,7 +3805,9 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
     /// <summary>
     /// Whether the trial on screen runs, or ran, in two passes: the engine names two, its tasks come
-    /// from two, or its verdict judges two. A line of such a trial says which pass it belongs to.
+    /// from two, or its verdict judges two. A line of such a trial says which pass it belongs to, and
+    /// so does a line that knew its trial took two when it was read (<see cref="ForgeTaskProgress.InTwoPassTrial"/>):
+    /// the pass count under way is forgotten with the run of the engine, the lines stay.
     /// </summary>
     private bool IsTwoPassTrial =>
         _model.TrialPasses > 1
@@ -3819,7 +3864,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
             var detail = task.AgentRole is not null && task.TaskId is { Length: > 0 } id ? id : "";
             // A trial in two passes says which one each line belongs to.
-            if (twoPasses && task.Circuit is not null)
+            if ((twoPasses || task.InTwoPassTrial) && task.Circuit is not null)
                 detail = WithPass(detail, task.Circuit);
             Activity.Add(new WizardActivityLine(text, detail, task.Success, cutShort, fileMissing));
         }

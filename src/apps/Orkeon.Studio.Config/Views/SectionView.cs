@@ -42,10 +42,15 @@ internal abstract class SectionView : FrameView
                 ClearFocus();
         };
         _scrolls = scrolls;
+        // A text that may be longer than its row (a name of the file) is fitted to the width it now has.
+        SubViewsLaidOut += (_, _) => FormLayout.Refit(this);
         if (!scrolls)
             return;
 
         ViewportSettings |= ViewportSettingsFlags.HasVerticalScrollBar;
+        // The width first, before the rows are laid out against it: a terminal that grew or shrank
+        // gives its rows their new width in the same pass, not in the one a later event starts.
+        SubViewLayout += (_, _) => FitWidth();
         SubViewsLaidOut += (_, _) => FitContent();
         // The wheel is heard from the application, once the screen runs under one: a field under the
         // pointer keeps every mouse event for itself, so nothing bound on the screen would ever see it.
@@ -160,6 +165,13 @@ internal abstract class SectionView : FrameView
         while (view.SuperView is { } parent)
             view = parent;
         return view;
+    }
+
+    private void FitWidth()
+    {
+        var size = GetContentSize();
+        if (size.Width != Viewport.Width)
+            SetContentSize(size with { Width = Viewport.Width });
     }
 
     // The content is as wide as the frame shows and as tall as the rows: taller than the frame, it scrolls.

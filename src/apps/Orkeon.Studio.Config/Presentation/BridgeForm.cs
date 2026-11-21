@@ -5,7 +5,7 @@ namespace Orkeon.Studio.Config.Presentation;
 /// <summary>
 /// Both sides of the tool bridge, as text fields: the caller's (<c>Orkeon:Tools:Bridge</c>: the address
 /// of the bridge, the tools a run executes there) and the serving one (<c>Orkeon:Bridge</c>: what
-/// <c>orkeon bridge serve</c> listens on and runs for a caller). A list is names separated by commas.
+/// <c>orkeon bridge serve</c> listens on and runs for a caller). A list is names separated by commas or semicolons.
 /// It stores no token: it names the variable the token is read from. Only a field that changed since
 /// it was loaded is written: one left as loaded keeps its key as the file writes it, and a changed
 /// field left blank removes its key. A value the engine's start refuses in one of the nine keys this
@@ -25,7 +25,7 @@ internal sealed class BridgeForm : ISettingsForm
     public string Title => "Tool bridge";
 
     /// <summary>How a list is written.</summary>
-    public const string Notice = "Lists: names separated by commas, or *.";
+    public const string Notice = "Lists: commas or semicolons, or * alone.";
 
     /// <summary>Where a token comes from: the variable a blank field stands for, never this file.</summary>
     public const string TokenNotice = "Blank token variable: " + ToolBridgeSection.DefaultTokenEnvVar;

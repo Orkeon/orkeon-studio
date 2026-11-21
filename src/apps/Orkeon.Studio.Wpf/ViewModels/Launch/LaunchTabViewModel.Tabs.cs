@@ -203,9 +203,6 @@ public sealed partial class LaunchTabViewModel
 
     // ── The options tab ──
 
-    /// <summary>The options keep their marks to themselves: an empty circle.</summary>
-    public static string OptionsTabState => "Empty";
-
     /// <summary>« Default settings » while the options are untouched; otherwise « Detailed level · Raw output »: the verbosity and the display.</summary>
     public string OptionsTabSubtitle => Options.Verbosity == 0 && Options.WatchProgress
         ? _strings[StudioStringKeys.RunOptionsDefault]
@@ -266,9 +263,6 @@ public sealed partial class LaunchTabViewModel
     }
 
     // ── The command tab ──
-
-    /// <summary>The command keeps its marks to itself: an empty circle.</summary>
-    public static string CommandTabState => "Empty";
 
     /// <summary>The start of the command, the rest folded behind an ellipsis.</summary>
     public string CommandTabSubtitle

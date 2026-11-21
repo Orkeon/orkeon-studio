@@ -9,14 +9,15 @@ namespace Orkeon.Studio.Config.Presentation;
 /// removing the key and writing <c>false</c> differ), the provider's name (<c>Orkeon:Decision:Provider</c>,
 /// automatic when absent), and for each provider whether its section is written, its model and its
 /// address, then the ladder of profiles and the thinking levels System One picks among
-/// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), each a comma-separated
-/// list. Only what changed since the file was loaded is written: a field left as loaded keeps its key as
+/// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), each a list of names
+/// separated by commas or semicolons. Only what changed since the file was loaded is written: a field left as loaded keeps its key as
 /// the file writes it (a list written as an object, a switch written as text), and a changed field left
 /// blank removes its key, the engine then giving the provider's default. While a
 /// provider's section stays ticked, every key the form does not show (its timeout, its retries, its key
 /// variable, a key written by hand) is kept as it is, and so are the decision profiles; unticking the
 /// section removes it whole, with every key in it. A provider name the engine does not know is shown as
-/// written and kept, and refused at apply until another choice is picked, as the engine refuses it at start.
+/// written and kept, and refused at apply until another choice is picked, as the engine refuses it at start;
+/// once applied, the form is loaded again from the document, and that name is offered no more.
 /// Every key is read and written where the file spells it, in whatever letter case
 /// (<see cref="AppSettingsDocument.PathAsWritten"/>), as the configuration reads it.
 /// </summary>
@@ -86,22 +87,22 @@ internal sealed class DecisionForm : ISettingsForm
     public IReadOnlyList<ProviderFields> Providers { get; }
 
     /// <summary>
-    /// The profiles System One picks among for an agent on <c>llm.profile: auto</c>, comma-separated,
-    /// cheapest first; blank removes the key, and a crew that asks for the pick is then refused at load.
+    /// The profiles System One picks among for an agent on <c>llm.profile: auto</c>, separated by commas
+    /// or semicolons, cheapest first; blank removes the key, and a crew that asks for the pick is then refused at load.
     /// </summary>
     public string RouteLadder { get; set; } = "";
 
     /// <summary>
-    /// The thinking levels System One picks among for <c>thinking: { effort: auto }</c>, comma-separated,
-    /// cheapest first; blank removes the key, the engine's own three then standing.
+    /// The thinking levels System One picks among for <c>thinking: { effort: auto }</c>, separated by
+    /// commas or semicolons, cheapest first; blank removes the key, the engine's own three then standing.
     /// </summary>
     public string EffortLevels { get; set; } = "";
 
     /// <summary>What the two lists are for.</summary>
     public const string PicksNotice = "For llm.profile: auto and effort: auto.";
 
-    /// <summary>How the two lists are written.</summary>
-    public const string ListsNotice = "Commas between names, cheapest first.";
+    /// <summary>How the two lists are written (<see cref="DecisionSection.SplitList"/>).</summary>
+    public const string ListsNotice = "Commas or semicolons, cheapest first.";
 
     /// <summary>The levels a list may name.</summary>
     public static string LevelsNotice { get; } = "Levels: " + string.Join(", ", DecisionSection.KnownEffortLevels) + ".";
@@ -204,8 +205,15 @@ internal sealed class DecisionForm : ISettingsForm
             section.RouteLadder = ladder;
         if (levelsChanged)
             section.EffortLevels = levels;
-        _loaded = typed;
-        Status = Describe(section.Resolve(_environment));
+
+        // The form follows what it wrote, as the other forms do: the row of a provider name the engine
+        // does not know leaves the list once another choice is applied, and a list shows as stored.
+        // What is typed under a section left unticked is no key of the file: it stays typed, and is
+        // written anew once the section is ticked again.
+        var unticked = Providers.Where(fields => !fields.SetUp).Select(fields => (fields, fields.Model, fields.BaseAddress)).ToList();
+        LoadFrom(document);
+        foreach (var (fields, model, address) in unticked.Where(kept => !kept.fields.SetUp))
+            (fields.Model, fields.BaseAddress) = (model, address);
         return [];
     }
 

@@ -23,6 +23,7 @@ internal sealed class DecisionSectionView : SectionView
     private readonly TextField _routeLadder;
     private readonly TextField _effortLevels;
     private readonly Label _status;
+    private IReadOnlyList<string> _shownChoices;
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public DecisionSectionView(DecisionForm form)
@@ -36,6 +37,7 @@ internal sealed class DecisionSectionView : SectionView
         _provider = new ListView { X = FormLayout.Margin, Y = 1, Width = Dim.Fill(FormLayout.Margin), Height = rows };
         Add(_provider);
         FormLayout.SetItems(_provider, _form.ProviderChoices, _form.ProviderChoiceIndex);
+        _shownChoices = [.. _form.ProviderChoices];
         var y = rows + 2;
         // Two rows: the caption of a switch the file writes as no boolean says so, and is longer.
         _enabled = FormLayout.AddOptionalSwitch(this, y, EnabledCaption, _form.Enabled);
@@ -71,28 +73,47 @@ internal sealed class DecisionSectionView : SectionView
     }
 
     /// <inheritdoc />
-    public override void Load()
+    public override void Load() => Refresh();
+
+    /// <summary>
+    /// The screen follows the form, which follows the document it was just applied to: the row of a
+    /// provider name the engine does not know leaves the list once another choice is applied, a list of
+    /// names shows as it was stored, and the status says what a run now gets. What already shows what
+    /// the form holds is left alone, the cursor and the selection with it.
+    /// </summary>
+    public override void Refresh()
     {
-        FormLayout.SetItems(_provider, _form.ProviderChoices, _form.ProviderChoiceIndex);
-        // The state first: setting it raises a change, which must not clear the text just loaded.
+        var choices = _form.ProviderChoices;
+        if (!choices.SequenceEqual(_shownChoices, StringComparer.Ordinal) || FormLayout.SelectedIndex(_provider) != _form.ProviderChoiceIndex)
+        {
+            FormLayout.SetItems(_provider, choices, _form.ProviderChoiceIndex);
+            _shownChoices = [.. choices];
+        }
+
+        // The state first: setting it raises a change, which must not clear the text the form holds.
         var enabled = _form.EnabledAsWritten;
-        _enabled.Value = FormLayout.ToCheckState(_form.Enabled);
+        if (_enabled.Value != FormLayout.ToCheckState(_form.Enabled))
+            _enabled.Value = FormLayout.ToCheckState(_form.Enabled);
         _form.EnabledAsWritten = enabled;
         _enabled.Text = FormLayout.SwitchCaption(EnabledCaption, enabled);
         foreach (var (fields, setUp, model, address) in _providers)
         {
-            setUp.Value = FormLayout.ToCheckState(fields.SetUp);
-            model.Text = fields.Model;
-            address.Text = fields.BaseAddress;
+            if (setUp.Value != FormLayout.ToCheckState(fields.SetUp))
+                setUp.Value = FormLayout.ToCheckState(fields.SetUp);
+            Show(model, fields.Model);
+            Show(address, fields.BaseAddress);
         }
 
-        _routeLadder.Text = _form.RouteLadder;
-        _effortLevels.Text = _form.EffortLevels;
+        Show(_routeLadder, _form.RouteLadder);
+        Show(_effortLevels, _form.EffortLevels);
         _status.Text = _form.Status;
     }
 
-    /// <summary>The status follows the document the form was just applied to.</summary>
-    public override void Refresh() => _status.Text = _form.Status;
+    private static void Show(TextField field, string text)
+    {
+        if (!string.Equals(field.Text, text, StringComparison.Ordinal))
+            field.Text = text;
+    }
 
     /// <inheritdoc />
     public override void Apply()

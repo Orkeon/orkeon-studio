@@ -160,6 +160,32 @@ internal static partial class SettingsBinding
         return Walk(configuration.GetSection(sectionPath), shape);
     }
 
+    /// <summary>
+    /// As <see cref="UnknownKeys(IConfiguration, string, Type, ValueTuple{string, Type}[])"/>, for a
+    /// section several readers declare, in the order the host meets them: a reader with no key adds its
+    /// properties to the section's own keys, one with a key declares the sub-section of that name. The
+    /// order is the one the engine's sentence lists the keys in.
+    /// </summary>
+    public static IEnumerable<(string Path, string Problem)> UnknownKeysOfReaders(
+        IConfiguration configuration, string sectionPath, params (string? Key, Type Options)[] readers)
+    {
+        var shape = new Shape();
+        foreach (var (key, type) in readers)
+        {
+            var read = Shape.Of(type);
+            if (key is not null)
+            {
+                shape.Named[key] = read;
+                continue;
+            }
+
+            foreach (var (name, below) in read.Named)
+                shape.Named.TryAdd(name, below);
+        }
+
+        return Walk(configuration.GetSection(sectionPath), shape);
+    }
+
     private static IEnumerable<(string Path, string Problem)> Walk(IConfigurationSection section, Shape shape)
     {
         foreach (var child in section.GetChildren())

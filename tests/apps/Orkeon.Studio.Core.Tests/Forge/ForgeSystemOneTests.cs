@@ -400,6 +400,70 @@ public sealed partial class ForgeSystemOneTests
     }
 
     /// <summary>
+    /// An <c>error</c> the engine calls recoverable says nothing of its run: after an edit it refuses at
+    /// the arbitration the engine asks again, and a trial is under way until the stream, or the end of
+    /// the process, says the run ended. A fatal one is the last thing the engine says of its work.
+    /// </summary>
+    [Fact]
+    public void A_recoverable_error_does_not_end_the_trial_and_a_fatal_one_does()
+    {
+        const string FirstPass = """{"v":2,"seq":1,"ts":"t","kind":"run.started","run":1,"passes":2,"pass":1,"circuit":"on"}""";
+
+        var recoverable = new ForgeSessionModel();
+        recoverable.Feed(Parse(FirstPass));
+        recoverable.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-BLUEPRINT-INVALID","message":"the plan names no agent","recoverable":true}"""));
+        Assert.True(recoverable.LastError!.Recoverable);
+        Assert.True(recoverable.RunInProgress);
+        Assert.Equal((1, 2, "on"), (recoverable.TrialPass, recoverable.TrialPasses, recoverable.TrialCircuit));
+
+        // A recoverable error the engine stops on (a spent budget) is followed by session.finished.
+        recoverable.Feed(Parse("""{"v":2,"seq":3,"ts":"t","kind":"error","code":"FORGE-BUDGET-EXHAUSTED","message":"The session's tokens budget is exhausted.","recoverable":true}"""));
+        Assert.True(recoverable.RunInProgress);
+        recoverable.Feed(Parse("""{"v":2,"seq":4,"ts":"t","kind":"session.finished","status":"abandoned","exitCode":0}"""));
+        Assert.False(recoverable.RunInProgress);
+        Assert.Null(recoverable.TrialPasses);
+
+        var fatal = new ForgeSessionModel();
+        fatal.Feed(Parse(FirstPass));
+        fatal.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-STAGE-FAILED","message":"boom","recoverable":false}"""));
+        Assert.False(fatal.RunInProgress);
+        Assert.Equal((null, null, null), (fatal.TrialPass, fatal.TrialPasses, fatal.TrialCircuit));
+
+        // An error that does not say is taken as fatal, as it was read before the field.
+        var silent = new ForgeSessionModel();
+        silent.Feed(Parse(FirstPass));
+        silent.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"X","message":"m"}"""));
+        Assert.False(silent.RunInProgress);
+    }
+
+    /// <summary>
+    /// A line keeps what was known of its trial when it was read: the pass count under way is forgotten
+    /// with the run of the engine, and a trial that died during its first pass still says its lines
+    /// come from a trial in two passes.
+    /// </summary>
+    [Fact]
+    public void A_line_remembers_that_its_trial_took_two_passes_once_the_engine_is_gone()
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"run.started","run":1,"passes":2,"pass":1,"circuit":"on"}"""));
+        model.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","agentRole":"Analyst","success":true,"circuit":"on"}"""));
+        model.Feed(Parse("""{"v":2,"seq":3,"ts":"t","kind":"run.finished","run":1,"circuit":"on","mailActions":[{"kind":"send","to":"a@example.org","subject":"first"}]}"""));
+        model.AcknowledgeEngineExit();
+
+        Assert.Null(model.TrialPasses);
+        Assert.True(Assert.Single(model.Activity).InTwoPassTrial);
+        Assert.True(Assert.Single(model.MailActions).InTwoPassTrial);
+
+        // A single-pass trial marks nothing.
+        var single = new ForgeSessionModel();
+        single.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"run.started","run":1,"passes":1,"pass":1,"circuit":"off"}"""));
+        single.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","agentRole":"Analyst","success":true,"circuit":"off"}"""));
+        single.Feed(Parse("""{"v":2,"seq":3,"ts":"t","kind":"run.finished","run":1,"circuit":"off","mailActions":[{"kind":"send","to":"a@example.org","subject":"only"}]}"""));
+        Assert.False(Assert.Single(single.Activity).InTwoPassTrial);
+        Assert.False(Assert.Single(single.MailActions).InTwoPassTrial);
+    }
+
+    /// <summary>
     /// The second pass of a trial continues it: what the first did stays, each line knows its pass, the
     /// trial is under way until the last pass ends, and the mail actions of the passes add up.
     /// </summary>

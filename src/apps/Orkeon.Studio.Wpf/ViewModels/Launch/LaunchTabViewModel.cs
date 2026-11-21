@@ -1766,19 +1766,29 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
     private string DecisionText(DecisionPreflightFinding finding)
     {
-        var reasons = string.Join(" ", finding.Reasons.Select(reason => _strings[reason switch
+        // Settings known to be the run's are those of a pinned or team file, which Settings does not
+        // edit: the file is named where the machine's settings are sent to their section.
+        var file = finding.SettingsKnown && ResolvedSettingsPath is { Length: > 0 } read ? read : null;
+        var reasons = string.Join(" ", finding.Reasons.Select(reason => reason switch
         {
-            DecisionOffReason.RunSwitch => StudioStringKeys.RunDecisionOffRunSwitch,
-            DecisionOffReason.SettingsSwitch => StudioStringKeys.RunDecisionOffSettings,
-            _ => StudioStringKeys.RunDecisionOffNoProvider,
-        }]));
+            DecisionOffReason.RunSwitch => _strings[StudioStringKeys.RunDecisionOffRunSwitch],
+            DecisionOffReason.SettingsSwitch when file is not null => _strings.Format(StudioStringKeys.RunDecisionOffSettingsInFile, file),
+            DecisionOffReason.SettingsSwitch => _strings[StudioStringKeys.RunDecisionOffSettings],
+            _ => _strings[StudioStringKeys.RunDecisionOffNoProvider],
+        }));
         var provider = finding.Status?.Provider?.DisplayName ?? "";
         switch (finding.Kind)
         {
+            case DecisionPreflightKind.ProviderRefused when !finding.SettingsKnown:
+                return _strings.Format(StudioStringKeys.RunWarnDecisionProvider, finding.Status?.Refusal ?? "");
             case DecisionPreflightKind.ProviderRefused:
+                // A name two profiles share is mended by renaming one, wherever the model profile comes from.
                 return _strings.Format(
-                    finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionProvider : StudioStringKeys.RunWarnDecisionProvider,
-                    finding.Status?.Refusal ?? "");
+                    finding.Status is { RefusalStage: DecisionRefusalStage.Profiles }
+                        ? StudioStringKeys.RunBlockedDecisionSharedName
+                        : StudioStringKeys.RunBlockedDecisionProvider,
+                    finding.Status?.Refusal ?? "",
+                    file ?? "");
             case DecisionPreflightKind.ProfileRefusedByMode:
                 // A holder on auto is refused whatever the file; a decision profile is one of the settings,
                 // said beside it only when they are the run's.
@@ -1795,7 +1805,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                     Quoted(finding.RoutedHolders),
                     finding.UnknownRungs.Count > 0
                         ? _strings.Format(StudioStringKeys.RunDecisionLadderUnknownRungs, Quoted(finding.UnknownRungs))
-                        : _strings[StudioStringKeys.RunDecisionLadderMissing]);
+                        : _strings[StudioStringKeys.RunDecisionLadderMissing],
+                    file is null
+                        ? _strings[StudioStringKeys.RunDecisionLadderFixSettings]
+                        : _strings.Format(StudioStringKeys.RunDecisionLadderFixFile, file));
             case DecisionPreflightKind.RequiredWithoutModel:
                 return _strings.Format(StudioStringKeys.RunBlockedDecisionRequired, DecisionNeeds(finding), reasons).TrimEnd();
             case DecisionPreflightKind.ProfileBlockedWithoutModel:

@@ -76,8 +76,9 @@ public sealed record RunTaskProgress(
 /// <param name="Tokens">Both directions together.</param>
 /// <param name="Model">
 /// The model the agents' latest call was answered by, when reported. A reading from the
-/// machinery around the agents — a judge, a RAG pipeline, the manager, the planner — or one that
-/// names no kind of work leaves it as it was (<see cref="RunCostOperations.IsAgentWork"/>).
+/// machinery around the agents — the manager, the planner, a RAG pipeline, the memory services,
+/// a judge, a decision model, a decision task's relay agent — or one that names no kind of work
+/// leaves it as it was (<see cref="RunCostOperations.IsAgentWork"/>).
 /// </param>
 /// <param name="Provider">The provider of that same call, when reported.</param>
 /// <param name="PromptTokens">What went up (↑).</param>
@@ -673,9 +674,10 @@ public sealed class RunProgressModel
         // `budgetRemaining` — fields the writer never produced — so the screen was
         // built against a fiction. The split and the vendor's charge arrive with every
         // reading since STUDIO-29; a field a line leaves out stays null here.
-        // Every call of the run is on the meter since STUDIO-42 — a judge's, a RAG
-        // pipeline's, the manager's: their readings move the figures and leave the model
-        // named, which is the one the agents work on.
+        // Every call of the run is on the meter since STUDIO-42 — the manager's, the
+        // planner's, a RAG pipeline's, the memory services', a judge's, a decision model's, a
+        // decision task's relay agent's (RunCostOperations): their readings move the figures
+        // and leave the model named, which is the one the agents work on.
         var agentWork = RunCostOperations.IsAgentWork(orkeonEvent.GetString("operation"));
         var standing = orkeonEvent.GetInt64("tokens") ?? 0;
         var spent = standing - (Cost?.Tokens ?? 0);

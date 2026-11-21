@@ -14,7 +14,8 @@ namespace Orkeon.Studio.Core.Tests.Launch;
 /// The engine as the oracle of what Studio says before a launch. The runner host, the one
 /// <c>orkeon run</c> builds, is built over each settings file below: it starts or refuses, and loads a
 /// crew or refuses it. Studio, which opens no host, must say the same from the file alone: the status
-/// of the decision settings and the problems of the sections it restates for the start, and
+/// of the decision settings (the decision profiles and the guardian among them) and the problems of
+/// the sections it restates for the start, and
 /// <see cref="DecisionPreflight"/> for the load. A rule the engine changes fails here.
 /// </summary>
 /// <remarks>
@@ -120,9 +121,10 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
     /// <summary>
     /// What Studio says the start refuses in <paramref name="settings"/>, in the order the host meets
     /// it, so the first is the one the host raises: the file it does not load, and nothing else then;
-    /// what is refused while the host is composed; the values and the rules of each section, in the
-    /// order the host declares them (the compaction, the skills, the ladder and the levels, the
-    /// guardian and the circuit's switch, the caller's bridge, the serving one, the provider in use);
+    /// what is refused while the host is composed (the decision profiles among it); the values and the
+    /// rules of each section, in the order the host declares them (the compaction, the skills, the
+    /// ladder and the levels, the guardian and the circuit's switch, the caller's bridge, the serving
+    /// one, the provider in use);
     /// the keys no section carries; a name two profiles share; and last the fail-closed judge.
     /// </summary>
     private static List<string> StudioRefusals(string settings, Func<string, string?>? environment = null)
@@ -139,6 +141,9 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             || problem.EndsWith(", which is not a finite number.", StringComparison.Ordinal);
         List<string> context = [.. document.Compaction.Problems().Concat(document.Skills.Problems()).Select(problem => problem.Problem)];
         List<string> bridge = [.. document.ToolBridge.Problems().Concat(document.BridgeServer.Problems()).Select(problem => problem.Problem)];
+        // The guardian's values and rules are the status's own refusal; its keys are walked with the others.
+        List<string> guardian = [.. document.Guardian.Problems().Select(problem => problem.Problem)];
+        List<string> decisionKeys = [.. document.Decision.UnknownKeys().Select(problem => problem.Problem)];
         return
         [
             .. Decision(DecisionRefusalStage.Composition),
@@ -147,6 +152,8 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             .. bridge.Where(problem => !OfTheWalk(problem)),
             .. Decision(DecisionRefusalStage.Provider),
             .. context.Where(OfTheWalk),
+            .. guardian.Where(OfTheWalk),
+            .. decisionKeys,
             .. bridge.Where(OfTheWalk),
             .. Decision(DecisionRefusalStage.Profiles, DecisionRefusalStage.Judge),
         ];
@@ -230,7 +237,77 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         { "strict tools that are no boolean and an unknown provider", "\"CrewFactory\": { \"StrictTools\": \"y\" }, \"Decision\": { \"Provider\": \"nope\" }" },
         { "an unknown provider and a share out of bounds", "\"Decision\": { \"Provider\": \"nope\" }, \"Compaction\": { \"TriggerShare\": 2 }" },
         { "a decision profile named auto and a share out of bounds", "\"Decision\": { \"Profiles\": { \"auto\": { \"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" } } ] } } }, \"Compaction\": { \"TriggerShare\": 2 }" },
+        // The decision profiles, judged while the host is composed: one row per rule of the engine.
+        { "a decision profile that is right", DecisionProfile },
+        { "a decision profile with every kind of stage", Profile("\"Target\": \"default\", \"FailClosed\": true, \"Stages\": [ { \"Kind\": \" Guard \", \"Phase\": \"request\", \"Risks\": { \"x\": \"y\" } }, { \"Kind\": \"ROUTE\", \"Routes\": { \"default\": \"anything\" }, \"Fallback\": \"default\", \"MinConfidence\": 1 }, { \"Kind\": \"verify\", \"EscalateTo\": \"default\", \"Steps\": \"ALL\", \"MinProbability\": 0 } ]") },
+        { "a decision profile with no target", Profile("\"Stages\": [ " + Guard + " ]") },
+        { "a decision profile with a blank target", Profile("\"Target\": \"  \", \"Stages\": [ " + Guard + " ]") },
+        { "a decision profile with no stage", Profile("\"Target\": \"default\"") },
+        { "a decision profile with an empty list of stages", Profile("\"Target\": \"default\", \"Stages\": []") },
+        { "a stage of an unknown kind", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"nope\" } ]") },
+        { "a stage with no kind", Profile("\"Target\": \"default\", \"Stages\": [ null ]") },
+        { "a guard with no risk", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\" } ]") },
+        { "a guard on a phase that is none", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"Phase\": \"later\" } ]") },
+        { "a guard on a phase written as its number", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"Phase\": \"1\" } ]") },
+        { "a guard on a phase written as a number that is none", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"Phase\": \"7\" } ]") },
+        { "a guard's block threshold above one", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"BlockThreshold\": 2 } ]") },
+        { "a guard's warn threshold under zero, with decimals", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"WarnThreshold\": -0.5 } ]") },
+        { "a guard's threshold that is no number", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"BlockThreshold\": \"NaN\" } ]") },
+        { "a route with no profile", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"route\" } ]") },
+        { "a route's confidence above one", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"route\", \"Routes\": { \"default\": \"anything\" }, \"MinConfidence\": 3 } ]") },
+        { "a route to a decision profile", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"route\", \"Routes\": { \"P\": \"itself\" } } ]") },
+        { "a route that falls back on a decision profile", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"route\", \"Routes\": { \"default\": \"anything\" }, \"Fallback\": \" p \" } ]") },
+        { "a verify with nowhere to escalate", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"verify\" } ]") },
+        { "a verify's probability above one", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"verify\", \"EscalateTo\": \"default\", \"MinProbability\": 1.5 } ]") },
+        { "a verify on steps that are none", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"verify\", \"EscalateTo\": \"default\", \"Steps\": \"some\" } ]") },
+        { "a decision profile whose target is a decision profile", Profile("\"Target\": \"p\", \"Stages\": [ " + Guard + " ]") },
+        { "two things wrong in one stage and a second stage wrong", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Phase\": \"later\", \"WarnThreshold\": 4 }, { \"Kind\": \"nope\" } ]") },
+        // The binder leaves out a stage with a value it cannot convert, and reads as off a switch that is no boolean.
+        { "a single stage with a threshold that is no number", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"BlockThreshold\": \"x\" } ]") },
+        { "a stage with a threshold that is no number beside a stage that is right", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"BlockThreshold\": \"x\" }, " + Guard + " ]") },
+        { "a decision profile whose FailClosed is no boolean", Profile("\"Target\": \"default\", \"FailClosed\": \"x\", \"Stages\": [ " + Guard + " ]") },
+        { "a decision profile that is a text", "\"Decision\": { \"Profiles\": { \"p\": \"x\" } }" },
+        { "a decision profile written without a value", "\"Decision\": { \"Profiles\": { \"p\": null } }" },
+        // Where the host meets a profile it refuses: after the choice of a provider, before every section.
+        { "a decision profile with no stage and an unknown provider", Profile("\"Target\": \"default\"").Replace("\"Profiles\"", "\"Provider\": \"nope\", \"Profiles\"", StringComparison.Ordinal) },
+        { "a decision profile with no stage and strict tools that are no boolean", Profile("\"Target\": \"default\"") + ", \"CrewFactory\": { \"StrictTools\": \"y\" }" },
+        { "a decision profile with no stage and a share out of bounds", Profile("\"Target\": \"default\"") + ", \"Compaction\": { \"TriggerShare\": 2 }" },
+        { "a decision profile with no stage and a ladder of one rung", Profile("\"Target\": \"default\"").Replace("\"Profiles\"", "\"Route\": { \"Ladder\": [\"default\"] }, \"Profiles\"", StringComparison.Ordinal) },
+        // The keys of the decision sections that are no setting.
+        { "a misspelt key of a decision profile", Profile("\"Target\": \"default\", \"FailClose\": true, \"Stages\": [ " + Guard + " ]") },
+        { "a misspelt key of a stage", Profile("\"Target\": \"default\", \"Stages\": [ { \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" }, \"BlockTreshold\": 0.4 } ]") },
+        { "a misspelt key of the decision section", "\"Decision\": { \"Enable\": false }" },
+        { "a misspelt key of the ladder's section", "\"Decision\": { \"Route\": { \"Lader\": [\"default\", \"default\"] } }" },
+        { "a misspelt key of the provider in use", Provider.Replace("}", ", \"Modle\": \"x\" }", StringComparison.Ordinal) },
+        { "a misspelt key of a provider left aside", Provider + ", \"Liquid\": { \"Modle\": \"x\" }" },
+        // The guardian: its values, its three rules, its keys.
+        { "a judge's threshold above one", "\"Guardian\": { \"Llm\": { \"BlockThreshold\": 2 } }" },
+        { "a judge's warn threshold under zero", "\"Guardian\": { \"Llm\": { \"WarnThreshold\": -0.1 } }" },
+        { "a judge's threshold that is no number", "\"Guardian\": { \"Llm\": { \"BlockThreshold\": \"NaN\" } }" },
+        { "a judge that reads no character", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }" },
+        { "a judge that reads no character under a guardian off", "\"Guardian\": { \"Enabled\": false, \"Llm\": { \"MaxContentChars\": 0 } }" },
+        { "phases a model does not judge", "\"Guardian\": { \"Llm\": { \"Phases\": [\"ToolExecution\", \"Input\", \"nope\"] } }" },
+        { "phases a model judges, in any letter case or by number", "\"Guardian\": { \"Llm\": { \"Phases\": [\"input\", \"OUTPUT\", \"1\", \"\"] } }" },
+        { "a phase written as a number that is none", "\"Guardian\": { \"Llm\": { \"Phases\": [\"7\"] } }" },
+        { "a phase, a threshold and a size, all refused", "\"Guardian\": { \"Llm\": { \"Phases\": [\"Delegation\"], \"MaxContentChars\": 0, \"WarnThreshold\": -1 } }" },
+        { "a threshold and a size, both refused", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0, \"WarnThreshold\": -1 } }" },
+        { "a delegation depth that is no number", "\"Guardian\": { \"DefaultPolicy\": { \"MaxDelegationDepth\": \"x\" } }" },
+        { "a size refused and a threshold that does not convert", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0, \"WarnThreshold\": \"x\" } }" },
+        { "a misspelt key of the guardian", "\"Guardian\": { \"Enable\": false }" },
+        { "a misspelt key of the judge", "\"Guardian\": { \"Llm\": { \"FailMod\": \"Open\" } }" },
+        { "a misspelt key of the default policy", "\"Guardian\": { \"DefaultPolicy\": { \"InputGuard\": false } }" },
+        { "the guardian as a file may write it", "\"Guardian\": { \"Enabled\": true, \"DefaultPolicy\": { \"OutputGuardEnabled\": false, \"MaxDelegationDepth\": 3 }, \"Llm\": { \"Enabled\": false, \"Phases\": [\"Input\"], \"Risks\": { \"leak\": \"a secret leaves\" }, \"BlockThreshold\": 0.9, \"WarnThreshold\": 0.4, \"FailMode\": \"Open\", \"MaxContentChars\": 4000 } }" },
+        { "a judge's size refused and the circuit's switch no boolean", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Decision\": { \"Enabled\": \"x\" }" },
+        { "a judge's size refused and a ladder of one rung", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Decision\": { \"Route\": { \"Ladder\": [\"default\"] } }" },
+        { "a judge's size refused and a count out of bounds", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Bridge\": { \"MaxSessions\": 0 }" },
+        { "a judge's size refused and a share out of bounds", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Compaction\": { \"TriggerShare\": 2 }" },
+        { "a fail-closed judge with no provider and a size refused", "\"Guardian\": { \"Llm\": { \"Enabled\": true, \"MaxContentChars\": 0 } }" },
     };
+
+    private const string Guard = "{ \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" } }";
+
+    /// <summary>The decision section with one decision profile, <c>p</c>, of the given body.</summary>
+    private static string Profile(string body) => "\"Decision\": { \"Profiles\": { \"p\": { " + body + " } } }";
 
     /// <summary>
     /// The host starts exactly when Studio finds nothing to refuse, and its refusal is the sentence

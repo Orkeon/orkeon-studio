@@ -47,6 +47,7 @@ public sealed class AppSettingsDocument
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
         Decision = new DecisionSection(this);
+        Guardian = new GuardianSection(this);
         Compaction = new CompactionSection(this);
         Skills = new SkillsSection(this);
         ToolBridge = new ToolBridgeSection(this);
@@ -88,6 +89,9 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the decision models: <c>Orkeon:Decision</c> and the provider sections.</summary>
     public DecisionSection Decision { get; }
+
+    /// <summary>What the host's start refuses in <c>Orkeon:Guardian</c>: the guards of a run and its LLM judge.</summary>
+    public GuardianSection Guardian { get; }
 
     /// <summary>Typed view over <c>Orkeon:Compaction</c>: the compaction of a context and the pruning of its tool results.</summary>
     public CompactionSection Compaction { get; }

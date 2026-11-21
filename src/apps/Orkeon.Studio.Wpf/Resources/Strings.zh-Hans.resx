@@ -485,6 +485,7 @@
   </data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>运行成功完成</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>脚本或设置错误：请检查团队文件及其使用的设置</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>运行被拒绝：此团队离不开决策模型（System One），而它们已关闭。请在“设置 › 决策模型”中完成配置，并保持勾选“使用决策模型”</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>运行时错误：日志的最后几行说明了原因</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>运行已中断</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>意外结束：请查看上方的输出</value></data>
@@ -839,6 +840,7 @@
   <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>本次运行不使用它们</value></data>
   <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>设置中已将其关闭</value></data>
   <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>未配置决策提供方</value></data>
+  <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>试运行的这一轮不使用它们</value></data>
   <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}：System One 选择了模型配置“{1}”（{2}%）。</value></data>
   <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}：模型配置“{1}”，非 System One 选择（{2}）。</value></data>
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}：System One 选择了思考级别 {1}（{2}%）。</value></data>
@@ -1600,7 +1602,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），而设置无法满足：设置中没有包含两个或更多模型配置的阶梯，或阶梯中的某个模型配置既未在设置中定义，也未在启动时提供给本次运行。引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>团队声明了 decision.mode: none，而某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），或指定了设置中的决策配置：该模式拒绝任何对 System One 的使用，因此引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED" xml:space="preserve"><value>某个智能体或任务使用设置中的决策配置，其防护阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。检查仍会加载团队。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>引擎在启动时检查的某个配置节（压缩、裁剪、技能、工具桥）包含其规则拒绝的值，或包含不属于该节设置的键：作为错误时，任何运行都无法启动。作为警告时，它指定了本文件未定义的模型配置，在 Studio 之外启动的运行会因此被拒绝。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>引擎在启动时检查的某个配置节（压缩、裁剪、技能、工具桥、守卫、决策模型及其决策配置）包含其规则拒绝的值，或包含不属于该节设置的键：作为错误时，任何运行都无法启动。作为警告时，它指定了本文件未定义的模型配置，在 Studio 之外启动的运行会因此被拒绝。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>运行会把工具桥接到另一台机器，而工具桥的令牌不在其环境变量中，或短于 16 个字符：运行拒绝启动。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>设置中指定了工具桥的地址，但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
@@ -2350,6 +2352,7 @@
   <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>始终：团队离不开它们</value></data>
   <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：团队可以组建，但在“设置 › 决策模型”中完成配置之前，其试运行会被拒绝。</value></data>
   <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：试运行将只在不使用它们的情况下执行。</value></data>
+  <data name="Studio.Create.CrewDecisionSession" xml:space="preserve"><value>屏幕上的团队是按“{0}”组建的，并保持不变：上方的选择用于下一次“组建团队”。</value></data>
   <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：使用决策模型</value></data>
   <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：不使用决策模型</value></data>
   <data name="Studio.Create.PassWith" xml:space="preserve"><value>使用决策模型</value></data>
@@ -2486,17 +2489,21 @@
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>任务“{0}”是决策任务，需要写入 {1}，但决策不会写入任何文件：请删除该交付物，或将其移到由智能体运行的任务中。</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>使用决策模型（System One）</value></data>
   <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>取消勾选后，本次运行不使用决策模型（--no-decision）：决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行；引擎会扣留 system_one_decide 工具；离不开决策模型的团队会被拒绝。</value></data>
-  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>引擎拒绝这些决策设置，因此 CLI 不会启动：{0} 请在“设置 › 决策模型”中修正。</value></data>
+  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 请在 {1} 中修正。</value></data>
+  <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 决策配置与模型配置不能同名：请重命名其中一个。决策配置位于 {1} 的 Orkeon:Decision:Profiles 下。</value></data>
   <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>引擎拒绝本机的决策设置：除非 CLI 选用的设置文件另有规定，否则它不会启动。{0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。{1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。CLI 会自行选择设置文件：请确认它提供了决策模型，或固定该文件。{1}</value></data>
   <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请勾选“使用决策模型”。</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>设置关闭了决策模型：请在“设置 › 决策模型”中开启。</value></data>
+  <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>本次运行读取的设置文件关闭了决策模型：请在 {0} 中将 Orkeon:Decision:Enabled 设为 true。</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>未配置决策提供方：请在“设置 › 决策模型”中配置一个。</value></data>
   <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，没有决策模型时引擎会扣留该工具</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>决策任务 {0} 既无后备答案也无“otherwise”任务，因此需要开启决策模型</value></data>
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>它声明了 decision.mode: required，因此引擎会在第一个任务之前拒绝运行</value></data>
-  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其模型配置（llm.profile: auto），而{1}：引擎在加载团队时会拒绝它。请在“设置 › 决策模型”中设置阶梯。</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其模型配置（llm.profile: auto），而{1}：引擎在加载团队时会拒绝它。{2}</value></data>
+  <data name="Studio.Run.DecisionLadderFixSettings" xml:space="preserve"><value>请在“设置 › 决策模型”中设置阶梯。</value></data>
+  <data name="Studio.Run.DecisionLadderFixFile" xml:space="preserve"><value>请在 {0} 中设置阶梯（Orkeon:Decision:Route:Ladder）。</value></data>
   <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} 指定了决策配置，而团队声明了 decision.mode: none，它拒绝任何对 System One 的使用：引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Run.BlockedDecisionModeAuto" xml:space="preserve"><value>{0} 让 System One 选择其模型配置（llm.profile: auto），而团队声明了 decision.mode: none，它拒绝任何对 System One 的使用：引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Run.BlockedDecisionProfileClosed" xml:space="preserve"><value>{0} 使用的决策配置带有防护阶段，该阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。{1}</value></data>

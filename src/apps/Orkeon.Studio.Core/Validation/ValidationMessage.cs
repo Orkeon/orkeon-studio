@@ -163,8 +163,9 @@ public static class ValidationCodes
 
     /// <summary>
     /// The engine refuses the decision settings: a provider it does not know or cannot deduce, a ladder of
-    /// profiles or a list of thinking levels its rules refuse, a decision profile named <c>auto</c> or
-    /// named as a model profile of the settings or of the run's environment is, or a
+    /// profiles or a list of thinking levels its rules refuse, a decision profile its rules refuse (the
+    /// name <c>auto</c>, no target, no stage, a stage it cannot build) or named as a model profile of the
+    /// settings or of the run's environment is, a value of the guardian its section refuses, or a
     /// fail-closed LLM judge while the circuit is off, the run's own <c>--no-decision</c> included. The
     /// host stops before it loads the crew, a check included. An error when the file is the one the run
     /// reads; a warning otherwise.
@@ -211,7 +212,8 @@ public static class ValidationCodes
 
     /// <summary>
     /// A value, or a key, of a section the engine validates at start (the compaction, the pruning, the
-    /// skills, the tool bridge) that its own rules refuse: the run would not start. The sentence is the
+    /// skills, the tool bridge, the guardian, the decision models and their profiles) that its own rules
+    /// refuse: the run would not start. The sentence is the
     /// engine's. A warning for a summary profile the file does not define, which the run's environment
     /// may give.
     /// </summary>

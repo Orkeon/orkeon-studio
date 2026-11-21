@@ -153,6 +153,32 @@ public sealed class ConstantDriftTests
     }
 
     /// <summary>
+    /// A decision circuit that is off says why in one of the engine's words, and a screen says it in a
+    /// sentence of the catalogue: a cause the engine adds and Studio does not map would be shown as a
+    /// raw word inside a localized sentence, as <c>trial</c> was. Every cause has its sentence, each
+    /// its own; a word the engine does not define has none, and is shown as written.
+    /// </summary>
+    [Fact]
+    public void Every_cause_the_engine_gives_for_a_circuit_off_has_its_sentence()
+    {
+        var causes = ConstantValuesOf(typeof(DecisionCircuitCauses)).ToList();
+        Assert.NotEmpty(causes);
+
+        var keys = causes.Select(DecisionCircuitCauseKeys.KeyOf).ToList();
+
+        Assert.All(keys, Assert.NotNull);
+        Assert.Equal(causes.Count, keys.Distinct(StringComparer.Ordinal).Count());
+        Assert.All(causes.Zip(keys), pair =>
+        {
+            var sentence = Orkeon.Studio.Core.Localization.EnglishStudioStrings.Instance[pair.Second!];
+            Assert.NotEqual(pair.Second, sentence);
+            Assert.NotEqual(pair.First, sentence);
+        });
+        Assert.Null(DecisionCircuitCauseKeys.KeyOf("maintenance"));
+        Assert.Null(DecisionCircuitCauseKeys.KeyOf(null));
+    }
+
+    /// <summary>
     /// The sign-in of an e-mail account is a stream the CLI writes and Studio reads (STUDIO-70),
     /// and a kind Studio does not read is not an error anywhere: the panel would simply never say
     /// what to do. Every kind the shared vocabulary declares must therefore come out of the client

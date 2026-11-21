@@ -313,25 +313,32 @@ public sealed class RunProgressViewModel : ObservableObject
     public bool HasAgentNotes => AgentNotes.Count > 0;
 
     /// <summary>
-    /// How many lines <see cref="AgentNotes"/> keeps: the oldest go first, the circuit line that opens
-    /// the list excepted, every « circuit-off » or « relay » note below it being read against it.
+    /// How many lines <see cref="AgentNotes"/> keeps: the oldest go first, the circuit line excepted,
+    /// which stays the first of the list, every « circuit-off » or « relay » note below it being read
+    /// against it.
     /// </summary>
     internal const int MaxAgentNotes = 200;
 
     private string? _pendingCircuitNote;
 
     /// <summary>Whether the first line of <see cref="AgentNotes"/> is the run's circuit line, which the cap never evicts.</summary>
-    private bool _circuitNoteOpensTheList;
+    private bool _circuitNotePinned;
 
+    /// <summary>
+    /// Puts the circuit line the run stated first in the list, wherever the run was when it stated it:
+    /// above the notes that came before it, and in place of the line of an earlier statement.
+    /// </summary>
     private void ShowCircuitNote()
     {
         if (_pendingCircuitNote is not { } line)
             return;
 
         _pendingCircuitNote = null;
-        if (AgentNotes.Count == 0)
-            _circuitNoteOpensTheList = true;
-        AgentNotes.Add(line);
+        if (_circuitNotePinned)
+            AgentNotes[0] = line;
+        else
+            AgentNotes.Insert(0, line);
+        _circuitNotePinned = true;
     }
 
     /// <summary>The cost line, empty until the meter moves.</summary>
@@ -420,7 +427,7 @@ public sealed class RunProgressViewModel : ObservableObject
         HubMessages.Clear();
         AgentNotes.Clear();
         _pendingCircuitNote = null;
-        _circuitNoteOpensTheList = false;
+        _circuitNotePinned = false;
         AnswerText = string.Empty;
         ReplyText = string.Empty;
         _model = new RunProgressModel(_time);
@@ -496,7 +503,7 @@ public sealed class RunProgressViewModel : ObservableObject
         // A long tool loop prunes or compacts at each turn: the panel keeps the latest lines, under
         // the circuit line that explains them.
         while (AgentNotes.Count > MaxAgentNotes)
-            AgentNotes.RemoveAt(_circuitNoteOpensTheList ? 1 : 0);
+            AgentNotes.RemoveAt(_circuitNotePinned ? 1 : 0);
 
         // A delta arrives per token, on the UI thread. Re-raising the eleven labels plus the
         // command state for each one would mean thousands of change notifications per
@@ -575,14 +582,10 @@ public sealed class RunProgressViewModel : ObservableObject
         if (circuit.On)
             return _strings.Format(StudioStringKeys.RunNoteDecisionOn, mode);
 
-        var cause = circuit.Cause switch
-        {
-            Orkeon.Constants.Protocol.DecisionCircuitCauses.Switch => _strings[StudioStringKeys.RunNoteCauseSwitch],
-            Orkeon.Constants.Protocol.DecisionCircuitCauses.Settings => _strings[StudioStringKeys.RunNoteCauseSettings],
-            Orkeon.Constants.Protocol.DecisionCircuitCauses.NoProvider => _strings[StudioStringKeys.RunNoteCauseNoProvider],
-            // A cause this build does not know is said as the engine wrote it.
-            _ => circuit.Cause ?? "\u2014",
-        };
+        // A cause this build does not know is said as the engine wrote it.
+        var cause = DecisionCircuitCauseKeys.KeyOf(circuit.Cause) is { } key
+            ? _strings[key]
+            : circuit.Cause ?? "\u2014";
         return _strings.Format(StudioStringKeys.RunNoteDecisionOff, mode, cause);
     }
 

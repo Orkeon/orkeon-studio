@@ -16,8 +16,8 @@ namespace Orkeon.Studio.Core.Configuration;
 /// <c>Orkeon:Decision:Effort:Levels</c>) and the section of each provider
 /// (<c>Orkeon:TypeSafe</c>, <c>Orkeon:Liquid</c>, <c>Orkeon:Kev</c>); <see cref="Resolve"/> tells what a
 /// run of the file gets, and the first thing the host's start refuses in it. Every write lands in
-/// place, field by field, so a key Studio does not model (the decision profiles under <c>Orkeon:Decision:Profiles</c>, a
-/// provider's <c>ApiKey</c>) survives an edit. The providers, their sections and their defaults are the
+/// place, field by field, so a key Studio does not write (the decision profiles under <c>Orkeon:Decision:Profiles</c>,
+/// which <see cref="ProfileProblems"/> judges all the same, a provider's <c>ApiKey</c>) survives an edit. The providers, their sections and their defaults are the
 /// engine's own (<see cref="DecisionProviderDescriptor"/>), read from the <c>Orkeon</c> package.
 /// </summary>
 public sealed class DecisionSection
@@ -252,14 +252,8 @@ public sealed class DecisionSection
             return status with { Refusal = ex.Message, RefusalStage = DecisionRefusalStage.Composition };
         }
 
-        if (decisionProfiles.FirstOrDefault(LlmProfiles.IsAuto) is { } reserved)
-        {
-            return status with
-            {
-                Refusal = LlmProfiles.AutoReservedMessage($"{ProfilesPath}:{reserved}"),
-                RefusalStage = DecisionRefusalStage.Composition,
-            };
-        }
+        if (ProfileProblemsOf(configuration).Select(problem => problem.Problem).FirstOrDefault() is { } profile)
+            return status with { Refusal = profile, RefusalStage = DecisionRefusalStage.Composition };
 
         // Then the declared sections, in the host's order: the ladder and the levels System One picks
         // on, validated at start whatever the circuit; the guardian; the circuit's switch; the section
@@ -287,6 +281,49 @@ public sealed class DecisionSection
                 RefusalStage = DecisionRefusalStage.Judge,
             }
             : status;
+    }
+
+    /// <summary>
+    /// What the host refuses in the decision profiles of the file (<c>Orkeon:Decision:Profiles</c>) while
+    /// it is composed, by the engine's rules restated in <see cref="DecisionProfileRules"/>: a profile
+    /// under the reserved name <c>auto</c>, with no <c>Target</c> or no stage, a stage of an unknown
+    /// <c>Kind</c>, a route with no profile, a guard with no risk, a verify with no <c>EscalateTo</c>, a
+    /// probability outside [0, 1], a <c>Phase</c> or <c>Steps</c> that is none, a profile that names
+    /// another decision profile. Each with the path of its key, in the engine's sentence; the host
+    /// stops on the first, and the following ones are what it says once that one is mended. Empty when
+    /// every profile is accepted. The profiles are bound as the engine binds them: a stage with a value
+    /// the binder cannot convert is left out of its profile, without a word.
+    /// </summary>
+    public IReadOnlyList<(string Path, string Problem)> ProfileProblems() => [.. ProfileProblemsOf(ToConfiguration(_document.Root))];
+
+    /// <summary>
+    /// The keys of <c>Orkeon:Decision</c> and of each provider's section that are no setting, at any
+    /// depth, as the host's start walks them (the keys of a decision profile and of its stages among
+    /// them), and a probability that is no finite number; each with its path, in the engine's sentence,
+    /// which may say more after it. The host says them after the rules of every section.
+    /// </summary>
+    public IReadOnlyList<(string Path, string Problem)> UnknownKeys()
+    {
+        var configuration = ToConfiguration(_document.Root);
+        return
+        [
+            // The readers of the section in the host's order, which the sentence lists the keys in.
+            .. SettingsBinding.UnknownKeysOfReaders(
+                configuration,
+                SectionPath,
+                (ConfigurationPath.GetSectionKey(AgentRouteOptions.SectionName), typeof(AgentRouteOptions)),
+                (ConfigurationPath.GetSectionKey(AgentEffortOptions.SectionName), typeof(AgentEffortOptions)),
+                (null, typeof(DecisionCircuitOptions)),
+                (null, typeof(DecisionProfilesOptions))),
+            .. Providers.SelectMany(provider => SettingsBinding.UnknownKeys(configuration, provider.Section, typeof(SystemOneProviderOptions))),
+        ];
+    }
+
+    private static IEnumerable<(string Path, string Problem)> ProfileProblemsOf(IConfiguration configuration)
+    {
+        var unconverted = new List<(string Path, string Problem)>();
+        var profiles = SettingsBinding.Bind<DecisionProfilesOptions>(configuration, DecisionProfilesOptions.SectionName, unconverted);
+        return unconverted.Concat(DecisionProfileRules.Problems(profiles));
     }
 
     /// <summary>The engine's sentence for a name a decision profile and a model profile share: the start is refused.</summary>
@@ -347,16 +384,16 @@ public sealed class DecisionSection
     /// Whether the host runs a fail-closed LLM judge (<c>Orkeon:Guardian:Llm</c> enabled, its
     /// <c>FailMode</c> left on <c>Closed</c>, the guardian itself on), as the engine binds the guardian's
     /// section, the judge's within it; returns the binder's refusal of the first value it cannot
-    /// convert, or null. A key without a value (a JSON null, an empty object) is the binder's
+    /// convert, else the first rule of the section a value breaks (<see cref="GuardianSection.Problems"/>),
+    /// or null. A key without a value (a JSON null, an empty object) is the binder's
     /// <c>false</c>, as for every switch it binds: the guardian written so is off.
     /// </summary>
     private static string? ReadClosedJudge(IConfiguration configuration, out bool closed)
     {
         var unconverted = new List<(string Path, string Problem)>();
-        var guardian = SettingsBinding.Bind<Orkeon.Infrastructure.Configuration.GuardianOptions>(
-            configuration, ConfigurationPath.GetParentPath(GuardianEnabledPath)!, unconverted);
+        var guardian = GuardianSection.Read(configuration, unconverted, out var refused);
         closed = unconverted.Count == 0 && guardian is { Enabled: true, Llm: { Enabled: true, FailMode: GuardianJudgeFailMode.Closed } };
-        return unconverted.Count > 0 ? unconverted[0].Problem : null;
+        return unconverted.Concat(refused).Select(problem => problem.Problem).FirstOrDefault();
     }
 
     /// <summary>
@@ -500,8 +537,9 @@ public sealed class DecisionSection
 /// <param name="Refusal">
 /// The engine's message when it refuses the settings at start (a file that does not load for a key
 /// written twice, an unknown name, two providers that could be deduced, a Kev address the key may not
-/// travel to, a decision profile named <c>auto</c>, a ladder or levels it refuses, a switch or a value of
-/// the guardian that does not convert, a section of the provider in use its validation refuses, a name
+/// travel to, a decision profile it refuses (<see cref="DecisionSection.ProfileProblems"/>), a ladder or
+/// levels it refuses, a switch or a value of the guardian that does not convert or breaks a rule of
+/// its section, a section of the provider in use its validation refuses, a name
 /// a decision profile shares with a model profile, a fail-closed judge left without a circuit); null
 /// otherwise.
 /// One sentence: the first the host meets among those (<see cref="DecisionStatus.RefusalStage"/>).
@@ -564,7 +602,8 @@ public sealed record DecisionStatus(
     /// off: those that are fail-closed (<c>FailClosed: true</c>) and carry a guard stage (a <c>Kind</c>
     /// that reads <c>guard</c>, trimmed, in any letter case), as the engine builds them without decisions
     /// (<c>CircuitOffGuardStage</c>). Empty when none is; a <c>FailClosed</c> that reads as no boolean
-    /// counts as off. Held under a refusal too, whatever it is.
+    /// counts as off, and a guard stage the binder leaves out for a value it cannot convert is no stage.
+    /// Held under a refusal too, whatever it is.
     /// </summary>
     public IReadOnlyList<string> BlockingProfiles { get; init; } = [];
 
@@ -610,14 +649,18 @@ public enum DecisionRefusalStage
 
     /// <summary>
     /// Refused while the host is composed, before any section is judged: <c>Orkeon:CrewFactory:StrictTools</c>
-    /// that is no boolean, the choice of a provider, a decision profile under a reserved name.
+    /// that is no boolean, the choice of a provider, a decision profile the engine's rules refuse (a
+    /// reserved name, no target, no stage, a stage it cannot build).
     /// </summary>
     Composition,
 
     /// <summary>The ladder or the thinking levels: judged after the compaction and the skills.</summary>
     Picks,
 
-    /// <summary>A value of the guardian or the circuit's switch that does not convert: judged before the tool bridge.</summary>
+    /// <summary>
+    /// A value of the guardian that does not convert or breaks a rule of its section, or the circuit's
+    /// switch that does not convert: judged before the tool bridge.
+    /// </summary>
     Switches,
 
     /// <summary>The section of the provider in use: the last section judged, before the keys no section carries.</summary>

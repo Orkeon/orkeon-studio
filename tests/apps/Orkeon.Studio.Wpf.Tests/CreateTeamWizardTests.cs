@@ -37,7 +37,8 @@ public partial class CreateTeamWizardTests
         string? assistantKeyEnvName = null,
         Orkeon.Studio.Core.FileSystem.IDiskEntryProbe? diskEntries = null,
         FakeFolderWatch? folderWatch = null,
-        Func<DecisionStatus?>? machineDecision = null)
+        Func<DecisionStatus?>? machineDecision = null,
+        Orkeon.Studio.Core.Localization.IStudioStrings? strings = null)
     {
         var document = AppSettingsDocument.CreateEmpty();
         var llm = new LlmSectionViewModel(() => document, () => { });
@@ -76,6 +77,7 @@ public partial class CreateTeamWizardTests
                 DiskEntries = diskEntries,
                 FolderWatch = folderWatch ?? new FakeFolderWatch(),
                 MachineDecisionStatus = machineDecision,
+                Strings = strings,
             });
         return (vm, processes, profiles);
     }

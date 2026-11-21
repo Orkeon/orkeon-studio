@@ -26,6 +26,7 @@ internal sealed class RunLauncherViewModel
     private readonly ITargetProbe _targetProbe;
     private readonly IDirectoryProbe _directories;
     private readonly Func<string, string?> _environment;
+    private readonly Func<IEnumerable<string>> _environmentNames;
 
     /// <summary>
     /// Creates the launcher over explicit collaborators (the test seam). <paramref name="teamsRoot"/>
@@ -33,7 +34,10 @@ internal sealed class RunLauncherViewModel
     /// and the root a team's own settings file is anchored on (STUDIO-62); null stamps nothing and
     /// finds no team file. <paramref name="targetProbe"/> is the disk the team file is looked up on
     /// — the detector's, in production; the real disk when absent. <paramref name="environment"/> is
-    /// where the decision providers' keys are read, the process environment the child inherits when absent.
+    /// where the decision providers' keys are read, the process environment the child inherits when absent;
+    /// <paramref name="environmentNames"/> lists the names of its variables, for the settings a run reads
+    /// under names this launcher cannot spell in advance (a model profile laid in any letter case): the
+    /// process environment's when both are absent, none when only <paramref name="environment"/> is given.
     /// </summary>
     public RunLauncherViewModel(
         RunTargetDetector detector,
@@ -43,7 +47,8 @@ internal sealed class RunLauncherViewModel
         IAppSettingsReader? settingsReader = null,
         TeamsRootResolution? teamsRoot = null,
         ITargetProbe? targetProbe = null,
-        Func<string, string?>? environment = null)
+        Func<string, string?>? environment = null,
+        Func<IEnumerable<string>>? environmentNames = null)
     {
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(runner);
@@ -55,6 +60,7 @@ internal sealed class RunLauncherViewModel
         _settingsReader = settingsReader ?? PhysicalAppSettingsReader.Instance;
         _targetProbe = targetProbe ?? PhysicalTargetProbe.Instance;
         _directories = new TargetProbeDirectories(_targetProbe);
+        _environmentNames = environmentNames ?? (environment is null ? ProcessEnvironmentNames : () => []);
         _environment = environment ?? Environment.GetEnvironmentVariable;
     }
 
@@ -594,13 +600,16 @@ internal sealed class RunLauncherViewModel
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
         _settingsBridge = ToolBridgePreflight.Check(document, _environment);
+
+        // The environment is listed once: a profile is looked up among the names it lays.
+        var laid = ProfilesLaidIn(_environmentNames());
         _profilesLaidInEnvironment =
         [
             .. _settingsDecision.UnknownRungs.Concat(_settingsDecision.DecisionProfiles)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Where(LaidInEnvironment),
+                .Where(laid.Contains),
         ];
-        _settingsCompactionProfile = document.Compaction.Profile is { } profile && LaidInEnvironment(profile.Trim())
+        _settingsCompactionProfile = document.Compaction.Profile is { } profile && laid.Contains(profile.Trim())
             ? null
             : document.Compaction.UnknownProfile();
         SettingsMountsNotice = SettingsMounts.Count == 0
@@ -609,18 +618,40 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>
-    /// Whether the environment of this launcher, which the spawned CLI inherits, lays the LLM profile
-    /// <paramref name="profile"/> (<c>ORKEON_Llm__Profiles__&lt;name&gt;__Provider</c> or <c>__Model</c>, with
-    /// or without the prefix): the host then offers it although the settings file does not define it.
+    /// The LLM profiles the variables of <paramref name="names"/> lay, as the host of the spawned CLI,
+    /// which inherits them, reads its environment: a variable is a setting with <c>__</c> for <c>:</c>,
+    /// with or without the <c>ORKEON_</c> prefix, in any letter case, and any key under
+    /// <c>Llm:Profiles:&lt;name&gt;</c> (<c>ORKEON_llm__profiles__Strong__BaseUrl</c>) makes the profile
+    /// one the host offers, although the settings file does not define it. Compared in any letter case.
     /// </summary>
-    private bool LaidInEnvironment(string profile) =>
-        LaidProfilePrefixes.Any(prefix =>
-            LaidProfileFields.Any(field =>
-                !string.IsNullOrWhiteSpace(_environment($"{prefix}Llm__Profiles__{profile}__{field}"))));
+    internal static HashSet<string> ProfilesLaidIn(IEnumerable<string> names)
+    {
+        ArgumentNullException.ThrowIfNull(names);
+        const string Separator = "__";
+        var profiles = LlmProfilesSection.SectionPath.Replace(":", Separator, StringComparison.Ordinal) + Separator;
+        var laid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in names)
+        {
+            // The host reads every variable twice: as it is, and without the prefix when it has it.
+            foreach (var setting in name.StartsWith(DecisionSection.EnvironmentPrefix, StringComparison.OrdinalIgnoreCase)
+                         ? new[] { name, name[DecisionSection.EnvironmentPrefix.Length..] }
+                         : [name])
+            {
+                if (!setting.StartsWith(profiles, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
-    private static readonly string[] LaidProfilePrefixes = [DecisionSection.EnvironmentPrefix, ""];
+                var end = setting.IndexOf(Separator, profiles.Length, StringComparison.Ordinal);
+                var profile = end < 0 ? setting[profiles.Length..] : setting[profiles.Length..end];
+                if (profile.Length > 0)
+                    laid.Add(profile);
+            }
+        }
 
-    private static readonly string[] LaidProfileFields = ["Provider", "Model"];
+        return laid;
+    }
+
+    private static IEnumerable<string> ProcessEnvironmentNames() =>
+        Environment.GetEnvironmentVariables().Keys.Cast<string>();
 
     /// <summary>Spawns the run the form describes.</summary>
     /// <param name="dryRun">True for the "Validate" button: <c>--validate</c>, not recorded in the history.</param>

@@ -1,4 +1,5 @@
 using Orkeon.Studio.Core.Validation;
+using Orkeon.Studio.Run.Launcher;
 
 namespace Orkeon.Studio.Run.Tests.Launcher;
 
@@ -372,10 +373,48 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         var defined = Pin(new LauncherFixture().WithInstalledCli(), CrewOf(OnAuto), TwoRungs);
         Assert.Equal(ValidationCodes.DecisionFallback, Only(defined).Code);
 
-        var fixture = new LauncherFixture().WithInstalledCli();
-        fixture.Environment = name => name == "ORKEON_Llm__Profiles__strong__Provider" ? "mock" : null;
+        var fixture = new LauncherFixture().WithInstalledCli().WithEnvironment(("ORKEON_Llm__Profiles__strong__Provider", "mock"));
         var laid = Pin(fixture, CrewOf(OnAuto), UnknownRung);
         Assert.Equal(ValidationCodes.DecisionFallback, Only(laid).Code);
+    }
+
+    /// <summary>
+    /// The host reads its environment in any letter case, with or without the prefix, and any key of a
+    /// profile makes the profile one it offers: the launcher lists the environment and reads it so.
+    /// </summary>
+    [Theory]
+    [InlineData("orkeon_llm__profiles__STRONG__BaseUrl")]
+    [InlineData("LLM__PROFILES__Strong__ApiKeyEnvVar")]
+    [InlineData("Llm__Profiles__strong__Thinking__Effort")]
+    [InlineData("ORKEON_Llm__Profiles__strong")]
+    public void A_rung_is_laid_by_any_key_of_its_profile_in_any_letter_case(string variable)
+    {
+        var fixture = new LauncherFixture().WithInstalledCli().WithEnvironment(("PATH", "/usr/bin"), (variable, "x"));
+
+        Assert.Equal(ValidationCodes.DecisionFallback, Only(Pin(fixture, CrewOf(OnAuto), UnknownRung)).Code);
+    }
+
+    [Theory]
+    [InlineData("ORKEON_Llm__Profiles__stronger__Model")]
+    [InlineData("ORKEON_Llm__Profiles__")]
+    [InlineData("ORKEON_Llm__Profile__strong__Model")]
+    [InlineData("STUDIO_Llm__Profiles__strong__Model")]
+    [InlineData("Orkeon__Llm__Profiles__strong__Model")]
+    public void A_variable_that_is_no_key_of_the_profile_lays_nothing(string variable)
+    {
+        var fixture = new LauncherFixture().WithInstalledCli().WithEnvironment((variable, "x"));
+
+        Assert.Equal(ValidationCodes.DecisionLadder, Only(Pin(fixture, CrewOf(OnAuto), UnknownRung)).Code);
+    }
+
+    [Fact]
+    public void The_profiles_an_environment_lays_are_read_from_its_names_alone()
+    {
+        var laid = RunLauncherViewModel.ProfilesLaidIn(
+            ["HOME", "ORKEON_CLI_DIR", "ORKEON_Llm__Profiles__a__Model", "llm__profiles__B__provider", "ORKEON_ORKEON_Llm__Profiles__c__Model", "Llm__Profiles____Model"]);
+
+        Assert.Equal(["B", "a"], laid.Order(StringComparer.Ordinal));
+        Assert.Contains("b", laid);
     }
 
     /// <summary>
@@ -386,10 +425,10 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
     [Theory]
     [InlineData("ORKEON_Llm__Profiles__guarded__Model")]
     [InlineData("Llm__Profiles__guarded__Provider")]
+    [InlineData("orkeon_LLM__profiles__GUARDED__BaseUrl")]
     public void A_decision_profile_the_environment_lays_as_a_model_profile_is_an_error_of_the_check_too(string variable)
     {
-        var fixture = new LauncherFixture().WithInstalledCli();
-        fixture.Environment = name => name == variable ? "mock" : null;
+        var fixture = new LauncherFixture().WithInstalledCli().WithEnvironment((variable, "mock"));
         var launcher = Pin(fixture, CrewOf(OnGuarded), Guarded(failClosed: false, "\"Liquid\":{\"ApiKey\":\"in-file\"},"));
 
         foreach (var dryRun in new[] { false, true })
@@ -496,9 +535,10 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
             Assert.True(launcher.HasBlockingErrors(dryRun));
         }
 
-        var fixture = new LauncherFixture().WithInstalledCli();
-        fixture.Environment = name => name == "ORKEON_Llm__Profiles__cheap__Model" ? "small" : null;
+        var fixture = new LauncherFixture().WithInstalledCli().WithEnvironment(("ORKEON_Llm__Profiles__cheap__Model", "small"));
         Assert.DoesNotContain(Pin(fixture, Crew(decideTool: false), settings).Validate(), m => m.Code == ValidationCodes.EngineSettingRefused);
+        var otherCase = new LauncherFixture().WithInstalledCli().WithEnvironment(("llm__profiles__CHEAP__MaxTokens", "400"));
+        Assert.DoesNotContain(Pin(otherCase, Crew(decideTool: false), settings).Validate(), m => m.Code == ValidationCodes.EngineSettingRefused);
 
         var defined = Pin(
             new LauncherFixture().WithInstalledCli(),

@@ -52,6 +52,10 @@ public class LaunchOutcomeFormatterTests
     [InlineData(OrkeonExitCodes.RuntimeError, "Exit code 2 — runtime error: the last log lines say why")]
     [InlineData(OrkeonExitCodes.Cancelled, "Exit code 130 — run interrupted")]
     [InlineData(42, "Exit code 42 — unexpected end: check the output above")]
+    [InlineData(
+        OrkeonExitCodes.DecisionUnavailable,
+        "Exit code 69 — run refused: this team cannot run without the decision models (System One) and they are off. "
+        + "Set them up in Settings › Decision models, and keep « Use the decision models » ticked")]
     public void The_localized_overload_says_the_outcome_in_the_ports_words_never_the_engines(int exitCode, string expected)
     {
         var result = Exited(exitCode);
@@ -60,6 +64,31 @@ public class LaunchOutcomeFormatterTests
 
         Assert.Equal(expected, text);
         Assert.DoesNotContain(result.Description, text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The engine's refusal of a crew that requires System One is classified a script error, and has a
+    /// sentence of its own all the same: the general one names neither the decision models nor where
+    /// they are set up. A dry run carries it after its verdict, should the engine ever refuse one so.
+    /// </summary>
+    [Fact]
+    public void A_refused_required_crew_is_not_said_as_a_plain_script_error()
+    {
+        var refused = Exited(OrkeonExitCodes.DecisionUnavailable);
+        var strings = EnglishStudioStrings.Instance;
+        Assert.Equal(RunOutcome.ScriptError, refused.Outcome);
+
+        var run = LaunchOutcomeFormatter.DescribeRun(refused, strings);
+        var general = LaunchOutcomeFormatter.DescribeRun(Exited(OrkeonExitCodes.ScriptError), strings);
+
+        Assert.Contains(strings[StudioStringKeys.LaunchExitDecisionUnavailable], run, StringComparison.Ordinal);
+        Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitScriptError], run, StringComparison.Ordinal);
+        Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitDecisionUnavailable], general, StringComparison.Ordinal);
+        Assert.Equal(
+            $"{LaunchOutcomeFormatter.ValidationFailed} — {run}",
+            LaunchOutcomeFormatter.Describe(refused, dryRun: true, strings));
+        // The English launcher of the terminal keeps the engine's own sentence, which names the cause.
+        Assert.Contains("the crew requires System One", LaunchOutcomeFormatter.DescribeRun(refused), StringComparison.Ordinal);
     }
 
     [Fact]
