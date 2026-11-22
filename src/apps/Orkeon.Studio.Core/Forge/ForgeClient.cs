@@ -135,6 +135,27 @@ public static class ForgeCrewDecisions
     /// <summary>The mode as the engine spells it, whatever the letter case; null for a text that is none of them.</summary>
     public static string? Normalize(string? mode) =>
         All.FirstOrDefault(known => string.Equals(known, mode?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The mode of a session written before <c>--crew-decision</c>, as the engine derives it from the
+    /// session's plan (<c>ForgeCrewDecision.Derive</c>, read by <c>ForgeSession.CrewDecisionOrDerived</c>):
+    /// <see cref="Required"/> when a task declares a <c>decision</c> or an agent or a task holds
+    /// <c>system_one_decide</c>, else <see cref="None"/>, a missing plan included.
+    /// </summary>
+    public static string Derive(System.Text.Json.Nodes.JsonObject? blueprint)
+    {
+        if (blueprint is null)
+            return None;
+
+        var tasks = (blueprint["tasks"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>();
+        var agents = (blueprint["agents"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>();
+        var decides = tasks.Any(task => task["decision"] is not null || HoldsDecideTool(task))
+            || agents.Any(HoldsDecideTool);
+        return decides ? Required : None;
+    }
+
+    private static bool HoldsDecideTool(System.Text.Json.Nodes.JsonObject entry) =>
+        BlueprintJson.Strings(entry["tools"]).Contains(Teams.CrewDecisionUsage.DecideTool, StringComparer.Ordinal);
 }
 
 /// <summary>
