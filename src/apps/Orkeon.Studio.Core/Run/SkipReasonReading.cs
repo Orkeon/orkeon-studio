@@ -16,13 +16,17 @@ public enum SkipReasonKind
 
     /// <summary>A task it depends on did not succeed.</summary>
     DependencyFailed,
+
+    /// <summary>Every task it depends on was skipped by a condition (the join rule of <c>ConditionGate</c>).</summary>
+    DependenciesConditionSkipped,
 }
 
 /// <summary>
 /// The <c>skipReason</c> of a skipped task, read back into what a screen can say in the user's
 /// language. The engine writes it as an English sentence with internal task ids and the decision's
 /// compact JSON; the sentences are copied from its sources and pinned there by a drift test
-/// (<see cref="ConditionNotHeldPrefix"/>, <see cref="DecisionNotRunSuffix"/>, <see cref="DependencyFailedMarker"/>).
+/// (<see cref="ConditionNotHeldPrefix"/>, <see cref="DecisionNotRunSuffix"/>, <see cref="DependencyFailedMarker"/>,
+/// <see cref="DependenciesConditionSkippedSentence"/>).
 /// A sentence a newer engine words differently reads <see cref="SkipReasonKind.Other"/>: its raw text is shown.
 /// </summary>
 /// <param name="Kind">Which of the engine's sentences it is.</param>
@@ -45,6 +49,9 @@ public sealed partial record SkipReasonReading(SkipReasonKind Kind, string? Deci
     /// <summary>The words of the sentence of a failed dependency (<c>CrewRunOutcome.RecordSkipAsync</c>).</summary>
     public const string DependencyFailedMarker = " skipped: it depends on task ";
 
+    /// <summary>The whole sentence of a task whose every dependency was condition-skipped (<c>ConditionGate</c>).</summary>
+    public const string DependenciesConditionSkippedSentence = "every dependency was condition skipped";
+
     /// <summary>Reads a <c>skipReason</c>; null or blank reads <see cref="SkipReasonKind.Other"/>.</summary>
     public static SkipReasonReading Parse(string? reason)
     {
@@ -53,6 +60,9 @@ public sealed partial record SkipReasonReading(SkipReasonKind Kind, string? Deci
 
         if (ConditionNotHeld().Match(reason) is { Success: true } condition)
             return new(SkipReasonKind.ConditionNotHeld, condition.Groups["key"].Value, condition.Groups["json"].Value);
+
+        if (string.Equals(reason.Trim(), DependenciesConditionSkippedSentence, StringComparison.Ordinal))
+            return new(SkipReasonKind.DependenciesConditionSkipped);
 
         if (DecisionNotRun().Match(reason) is { Success: true } notRun)
             return new(SkipReasonKind.DecisionNotRun, notRun.Groups["key"].Value);

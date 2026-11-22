@@ -84,6 +84,7 @@ public sealed class RunTaskViewModel
                     _strings.Format(StudioStringKeys.RunProgressSkipCondition, reading.DecisionTask!, answers),
                 SkipReasonKind.DecisionNotRun => _strings.Format(StudioStringKeys.RunProgressSkipDecisionNotRun, reading.DecisionTask!),
                 SkipReasonKind.DependencyFailed => _strings[StudioStringKeys.RunProgressSkipDependency],
+                SkipReasonKind.DependenciesConditionSkipped => _strings[StudioStringKeys.RunProgressSkipDependenciesConditionSkipped],
                 _ => _strings.Format(StudioStringKeys.RunProgressSkipReason, Task.SkipReason),
             };
         }

@@ -823,6 +823,7 @@
   <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>Omitida: la decisión {0} respondió {1}</value></data>
   <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>Omitida: la decisión {0} no se tomó</value></data>
   <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>Omitida: una tarea de la que depende no tuvo éxito</value></data>
+  <data name="Studio.Run.SkipDependenciesConditionSkipped" xml:space="preserve"><value>Omitida: todas las tareas de las que depende fueron omitidas por una decisión</value></data>
   <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>Decisión</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tarea sin terminar: el agente agotó sus iteraciones antes de terminar. Su trabajo puede estar incompleto: compruebe los archivos que debía escribir.</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Archivo no escrito: la tarea tuvo éxito, pero no escribió (ni actualizó) el archivo indicado en su entregable. Compruebe que su agente tiene una herramienta que lo escriba y que la tarea pide ese archivo (si la tarea también quedó sin terminar, dé más iteraciones al agente) y vuelva a ejecutar el equipo.</value></data>

@@ -823,6 +823,7 @@
   <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>已跳过：决策 {0} 的回答为 {1}</value></data>
   <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>已跳过：决策 {0} 未作出</value></data>
   <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>已跳过：其依赖的任务未成功</value></data>
+  <data name="Studio.Run.SkipDependenciesConditionSkipped" xml:space="preserve"><value>已跳过：其依赖的所有任务均因决策而被跳过</value></data>
   <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>任务提前结束：智能体在完成前用尽了迭代次数。其工作可能不完整：请检查它应写入的文件。</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但未写入（或更新）其交付物指定的文件。请检查其智能体是否有能写入该文件的工具，以及任务是否要求写入该文件（如果任务也提前结束，请给智能体更多迭代次数），然后重新运行团队。</value></data>

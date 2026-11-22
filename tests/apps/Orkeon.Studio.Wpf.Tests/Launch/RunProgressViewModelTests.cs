@@ -394,6 +394,7 @@ public class RunProgressViewModelTests
         """condition of task 01M82GYVEZ2D5B4TB5BBXTJ3Q3 did not hold on decision task controle-couverture: {\"couverture\":{\"chosen\":\"complet\",\"probabilities\":{\"complet\":0.92,\"partiel\":0.08},\"confidence\":0.84}}""",
         "Skipped: decision controle-couverture answered couverture = complet")]
     [InlineData("decision controle-couverture did not run", "Skipped: decision controle-couverture was not taken")]
+    [InlineData("every dependency was condition skipped", "Skipped: every task it depends on was skipped by a decision")]
     [InlineData(
         "Task 01M8A (writer) skipped: it depends on task 01M8B, which did not succeed",
         "Skipped: a task it depends on did not succeed")]

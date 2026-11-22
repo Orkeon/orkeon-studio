@@ -324,6 +324,7 @@
   <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>Skipped: decision {0} answered {1}</value></data>
   <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>Skipped: decision {0} was not taken</value></data>
   <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>Skipped: a task it depends on did not succeed</value></data>
+  <data name="Studio.Run.SkipDependenciesConditionSkipped" xml:space="preserve"><value>Skipped: every task it depends on was skipped by a decision</value></data>
   <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>Decision</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.</value></data>

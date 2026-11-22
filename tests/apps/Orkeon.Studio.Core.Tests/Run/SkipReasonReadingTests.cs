@@ -4,7 +4,7 @@ using Orkeon.Studio.Tests.Shared;
 namespace Orkeon.Studio.Core.Tests.Run;
 
 /// <summary>
-/// The <c>skipReason</c> of a skipped task, read back into what a screen says: the three sentences the
+/// The <c>skipReason</c> of a skipped task, read back into what a screen says: the four sentences the
 /// engine writes, and the role it gives the decision tasks it answers itself, are copies of its sources
 /// and pinned there.
 /// </summary>
@@ -37,6 +37,14 @@ public sealed class SkipReasonReadingTests
             SkipReasonReading.Parse("Task 01M8A (writer) skipped: it depends on task 01M8B, which did not succeed").Kind);
     }
 
+    [Fact]
+    public void A_task_whose_every_dependency_was_condition_skipped_is_read_as_such()
+    {
+        Assert.Equal(
+            new SkipReasonReading(SkipReasonKind.DependenciesConditionSkipped),
+            SkipReasonReading.Parse("every dependency was condition skipped"));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -60,6 +68,7 @@ public sealed class SkipReasonReadingTests
             "$\"" + SkipReasonReading.DecisionNotRunPrefix + "{condition.DecisionTask}" + SkipReasonReading.DecisionNotRunSuffix + "\"",
             gate,
             StringComparison.Ordinal);
+        Assert.Contains("\"" + SkipReasonReading.DependenciesConditionSkippedSentence + "\"", gate, StringComparison.Ordinal);
 
         var outcome = Read("src", "core", "Orkeon.Infrastructure", "Crew", "Strategies", "CrewRunOutcome.cs");
         Assert.Contains(

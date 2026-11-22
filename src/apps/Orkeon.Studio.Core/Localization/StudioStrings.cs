@@ -1603,6 +1603,9 @@ public static class StudioStringKeys
     /// <summary>"Skipped: a task it depends on did not succeed"</summary>
     public const string RunProgressSkipDependency = "Studio.Run.SkipDependency";
 
+    /// <summary>"Skipped: every task it depends on was skipped by a decision"</summary>
+    public const string RunProgressSkipDependenciesConditionSkipped = "Studio.Run.SkipDependenciesConditionSkipped";
+
     /// <summary>"Decision": the engine's own decision task, on its card and its row.</summary>
     public const string RunLaneDecision = "Studio.Run.LaneDecision";
 
@@ -4242,6 +4245,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunProgressSkipCondition] = "Skipped: decision {0} answered {1}",
         [StudioStringKeys.RunProgressSkipDecisionNotRun] = "Skipped: decision {0} was not taken",
         [StudioStringKeys.RunProgressSkipDependency] = "Skipped: a task it depends on did not succeed",
+        [StudioStringKeys.RunProgressSkipDependenciesConditionSkipped] = "Skipped: every task it depends on was skipped by a decision",
         [StudioStringKeys.RunLaneDecision] = "Decision",
         [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
         [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
