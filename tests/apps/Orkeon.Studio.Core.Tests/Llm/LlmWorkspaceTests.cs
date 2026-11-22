@@ -124,7 +124,12 @@ public sealed class LlmWorkspaceTests
             Assert.Equal(ValidationSeverity.Warning, warning.Severity);
             Assert.Equal(path, warning.Path);
             Assert.Equal(AppSettingsValidator.WorkspaceNotSent(path, provider), warning.Text);
-            Assert.EndsWith("Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.", warning.Text, StringComparison.Ordinal);
+            Assert.EndsWith(
+                provider == LlmProviderRules.AgentCliKey
+                    ? "Only Anthropic scopes a key to a workspace, and the agent CLI runs on its login; remove Llm:WorkspaceId (or the profile's) for this provider."
+                    : "Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.",
+                warning.Text,
+                StringComparison.Ordinal);
         }
     }
 
@@ -165,6 +170,19 @@ public sealed class LlmWorkspaceTests
             OrkeonSources.Root(), "src", "core", "Orkeon.Infrastructure", "LLMs", "Base", "HttpLlmProviderBase.cs"));
 
         Assert.Contains("\"Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider\"", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_remedy_of_the_agent_cli_module_is_the_one_its_run_logs()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            OrkeonSources.Root(), "src", "interop", "Orkeon.Interop.AgentCli", "AgentCliLlmProvider.cs"));
+
+        Assert.Contains("\"Only Anthropic scopes a key to a workspace, and the agent CLI runs on its login; remove Llm:WorkspaceId (or the profile's) for this provider\"", source, StringComparison.Ordinal);
+        Assert.EndsWith(
+            "Only Anthropic scopes a key to a workspace, and the agent CLI runs on its login; remove Llm:WorkspaceId (or the profile's) for this provider.",
+            AppSettingsValidator.WorkspaceNotSent("Llm:WorkspaceId", LlmProviderRules.AgentCliKey),
+            StringComparison.Ordinal);
     }
 
     [Fact]

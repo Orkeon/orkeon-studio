@@ -108,7 +108,7 @@ $apps = @(
 )
 
 # The Orkeon packages the apps restore and the project each is packed from: the same list
-# as install-from-source.sh (Orkeon.Tools and Orkeon.Scripting serve the tests alone).
+# as install-from-source.sh (Orkeon.Tools, Orkeon.Scripting and Orkeon.Interop.AgentCli serve the tests alone).
 $packages = @(
     @{ Id = 'Orkeon';                        Project = 'src\packaging\Orkeon\Orkeon.csproj' },
     @{ Id = 'Orkeon.Constants.Cli';          Project = 'src\constants\Orkeon.Constants.Cli\Orkeon.Constants.Cli.csproj' },

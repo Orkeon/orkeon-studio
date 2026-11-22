@@ -100,7 +100,7 @@ APPS=(
 
 # The Orkeon packages the apps restore (Directory.Packages.props, src/Directory.Build.props
 # for the analyzer) and the project each is packed from; their Orkeon.* dependencies are
-# among them. Orkeon.Tools and Orkeon.Scripting serve the tests alone. The same projects
+# among them. Orkeon.Tools, Orkeon.Scripting and Orkeon.Interop.AgentCli serve the tests alone. The same projects
 # Orkeon's publish.yml packs: Orkeon.Cli.TerminalGui through its wrapper, which depends
 # on the Orkeon package instead of shipping its assemblies a second time.
 PACKAGES=(

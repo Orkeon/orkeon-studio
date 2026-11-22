@@ -99,6 +99,24 @@ public sealed class BinderRefusalWithoutValueTests
         Assert.DoesNotContain(Secret, driveSaid, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A refusal the account binders cannot read back is withheld under the account's section, which
+    /// Studio's rewording names the same way.
+    /// </summary>
+    [Fact]
+    public void An_accounts_refusal_that_cannot_be_read_back_names_the_accounts_section()
+    {
+        var refusal = new InvalidOperationException("Outer.", new FormatException(Secret));
+
+        var email = Orkeon.Tools.Email.Configuration.EmailOptionsBinder.Refusal("work", refusal);
+        var drive = Orkeon.Tools.Drive.Configuration.DriveOptionsBinder.Refusal("work", refusal);
+
+        Assert.Equal("Failed to convert a configuration value under 'Orkeon:Tools:Email:Accounts:work'; the binder's message is withheld, since it quotes the value.", email);
+        Assert.Equal("Failed to convert a configuration value under 'Orkeon:Tools:Drive:Accounts:work'; the binder's message is withheld, since it quotes the value.", drive);
+        Assert.Equal(email, Studio.WithoutValue(refusal, "Orkeon:Tools:Email:Accounts:work"));
+        Assert.Equal(drive, Studio.WithoutValue(refusal, "Orkeon:Tools:Drive:Accounts:work"));
+    }
+
     [Fact]
     public void A_value_holding_the_words_of_the_sentence_never_gets_through()
     {

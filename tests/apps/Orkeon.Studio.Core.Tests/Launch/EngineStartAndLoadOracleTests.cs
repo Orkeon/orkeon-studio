@@ -428,6 +428,34 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         }
     }
 
+    /// <summary>
+    /// The host of a run, built with the agent-cli module as the tool builds it, refuses in
+    /// <c>Llm:AgentCli</c> what Studio says first, in Studio's sentence, whatever provider the section
+    /// names; and starts on a section Studio accepts.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Command": "claude", "MaxProcesses": 2 }""")]
+    [InlineData("""{ "Engine": "codex" }""")]
+    [InlineData("""{ "Command": "claude.cmd" }""")]
+    [InlineData("""{ "MaxProcesses": 0 }""")]
+    [InlineData("""{ "MaxToolResultCharacters": 999, "AutocompactTokens": 0 }""")]
+    [InlineData("""{ "MaxProcesses": "many" }""")]
+    [InlineData("""{ "Comand": "claude" }""")]
+    [InlineData("""{ "MaxProcesses": null }""")]
+    [InlineData("\"claude\"")]
+    public void The_host_refuses_in_the_agent_cli_section_what_Studio_says(string agentCli)
+    {
+        var settings = $$"""{ "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "AgentCli": {{agentCli}} } }""";
+
+        var (host, refusal) = Start(settings);
+        host?.Dispose();
+        var studio = AppSettingsDocument.Parse(settings).AgentCli.Problems();
+
+        Assert.True((refusal is null) == (studio.Count == 0), $"The engine says «{refusal}», Studio says «{string.Join(" | ", studio.Select(problem => problem.Problem))}».");
+        if (refusal is not null)
+            Assert.Contains(studio[0].Problem, refusal, StringComparison.Ordinal);
+    }
+
     private const string SecretLike = "sk-test-0123456789abcdef";
 
     /// <summary>The same refusals with the value a key cannot read: one that looks like an API key, written by mistake.</summary>

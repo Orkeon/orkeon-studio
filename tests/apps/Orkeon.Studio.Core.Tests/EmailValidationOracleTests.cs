@@ -254,9 +254,9 @@ public sealed class EmailValidationOracleTests
     /// <summary>
     /// Orkeon #465: a secret written in every typed key of an account whose name holds an apostrophe
     /// is never said back, by the engine's binder or by Studio, and both say the same of it. The
-    /// binder's own refusal, which the engine's copy of the host's rewording cannot read under such a
-    /// name, is never met: every typed key is judged before the account is bound, and Studio's rules
-    /// say the binder's words for each of them, never its sentence.
+    /// binder's own refusal, which the engine rewords without the value (#469), is never met: every
+    /// typed key is judged before the account is bound, and Studio's rules say the binder's words for
+    /// each of them, never its sentence.
     /// </summary>
     [Fact]
     public void A_secret_in_every_typed_key_is_never_said_back()

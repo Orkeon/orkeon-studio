@@ -152,7 +152,8 @@ public sealed class AppSettingsValidator
     /// <summary>
     /// The sections the engine validates at start with rules of its own, judged by those very rules: the
     /// compaction and the pruning of a context, the skills, both sides of the tool bridge (which every
-    /// host validates, the serving command or not), the guardian and the decision profiles. One error
+    /// host validates, the serving command or not), the guardian, the decision profiles and the agent-cli
+    /// provider module's <c>Llm:AgentCli</c>. One error
     /// per refused value, at its key.
     /// </summary>
     private static void ValidateEngineSections(AppSettingsDocument document, List<ValidationMessage> messages)
@@ -647,10 +648,15 @@ public sealed class AppSettingsValidator
     private static string? ConfigurationText(JsonObject section, string relativePath) =>
         Child(section, relativePath) is JsonValue value ? EmailAccountRules.ConfigurationText(value) : null;
 
-    /// <summary>The warning of a workspace the provider does not send, ending on the run's own remedy.</summary>
+    /// <summary>
+    /// The warning of a workspace the provider does not send, ending on the run's own remedy: the HTTP
+    /// providers' and the mock's, or the agent-cli module's, which adds that its CLI runs on its login.
+    /// </summary>
     public static string WorkspaceNotSent(string path, string provider) =>
         $"{path} is not sent: the provider of this section is '{provider}'. "
-        + "Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.";
+        + (provider == LlmProviderRules.AgentCliKey
+            ? "Only Anthropic scopes a key to a workspace, and the agent CLI runs on its login; remove Llm:WorkspaceId (or the profile's) for this provider."
+            : "Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.");
 
     /// <summary>
     /// What the run will make of an absolute <c>BaseUrl</c> of a section of the <c>Llm</c> shape: an

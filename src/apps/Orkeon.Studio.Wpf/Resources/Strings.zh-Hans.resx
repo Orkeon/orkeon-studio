@@ -1608,7 +1608,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），而设置无法满足：设置中没有包含两个或更多模型配置的阶梯，或阶梯中的某个模型配置既未在设置中定义，也未在启动时提供给本次运行。引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>团队声明了 decision.mode: none，而某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），或指定了设置中的决策配置：该模式拒绝任何对 System One 的使用，因此引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED" xml:space="preserve"><value>某个智能体或任务使用设置中的决策配置，其防护阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。检查仍会加载团队。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>引擎在启动时检查的某个配置节（压缩、裁剪、技能、工具桥、守卫、决策模型及其决策配置）包含其规则拒绝的值，或包含不属于该节设置的键：作为错误时，任何运行都无法启动。作为警告时，它指定了本文件未定义的模型配置，在 Studio 之外启动的运行会因此被拒绝。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>引擎在启动时检查的某个配置节（压缩、裁剪、技能、工具桥、守卫、决策模型及其决策配置、agent-cli 提供方的 Llm:AgentCli）包含其规则拒绝的值，或包含不属于该节设置的键：作为错误时，任何运行都无法启动。作为警告时，它指定了本文件未定义的模型配置，在 Studio 之外启动的运行会因此被拒绝。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>运行会把工具桥接到另一台机器，而工具桥的令牌不在其环境变量中，或短于 16 个字符：运行拒绝启动。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>设置中指定了工具桥的地址，但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>

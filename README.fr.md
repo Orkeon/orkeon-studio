@@ -51,7 +51,7 @@ dotnet build Orkeon.Studio.sln --no-restore
 dotnet test Orkeon.Studio.sln --no-build --filter "Category!=Integration&Category!=Slow"
 ```
 
-Studio consomme Orkeon par des paquets NuGet (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui` ; les tests ajoutent `Orkeon.Tools` et `Orkeon.Scripting`). Leur version est la propriété `OrkeonVersion` de `Directory.Packages.props`. Ils viennent de nuget.org, comme tous les autres paquets (`nuget.config`).
+Studio consomme Orkeon par des paquets NuGet (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui` ; les tests ajoutent `Orkeon.Tools`, `Orkeon.Scripting` et `Orkeon.Interop.AgentCli`). Leur version est la propriété `OrkeonVersion` de `Directory.Packages.props`. Ils viennent de nuget.org, comme tous les autres paquets (`nuget.config`).
 
 Les tests de dérive d'`Orkeon.Studio.Core.Tests` comparent Studio à des fichiers qu'Orkeon livre sans les empaqueter (équipages d'exemple, réglages d'exemple de l'installeur, inventaire des outils, sources de la CLI). Ils les lisent dans un checkout d'Orkeon : renseignez `ORKEON_SOURCE_ROOT`, ou clonez Orkeon à côté de ce dépôt sous `../orkeon`.
 

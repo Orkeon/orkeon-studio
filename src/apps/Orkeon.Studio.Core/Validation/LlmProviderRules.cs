@@ -30,8 +30,8 @@ public static class LlmProviderRules
     public const string AgentCliKey = "agent-cli";
 
     /// <summary>
-    /// The provider modules the <c>orkeon</c> tool registers in every host it builds, by key: Studio's
-    /// mirror of <c>CliLlmProviderModules.All</c>. A drift test reads that list.
+    /// The provider modules the <c>orkeon</c> tool registers in the hosts of a run, a check and
+    /// <c>doctor</c>, by key: Studio's mirror of <c>CliLlmProviderModules.All</c>. A drift test reads that list.
     /// </summary>
     public static IReadOnlyList<string> CliModuleKeys { get; } = [AgentCliKey];
 
@@ -66,6 +66,22 @@ public static class LlmProviderRules
         }
 
         return messages;
+    }
+
+    /// <summary>
+    /// What stops a run at start in the model settings of <paramref name="document"/>: the refusals of
+    /// every <c>Provider</c> (<see cref="Check(AppSettingsDocument)"/>), then those of the agent-cli
+    /// module's section (<see cref="AgentCliSection.Problems"/>), which the host of a run validates
+    /// whatever provider is named. What a launch and a check are blocked on.
+    /// </summary>
+    public static IReadOnlyList<ValidationMessage> StartRefusals(AppSettingsDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return
+        [
+            .. Check(document),
+            .. document.AgentCli.Problems().Select(problem => ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem.Problem, problem.Path)),
+        ];
     }
 
     /// <summary>

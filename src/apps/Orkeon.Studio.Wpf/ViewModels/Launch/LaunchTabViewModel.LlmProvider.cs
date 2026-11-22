@@ -6,8 +6,8 @@ namespace Orkeon.Studio.Wpf.ViewModels.Launch;
 
 /// <summary>
 /// The <c>Provider</c> of the <c>Llm</c> section and of its profiles in the settings file the run reads
-/// (<see cref="LlmProviderRules"/>, Orkeon #457): one the host's start refuses blocks « Launch now » and
-/// the check, as a refused bridge does. Judged on a pinned or team file alone: while the CLI picks the
+/// (<see cref="LlmProviderRules"/>, Orkeon #457), and the agent-cli module's <c>Llm:AgentCli</c> (#470):
+/// what the host's start refuses there blocks « Launch now » and the check, as a refused bridge does. Judged on a pinned or team file alone: while the CLI picks the
 /// file itself, the machine's settings are judged by the Settings tab.
 /// </summary>
 public sealed partial class LaunchTabViewModel
@@ -24,7 +24,7 @@ public sealed partial class LaunchTabViewModel
             if (!ReferenceEquals(document, _llmProviderJudged))
             {
                 _llmProviderJudged = document;
-                _llmProviderRefusals = document is null ? [] : LlmProviderRules.Check(document);
+                _llmProviderRefusals = document is null ? [] : LlmProviderRules.StartRefusals(document);
             }
 
             return _llmProviderRefusals;

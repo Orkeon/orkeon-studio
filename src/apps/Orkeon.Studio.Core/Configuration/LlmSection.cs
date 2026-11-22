@@ -36,17 +36,28 @@ public sealed partial class LlmSection
     public LlmProfilesSection Profiles { get; }
 
     /// <summary>
-    /// True when the section describes the default provider: at least one key besides
-    /// <c>Profiles</c> that holds a value, the runtime's own reading (<c>LlmSettings.HasDefault</c>,
-    /// where a blank value reads as absent — STUDIO-49). False is the WIN-01 condition: the runtime
-    /// silently falls back to the <c>&lt;undefined-llm&gt;</c> echo provider — a section holding
-    /// profiles alone included.
+    /// True when the section describes the default provider: at least one key that holds a value
+    /// besides those that describe none (<see cref="KeysBesideTheDefault"/>), the runtime's own
+    /// reading (<c>LlmSettings.HasDefault</c>, where a blank value reads as absent — STUDIO-49).
+    /// False is the WIN-01 condition: the runtime silently falls back to the
+    /// <c>&lt;undefined-llm&gt;</c> echo provider — a section holding profiles alone included.
     /// </summary>
     public bool Exists =>
         _document.GetNode(Section) is JsonObject section
         && section.Any(property =>
-            !string.Equals(property.Key, ConfigurationKeys.LlmProfiles, StringComparison.OrdinalIgnoreCase)
+            !KeysBesideTheDefault.Contains(property.Key, StringComparer.OrdinalIgnoreCase)
             && HoldsValue(property.Value));
+
+    /// <summary>
+    /// The keys of <c>Llm</c> that say nothing of the default provider, as the runtime lists them
+    /// (<c>LlmSettings.HasDefault</c>): the named profiles, the capabilities declared per model, the
+    /// replay and the section of the agent-cli provider module (<c>Llm:AgentCli</c>, Orkeon #470),
+    /// which every profile on that provider shares.
+    /// </summary>
+    // What "no model" leaves in the section: the profiles, and the agent-cli module's section they share.
+    private static readonly string[] KeysKeptWithoutADefault = [ConfigurationKeys.LlmProfiles, "AgentCli"];
+
+    internal static readonly string[] KeysBesideTheDefault = [ConfigurationKeys.LlmProfiles, "ModelCapabilities", "Replay", "AgentCli"];
 
     /// <summary>
     /// Model identifier (<c>Llm:Model</c>). Setting another model than the one the section holds takes
@@ -285,7 +296,7 @@ public sealed partial class LlmSection
 
         foreach (var key in section
                      .Select(property => property.Key)
-                     .Where(key => !string.Equals(key, ConfigurationKeys.LlmProfiles, StringComparison.OrdinalIgnoreCase))
+                     .Where(key => !KeysKeptWithoutADefault.Contains(key, StringComparer.OrdinalIgnoreCase))
                      .ToList())
         {
             section.Remove(key);

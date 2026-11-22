@@ -627,7 +627,7 @@ internal sealed class RunLauncherViewModel
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
         _settingsBridge = ToolBridgePreflight.Check(document, _environment);
-        _settingsLlmProvider = LlmProviderRules.Check(document);
+        _settingsLlmProvider = LlmProviderRules.StartRefusals(document);
 
         // The environment is listed once: a profile is looked up among the names it lays.
         var laid = ProfilesLaidIn(_environmentNames());

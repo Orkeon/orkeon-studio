@@ -5,9 +5,10 @@ namespace Orkeon.Studio.Core.Configuration;
 /// <summary>
 /// What the engine's host judges at start in <c>Llm:AgentCli</c>, the section of the experimental
 /// <c>agent-cli</c> provider module (Orkeon ADR-020, <see cref="LlmProviderRules.AgentCliKey"/>). The
-/// <c>orkeon</c> tool registers the module in every host it builds and validates its options at start,
-/// whatever provider a section names: a value the binder cannot convert, an engine the module does not
-/// have, a command it cannot run or a limit that bounds nothing stops every run. The options class and
+/// <c>orkeon</c> tool registers the module in the hosts of a run, a check, <c>doctor</c>, <c>mcp</c>,
+/// <c>bridge</c> and the forge, and validates its options when such a host is built, whatever provider a
+/// section names: a value the binder cannot convert, an engine the module does not have, a command it
+/// cannot run or a limit that bounds nothing stops every run. The options class and
 /// its validator are internal or experimental in a package Studio does not reference, so the shape is
 /// restated in <see cref="AgentCliSettings"/> and the rules sentence for sentence, held to the engine by
 /// <c>AgentCliRulesOracleTests</c>. Studio writes none of these keys.
@@ -31,7 +32,8 @@ public sealed class AgentCliSection
     /// What the host's start refuses in the section: a file the configuration does not load, when the
     /// key it names is the section's; a value the binder cannot convert; then, on the values that did
     /// convert, the module's refusals in the order of its keys; and a key that is no setting of the
-    /// section. Each with the path of its key, in the engine's sentence; empty when the section is accepted.
+    /// section, or the section written as a single value. Each with the path of its key, in the engine's
+    /// sentence; empty when the section is accepted.
     /// </summary>
     public IReadOnlyList<(string Path, string Problem)> Problems()
     {
@@ -39,6 +41,10 @@ public sealed class AgentCliSection
         var problems = new List<(string, string)>();
         if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
             problems.Add(load);
+        // The section written as a single value: the host's walk says so, and nothing binds (the value is not echoed).
+        var written = configuration.GetSection(SectionPath);
+        if (written is { Value.Length: > 0 } && !written.GetChildren().Any())
+            problems.Add((SectionPath, $"{SectionPath} is a single value where a section of keys is expected: write its keys, or leave the key out."));
         var options = SettingsBinding.Bind<AgentCliSettings>(configuration, SectionPath, problems);
         problems.AddRange(Refusals(options));
         SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentCliSettings)));

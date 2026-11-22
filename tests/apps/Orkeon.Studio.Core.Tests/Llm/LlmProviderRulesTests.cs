@@ -24,6 +24,10 @@ public sealed partial class LlmProviderRulesTests
 
         Assert.True(all.Success, "CliLlmProviderModules.All is no longer written as a list Studio can read: re-read it and update LlmProviderRules.CliModuleKeys.");
 
+        // The list as it is written today: written any other way (a module added by a qualified name, a
+        // property, a spread), it is read again by hand, and this line with it.
+        Assert.Equal("[newAgentCliProviderModule(newAgentCliOptions())]", Blanks().Replace(all.Groups["list"].Value, ""));
+
         // Each module the list builds (its options built beside it are no module), by the key the packed module answers to.
         var keys = ModuleTypes().Matches(all.Groups["list"].Value)
             .Select(match => KeyOf(match.Groups["type"].Value))
@@ -53,6 +57,24 @@ public sealed partial class LlmProviderRulesTests
 
         Assert.Empty(LlmProviderRules.Check(document));
         Assert.DoesNotContain(new AppSettingsValidator().Validate(document), message => message.Severity == ValidationSeverity.Error);
+    }
+
+    /// <summary>
+    /// A launch and a check are blocked on what the host of a run refuses in the model settings: a
+    /// <c>Provider</c>, then the agent-cli module's section, whatever provider is named.
+    /// </summary>
+    [Fact]
+    public void The_start_refusals_are_those_of_the_providers_then_of_the_agent_cli_section()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Llm": { "Provider": "openai", "Model": "m", "AgentCli": { "MaxProcesses": 0, "Engine": "codex" } } }
+            """);
+
+        var refusals = LlmProviderRules.StartRefusals(document);
+
+        Assert.Equal(["Llm:Provider", "Llm:AgentCli:Engine", "Llm:AgentCli:MaxProcesses"], refusals.Select(refusal => refusal.Path));
+        Assert.All(refusals, refusal => Assert.Equal(ValidationSeverity.Error, refusal.Severity));
+        Assert.Empty(LlmProviderRules.StartRefusals(AppSettingsDocument.Parse("""{ "Llm": { "Provider": "agent-cli", "Model": "m", "AgentCli": { "Command": "claude" } } }""")));
     }
 
     /// <summary>
@@ -183,4 +205,7 @@ public sealed partial class LlmProviderRulesTests
 
     [GeneratedRegex(@"\bnew\s+(?<type>[A-Za-z_][A-Za-z0-9_]*)\s*\(", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex ModuleTypes();
+
+    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant, 1000)]
+    private static partial Regex Blanks();
 }

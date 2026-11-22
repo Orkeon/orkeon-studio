@@ -226,7 +226,8 @@ public static class ValidationCodes
 
     /// <summary>
     /// A value, or a key, of a section the engine validates at start (the compaction, the pruning, the
-    /// skills, the tool bridge, the guardian, the decision models and their profiles) that its own rules
+    /// skills, the tool bridge, the guardian, the decision models and their profiles, the agent-cli provider
+    /// module's <c>Llm:AgentCli</c>) that its own rules
     /// refuse: the run would not start. The sentence is the
     /// engine's. A warning for a summary profile the file does not define, which the run's environment
     /// may give.
