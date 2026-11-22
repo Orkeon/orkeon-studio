@@ -88,7 +88,8 @@ public sealed class AppSettingsValidator
 
     // The keys of a section of the Llm shape — Llm itself and each entry of Llm:Profiles —, by the
     // kind the run reads them as (LlmSettings): relative to the section.
-    private static readonly string[] LlmStringKeys = ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort"];
+    private static readonly string[] LlmStringKeys =
+        ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort", LlmProviderRules.ProviderKey, LlmProviderRules.ResponsesKey];
     private static readonly string[] LlmIntegerKeys =
         ["MaxTokens", "TimeoutSeconds", "StreamIdleSeconds", "MaxRetries", LlmProfilesSection.ContextWindowTokensKey];
     private static readonly string[] LlmBooleanKeys = ["Thinking:Enabled", ConfigurationKeys.LlmGrammar];
@@ -453,6 +454,7 @@ public sealed class AppSettingsValidator
         // STUDIO-55: the default is read as strictly as a profile at start (GAP-40) — its shape is
         // judged the same way, then each entry's.
         ValidateLlmShape(section, LlmSection.SectionPath, messages);
+        messages.AddRange(LlmProviderRules.Check(section, LlmSection.SectionPath));
         ValidateInlineKey(document, section, messages);
         ValidateProfiles(section, messages);
         ValidateModelCapabilities(section, messages);
@@ -868,7 +870,10 @@ public sealed class AppSettingsValidator
         }
 
         if (entry is JsonObject shape)
+        {
             ValidateLlmShape(shape, path, messages);
+            messages.AddRange(LlmProviderRules.Check(shape, path));
+        }
         else
             messages.Add(WrongType(path, "an object of the Llm section's keys"));
     }

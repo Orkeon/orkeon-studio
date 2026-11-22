@@ -1590,6 +1590,7 @@
     <value>模型地址被拒绝或保持沉默：位于其他供应商 /anthropic 路径下的地址会被拒绝，没有路径的地址会被当作根路径上的 OpenAI 兼容服务器。</value>
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>有一个模型配置使用了保留名称（“default”是 Llm 节自身的名称，“auto”表示由 System One 选择）：引擎拒绝启动。请重命名它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Llm 或某个配置的 Provider 被拒绝：它只接受带 Responses 文件的“mock”，或某个提供方模块的键。省略它时，提供方由地址、模型名称和密钥推断。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve">
     <value>两个文件夹带有相同的标识：一个标识只对应一个文件夹。</value>
   </data>

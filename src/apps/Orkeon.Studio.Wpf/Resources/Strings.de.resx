@@ -1590,6 +1590,7 @@
     <value>Eine Modelladresse wird abgelehnt oder bleibt stumm: Eine Adresse unter dem Pfad /anthropic eines anderen Anbieters wird abgelehnt, und eine Adresse ohne Pfad wird als OpenAI-kompatibler Server an seiner Wurzel gelesen.</value>
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>Ein Modellprofil trägt einen reservierten Namen („default“, den des Abschnitts Llm selbst, oder „auto“, die Wahl von System One): Die Engine verweigert den Start. Benennen Sie es um.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Der Provider von Llm oder eines Profils wird abgelehnt: Er nimmt „mock“ mit seiner Datei Responses oder den Schlüssel eines Anbietermoduls. Ohne ihn ergibt sich der Anbieter aus der Adresse, dem Modellnamen und dem Schlüssel.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve">
     <value>Zwei Ordner tragen dieselbe Kennung: Eine Kennung benennt genau einen Ordner.</value>
   </data>

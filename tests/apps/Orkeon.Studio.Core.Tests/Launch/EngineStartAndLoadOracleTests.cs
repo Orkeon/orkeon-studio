@@ -345,6 +345,62 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             Assert.Contains(studio[0], refusal, StringComparison.Ordinal);
     }
 
+    /// <summary>The <c>Provider</c> of <c>Llm</c> and of a profile, as a hand-written file may hold it (Orkeon #457).</summary>
+    public static TheoryData<string, string> ProviderSettings
+    {
+        get
+        {
+            var data = new TheoryData<string, string>();
+            (string What, string Keys)[] cases =
+            [
+                ("a vendor of the catalogue", "\"Provider\": \"openai\", \"Model\": \"gpt-4o\""),
+                ("a vendor in another letter case, with blanks", "\"Provider\": \" Anthropic \", \"Model\": \"claude-x\""),
+                ("a vendor's alias", "\"Provider\": \"azure\", \"Model\": \"gpt-4o\""),
+                ("the custom endpoint", "\"Provider\": \"custom\", \"Model\": \"m\""),
+                ("the Docker Model Runner", "\"Provider\": \"docker-model-runner\", \"Model\": \"m\""),
+                ("a name no module answers", "\"Provider\": \"acme\", \"Model\": \"m\""),
+                ("a name no module answers, with a responses file", "\"Provider\": \"acme\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
+                ("a vendor with a responses file", "\"Provider\": \"openai\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
+                ("the mock without its file", "\"Provider\": \"mock\", \"Model\": \"m\""),
+                ("the mock in capitals with its file", "\"Provider\": \"MOCK\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
+                ("a blank provider", "\"Provider\": \" \", \"Model\": \"m\", \"BaseUrl\": \"http://localhost:11434/v1\""),
+            ];
+            foreach (var (what, keys) in cases)
+            {
+                data.Add("under Llm: " + what, $$"""{ "Llm": { {{keys}} } }""");
+                data.Add("under a profile: " + what, $$"""
+                    { "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "Profiles": { "p": { {{keys}} } } } }
+                    """);
+            }
+
+            return data;
+        }
+    }
+
+    /// <summary>
+    /// The host refuses to start on a <c>Provider</c> that is neither <c>mock</c> with its file nor the
+    /// key of a provider module, and Studio's settings check says so in its sentence (Orkeon #457).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ProviderSettings))]
+    public void The_host_refuses_a_provider_as_Studio_says(string what, string settings)
+    {
+        var (host, refusal) = Start(settings);
+        host?.Dispose();
+        var studio = new AppSettingsValidator().Validate(AppSettingsDocument.Parse(settings))
+            .Where(message => message.Code == ValidationCodes.LlmProvider)
+            .ToList();
+
+        Assert.True((refusal is null) == (studio.Count == 0), $"{what}: the engine says «{refusal}», Studio says «{string.Join(" | ", studio.Select(message => message.Text))}».");
+        // Only the mock with its file and a blank provider start: the rows are not vacuous.
+        Assert.Equal(!(what.EndsWith("the mock in capitals with its file", StringComparison.Ordinal) || what.EndsWith("a blank provider", StringComparison.Ordinal)), refusal is not null);
+        if (refusal is not null)
+        {
+            Assert.Contains(studio[0].Text, refusal, StringComparison.Ordinal);
+            Assert.All(studio, message => Assert.Equal(ValidationSeverity.Error, message.Severity));
+        }
+    }
+
     private const string SecretLike = "sk-test-0123456789abcdef";
 
     /// <summary>The same refusals with the value a key cannot read: one that looks like an API key, written by mistake.</summary>

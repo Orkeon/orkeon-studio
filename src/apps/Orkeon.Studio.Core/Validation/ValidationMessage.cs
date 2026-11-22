@@ -74,6 +74,13 @@ public static class ValidationCodes
     /// </summary>
     public const string SettingPlaceholder = "STUDIO-SETTING-PLACEHOLDER";
 
+    /// <summary>
+    /// A <c>Provider</c> of <c>Llm</c> or of a profile the engine's start refuses (Orkeon #457): a vendor
+    /// of the catalogue, which its address picks; a name no provider module answers; <c>mock</c> without
+    /// its <c>Responses</c> file; a <c>Responses</c> beside a module's key.
+    /// </summary>
+    public const string LlmProvider = "STUDIO-LLM-PROVIDER";
+
     /// <summary>A model address the run refuses (a vendor's <c>/anthropic</c> path) or reads silently (a custom address with no path).</summary>
     public const string LlmEndpoint = "STUDIO-LLM-ENDPOINT";
 
