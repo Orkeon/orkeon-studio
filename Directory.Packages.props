@@ -15,8 +15,8 @@
        and the release pipeline clone the Orkeon tag v$(OrkeonVersion) for the drift tests:
        moving it moves both. -->
   <PropertyGroup>
-    <!-- TEMPORARY: packed from the untagged Orkeon main, served by dev-feed/ (see nuget.config). -->
-    <OrkeonVersion>1.3.1-local.202611211742</OrkeonVersion>
+    <!-- TEMPORARY: packed from Orkeon fix/issues-448-461 (30e2fcfdb), served by dev-feed/ (see nuget.config). -->
+    <OrkeonVersion>1.3.1-local.202611221300</OrkeonVersion>
   </PropertyGroup>
   <ItemGroup Label="Orkeon">
     <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />
