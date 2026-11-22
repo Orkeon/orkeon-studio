@@ -60,10 +60,12 @@ public sealed class AgentCliRulesOracleTests
     [Fact]
     public void The_shape_is_the_engines_own()
     {
-        var engine = typeof(AgentCliOptions).GetProperties().ToDictionary(property => property.Name, property => property.PropertyType);
-        var studio = typeof(AgentCliSettings).GetProperties().ToDictionary(property => property.Name, property => property.PropertyType);
+        // In the engine's order: the binder binds the properties in it and refuses the first value it
+        // cannot convert, the module's validator says its refusals in it, and Studio says them as they come.
+        var engine = typeof(AgentCliOptions).GetProperties().Select(property => (property.Name, property.PropertyType));
+        var studio = typeof(AgentCliSettings).GetProperties().Select(property => (property.Name, property.PropertyType));
 
-        Assert.Equal(engine.OrderBy(pair => pair.Key), studio.OrderBy(pair => pair.Key));
+        Assert.Equal(engine, studio);
         Assert.Equal(AgentCliOptions.SectionName, AgentCliSection.SectionPath);
         Assert.Equal(AgentCliEngines.Claude, AgentCliSection.ClaudeEngine);
 

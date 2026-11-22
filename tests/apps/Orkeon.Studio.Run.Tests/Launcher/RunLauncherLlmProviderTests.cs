@@ -50,13 +50,21 @@ public sealed class RunLauncherLlmProviderTests : IDisposable
     public void A_provider_the_start_refuses_is_an_error_of_the_launch_and_of_a_check()
     {
         var launcher = Pin("""{ "LLM": { "Provider": "acme", "Model": "m", "Profiles": { "p": { "Provider": "openai", "Model": "m" } } } }""");
+        var unanswered = Pin("""{ "LLM": { "Provider": "acme", "Model": "m", "Profiles": { "p": { "Provider": "zeta", "Model": "m" } } } }""");
 
+        Assert.StartsWith(
+            "The model settings stop the run at start: Llm:Provider names no provider of this host: write mock or the key of a provider module",
+            unanswered.Validate().First(m => m.Code == ValidationCodes.LlmProvider).Text,
+            StringComparison.Ordinal);
         foreach (var dryRun in new[] { false, true })
         {
             var errors = launcher.Validate(dryRun).Where(m => m.Code == ValidationCodes.LlmProvider).ToList();
-            Assert.Equal(["Llm:Provider", "Llm:Profiles:p:Provider"], errors.Select(error => error.Path));
-            Assert.All(errors, error => Assert.Equal(ValidationSeverity.Error, error.Severity));
-            Assert.StartsWith("The model settings stop the run at start: Llm:Provider names no provider of this host: write mock or the key of a provider module", errors[0].Text, StringComparison.Ordinal);
+            // The host reads the profile first and stops on its vendor: that refusal is the one it raises, the
+            // name no module answers is never reached.
+            var error = Assert.Single(errors);
+            Assert.Equal("Llm:Profiles:p:Provider", error.Path);
+            Assert.Equal(ValidationSeverity.Error, error.Severity);
+            Assert.StartsWith("The model settings stop the run at start: Llm:Profiles:p:Provider names a vendor of the catalogue", error.Text, StringComparison.Ordinal);
             Assert.True(launcher.HasBlockingErrors(dryRun));
         }
     }

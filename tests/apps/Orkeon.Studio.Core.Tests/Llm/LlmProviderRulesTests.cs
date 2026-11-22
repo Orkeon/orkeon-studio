@@ -60,21 +60,64 @@ public sealed partial class LlmProviderRulesTests
     }
 
     /// <summary>
-    /// A launch and a check are blocked on what the host of a run refuses in the model settings: a
-    /// <c>Provider</c>, then the agent-cli module's section, whatever provider is named.
+    /// A launch and a check are blocked on what the host of a run refuses in the model settings, in its
+    /// order. A vendor is refused while the host reads the section, which stops it there: that refusal
+    /// is the only one, the agent-cli section never validated.
     /// </summary>
     [Fact]
-    public void The_start_refusals_are_those_of_the_providers_then_of_the_agent_cli_section()
+    public void A_provider_refused_where_it_is_read_is_the_only_start_refusal()
     {
         var document = AppSettingsDocument.Parse("""
             { "Llm": { "Provider": "openai", "Model": "m", "AgentCli": { "MaxProcesses": 0, "Engine": "codex" } } }
             """);
 
+        var refusal = Assert.Single(LlmProviderRules.StartRefusals(document));
+
+        Assert.Equal("Llm:Provider", refusal.Path);
+        Assert.Equal(ValidationSeverity.Error, refusal.Severity);
+        Assert.Empty(LlmProviderRules.StartRefusals(AppSettingsDocument.Parse("""{ "Llm": { "Provider": "agent-cli", "Model": "m", "AgentCli": { "Command": "claude" } } }""")));
+    }
+
+    /// <summary>
+    /// The agent-cli section is validated at start whatever provider is named, before the host says a
+    /// name no module answers (<c>UnansweredProviderKeys</c>, said last): the default's, then each profile's.
+    /// </summary>
+    [Fact]
+    public void The_agent_cli_section_is_refused_before_a_name_no_module_answers()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Llm": { "Provider": "acme", "Model": "m", "AgentCli": { "MaxProcesses": 0, "Engine": "codex" },
+                "Profiles": { "p": { "Provider": "zeta", "Model": "m" } } } }
+            """);
+
         var refusals = LlmProviderRules.StartRefusals(document);
 
-        Assert.Equal(["Llm:Provider", "Llm:AgentCli:Engine", "Llm:AgentCli:MaxProcesses"], refusals.Select(refusal => refusal.Path));
+        Assert.Equal(["Llm:AgentCli:Engine", "Llm:AgentCli:MaxProcesses", "Llm:Provider", "Llm:Profiles:p:Provider"], refusals.Select(refusal => refusal.Path));
         Assert.All(refusals, refusal => Assert.Equal(ValidationSeverity.Error, refusal.Severity));
-        Assert.Empty(LlmProviderRules.StartRefusals(AppSettingsDocument.Parse("""{ "Llm": { "Provider": "agent-cli", "Model": "m", "AgentCli": { "Command": "claude" } } }""")));
+    }
+
+    /// <summary>
+    /// The host reads each profile before the <c>Llm</c> section, a profile under a reserved name refused
+    /// for its name before its <c>Provider</c> is read: the first refusal so met is the only one.
+    /// </summary>
+    [Fact]
+    public void A_profile_refused_where_it_is_read_comes_before_the_default_section()
+    {
+        var vendor = AppSettingsDocument.Parse("""
+            { "Llm": { "Provider": "openai", "Model": "m", "Profiles": { "b": { "Provider": "mock" }, "a": { "Provider": "acme" } } } }
+            """);
+        var reserved = AppSettingsDocument.Parse("""
+            { "Llm": { "Provider": "openai", "Model": "m", "Profiles": { "Default": { "Provider": "openai" } } } }
+            """);
+
+        Assert.Equal("Llm:Profiles:b:Responses", Assert.Single(LlmProviderRules.StartRefusals(vendor)).Path);
+        var refusal = Assert.Single(LlmProviderRules.StartRefusals(reserved));
+        Assert.Equal(ValidationCodes.LlmProfileReservedName, refusal.Code);
+        Assert.Equal(
+            "Llm:Profiles:Default: 'default' is the reserved name of the default profile, which is the Llm section itself. Rename the profile.",
+            refusal.Text);
+        // Its Provider is not judged: only the default section's is.
+        Assert.Equal(["Llm:Provider"], LlmProviderRules.Check(reserved).Select(message => message.Path));
     }
 
     /// <summary>
@@ -167,7 +210,8 @@ public sealed partial class LlmProviderRulesTests
     }
 
     /// <summary>
-    /// A launch reads the refusals of the whole file: the default and each profile, the section found
+    /// A launch reads the refusals of the whole file: each profile and the default, in the order the host
+    /// reads them, the section found
     /// whatever its letter case, a profile that is no object left to the shape check.
     /// </summary>
     [Fact]
@@ -179,7 +223,7 @@ public sealed partial class LlmProviderRulesTests
 
         var refusals = LlmProviderRules.Check(document);
 
-        Assert.Equal(["Llm:Provider", "Llm:Profiles:p:Responses"], refusals.Select(refusal => refusal.Path));
+        Assert.Equal(["Llm:Profiles:p:Responses", "Llm:Provider"], refusals.Select(refusal => refusal.Path));
         Assert.All(refusals, refusal => Assert.Equal(ValidationSeverity.Error, refusal.Severity));
         Assert.Empty(LlmProviderRules.Check(AppSettingsDocument.Parse("""{ "Orkeon": {} }""")));
     }

@@ -45,9 +45,14 @@ public static class LlmProviderRules
         || key is LlmProviderKeys.Custom or LlmProviderKeys.DockerModelRunner or LlmProviderKeys.AzureShort;
 
     /// <summary>
-    /// The refusals of every <c>Provider</c> of <paramref name="document"/>: the <c>Llm</c> section's,
-    /// then each <c>Llm:Profiles</c> entry's, the keys found whatever their letter case, as the
-    /// configuration reads them. What a launch is told of the settings file the run reads.
+    /// The refusals of every <c>Provider</c> of <paramref name="document"/>, the keys found whatever their
+    /// letter case, as the configuration reads them, in the order the host meets them: those it raises
+    /// while it reads the sections (a vendor, a mock without its file, a file beside a module's key),
+    /// each <c>Llm:Profiles</c> entry before the <c>Llm</c> section (<c>RegisterLlmProvider</c>); then a
+    /// name no module answers, the <c>Llm</c> section's first (<c>UnansweredProviderKeys</c>, said after
+    /// every section). A profile under a reserved name (<c>default</c>, <c>auto</c>) is refused for its
+    /// name before its <c>Provider</c> is read (<c>LlmSettings.ReadProfiles</c>): its <c>Provider</c> is
+    /// not judged. What a launch is told of the settings file the run reads.
     /// </summary>
     public static IReadOnlyList<ValidationMessage> Check(AppSettingsDocument document)
     {
@@ -55,34 +60,79 @@ public static class LlmProviderRules
         if (SectionOf(document) is not { } section)
             return [];
 
-        var messages = new List<ValidationMessage>(Check(section, LlmSection.SectionPath));
-        if (Node(section, ConfigurationKeys.LlmProfiles) is JsonObject profiles)
+        var profiles = new List<ValidationMessage>();
+        foreach (var (id, entry) in Profiles(section))
         {
-            foreach (var (id, entry) in profiles)
-            {
-                if (entry is JsonObject profile)
-                    messages.AddRange(Check(profile, $"{LlmProfilesSection.SectionPath}:{id}"));
-            }
+            if (!IsReserved(id) && entry is JsonObject profile)
+                profiles.AddRange(Check(profile, $"{LlmProfilesSection.SectionPath}:{id}"));
         }
 
-        return messages;
+        var own = Check(section, LlmSection.SectionPath);
+        return
+        [
+            .. profiles.Where(message => !IsUnanswered(message)),
+            .. own.Where(message => !IsUnanswered(message)),
+            .. own.Where(IsUnanswered),
+            .. profiles.Where(IsUnanswered),
+        ];
     }
 
     /// <summary>
-    /// What stops a run at start in the model settings of <paramref name="document"/>: the refusals of
-    /// every <c>Provider</c> (<see cref="Check(AppSettingsDocument)"/>), then those of the agent-cli
-    /// module's section (<see cref="AgentCliSection.Problems"/>), which the host of a run validates
-    /// whatever provider is named. What a launch and a check are blocked on.
+    /// What stops a run at start in the model settings of <paramref name="document"/>, as the host of a run
+    /// says it. What the host raises while it reads the profiles, then the <c>Llm</c> section, stops it
+    /// there and is the only refusal: a profile under a reserved name (in the engine's sentence), a
+    /// <c>Provider</c> refused where it is read (<see cref="Check(AppSettingsDocument)"/>). Otherwise the
+    /// agent-cli module's section (<see cref="AgentCliSection.Problems"/>), which the host of a run
+    /// validates whatever provider is named, then a name no module answers. What a launch and a check are
+    /// blocked on.
     /// </summary>
     public static IReadOnlyList<ValidationMessage> StartRefusals(AppSettingsDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
+        if (SectionOf(document) is { } section)
+        {
+            foreach (var (id, entry) in Profiles(section))
+            {
+                var path = $"{LlmProfilesSection.SectionPath}:{id}";
+                if (ReservedRefusal(id, path) is { } reserved)
+                    return [ValidationMessage.Error(ValidationCodes.LlmProfileReservedName, reserved, path)];
+                if (entry is JsonObject profile && Check(profile, path).FirstOrDefault(message => !IsUnanswered(message)) is { } read)
+                    return [read];
+            }
+
+            if (Check(section, LlmSection.SectionPath).FirstOrDefault(message => !IsUnanswered(message)) is { } own)
+                return [own];
+        }
+
         return
         [
-            .. Check(document),
             .. document.AgentCli.Problems().Select(problem => ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem.Problem, problem.Path)),
+            .. Check(document).Where(IsUnanswered),
         ];
     }
+
+    // The profiles of the section, in the order the configuration gives them (its keys sorted).
+    private static IEnumerable<(string Id, JsonNode? Entry)> Profiles(JsonObject section) =>
+        Node(section, ConfigurationKeys.LlmProfiles) is JsonObject profiles
+            ? profiles.OrderBy(pair => pair.Key, Microsoft.Extensions.Configuration.ConfigurationKeyComparer.Instance).Select(pair => (pair.Key, pair.Value))
+            : [];
+
+    private static bool IsReserved(string id) =>
+        Orkeon.Application.Interfaces.Ports.LlmProfiles.IsDefault(id) || Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id);
+
+    // The host's sentence for a profile under a reserved name (LlmSettings.ReadProfiles); null for any other name.
+    private static string? ReservedRefusal(string id, string path) =>
+        Orkeon.Application.Interfaces.Ports.LlmProfiles.IsDefault(id)
+            ? $"{path}: '{Orkeon.Application.Interfaces.Ports.LlmProfiles.Default}' is the reserved name of the default profile, "
+              + $"which is the {LlmSection.SectionPath} section itself. Rename the profile."
+            : Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id)
+                ? Orkeon.Application.Interfaces.Ports.LlmProfiles.AutoReservedMessage(path)
+                : null;
+
+    // The sentence of a name no module answers, which the host says after every section.
+    private const string UnansweredFragment = " names no provider of this host: ";
+
+    private static bool IsUnanswered(ValidationMessage message) => message.Text.Contains(UnansweredFragment, StringComparison.Ordinal);
 
     /// <summary>
     /// The <c>Llm</c> section of <paramref name="document"/>, however the file spells its key (<c>llm</c>,
@@ -144,7 +194,7 @@ public static class LlmProviderRules
 
         var known = modules.Count == 0 ? "this host registers none" : "registered: " + string.Join(", ", modules.Order(StringComparer.Ordinal));
         return [Refused($"{sectionPath}:{ProviderKey}",
-            $"{sectionPath}:{ProviderKey} names no provider of this host: "
+            $"{sectionPath}:{ProviderKey}{UnansweredFragment}"
             + $"write {LlmProviderKeys.Mock} or the key of a provider module ({known}); "
             + "leave it out and the provider follows from BaseUrl, the model's name and the key.")];
     }

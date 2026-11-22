@@ -41,10 +41,15 @@ public sealed class AgentCliSection
         var problems = new List<(string, string)>();
         if (_document.LoadRefusal() is { } load && SettingsBinding.IsUnder(load.Path, SectionPath))
             problems.Add(load);
-        // The section written as a single value: the host's walk says so, and nothing binds (the value is not echoed).
+        // The section written as a single value: the host's walk says so, and nothing binds (the value is not
+        // echoed). The walk descends from the Llm section, so its sentence names the key as the file writes it.
         var written = configuration.GetSection(SectionPath);
         if (written is { Value.Length: > 0 } && !written.GetChildren().Any())
-            problems.Add((SectionPath, $"{SectionPath} is a single value where a section of keys is expected: write its keys, or leave the key out."));
+        {
+            var walked = configuration.GetSection(LlmSection.SectionPath).GetChildren()
+                .LastOrDefault(child => string.Equals(child.Key, written.Key, StringComparison.OrdinalIgnoreCase))?.Path ?? SectionPath;
+            problems.Add((SectionPath, $"{walked} is a single value where a section of keys is expected: write its keys, or leave the key out."));
+        }
         var options = SettingsBinding.Bind<AgentCliSettings>(configuration, SectionPath, problems);
         problems.AddRange(Refusals(options));
         SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentCliSettings)));

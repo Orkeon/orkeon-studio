@@ -271,29 +271,32 @@ public sealed class ToolBridgeRulesOracleTests
     }
 
     /// <summary>
-    /// The engine's own verdict: its options class bound as its host binds it, then its <c>Problems()</c>,
-    /// then the value refusals of its walk merged as its start merges them (Orkeon #450, #454): a key
-    /// written without a value replaces what a rule said of the default the binder wrote, and a value
-    /// of the wrong form is said unless a rule already names its key. The keys that are no setting are
-    /// compared apart (<see cref="The_keys_that_are_no_setting_are_those_the_engines_walk_refuses"/>).
+    /// The engine's own verdict, as its start gives it: both sections registered as its hosts register them
+    /// (<c>ToolBridgeStartup.Register</c>), then <c>SettingsValidation.Refusals</c>, which binds them, runs
+    /// their <c>Problems()</c> and merges the value refusals of its walk (Orkeon #450, #454), each said once.
+    /// What it says of the section of <paramref name="optionsType"/> is kept, but the keys that are no
+    /// setting, compared apart (<see cref="The_keys_that_are_no_setting_are_those_the_engines_walk_refuses"/>).
+    /// A value the binder cannot convert throws, as the options class bound alone throws it.
     /// </summary>
     private static List<string> EngineProblems(string optionsType, string json)
     {
-        var refusals = EngineRules(optionsType, json);
-        var validation = Hosting.GetType("Orkeon.Hosting.SettingsValidation", throwOnError: true)!;
-        var names = validation.GetMethod("Names", BindingFlags.NonPublic | BindingFlags.Static, [typeof(string), typeof(string)])!;
-        var namesExactly = validation.GetMethod("NamesExactly", BindingFlags.NonPublic | BindingFlags.Static, [typeof(string), typeof(string)])!;
-        foreach (var (path, refusal, kind) in EngineWalk(optionsType, json))
-        {
-            if (kind == "Empty")
-                refusals.RemoveAll(earlier => (bool)namesExactly.Invoke(null, [earlier, path])!);
-            else if (kind != "Value" || refusals.Any(earlier => (bool)names.Invoke(null, [earlier, path])!))
-                continue;
-
-            refusals.Add(refusal);
-        }
-
-        return [.. refusals.Distinct(StringComparer.Ordinal)];
+        // The binder's refusal, which the start rewords without the value: thrown here as the binder throws it.
+        _ = EngineRules(optionsType, json);
+        var type = Hosting.GetType(optionsType, throwOnError: true)!;
+        var section = (string)type.GetField("SectionName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        var configuration = new ConfigurationBuilder().AddJsonStream(stream).Build();
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        Microsoft.Extensions.DependencyInjection.ServiceCollectionServiceExtensions.AddSingleton<IConfiguration>(services, configuration);
+        Hosting.GetType("Orkeon.Hosting.ToolBridge.ToolBridgeStartup", throwOnError: true)!
+            .GetMethod("Register", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, [services, configuration]);
+        using var provider = Microsoft.Extensions.DependencyInjection.ServiceCollectionContainerBuilderExtensions.BuildServiceProvider(services);
+        var refusals = (IEnumerable<string>)Hosting.GetType("Orkeon.Hosting.SettingsValidation", throwOnError: true)!
+            .GetMethod("Refusals", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, [typeof(IServiceProvider)])!
+            .Invoke(null, [provider])!;
+        var unknownKeys = EngineWalk(optionsType, json).Where(found => found.Kind == "Key").Select(found => found.Refusal).ToHashSet(StringComparer.Ordinal);
+        return [.. refusals.Where(refusal => refusal.StartsWith(section + ":", StringComparison.OrdinalIgnoreCase) && !unknownKeys.Contains(refusal))];
     }
 
     /// <summary>The engine's walk of the section: each finding's path, refusal and kind.</summary>

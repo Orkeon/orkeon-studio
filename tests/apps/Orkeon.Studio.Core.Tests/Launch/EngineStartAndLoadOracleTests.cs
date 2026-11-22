@@ -128,7 +128,8 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
     /// rules of each section, in the order the host declares them (the compaction, the skills, the
     /// ladder and the levels, the guardian and the circuit's switch, the caller's bridge, the serving
     /// one, the provider in use);
-    /// the keys no section carries; a name two profiles share; and last the fail-closed judge.
+    /// the keys no section carries; a name two profiles share; the summary's profile the registry does
+    /// not hold; and last the fail-closed judge.
     /// </summary>
     private static List<string> StudioRefusals(string settings, Func<string, string?>? environment = null)
     {
@@ -167,7 +168,10 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             .. guardian.Where(OfTheWalk),
             .. decisionKeys,
             .. bridge.Where(OfTheWalk),
-            .. Decision(DecisionRefusalStage.Profiles, DecisionRefusalStage.Judge),
+            .. Decision(DecisionRefusalStage.Profiles),
+            // RagLlm.EnsureProfileIsKnown, once the registry is built: the summary's profile.
+            .. (document.Compaction.UnknownProfile() is { } unknown ? [unknown.Problem] : Array.Empty<string>()),
+            .. Decision(DecisionRefusalStage.Judge),
         ];
     }
 
@@ -321,6 +325,18 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         { "a judge's size refused and a count out of bounds", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Bridge\": { \"MaxSessions\": 0 }" },
         { "a judge's size refused and a share out of bounds", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0 } }, \"Compaction\": { \"TriggerShare\": 2 }" },
         { "a fail-closed judge with no provider and a size refused", "\"Guardian\": { \"Llm\": { \"Enabled\": true, \"MaxContentChars\": 0 } }" },
+        // A provider deduced from its section whose key is nowhere: the judge refuses the circuit off for it (no-key).
+        { "a fail-closed judge, a provider without its key", KeylessProvider + ", \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        { "a fail-closed judge, a provider whose key variable is unset", "\"Liquid\": { \"ApiKeyEnvVar\": \"STUDIO_ORACLE_UNSET_KEY\" }, \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        { "a fail-open judge, a provider without its key", KeylessProvider + ", \"Guardian\": { \"Llm\": { \"Enabled\": true, \"FailMode\": \"Open\" } }" },
+        // The registry refuses the reserved name, whatever its letter case, before a name two profiles share.
+        { "a decision profile named default", "\"Decision\": { \"Profiles\": { \"Default\": { \"Target\": \"default\", \"Stages\": [ " + Guard + " ] } } }" },
+        { "a decision profile named default, a fail-closed judge", "\"Decision\": { \"Profiles\": { \"default\": { \"Target\": \"default\", \"Stages\": [ " + Guard + " ] } } }, \"Guardian\": { \"Llm\": { \"Enabled\": true } }" },
+        // The provider's options fail apart: the host throws the first, which Studio says first.
+        { "two failures of the provider in use", "\"TypeSafe\": { \"ApiKey\": \"studio-oracle-tests\", \"TimeoutSeconds\": 0, \"MaxRetries\": -1 }" },
+        // The summary's profile is looked up among the registry's names: the model profiles, then the decision profiles.
+        { "a summary's profile no profile holds", "\"Compaction\": { \"Profile\": \"nope\" }" },
+        { "a summary's profile that is a decision profile", "\"Compaction\": { \"Profile\": \"p\" }, " + Profile("\"Target\": \"default\", \"Stages\": [ " + Guard + " ]") },
     };
 
     private const string Guard = "{ \"Kind\": \"guard\", \"Risks\": { \"x\": \"y\" } }";
@@ -424,6 +440,8 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         if (refusal is not null)
         {
             Assert.Contains(studio[0].Text, refusal, StringComparison.Ordinal);
+            // What blocks a launch says first what the host raises.
+            Assert.Contains(LlmProviderRules.StartRefusals(document)[0].Text, refusal, StringComparison.Ordinal);
             Assert.All(studio, message => Assert.Equal(ValidationSeverity.Error, message.Severity));
         }
     }
@@ -454,6 +472,30 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         Assert.True((refusal is null) == (studio.Count == 0), $"The engine says «{refusal}», Studio says «{string.Join(" | ", studio.Select(problem => problem.Problem))}».");
         if (refusal is not null)
             Assert.Contains(studio[0].Problem, refusal, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The model settings whose refusals come in an order: a refusal met where a section is read stops
+    /// the host there (the profiles before the <c>Llm</c> section, a reserved name before a provider), the
+    /// agent-cli section is validated next, and a name no module answers is said last.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Llm": { "Provider": "openai", "Model": "m", "AgentCli": { "MaxProcesses": 0 } } }""", 1)]
+    [InlineData("""{ "Llm": { "Provider": "acme", "Model": "m", "AgentCli": { "MaxProcesses": 0 } } }""", 2)]
+    [InlineData("""{ "Llm": { "Provider": "openai", "Model": "m", "Profiles": { "b": { "Provider": "mock", "Model": "m" } } } }""", 1)]
+    [InlineData("""{ "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "Profiles": { "Default": { "Provider": "openai", "Model": "m" } } } }""", 1)]
+    [InlineData("""{ "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "Profiles": { "auto": { "Provider": "acme", "Model": "m" } } } }""", 1)]
+    [InlineData("""{ "Llm": { "Provider": "acme", "Model": "m", "Profiles": { "p": { "Provider": "zeta", "Model": "m" } } } }""", 2)]
+    [InlineData("""{ "llm": { "provider": "mock", "model": "mock", "responses": "/crew/responses.jsonl", "agentcli": "claude" } }""", 1)]
+    public void The_host_raises_first_the_model_setting_Studio_says_first(string settings, int count)
+    {
+        var (host, refusal) = Start(settings);
+        host?.Dispose();
+        var studio = LlmProviderRules.StartRefusals(AppSettingsDocument.Parse(settings));
+
+        Assert.NotNull(refusal);
+        Assert.Equal(count, studio.Count);
+        Assert.Contains(studio[0].Text, refusal, StringComparison.Ordinal);
     }
 
     private const string SecretLike = "sk-test-0123456789abcdef";
