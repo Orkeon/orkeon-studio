@@ -84,6 +84,10 @@ Built against the Orkeon main that follows `1.3.0` (System One modes, the decisi
 ### Fixed
 
 - On the Launch screen, a task a decision skipped no longer shows its agent as failed: the agent's card reads the task that ran, with its tool calls, tokens and duration, and an agent all of whose tasks were skipped reads « Not run ». A skipped task says why in the interface's language (« Skipped: decision controle-couverture answered couverture = complet », a decision not taken, a dependency that did not succeed), the engine's own sentence kept in its tooltip; a decision task the engine answers itself is named « Decision » instead of its bare role.
+- A run that stops to wait for input (exit code 75) no longer reads « Unexpected exit code » and is no longer painted failed: the Launch screen, the history and the Teams screen show it waiting.
+- A model setting's call mode (`Stream`, `Buffer`) is written into its `Llm:Profiles:<id>` entry and into `Llm` when it is elected, so `orkeon run` and a scheduled team call the model as a Studio launch does; electing a default no longer wipes a `Llm:CallMode` written by hand.
+- Choosing « no model » for the default keeps `Llm:ModelCapabilities` and `Llm:Replay`, which the profiles read too.
+- A whole number written in hexadecimal (`0x…`, `#…`) in an e-mail or drive account is read as the engine's binder reads it, instead of being refused or read as absent.
 
 ## [1.3.0] - 2026-11-18
 
