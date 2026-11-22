@@ -50,8 +50,21 @@ internal sealed class BridgeSectionView : SectionView
         _status.Text = _form.Status;
     }
 
-    /// <summary>The status follows the document the form was just applied to.</summary>
-    public override void Refresh() => _status.Text = _form.Status;
+    /// <summary>
+    /// The fields and the status follow the document the form was just applied to: a list shows as it
+    /// was stored (<c>a;b</c> as <c>a, b</c>), a value trimmed as kept. A field whose text already says it
+    /// is left alone, the cursor with it.
+    /// </summary>
+    public override void Refresh()
+    {
+        foreach (var (field, read, _) in _fields)
+        {
+            if (!string.Equals(field.Text, read(), StringComparison.Ordinal))
+                field.Text = read();
+        }
+
+        _status.Text = _form.Status;
+    }
 
     /// <inheritdoc />
     public override void Apply()

@@ -74,6 +74,30 @@ public sealed class SectionViewTests
     }
 
     /// <summary>
+    /// The bridge screen applied, its fields show what was stored: a list written with semicolons reads
+    /// back with commas, an address typed with spaces around it as kept.
+    /// </summary>
+    [Fact]
+    public void The_bridge_screen_applied_shows_its_fields_as_stored()
+    {
+        var form = new BridgeForm(_ => null);
+        var document = Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse("{}");
+        form.LoadFrom(document);
+        using var view = new BridgeSectionView(form);
+        view.Load();
+
+        var fields = Fields(view);
+        fields[0].Text = "  https://desk.example:7410/  ";
+        fields[1].Text = "read_file;write_file";
+        view.Apply();
+        Assert.Empty(form.ApplyTo(document));
+        view.Refresh();
+
+        Assert.Equal("https://desk.example:7410/", fields[0].Text);
+        Assert.Equal("read_file, write_file", fields[1].Text);
+    }
+
+    /// <summary>
     /// A screen has more rows than a small terminal shows: its content is as tall as its rows, and the
     /// part shown moves to the field in use, down and back up.
     /// </summary>
