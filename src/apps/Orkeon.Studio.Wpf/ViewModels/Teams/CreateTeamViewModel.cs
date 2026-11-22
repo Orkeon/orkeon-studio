@@ -544,6 +544,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
 
         RawLog = new RunLogViewModel(_strings);
         AgentEditor = new AgentEditorViewModel(_strings);
+        InitializeTasks();
         AddAgentCommand = new RelayCommand(() => EditAgent(null), () => CanEditAgents);
         AllowFolderCommand = new RelayCommand(AllowFolder);
         BindMountCommand = new RelayCommand(BindMount, IsStringParameter);
@@ -2266,37 +2267,43 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         if (!CanEditAgents || _model.BlueprintJson is not { } blueprintJson)
             return;
 
-        AgentEditor.Open(blueprintJson, agentKey, [.. TeamMounts], amended =>
+        AgentEditor.Open(blueprintJson, agentKey, [.. TeamMounts], ApplyEditedBlueprint);
+    }
+
+    /// <summary>
+    /// Sends an amended blueprint to the engine, from the agent editor, the task editor or a task
+    /// row's buttons, at whichever of its two edit points it is.
+    /// </summary>
+    private void ApplyEditedBlueprint(string amended)
+    {
+        // The engine owns the truth: at the arbitration the decision goes first, the
+        // amended blueprint follows, and everything is re-validated on its side of
+        // the wire. A dead engine must be SAID — closing the editor as if applied
+        // would lose the edit.
+        if (_model.DecisionOptions.Contains("edit", StringComparer.Ordinal))
         {
-            // The engine owns the truth: at the arbitration the decision goes first, the
-            // amended blueprint follows, and everything is re-validated on its side of
-            // the wire. A dead engine must be SAID — closing the editor as if applied
-            // would lose the edit.
-            if (_model.DecisionOptions.Contains("edit", StringComparer.Ordinal))
+            if (!_client.SendDecision("edit") || !_client.SendBlueprint(amended))
             {
-                if (!_client.SendDecision("edit") || !_client.SendBlueprint(amended))
-                {
-                    StatusMessage = _strings[StudioStringKeys.WizardAssistantNotRunning];
-                    return;
-                }
-
-                _model.AcknowledgeDecision();
-                SyncFromModel();
+                StatusMessage = _strings[StudioStringKeys.WizardAssistantNotRunning];
                 return;
             }
 
-            // At the dry pause the engine is off (W-10): a `resume --edit` carries the
-            // amended blueprint as the child's first stdin line, re-renders
-            // deterministically — zero LLM tokens, same iteration — and pauses again at
-            // the same boundary, so the Composer repaints with the amended team.
-            if (CanTryTeam && _model.Slug is { } slug)
-            {
-                _ = EditAtPauseAsync(slug, amended);
-                return;
-            }
+            _model.AcknowledgeDecision();
+            SyncFromModel();
+            return;
+        }
 
-            StatusMessage = _strings[StudioStringKeys.WizardAssistantNotRunning];
-        });
+        // At the dry pause the engine is off (W-10): a `resume --edit` carries the
+        // amended blueprint as the child's first stdin line, re-renders
+        // deterministically — zero LLM tokens, same iteration — and pauses again at
+        // the same boundary, so the Composer repaints with the amended team.
+        if (CanTryTeam && _model.Slug is { } slug)
+        {
+            _ = EditAtPauseAsync(slug, amended);
+            return;
+        }
+
+        StatusMessage = _strings[StudioStringKeys.WizardAssistantNotRunning];
     }
 
     /// <summary>
@@ -3712,6 +3719,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         }
 
         SyncAgents();
+        SyncTasks();
         SyncActivity();
         SyncChecklist();
         SyncDecisions();

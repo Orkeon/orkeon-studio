@@ -4658,4 +4658,23 @@
 
   <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>更多工具…</value></data>
   <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>收起工具</value></data>
+  <data name="Studio.Create.TaskTitleAdd" xml:space="preserve"><value>添加任务</value></data>
+  <data name="Studio.Create.TaskTitleEdit" xml:space="preserve"><value>编辑任务</value></data>
+  <data name="Studio.Create.TaskAdd" xml:space="preserve"><value>添加到团队</value></data>
+  <data name="Studio.Create.TaskEditorSub" xml:space="preserve"><value>团队中某一步要做什么、由谁负责、需要等待什么。保存时助手会检查所有内容。</value></data>
+  <data name="Studio.Create.TaskDoes" xml:space="preserve"><value>要做什么</value></data>
+  <data name="Studio.Create.TaskExpected" xml:space="preserve"><value>预期结果</value></data>
+  <data name="Studio.Create.TaskWho" xml:space="preserve"><value>由谁负责</value></data>
+  <data name="Studio.Create.TaskDeliverable" xml:space="preserve"><value>生成的文件（可选）</value></data>
+  <data name="Studio.Create.TaskAfterField" xml:space="preserve"><value>在此之后</value></data>
+  <data name="Studio.Create.TaskTools" xml:space="preserve"><value>此任务的工具</value></data>
+  <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>之后：{0}</value></data>
+  <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>条件：{0}</value></data>
+  <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>无法移除：{0} 的条件读取了它的答案</value></data>
+  <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>决策需通过与助手对话来修改</value></data>
+  <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>任务</value></data>
+  <data name="Studio.Create.AddTask" xml:space="preserve"><value>添加任务</value></data>
+  <data name="Studio.Create.TaskMoveUp" xml:space="preserve"><value>上移</value></data>
+  <data name="Studio.Create.TaskMoveDown" xml:space="preserve"><value>下移</value></data>
+  <data name="Studio.Create.TaskRemove" xml:space="preserve"><value>移除任务</value></data>
 </root>

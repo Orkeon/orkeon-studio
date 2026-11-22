@@ -171,6 +171,8 @@ public partial class MainWindow : Window
             shell.TeamMounts.CancelCommand.Execute(null);
         else if (shell.CreateTeam.AgentEditor.IsOpen)
             shell.CreateTeam.AgentEditor.CancelCommand.Execute(null);
+        else if (shell.CreateTeam.TaskEditor.IsOpen)
+            shell.CreateTeam.TaskEditor.CancelCommand.Execute(null);
         else if (shell.AllowedFolders.IsOpen)
             shell.AllowedFolders.CancelCommand.Execute(null);
         else if (shell.About.IsOpen)
@@ -374,6 +376,12 @@ public partial class MainWindow : Window
     {
         if (DataContext is ViewModels.Shell.MainWindowViewModel shell)
             shell.CreateTeam.AgentEditor.CancelCommand.Execute(null);
+    }
+
+    private void OnTaskEditorBackdropClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is ViewModels.Shell.MainWindowViewModel shell)
+            shell.CreateTeam.TaskEditor.CancelCommand.Execute(null);
     }
 
     private void OnAllowedFoldersBackdropClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

@@ -136,5 +136,18 @@ internal static class ModalStops
             },
             Teardown = CaptureAction.Sync(static c => c.Shell.CreateTeam.AgentEditor.CancelCommand.Execute(null)),
         },
+
+        new()
+        {
+            Name = "modale-editeur-tache",
+            Category = CaptureCategory.Modal,
+            Screen = CaptureScreen.Create,
+            Because = "The task editor over the Composer: what the task does, what is expected, who "
+                    + "does it, the file it writes, the tasks it waits for and its own tools.",
+            Covers = ["CreateTeam.TaskEditor.IsOpen"],
+            // The agent editor's stop left the proposal on screen.
+            Arrange = CaptureAction.Sync(static c => c.Shell.CreateTeam.Tasks.First(task => !task.IsDecision).EditCommand.Execute(null)),
+            Teardown = CaptureAction.Sync(static c => c.Shell.CreateTeam.TaskEditor.CancelCommand.Execute(null)),
+        },
     ];
 }

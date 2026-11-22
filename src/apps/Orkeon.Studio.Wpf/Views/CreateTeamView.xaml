@@ -1388,6 +1388,106 @@
                               ToolTipService.ShowOnDisabled="True"
                               Content="{Binding [Studio.Create.AddAgent], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="plus"/>
                     </WrapPanel>
+
+                    <!-- The tasks: what each step does, who does it, the file it writes, what it waits
+                         for and under which condition. Edit, move and remove follow the agents' « Edit »
+                         rule (Expert, or « Adjust the team… » in Novice) and travel the same `edit`;
+                         a decision task is shown, its questions are the assistant's to change. -->
+                    <StackPanel Margin="0,16,0,0" Visibility="{Binding HasTasks, Converter={StaticResource BooleanToVisibility}}">
+                      <TextBlock Style="{StaticResource ObjectTitle}" FontSize="13.5"
+                                 Text="{Binding [Studio.Create.TasksTitle], Source={x:Static services:I18n.Instance}}"/>
+                      <ItemsControl ItemsSource="{Binding Tasks}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border BorderBrush="{DynamicResource LineFaintBrush}" BorderThickness="0,1,0,0" Padding="0,10" Background="Transparent">
+                              <Border.Style>
+                                <Style TargetType="Border">
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDecision}" Value="True">
+                                      <Setter Property="ToolTip" Value="{Binding [Studio.Create.TaskDecisionTip], Source={x:Static services:I18n.Instance}}"/>
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Border.Style>
+                              <DockPanel>
+                                <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="13" VerticalAlignment="Top"
+                                        Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Margin="0,0,12,0">
+                                  <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{DynamicResource InkMutedBrush}"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Number}"/>
+                                </Border>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                  <StackPanel.Visibility>
+                                    <MultiBinding Converter="{StaticResource AnyTrueToVisibility}">
+                                      <Binding Path="DataContext.Mode.IsExpert" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                      <Binding Path="DataContext.IsAdjustingTeam" RelativeSource="{RelativeSource AncestorType=views:CreateTeamView}"/>
+                                    </MultiBinding>
+                                  </StackPanel.Visibility>
+                                  <Button Style="{StaticResource IconBtnGhost}" Command="{Binding MoveUpCommand}" controls:ButtonIcon.Kind="arrow-up"
+                                          ToolTip="{Binding [Studio.Create.TaskMoveUp], Source={x:Static services:I18n.Instance}}"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskMoveUp], Source={x:Static services:I18n.Instance}}"/>
+                                  <Button Style="{StaticResource IconBtnGhost}" Command="{Binding MoveDownCommand}" controls:ButtonIcon.Kind="arrow-down"
+                                          ToolTip="{Binding [Studio.Create.TaskMoveDown], Source={x:Static services:I18n.Instance}}"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskMoveDown], Source={x:Static services:I18n.Instance}}"/>
+                                  <Button Command="{Binding RemoveCommand}" controls:ButtonIcon.Kind="trash-2"
+                                          ToolTipService.ShowOnDisabled="True"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}">
+                                    <Button.Style>
+                                      <Style TargetType="Button" BasedOn="{StaticResource IconBtnGhost}">
+                                        <Setter Property="ToolTip" Value="{Binding RemoveTooltip}"/>
+                                        <Style.Triggers>
+                                          <DataTrigger Binding="{Binding RemoveTooltip.Length}" Value="0">
+                                            <Setter Property="ToolTip" Value="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}"/>
+                                          </DataTrigger>
+                                        </Style.Triggers>
+                                      </Style>
+                                    </Button.Style>
+                                  </Button>
+                                  <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Margin="6,0,0,0"
+                                          Command="{Binding EditCommand}"
+                                          Visibility="{Binding IsDecision, Converter={StaticResource InverseBooleanToVisibility}}"
+                                          Content="{Binding [Studio.Create.Modify], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="pencil"/>
+                                </StackPanel>
+                                <StackPanel>
+                                  <TextBlock FontSize="13.5" Foreground="{DynamicResource InkBrush}" TextWrapping="Wrap" MaxHeight="40"
+                                             TextTrimming="CharacterEllipsis" Text="{Binding Description}">
+                                    <TextBlock.ToolTip>
+                                      <ToolTip>
+                                        <TextBlock MaxWidth="420" TextWrapping="Wrap" Text="{Binding Description}"/>
+                                      </ToolTip>
+                                    </TextBlock.ToolTip>
+                                  </TextBlock>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding Who, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    <InlineUIContainer BaselineAlignment="Center">
+                                      <TextBlock Style="{StaticResource MonoText}" FontSize="12.5" Margin="8,0,0,0" Text="{Binding Deliverable}"
+                                                 Visibility="{Binding HasDeliverable, Converter={StaticResource BooleanToVisibility}}"/>
+                                    </InlineUIContainer>
+                                    <InlineUIContainer BaselineAlignment="Center">
+                                      <TextBlock Style="{StaticResource MonoText}" FontSize="12.5" Margin="8,0,0,0" Foreground="{DynamicResource InkFaintBrush}"
+                                                 Text="{Binding Key}"
+                                                 Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+                                    </InlineUIContainer>
+                                  </TextBlock>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                             Text="{Binding AfterLine}" ToolTip="{Binding AfterLine}"
+                                             Visibility="{Binding HasAfter, Converter={StaticResource BooleanToVisibility}}"/>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                             Text="{Binding WhenLine}" ToolTip="{Binding WhenLine}"
+                                             Visibility="{Binding HasWhen, Converter={StaticResource BooleanToVisibility}}"/>
+                                </StackPanel>
+                              </DockPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <WrapPanel Margin="0,8,0,0">
+                        <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32"
+                                Command="{Binding AddTaskCommand}"
+                                ToolTip="{Binding [Studio.Create.Wait], Source={x:Static services:I18n.Instance}}"
+                                ToolTipService.ShowOnDisabled="True"
+                                Content="{Binding [Studio.Create.AddTask], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="plus"/>
+                      </WrapPanel>
+                    </StackPanel>
                   </StackPanel>
 
                   <!-- Expert, the YAML side: what the render wrote, where the session lives. -->

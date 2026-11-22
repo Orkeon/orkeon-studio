@@ -984,6 +984,63 @@ public static class StudioStringKeys
     /// <summary>"Add to the team" — the agent editor's save label in add mode.</summary>
     public const string AgentEditorAdd = "Studio.Create.Add";
 
+    /// <summary>The task editor's title in add mode.</summary>
+    public const string TaskEditorTitleAdd = "Studio.Create.TaskTitleAdd";
+
+    /// <summary>The task editor's title over an existing task.</summary>
+    public const string TaskEditorTitleEdit = "Studio.Create.TaskTitleEdit";
+
+    /// <summary>The task editor's save label in add mode.</summary>
+    public const string TaskEditorAdd = "Studio.Create.TaskAdd";
+
+    /// <summary>The task editor's subtitle.</summary>
+    public const string TaskEditorSub = "Studio.Create.TaskEditorSub";
+
+    /// <summary>The task editor's description field label.</summary>
+    public const string TaskFieldDoes = "Studio.Create.TaskDoes";
+
+    /// <summary>The task editor's expected-output field label.</summary>
+    public const string TaskFieldExpected = "Studio.Create.TaskExpected";
+
+    /// <summary>The task editor's agent field label.</summary>
+    public const string TaskFieldWho = "Studio.Create.TaskWho";
+
+    /// <summary>The task editor's deliverable field label.</summary>
+    public const string TaskFieldDeliverable = "Studio.Create.TaskDeliverable";
+
+    /// <summary>The task editor's dependencies label.</summary>
+    public const string TaskFieldAfter = "Studio.Create.TaskAfterField";
+
+    /// <summary>The task editor's tools label.</summary>
+    public const string TaskFieldTools = "Studio.Create.TaskTools";
+
+    /// <summary>A task row's dependencies line; {0} lists them.</summary>
+    public const string TaskAfter = "Studio.Create.TaskAfter";
+
+    /// <summary>A task row's condition line; {0} lists its terms.</summary>
+    public const string TaskWhen = "Studio.Create.TaskWhen";
+
+    /// <summary>Why a task cannot be removed; {0} names the tasks whose condition reads it.</summary>
+    public const string TaskRemoveBlocked = "Studio.Create.TaskRemoveBlocked";
+
+    /// <summary>The tooltip of a decision task's row: it is not edited here.</summary>
+    public const string TaskDecisionTip = "Studio.Create.TaskDecisionTip";
+
+    /// <summary>The Composer step's task list title.</summary>
+    public const string TasksTitle = "Studio.Create.TasksTitle";
+
+    /// <summary>The add-a-task button of the Composer step.</summary>
+    public const string AddTask = "Studio.Create.AddTask";
+
+    /// <summary>A task row's move-up button.</summary>
+    public const string TaskMoveUp = "Studio.Create.TaskMoveUp";
+
+    /// <summary>A task row's move-down button.</summary>
+    public const string TaskMoveDown = "Studio.Create.TaskMoveDown";
+
+    /// <summary>The remove-the-task button.</summary>
+    public const string TaskRemove = "Studio.Create.TaskRemove";
+
     /// <summary>"More tools…": unfolds the rest of the catalogue under a blueprint editor's chips.</summary>
     public const string ToolPaletteMore = "Studio.Create.PaletteMore";
 
@@ -3661,6 +3718,25 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.AgentEditorTitleAdd] = "Add an agent",
         [StudioStringKeys.AgentEditorTitleEdit] = "Edit the agent",
         [StudioStringKeys.AgentEditorAdd] = "Add to the team",
+        [StudioStringKeys.TaskEditorTitleAdd] = "Add a task",
+        [StudioStringKeys.TaskEditorTitleEdit] = "Edit the task",
+        [StudioStringKeys.TaskEditorAdd] = "Add to the team",
+        [StudioStringKeys.TaskEditorSub] = "What a step of the team does, who does it and what it waits for. The assistant checks everything once you save.",
+        [StudioStringKeys.TaskFieldDoes] = "What to do",
+        [StudioStringKeys.TaskFieldExpected] = "What is expected",
+        [StudioStringKeys.TaskFieldWho] = "Who does it",
+        [StudioStringKeys.TaskFieldDeliverable] = "File it writes (optional)",
+        [StudioStringKeys.TaskFieldAfter] = "After",
+        [StudioStringKeys.TaskFieldTools] = "Tools of this task",
+        [StudioStringKeys.TaskAfter] = "after: {0}",
+        [StudioStringKeys.TaskWhen] = "if: {0}",
+        [StudioStringKeys.TaskRemoveBlocked] = "Cannot be removed: the condition of {0} reads its answer",
+        [StudioStringKeys.TaskDecisionTip] = "A decision is changed by talking to the assistant",
+        [StudioStringKeys.TasksTitle] = "Tasks",
+        [StudioStringKeys.AddTask] = "Add a task",
+        [StudioStringKeys.TaskMoveUp] = "Move up",
+        [StudioStringKeys.TaskMoveDown] = "Move down",
+        [StudioStringKeys.TaskRemove] = "Remove the task",
         [StudioStringKeys.ToolPaletteMore] = "More tools…",
         [StudioStringKeys.ToolPaletteLess] = "Fewer tools",
         [StudioStringKeys.ActSave] = "Save",

@@ -2940,4 +2940,23 @@
 
   <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>Plus d'outils…</value></data>
   <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>Moins d'outils</value></data>
+  <data name="Studio.Create.TaskTitleAdd" xml:space="preserve"><value>Ajouter une tâche</value></data>
+  <data name="Studio.Create.TaskTitleEdit" xml:space="preserve"><value>Modifier la tâche</value></data>
+  <data name="Studio.Create.TaskAdd" xml:space="preserve"><value>Ajouter à l'équipe</value></data>
+  <data name="Studio.Create.TaskEditorSub" xml:space="preserve"><value>Ce que fait une étape de l'équipe, qui s'en charge et ce qu'elle attend. L'assistant vérifie tout à l'enregistrement.</value></data>
+  <data name="Studio.Create.TaskDoes" xml:space="preserve"><value>Ce qu'il faut faire</value></data>
+  <data name="Studio.Create.TaskExpected" xml:space="preserve"><value>Ce qu'on attend</value></data>
+  <data name="Studio.Create.TaskWho" xml:space="preserve"><value>Qui s'en charge</value></data>
+  <data name="Studio.Create.TaskDeliverable" xml:space="preserve"><value>Fichier produit (facultatif)</value></data>
+  <data name="Studio.Create.TaskAfterField" xml:space="preserve"><value>Après</value></data>
+  <data name="Studio.Create.TaskTools" xml:space="preserve"><value>Outils de cette tâche</value></data>
+  <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>après : {0}</value></data>
+  <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>si : {0}</value></data>
+  <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>Retrait impossible : la condition de {0} lit sa réponse</value></data>
+  <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>Une décision se modifie en parlant à l'assistant</value></data>
+  <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Tâches</value></data>
+  <data name="Studio.Create.AddTask" xml:space="preserve"><value>Ajouter une tâche</value></data>
+  <data name="Studio.Create.TaskMoveUp" xml:space="preserve"><value>Monter</value></data>
+  <data name="Studio.Create.TaskMoveDown" xml:space="preserve"><value>Descendre</value></data>
+  <data name="Studio.Create.TaskRemove" xml:space="preserve"><value>Retirer la tâche</value></data>
 </root>

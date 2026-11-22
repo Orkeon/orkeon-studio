@@ -111,8 +111,10 @@ public sealed class CapturePlannerTests
         // Settings > Access in three sections: +2 stops (reglages-cles-outils, both modes, both themes,
         // language sweep = +8; reglages-shell, expert only, both themes = +2) = +10 shots.
         // UX lot 07: -2 stops (visite-etape4 and visite-etape5, the tour cut to three stops) = -4 shots.
-        Assert.Equal(75, CaptureCatalog.All.Count);
-        Assert.Equal(412, plan.Count);
+        // Task editor: +1 stop (modale-editeur-tache, the task editor over the Composer, both modes,
+        // both themes) = +4 shots.
+        Assert.Equal(76, CaptureCatalog.All.Count);
+        Assert.Equal(416, plan.Count);
     }
 
     [Fact]

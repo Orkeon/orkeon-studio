@@ -2940,4 +2940,23 @@
 
   <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>More tools…</value></data>
   <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>Fewer tools</value></data>
+  <data name="Studio.Create.TaskTitleAdd" xml:space="preserve"><value>Add a task</value></data>
+  <data name="Studio.Create.TaskTitleEdit" xml:space="preserve"><value>Edit the task</value></data>
+  <data name="Studio.Create.TaskAdd" xml:space="preserve"><value>Add to the team</value></data>
+  <data name="Studio.Create.TaskEditorSub" xml:space="preserve"><value>What a step of the team does, who does it and what it waits for. The assistant checks everything once you save.</value></data>
+  <data name="Studio.Create.TaskDoes" xml:space="preserve"><value>What to do</value></data>
+  <data name="Studio.Create.TaskExpected" xml:space="preserve"><value>What is expected</value></data>
+  <data name="Studio.Create.TaskWho" xml:space="preserve"><value>Who does it</value></data>
+  <data name="Studio.Create.TaskDeliverable" xml:space="preserve"><value>File it writes (optional)</value></data>
+  <data name="Studio.Create.TaskAfterField" xml:space="preserve"><value>After</value></data>
+  <data name="Studio.Create.TaskTools" xml:space="preserve"><value>Tools of this task</value></data>
+  <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>after: {0}</value></data>
+  <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>if: {0}</value></data>
+  <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>Cannot be removed: the condition of {0} reads its answer</value></data>
+  <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>A decision is changed by talking to the assistant</value></data>
+  <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Tasks</value></data>
+  <data name="Studio.Create.AddTask" xml:space="preserve"><value>Add a task</value></data>
+  <data name="Studio.Create.TaskMoveUp" xml:space="preserve"><value>Move up</value></data>
+  <data name="Studio.Create.TaskMoveDown" xml:space="preserve"><value>Move down</value></data>
+  <data name="Studio.Create.TaskRemove" xml:space="preserve"><value>Remove the task</value></data>
 </root>

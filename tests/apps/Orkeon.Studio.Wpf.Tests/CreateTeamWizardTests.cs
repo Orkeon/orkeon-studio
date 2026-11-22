@@ -468,6 +468,85 @@ public partial class CreateTeamWizardTests
         Assert.True(vm.CanEditAgents);
     }
 
+    private const string TwoTasks =
+        """{"crew":{"name":"veille"},"agents":[{"key":"a","role":"Scanner","tools":["file_read"]}],"tasks":[{"key":"lire","description":"Lire","expectedOutput":"x","agent":"a"},{"key":"ecrire","description":"Écrire","expectedOutput":"y","agent":"a","dependencies":["lire"],"deliverable":"/output/r.md"}],"rationale":"r"}""";
+
+    [Fact]
+    public async Task The_Composer_lists_the_tasks_and_a_task_edit_at_the_dry_pause_relaunches_the_engine()
+    {
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/ws/.orkeon/forge/veille","format":"yaml","resumed":false}"""),
+            Out($$"""{"v":2,"seq":2,"ts":"t","kind":"blueprint.ready","blueprint":{{TwoTasks}},"iteration":1}"""),
+            Out("""{"v":2,"seq":3,"ts":"t","kind":"session.finished","status":"paused","exitCode":0}"""),
+        ]);
+        FillStepOne(vm);
+        await Compose(vm);
+
+        Assert.True(vm.HasTasks);
+        Assert.Equal(["lire", "ecrire"], vm.Tasks.Select(task => task.Key));
+        Assert.Equal("Scanner", vm.Tasks[1].Who);
+        Assert.Equal("/output/r.md", vm.Tasks[1].Deliverable);
+        Assert.Equal("after: Lire", vm.Tasks[1].AfterLine);
+        Assert.False(vm.Tasks[0].MoveUpCommand.CanExecute(null));
+        Assert.True(vm.Tasks[0].MoveDownCommand.CanExecute(null));
+        Assert.False(vm.Tasks[1].MoveDownCommand.CanExecute(null));
+        Assert.True(vm.AddTaskCommand.CanExecute(null));
+
+        processes.OutputToEmit.Clear();
+        vm.AddTaskCommand.Execute(null);
+        Assert.True(vm.TaskEditor.IsOpen);
+        Assert.True(vm.TaskEditor.IsNew);
+        vm.TaskEditor.Description = "Relire le rapport";
+        vm.TaskEditor.ExpectedOutput = "Des remarques";
+        vm.TaskEditor.Dependencies.Single(option => option.Key == "ecrire").IsChecked = true;
+        vm.TaskEditor.SaveCommand.Execute(null);
+
+        Assert.Equal(
+            ["forge", "resume", "veille", "--events", "jsonl", "--dry", "--edit"],
+            processes.Requests[1].Arguments);
+        var line = Assert.Single(processes.InputLines);
+        Assert.StartsWith("""{"kind":"blueprint.edited","blueprint":""", line, StringComparison.Ordinal);
+        Assert.Contains("Relire le rapport", line, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task At_the_arbitration_a_task_move_sends_the_edit_decision_then_the_amended_blueprint()
+    {
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/ws/.orkeon/forge/veille","format":"yaml","resumed":false}"""),
+            Out($$"""{"v":2,"seq":2,"ts":"t","kind":"blueprint.ready","blueprint":{{TwoTasks}},"iteration":1}"""),
+            Out("""{"v":2,"seq":3,"ts":"t","kind":"decision.needed","options":["accept","edit","abort"]}"""),
+        ]);
+        var sent = false;
+        processes.OnInputLine = _ => { };
+        FillStepOne(vm);
+        processes.WhileRunning = () =>
+        {
+            foreach (var output in processes.OutputToEmit)
+                processes.Emit(output);
+            processes.OutputToEmit.Clear();
+            if (vm.Tasks.Count == 2 && vm.CanEditAgents)
+            {
+                vm.Tasks[1].MoveUpCommand.Execute(null);
+                sent = true;
+            }
+        };
+        await Compose(vm);
+
+        Assert.True(sent);
+        Assert.Equal(2, processes.InputLines.Count);
+        Assert.Equal("""{"kind":"decision.made","value":"edit"}""", processes.InputLines[0]);
+        Assert.StartsWith("""{"kind":"blueprint.edited","blueprint":""", processes.InputLines[1], StringComparison.Ordinal);
+        var tasks = System.Text.Json.JsonDocument.Parse(processes.InputLines[1]).RootElement
+            .GetProperty("blueprint").GetProperty("tasks").EnumerateArray()
+            .Select(task => task.GetProperty("key").GetString());
+        Assert.Equal(["ecrire", "lire"], tasks);
+    }
+
     [Fact]
     public async Task A_cold_resume_of_the_dry_pause_restores_the_identity_and_the_trial_button()
     {

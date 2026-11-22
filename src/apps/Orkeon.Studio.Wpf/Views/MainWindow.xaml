@@ -1474,6 +1474,99 @@
       </Border>
     </Grid>
 
+    <!-- ══════════ ÉDITEUR DE TÂCHE (overlay, same template as the agent editor) ══════════
+         The fields sit in a ScrollViewer: a team with many tasks lists many « After » switches. -->
+    <Grid Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource ScrimBrush}" MouseLeftButtonDown="OnTaskEditorBackdropClick"
+          Visibility="{Binding CreateTeam.TaskEditor.IsOpen, Converter={StaticResource BooleanToVisibility}}">
+      <Border Width="660" HorizontalAlignment="Center" VerticalAlignment="Center" MouseLeftButtonDown="OnSwallowClick"
+              Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+              CornerRadius="20" DataContext="{Binding CreateTeam.TaskEditor}" Effect="{DynamicResource ShadowLg}">
+        <DockPanel>
+          <Border DockPanel.Dock="Bottom" Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource LineFaintBrush}"
+                  BorderThickness="0,1,0,0" CornerRadius="0,0,19,19" Padding="22,18" Margin="0,18,0,0">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" controls:ButtonIcon.Kind="check"
+                      Content="{Binding SaveLabel}"/>
+              <Button DockPanel.Dock="Left" Style="{StaticResource BtnSecondary}" Margin="0,0,12,0" Command="{Binding CancelCommand}"
+                      Content="{Binding [Studio.Common.Cancel], Source={x:Static services:I18n.Instance}}"/>
+              <Button HorizontalAlignment="Left" Command="{Binding RemoveCommand}"
+                      controls:ButtonIcon.Kind="trash-2" ToolTipService.ShowOnDisabled="True"
+                      Content="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}"
+                      Visibility="{Binding IsNew, Converter={StaticResource InverseBooleanToVisibility}}">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource BtnDanger}">
+                    <Setter Property="ToolTip" Value="{Binding RemoveTooltip}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding RemoveTooltip.Length}" Value="0">
+                        <Setter Property="ToolTip" Value="{x:Null}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+            </DockPanel>
+          </Border>
+          <StackPanel DockPanel.Dock="Top" Margin="22,20,22,0">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Style="{StaticResource IconBtnGhost}" VerticalAlignment="Top" Margin="12,0,0,0"
+                      Command="{Binding CancelCommand}" controls:ButtonIcon.Kind="x"
+                      ToolTip="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"
+                      AutomationProperties.Name="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource ModalTitle}" Text="{Binding Title}"/>
+            </DockPanel>
+            <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" TextWrapping="Wrap" LineHeight="18.5"
+                       Margin="0,6,0,0" Text="{Binding [Studio.Create.TaskEditorSub], Source={x:Static services:I18n.Instance}}"/>
+          </StackPanel>
+          <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="22,0,22,0">
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskDoes], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMultiline}"
+                       Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskExpected], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMultiline}"
+                       Text="{Binding ExpectedOutput, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskWho], Source={x:Static services:I18n.Instance}}"/>
+              <ComboBox ItemsSource="{Binding Agents}" SelectedItem="{Binding Agent}" DisplayMemberPath="Role"
+                        AutomationProperties.Name="{Binding [Studio.Create.TaskWho], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskDeliverable], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox FontFamily="{StaticResource MonoFont}" Text="{Binding Deliverable, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="{Binding [Studio.Create.TaskDeliverable], Source={x:Static services:I18n.Instance}}"/>
+              <DockPanel Margin="0,8,0,0">
+                <TextBlock DockPanel.Dock="Left" FontSize="13" Foreground="{DynamicResource InkMutedBrush}"
+                           MinWidth="132" VerticalAlignment="Center"
+                           Text="{Binding [Studio.Create.Scope], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource MonoText}" FontSize="13" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Text="{Binding ScopeInfo}" ToolTip="{Binding ScopeInfo}"/>
+              </DockPanel>
+              <StackPanel Visibility="{Binding HasDependencies, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Create.TaskAfterField], Source={x:Static services:I18n.Instance}}"/>
+                <ItemsControl ItemsSource="{Binding Dependencies}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <CheckBox Margin="0,3" IsChecked="{Binding IsChecked}" ToolTip="{Binding Key}">
+                        <TextBlock FontSize="13" TextTrimming="CharacterEllipsis" Text="{Binding Label}"/>
+                      </CheckBox>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,7"
+                         Text="{Binding [Studio.Create.TaskTools], Source={x:Static services:I18n.Instance}}"/>
+              <views:ToolPaletteView DataContext="{Binding Tools}"/>
+              <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkFaintBrush}"
+                         Margin="0,9,0,0" TextTrimming="CharacterEllipsis" Text="{Binding KeyLine}" ToolTip="{Binding KeyLine}"
+                         Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Grid>
+
     <!-- ══════════ CAS D'USAGE (panneau latéral, STUDIO-39) ══════════
          The gallery comes in from the right, over the wizard it was opened from: step 1 stays in
          sight on the left, under the scrim, so the need a card fills is never out of view. A click
