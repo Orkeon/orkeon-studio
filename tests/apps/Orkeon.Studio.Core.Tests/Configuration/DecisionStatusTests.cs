@@ -48,7 +48,7 @@ public sealed class DecisionStatusTests
             """);
 
         Assert.Equal(DecisionRefusalStage.Composition, status.RefusalStage);
-        Assert.Contains("'maybe' at 'Orkeon:Decision:Profiles:unreadable:FailClosed'", status.Refusal, StringComparison.Ordinal);
+        Assert.Contains("value at 'Orkeon:Decision:Profiles:unreadable:FailClosed'", status.Refusal, StringComparison.Ordinal);
     }
 
     public static TheoryData<string, DecisionRefusalStage, string> Refusals => new()
@@ -58,8 +58,8 @@ public sealed class DecisionStatusTests
         { """ "Decision": { "Route": { "Ladder": ["auto"] }, "Enabled": "x" } """, DecisionRefusalStage.Picks, "Orkeon:Decision:Route:Ladder names one profile" },
         { """ "Decision": { "Effort": { "Levels": ["high", "low"] } }, "Guardian": { "Enabled": "z" } """, DecisionRefusalStage.Picks, "Orkeon:Decision:Effort:Levels" },
         { """ "Decision": { "Enabled": "x" }, "Guardian": { "Enabled": "z" }, "TypeSafe": { "TimeoutSeconds": 0 } """, DecisionRefusalStage.Switches, "'Orkeon:Guardian:Enabled'" },
-        { """ "Decision": { "Enabled": [] }, "TypeSafe": { "TimeoutSeconds": 0 } """, DecisionRefusalStage.Switches, "value '' at 'Orkeon:Decision:Enabled'" },
-        { """ "Decision": { "Enabled": "" } """, DecisionRefusalStage.Switches, "value '' at 'Orkeon:Decision:Enabled'" },
+        { """ "Decision": { "Enabled": [] }, "TypeSafe": { "TimeoutSeconds": 0 } """, DecisionRefusalStage.Switches, "value at 'Orkeon:Decision:Enabled'" },
+        { """ "Decision": { "Enabled": "" } """, DecisionRefusalStage.Switches, "value at 'Orkeon:Decision:Enabled'" },
         { """ "Guardian": { "Llm": { "Enabled": true } }, "TypeSafe": { "TimeoutSeconds": 0 } """, DecisionRefusalStage.Provider, "Orkeon:TypeSafe:TimeoutSeconds" },
         { """ "Guardian": { "Llm": { "Enabled": true } } """, DecisionRefusalStage.Judge, "Orkeon:Guardian:Llm:Enabled is true with FailMode Closed" },
     };

@@ -275,13 +275,15 @@ public sealed class DriveSection
     }
 
     /// <summary>
-    /// Reads the rights the way the binder's converter does (names without regard to case, or a
-    /// number), and refuses what it would refuse: a number with an undefined bit, and nothing granted.
+    /// Reads the rights the way the engine's binder does, names without regard to case, and refuses
+    /// what it refuses: a number, even one whose bits are rights (Orkeon #464), and nothing granted.
+    /// A file that holds a number is then read as granting nothing and kept as written.
     /// </summary>
     private static bool TryParseRights(string? text, out DriveRights rights)
     {
         rights = DriveRights.None;
         if (text is null
+            || Orkeon.Studio.Core.Validation.EmailAccountRules.HoldsNumber(text)
             || !Enum.TryParse(text, ignoreCase: true, out DriveRights parsed)
             || parsed == DriveRights.None
             || (parsed & ~AllRights) != DriveRights.None)

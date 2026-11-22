@@ -265,7 +265,7 @@ public sealed class SectionScreenLayoutTests
     }
 
     private static bool IsCutOnPurpose(string text) =>
-        text.EndsWith('\u2026') || text.Contains("\u2026 \u2014 '", StringComparison.Ordinal);
+        text.EndsWith('\u2026') || text.Contains("\u2026 \u2014 ", StringComparison.Ordinal);
 
     private const string LongNames = """
         {
@@ -286,8 +286,8 @@ public sealed class SectionScreenLayoutTests
         """;
 
     /// <summary>
-    /// What a line shows of the file (a profile's name, the profile the RAG calls, the text a switch
-    /// holds) may be of any length: at 80 columns it is cut on purpose, its end an ellipsis, and never
+    /// What a line shows of the file (a profile's name, the profile the RAG calls, the caption of a
+    /// switch that says the file holds no boolean) may be of any length: at 80 columns it is cut on purpose, its end an ellipsis, and never
     /// by the edge of the screen; a wider terminal shows more of it, a wide enough one the whole.
     /// </summary>
     [Theory]
@@ -306,9 +306,13 @@ public sealed class SectionScreenLayoutTests
         var shown = screen.SubViews.Where(view => view is Label or CheckBox).Select(view => view.Text)
             .Concat(screen.SubViews.OfType<ListView>().SelectMany(Items)).ToList();
         Assert.True(shown.Any(IsCutOnPurpose), "says " + string.Join(" | ", shown));
-        // What the file holds stays in sight on a switch: its caption gives way first.
+        // That the file holds no boolean stays in sight on a switch, never the value itself (Orkeon #465):
+        // the caption gives way first.
         if (section == Rag)
-            Assert.True(shown.Any(text => text.EndsWith("'perhaps': not true or false", StringComparison.Ordinal)), "says " + string.Join(" | ", shown));
+        {
+            Assert.True(shown.Any(text => text.EndsWith("\u2026 \u2014 not true or false", StringComparison.Ordinal)), "says " + string.Join(" | ", shown));
+            Assert.DoesNotContain(shown, text => text.Contains("perhaps", StringComparison.Ordinal));
+        }
 
         // Two passes, as the main loop runs them: the screen takes its new width, then its lines theirs.
         editor.Resize(260, 60);

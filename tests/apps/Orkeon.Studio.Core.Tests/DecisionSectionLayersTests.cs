@@ -104,7 +104,7 @@ public sealed class DecisionSectionLayersTests
 
         var refused = AppSettingsDocument.Parse("""{"Orkeon":{"CrewFactory":{"StrictTools":"nope"}}}""").Decision.Resolve(NoEnvironment);
         Assert.Contains("'Orkeon:CrewFactory:StrictTools'", refused.Refusal, StringComparison.Ordinal);
-        Assert.Contains("'nope'", refused.Refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain("nope", refused.Refusal, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -346,20 +346,18 @@ internal static class FormLayout
     }
 
     /// <summary>
-    /// A switch's caption, saying beside it the text the file holds when that text reads as no
-    /// boolean (STUDIO-55): the switch then shows « unset », and applying refuses the value until the
-    /// switch changes state.
+    /// A switch's caption, saying beside it that the file holds a text that reads as no boolean
+    /// (STUDIO-55): the switch then shows « unset », and applying refuses the value until the switch
+    /// changes state. The text itself is not shown (Orkeon #465): not of the key's type, it may be
+    /// anything written there by mistake, a key included.
     /// </summary>
     public static string SwitchCaption(string caption, string? asWritten) =>
-        asWritten is null
-            ? caption
-            : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{caption} — the file holds '{asWritten}', not true or false");
+        asWritten is null ? caption : caption + UnreadableSwitchSuffix;
 
     /// <summary>
     /// <see cref="SwitchCaption"/> as it fits <paramref name="width"/> cells on one row: whole when it
-    /// does. Else what the file holds is said shorter (« 'x': not true or false »), and kept in sight:
-    /// the caption gives way first, cut with an ellipsis, then the text of the file, which may be of
-    /// any length.
+    /// does. Else the caption gives way first, cut with an ellipsis, and the remark that the file holds
+    /// no boolean is kept in sight, shorter (« : not true or false »).
     /// </summary>
     public static string FitSwitchCaption(string caption, string? asWritten, int width)
     {
@@ -369,11 +367,11 @@ internal static class FormLayout
             return Fit(whole, width);
 
         const int LeastCaption = 8;
-        const int LeastWritten = 4;
-        static string Said(string written) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $" \u2014 '{written}': not true or false");
-        var said = Said(Fit(asWritten, Math.Max(LeastWritten, width - LeastCaption - Said("").Length)));
-        return Fit(Fit(caption, Math.Max(LeastCaption, width - said.Length)) + said, width);
+        const string Said = " \u2014 not true or false";
+        return Fit(Fit(caption, Math.Max(LeastCaption, width - Said.Length)) + Said, width);
     }
+
+    private const string UnreadableSwitchSuffix = " \u2014 the file holds a value that is not true or false";
 
     /// <summary>
     /// Wires a switch to the unreadable text its form keeps (STUDIO-55): the caption says it, and the

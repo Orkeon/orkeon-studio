@@ -103,15 +103,15 @@ public sealed class SettingsBindingOracleTests
 
     /// <summary>
     /// The binder reads <c>True</c> and <c>False</c> for a JSON boolean and an empty text for an empty
-    /// list, so that is what its refusal quotes; an empty object and a null are keys without a value,
+    /// list, which it cannot convert; its refusal no longer quotes them (Orkeon #465). An empty object and a null are keys without a value,
     /// which it would read as a number's zero and a switch's off: the engine's start refuses them on a
     /// value type, in place of what a rule says of that zero (Orkeon #450), and lets a text pass.
     /// </summary>
     [Theory]
-    [InlineData("""{ "Orkeon": { "Compaction": { "KeepRecentTurns": true } } }""", "Failed to convert configuration value 'True' at 'Orkeon:Compaction:KeepRecentTurns' to type 'System.Int32'.")]
-    [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": [] } } }""", "Failed to convert configuration value '' at 'Orkeon:Compaction:Enabled' to type 'System.Boolean'.")]
-    [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "HeadChars": false } } } }""", "Failed to convert configuration value 'False' at 'Orkeon:Compaction:Prune:HeadChars' to type 'System.Int32'.")]
-    [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": [] } } }""", "Failed to convert configuration value '' at 'Orkeon:Skills:MaxSkillChars' to type 'System.Int32'.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "KeepRecentTurns": true } } }""", "Failed to convert the configuration value at 'Orkeon:Compaction:KeepRecentTurns' to type 'System.Int32'.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": [] } } }""", "Failed to convert the configuration value at 'Orkeon:Compaction:Enabled' to type 'System.Boolean'.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "HeadChars": false } } } }""", "Failed to convert the configuration value at 'Orkeon:Compaction:Prune:HeadChars' to type 'System.Int32'.")]
+    [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": [] } } }""", "Failed to convert the configuration value at 'Orkeon:Skills:MaxSkillChars' to type 'System.Int32'.")]
     [InlineData("""{ "Orkeon": { "Compaction": { "TriggerShare": null } } }""", "Orkeon:Compaction:TriggerShare is written without a value, which would bind it to 0: write a number, or leave the key out and its default applies.")]
     [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": {} } } }""", "Orkeon:Skills:MaxSkillChars is written without a value, which would bind it to 0: write a number, or leave the key out and its default applies.")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": {} } } }""", "Orkeon:Compaction:Enabled is written without a value, which would bind it to false: write true or false, or leave the key out and its default applies.")]

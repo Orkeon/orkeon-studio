@@ -80,7 +80,7 @@ public sealed class DecisionProfileRulesOracleTests
         Assert.Equal(engine, studio.Select(problem => problem.Problem).FirstOrDefault());
         // Each problem names its key: a rule's sentence starts with it, and so does a single value written
         // where a section is expected; the binder's, which the engine says inside a profile since #454,
-        // quotes it ("Failed to convert configuration value 'x' at '<key>'").
+        // names it without the value ("Failed to convert the configuration value at '<key>'", Orkeon #465).
         Assert.All(studio, problem => Assert.True(
             (problem.Problem + ":").StartsWith(problem.Path + ":", StringComparison.Ordinal)
                 || problem.Problem.StartsWith(problem.Path + " is a single value where ", StringComparison.Ordinal)
@@ -122,7 +122,8 @@ public sealed class DecisionProfileRulesOracleTests
         }
         catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException refusal)
         {
-            return refusal.Message;
+            // The host's start says the binder's refusal without the value (Orkeon #465).
+            return EngineBinderRefusal.WithoutValue(refusal.Message);
         }
     }
 }

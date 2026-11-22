@@ -131,7 +131,7 @@ internal static partial class SettingsBinding
             catch (InvalidOperationException ex)
             {
                 var named = ConvertedPath().Match(ex.Message);
-                problems.Add((named.Success ? named.Groups[1].Value : sectionPath, ex.Message));
+                problems.Add((named.Success ? named.Groups[1].Value : sectionPath, WithoutValue(ex.Message)));
                 if (!named.Success || unconverted >= MaxUnconverted)
                     return options;
 
@@ -310,10 +310,47 @@ internal static partial class SettingsBinding
                 : $"{child.Path} is a single value where a section of keys is expected: write its keys, or leave the key out.";
         }
 
+        // The value is not echoed (Orkeon #465): written under the wrong key, it may be a secret.
         if (IsNotFinite(value, below.Number))
-            return $"{child.Path} is '{value}', which is not a finite number.";
+            return $"{child.Path} is not a finite number: NaN, an infinity and a number past the type's range are refused.";
+
+        if (NotAMemberName(child.Path, value, below.Values) is { } notAName)
+            return notAName;
 
         return inCollection ? below.Values.Select(declared => Unconverted(child.Path, value, declared)).FirstOrDefault(problem => problem is not null) : null;
+    }
+
+    // An enumeration setting written as a number, or as a comma list where it takes one name
+    // (SettingsValidation.NotAMemberName, Orkeon #464): the binder would take it as the member
+    // holding that value without a word. A name it does not know is left to the binder or to the
+    // section's own reader, which may take spellings of its own.
+    private static string? NotAMemberName(string path, string value, IEnumerable<Type> declared)
+    {
+        var enums = declared.Select(type => Nullable.GetUnderlyingType(type) ?? type).Distinct().ToList();
+        if (value.Trim().Length == 0 || enums.Count == 0 || !enums.TrueForAll(type => type.IsEnum))
+            return null;
+
+        foreach (var type in enums)
+        {
+            var names = string.Join(", ", Enum.GetNames(type));
+            if (type.IsDefined(typeof(FlagsAttribute), inherit: false))
+            {
+                if (value.Split(',').Any(IsWholeNumber))
+                    return $"{path} holds a number where {type.Name} takes names: write one or more of {names}, separated by commas.";
+                continue;
+            }
+
+            if (IsWholeNumber(value))
+                return $"{path} is a number where a name is expected: write one of {names}.";
+            if (value.Contains(',', StringComparison.Ordinal))
+                return $"{path} is a list where a single name is expected: write one of {names}.";
+        }
+
+        return null;
+
+        static bool IsWholeNumber(string token) =>
+            long.TryParse(token.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _)
+            || ulong.TryParse(token.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out _);
     }
 
     // A value type the binder writes its default to when the key holds no value: false, 0, the first member.
@@ -334,7 +371,7 @@ internal static partial class SettingsBinding
     private static bool IsNumber(Type type) =>
         !type.IsEnum && Type.GetTypeCode(type) is >= TypeCode.SByte and <= TypeCode.Decimal;
 
-    // The binder's sentence for a value it cannot convert, or null; neither a string nor an enumeration is judged.
+    // The binder's sentence for a value it cannot convert, or null; neither a string nor an enumeration is judged here.
     private static string? Unconverted(string path, string value, Type declared)
     {
         var type = Nullable.GetUnderlyingType(declared) ?? declared;
@@ -349,10 +386,8 @@ internal static partial class SettingsBinding
         catch (Exception ex) when (ex is FormatException or ArgumentException or NotSupportedException or OverflowException
                                        || ex.InnerException is FormatException or OverflowException)
         {
-            // A boolean or a number cannot be a secret, and is echoed; any other value is not.
-            return type == typeof(bool) || IsNumber(type)
-                ? $"Failed to convert configuration value '{value}' at '{path}' to type '{type}'."
-                : $"Failed to convert the configuration value at '{path}' to type '{type}'.";
+            // The value is never echoed (Orkeon #465): not of the key's type, it may be anything, a secret included.
+            return $"Failed to convert the configuration value at '{path}' to type '{type}'.";
         }
     }
 
@@ -483,7 +518,29 @@ internal static partial class SettingsBinding
         }
     }
 
+    /// <summary>
+    /// <paramref name="message"/> with the value taken out when it is the binder's sentence, as the
+    /// host rewords it (<c>BinderRefusal.WithoutValue</c>, Orkeon #465): <c>Failed to convert the
+    /// configuration value at '…' to type '…'.</c> The value is not of the key's type, so it may be
+    /// anything written there by mistake, a key included. Any other message as it is.
+    /// </summary>
+    public static string WithoutValue(string message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        var match = BinderSentence().Match(message);
+        return match.Success
+            ? $"Failed to convert the configuration value at '{match.Groups["path"].Value}' to type '{match.Groups["type"].Value}'."
+            : message;
+    }
+
     // The binder's sentence names the key: Failed to convert configuration value '…' at 'Section:Key' to type '…'.
     [GeneratedRegex(@" at '([^']+)' to type '[^']+'\.$")]
     private static partial Regex ConvertedPath();
+
+    // The value may hold quotes; a path and a type hold none, so the last " at '" ends the value.
+    [GeneratedRegex(
+        @"^Failed to convert configuration value '.*' at '(?<path>[^']*)' to type '(?<type>[^']*)'\.$",
+        RegexOptions.Singleline | RegexOptions.CultureInvariant,
+        matchTimeoutMilliseconds: 1000)]
+    private static partial Regex BinderSentence();
 }

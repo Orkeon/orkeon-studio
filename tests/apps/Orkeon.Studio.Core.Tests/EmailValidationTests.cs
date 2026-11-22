@@ -151,7 +151,7 @@ public sealed partial class EmailValidationTests : IDisposable
             ],
             messages.Select(message => (message.Code, message.Path!)));
         Assert.Contains("Note is not an account setting", messages[1].Text, StringComparison.Ordinal);
-        Assert.Equal("Incoming:Port 'nine' is not a whole number", messages[3].Text);
+        Assert.Equal("Incoming:Port is not a whole number", messages[3].Text);
     }
 
     [Fact]

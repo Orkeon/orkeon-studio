@@ -7,6 +7,7 @@ using Orkeon.Hosting;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Launch;
 using Orkeon.Studio.Core.Teams;
+using Orkeon.Studio.Core.Validation;
 
 namespace Orkeon.Studio.Core.Tests.Launch;
 
@@ -137,10 +138,14 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         string[] Decision(params DecisionRefusalStage[] stages) =>
             status.Refusal is { } refusal && stages.Contains(status.RefusalStage) ? [refusal] : [];
         // The walk's sentences (SettingsValidation.Walk): a key, a value not finite, written without
-        // one (#450) or single where a list or a section is expected (#454).
+        // one (#450), single where a list or a section is expected (#454), an enumeration written as a
+        // number or a list (#464).
         static bool OfTheWalk(string problem) =>
             problem.Contains(" is not a setting: ", StringComparison.Ordinal)
-            || problem.EndsWith(", which is not a finite number.", StringComparison.Ordinal)
+            || problem.Contains(" is not a finite number: NaN, an infinity and a number past the type's range are refused.", StringComparison.Ordinal)
+            || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
             || problem.Contains(" is written without a value, which would bind it to ", StringComparison.Ordinal)
             || problem.Contains(" is a single value where a list is expected: ", StringComparison.Ordinal)
             || problem.Contains(" is a single value where a section of keys is expected: ", StringComparison.Ordinal);
@@ -298,6 +303,13 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         { "a threshold and a size, both refused", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0, \"WarnThreshold\": -1 } }" },
         { "a delegation depth that is no number", "\"Guardian\": { \"DefaultPolicy\": { \"MaxDelegationDepth\": \"x\" } }" },
         { "a size refused and a threshold that does not convert", "\"Guardian\": { \"Llm\": { \"MaxContentChars\": 0, \"WarnThreshold\": \"x\" } }" },
+        // An enumeration is written by its name (Orkeon #464): a number, even one it defines, and a comma
+        // list where it takes one name are refused, and the value is never echoed (#465).
+        { "a fail mode written as a number", "\"Guardian\": { \"Llm\": { \"FailMode\": \"1\" } }" },
+        { "a fail mode written as a negative number", "\"Guardian\": { \"Llm\": { \"FailMode\": \"-1\" } }" },
+        { "a fail mode written as a list", "\"Guardian\": { \"Llm\": { \"FailMode\": \"Closed, Open\" } }" },
+        { "a fail mode in another letter case", "\"Guardian\": { \"Llm\": { \"FailMode\": \"open\" } }" },
+        { "a fail mode no member has", "\"Guardian\": { \"Llm\": { \"FailMode\": \"Ajar\" } }" },
         { "a misspelt key of the guardian", "\"Guardian\": { \"Enable\": false }" },
         { "a misspelt key of the judge", "\"Guardian\": { \"Llm\": { \"FailMod\": \"Open\" } }" },
         { "a misspelt key of the default policy", "\"Guardian\": { \"DefaultPolicy\": { \"InputGuard\": false } }" },
@@ -331,6 +343,43 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         Assert.True((refusal is null) == (studio.Count == 0), $"{what}: the engine says «{refusal}», Studio says «{string.Join(" | ", studio)}».");
         if (refusal is not null)
             Assert.Contains(studio[0], refusal, StringComparison.Ordinal);
+    }
+
+    private const string SecretLike = "sk-test-0123456789abcdef";
+
+    /// <summary>The same refusals with the value a key cannot read: one that looks like an API key, written by mistake.</summary>
+    public static TheoryData<string, string> SecretUnderTypedKeys => new()
+    {
+        { "under a boolean key", $"\"Compaction\": {{ \"Enabled\": \"{SecretLike}\" }}" },
+        { "under a number key", $"\"Compaction\": {{ \"KeepRecentTurns\": \"{SecretLike}\" }}" },
+        { "under a number key of a list's item", $"\"Decision\": {{ \"Profiles\": {{ \"p\": {{ \"Target\": \"default\", \"Stages\": [ {{ \"Kind\": \"guard\", \"Risks\": {{ \"x\": \"y\" }}, \"BlockThreshold\": \"{SecretLike}\" }} ] }} }} }}" },
+        { "as the judged phases", $"\"Guardian\": {{ \"Llm\": {{ \"Phases\": \"{SecretLike}\" }} }}" },
+        { "under an enumeration, beside a name", $"\"Guardian\": {{ \"Llm\": {{ \"FailMode\": \"Closed, {SecretLike}\" }} }}" },
+        { "under the circuit's switch", $"\"Decision\": {{ \"Enabled\": \"{SecretLike}\" }}" },
+        { "under the strict tools", $"\"CrewFactory\": {{ \"StrictTools\": \"{SecretLike}\" }}" },
+    };
+
+    /// <summary>
+    /// No refusal repeats a value its key cannot read (Orkeon #465): it is not of the key's type, so it
+    /// may be anything, an API key included, and the refusal reaches the screen and the logs. Studio's
+    /// validation holds to it as the host's start does.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(SecretUnderTypedKeys))]
+    public void No_refusal_repeats_a_value_its_key_cannot_read(string what, string orkeon)
+    {
+        var settings = Settings(orkeon);
+
+        var (host, refusal) = Start(settings);
+        host?.Dispose();
+        var studio = StudioRefusals(settings);
+        var messages = new AppSettingsValidator().Validate(AppSettingsDocument.Parse(settings));
+
+        Assert.False(refusal is null, $"{what}: the engine starts");
+        Assert.NotEmpty(studio);
+        Assert.DoesNotContain(SecretLike, refusal, StringComparison.Ordinal);
+        Assert.All(studio, problem => Assert.DoesNotContain(SecretLike, problem, StringComparison.Ordinal));
+        Assert.All(messages, message => Assert.DoesNotContain(SecretLike, message.Text, StringComparison.Ordinal));
     }
 
     /// <summary>

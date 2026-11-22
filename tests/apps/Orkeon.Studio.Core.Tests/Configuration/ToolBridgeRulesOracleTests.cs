@@ -128,7 +128,7 @@ public sealed class ToolBridgeRulesOracleTests
     {
         var engine = Assert.Throws<InvalidOperationException>(() => EngineProblems(optionsType, json));
 
-        Assert.Equal(engine.Message, StudioProblems(optionsType, json)[0]);
+        Assert.Equal(EngineBinderRefusal.WithoutValue(engine.Message), StudioProblems(optionsType, json)[0]);
     }
 
     /// <summary>

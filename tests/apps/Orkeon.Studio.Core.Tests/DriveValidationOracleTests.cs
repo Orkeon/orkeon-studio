@@ -120,9 +120,13 @@ public sealed class DriveValidationOracleTests
                 "share": { "allowedrecipients": ["*@example.com"], "allowpubliclinks": "True" },
                 "maxuploadmegabytes": "250", "timeoutseconds": 60 } } }
             """, []),
+        // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
         ["numbers for the provider and the rights"] = ("""
             { "Accounts": { "work": { "Provider": 1, "Rights": "63", "Auth": { "ClientId": "c" } } } }
-            """, []),
+            """, [ValidationCodes.DriveValue, ValidationCodes.DriveValue]),
+        ["the rights as a number among names"] = ("""
+            { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "Read, 2", "Auth": { "ClientId": "c" } } } }
+            """, [ValidationCodes.DriveValue]),
         ["a number with a bit no right has"] = ("""
             { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "64", "Auth": { "ClientId": "c" } } } }
             """, [ValidationCodes.DriveValue]),
@@ -263,10 +267,15 @@ public sealed class DriveValidationOracleTests
     {
         _ when problem.Contains(" is not an account setting: ", StringComparison.Ordinal) => ValidationCodes.DriveKey,
         _ when problem.StartsWith(ConfigurationKeys.ToolsDrive + ":Screening:", StringComparison.Ordinal) => ValidationCodes.DriveScreening,
-        _ when problem.Contains("' is not one of ", StringComparison.Ordinal)
-            || problem.Contains("' is not a list of ", StringComparison.Ordinal)
-            || problem.EndsWith("' is neither true nor false", StringComparison.Ordinal)
-            || problem.EndsWith("' is not a whole number", StringComparison.Ordinal) => ValidationCodes.DriveValue,
+        // The binder's sentences name the key and never the value (Orkeon #465); a number written for
+        // an enumeration is one of them (#464).
+        _ when problem.Contains(" is not one of ", StringComparison.Ordinal)
+            || problem.Contains(" is not a list of ", StringComparison.Ordinal)
+            || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
+            || problem.EndsWith(" is neither true nor false", StringComparison.Ordinal)
+            || problem.EndsWith(" is not a whole number", StringComparison.Ordinal) => ValidationCodes.DriveValue,
         _ when problem.StartsWith("the account name ", StringComparison.Ordinal) => ValidationCodes.DriveName,
         _ when problem.StartsWith("Provider ", StringComparison.Ordinal) => ValidationCodes.DriveProvider,
         _ when problem.StartsWith("Rights ", StringComparison.Ordinal) => ValidationCodes.DriveRights,

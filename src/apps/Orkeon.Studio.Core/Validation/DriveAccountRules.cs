@@ -181,7 +181,7 @@ public static class DriveAccountRules
 
     /// <summary>
     /// The member of <see cref="DriveSection.Providers"/> the engine binds <paramref name="text"/>
-    /// to — a name without regard to case, or its number —, or null when it binds none.
+    /// to, a name without regard to case, or null when it binds none: a number binds none (Orkeon #464).
     /// </summary>
     public static string? ProviderOf(string? text) => EmailAccountRules.Member(DriveSection.Providers, text);
 
@@ -194,7 +194,7 @@ public static class DriveAccountRules
         var text = EmailAccountRules.ConfigurationText(document.Drive.WithholdRejectedNode);
         return string.IsNullOrEmpty(text) || bool.TryParse(text, out _)
             ? null
-            : $"{WithholdRejectedPath} '{text}' is neither true nor false";
+            : $"{WithholdRejectedPath} is neither true nor false";
     }
 
     /// <summary>The engine's resolver, rule by rule and in its order.</summary>
@@ -337,12 +337,12 @@ public static class DriveAccountRules
 
         return kind switch
         {
-            Kind.Integer => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{key} '{text}' is not a whole number",
-            Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} '{text}' is neither true nor false",
+            Kind.Integer => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{key} is not a whole number",
+            Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} is neither true nor false",
             Kind.Rights => EmailAccountRules.EnumerationValue(DriveSection.RightNames, text, flags: true) is { } value && (value & ~(long)DriveSection.AllRights) == 0
                 ? null
-                : $"{key} '{text}' is not a list of {string.Join(", ", DriveSection.RightNames)}, separated by commas",
-            _ => ProviderOf(text) is not null ? null : $"{key} '{text}' is not one of {string.Join(", ", DriveSection.Providers)}",
+                : EmailAccountRules.EnumerationProblem(key, nameof(DriveRights), DriveSection.RightNames, flags: true, text),
+            _ => ProviderOf(text) is not null ? null : EmailAccountRules.EnumerationProblem(key, typeName: null, DriveSection.Providers, flags: false, text),
         };
     }
 

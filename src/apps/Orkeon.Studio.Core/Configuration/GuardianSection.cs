@@ -59,11 +59,12 @@ public sealed class GuardianSection
         // item it cannot convert. A phase is a name, never a number (Orkeon #455), and the list a list:
         // a single value binds an empty one, which judges both phases.
         var written = configuration.GetSection(PhasesPath);
-        if (written is { Value: { Length: > 0 } single } && !written.GetChildren().Any())
+        // The single value is not echoed (Orkeon #465): the example names a phase, never what was written.
+        if (written is { Value.Length: > 0 } && !written.GetChildren().Any())
         {
             problems.Add((PhasesPath,
-                $"{PhasesPath} is '{single}', a single value where a list is expected: write its items as a list, "
-                + $"[\"{single}\"] (the environment variable Orkeon__Guardian__Llm__Phases__0={single}), or leave the key out to judge both phases."));
+                $"{PhasesPath} is a single value where a list is expected: write its items as a list, "
+                + "[\"Input\"] (the environment variable Orkeon__Guardian__Llm__Phases__0=Input), or leave the key out to judge both phases."));
         }
 
         var phases = written.GetChildren()

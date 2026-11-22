@@ -46,7 +46,7 @@ public sealed class UnreadableValuesTests : IDisposable
         model.Llm.Temperature = typed;
         var errors = model.ApplyForms();
 
-        Assert.Equal($"Llm:Temperature: '{typed}' is not a number.", Assert.Single(errors));
+        Assert.Equal("Llm:Temperature is not a finite number.", Assert.Single(errors));
         Assert.Equal(0.2, model.Document.Llm.Temperature);
         Assert.Contains("\"Temperature\": 0.2", model.RawJson, StringComparison.Ordinal);
     }
@@ -72,12 +72,12 @@ public sealed class UnreadableValuesTests : IDisposable
 
         var errors = model.ApplyForms();
 
-        Assert.Contains("Llm:TimeoutSeconds: '600.0' is not a whole number.", errors);
-        Assert.Contains("Llm:MaxTokens: '4096x' is not a whole number.", errors);
-        Assert.Contains("Llm:Thinking:Enabled: 'yes' is not true or false.", errors);
-        Assert.Contains("RateLimiting:QueueLimit: '32.5' is not a whole number.", errors);
-        Assert.Contains("LlmLogging:MaxBodyLengthChars: 'lots' is not a whole number.", errors);
-        Assert.Contains("Orkeon:Rag:Corrective:MaxIterations: '2.5' is not a whole number.", errors);
+        Assert.Contains("Llm:TimeoutSeconds is not a whole number.", errors);
+        Assert.Contains("Llm:MaxTokens is not a whole number.", errors);
+        Assert.Contains("Llm:Thinking:Enabled is not true or false.", errors);
+        Assert.Contains("RateLimiting:QueueLimit is not a whole number.", errors);
+        Assert.Contains("LlmLogging:MaxBodyLengthChars is not a whole number.", errors);
+        Assert.Contains("Orkeon:Rag:Corrective:MaxIterations is not a whole number.", errors);
         Assert.Equal("600.0", model.Document.GetString("Llm:TimeoutSeconds"));
         Assert.Equal("4096x", model.Document.GetString("Llm:MaxTokens"));
         Assert.Equal("yes", model.Document.GetString("Llm:Thinking:Enabled"));
@@ -102,8 +102,8 @@ public sealed class UnreadableValuesTests : IDisposable
 
         var errors = model.ApplyForms();
 
-        Assert.Contains("LlmLogging:FullEmbeddingLog: 'yes' is not true or false.", errors);
-        Assert.Contains("Orkeon:Rag:Retrieval:Hybrid:Enabled: '1' is not true or false.", errors);
+        Assert.Contains("LlmLogging:FullEmbeddingLog is not true or false.", errors);
+        Assert.Contains("Orkeon:Rag:Retrieval:Hybrid:Enabled is not true or false.", errors);
         Assert.Equal("yes", model.Document.GetString("LlmLogging:FullEmbeddingLog"));
         Assert.Equal("1", model.Document.GetString("Orkeon:Rag:Retrieval:Hybrid:Enabled"));
     }
@@ -128,11 +128,12 @@ public sealed class UnreadableValuesTests : IDisposable
     }
 
     [Fact]
-    public void The_switch_caption_says_the_text_the_file_holds()
+    public void The_switch_caption_says_the_file_holds_no_boolean_without_repeating_it()
     {
+        // The value may be anything, an API key written by mistake included (Orkeon #465).
         Assert.Equal("Log streaming exchanges", FormLayout.SwitchCaption("Log streaming exchanges", null));
         Assert.Equal(
-            "Log streaming exchanges — the file holds 'on', not true or false",
-            FormLayout.SwitchCaption("Log streaming exchanges", "on"));
+            "Log streaming exchanges — the file holds a value that is not true or false",
+            FormLayout.SwitchCaption("Log streaming exchanges", "sk-test-0123456789abcdef"));
     }
 }

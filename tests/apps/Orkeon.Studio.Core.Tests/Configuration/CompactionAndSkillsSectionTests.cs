@@ -106,7 +106,7 @@ public sealed class CompactionAndSkillsSectionTests
 
         var error = Assert.Single(messages, m => m.Code == ValidationCodes.EngineSettingRefused);
         Assert.Equal("Orkeon:Compaction:KeepRecentTurns", error.Path);
-        Assert.Contains("many", error.Text, StringComparison.Ordinal);
+        Assert.Equal("Failed to convert the configuration value at 'Orkeon:Compaction:KeepRecentTurns' to type 'System.Int32'.", error.Text);
     }
 
     [Fact]

@@ -2,8 +2,8 @@ namespace Orkeon.Studio.Core.Configuration;
 
 /// <summary>
 /// What an agent may do with a drive account: the six rights the engine's <c>DriveRights</c>
-/// declares, with the same values, so that the numeric spelling the binder accepts reads the same
-/// here. Written as the engine reads it, <c>"Read, Write, Organize"</c>.
+/// declares, with the same values. Written by name, as the engine reads it,
+/// <c>"Read, Write, Organize"</c>: the engine refuses a number (Orkeon #464).
 /// </summary>
 [Flags]
 public enum DriveRights

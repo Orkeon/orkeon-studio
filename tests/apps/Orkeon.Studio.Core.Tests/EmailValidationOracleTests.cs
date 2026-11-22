@@ -165,8 +165,10 @@ public sealed class EmailValidationOracleTests
         ["a switch written as text"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "SaveSentCopy": " TRUE ", "Auth": { "PasswordEnvVar": "P" } }"""), []),
         ["a quota written in words and a timeout with its unit"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "TimeoutSeconds": "5s", "Send": { "MaxPerHour": "ten", "MaxRecipients": true }, "Auth": { "PasswordEnvVar": "P" } }"""),
             [ValidationCodes.EmailValue, ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
-        ["a provider written as its number"] = (Account("""{ "Provider": 1, "Address": "me@gmail.com", "Rights": 9, "Incoming": { "Security": " StartTls " }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
-        ["members separated by commas"] = (Account("""{ "Provider": "Custom, Gmail", "Address": "me@gmail.com", "Rights": "None, read , SEND", "Auth": { "Method": "+0", "PasswordEnvVar": "P" } }"""), []),
+        // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
+        ["a provider and rights written as numbers"] = (Account("""{ "Provider": 1, "Address": "me@gmail.com", "Rights": 9, "Incoming": { "Security": " StartTls " }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
+        ["rights written as numbers beside names"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read, 2", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
+        ["members separated by commas"] = (Account("""{ "Provider": "Custom, Gmail", "Address": "me@gmail.com", "Rights": "None, read , SEND", "Auth": { "Method": "+0", "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         ["a member left empty between commas"] = (Account("""{ "Provider": "Gmail,", "Address": "me@gmail.com", "Rights": "Read,", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         ["a provider number the engine does not define"] = (Account("""{ "Provider": 3, "Address": "me@gmail.com", "Rights": "Read", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["rights with a bit the engine does not define"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": 64, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
@@ -310,10 +312,15 @@ public sealed class EmailValidationOracleTests
     {
         _ when problem.Contains(" is not an account setting: ", StringComparison.Ordinal) => ValidationCodes.EmailKey,
         _ when problem.StartsWith(ConfigurationKeys.ToolsEmail + ":Screening:", StringComparison.Ordinal) => ValidationCodes.EmailScreening,
-        _ when problem.Contains("' is not one of ", StringComparison.Ordinal)
-            || problem.Contains("' is not a list of ", StringComparison.Ordinal)
-            || problem.EndsWith("' is neither true nor false", StringComparison.Ordinal)
-            || problem.EndsWith("' is not a whole number", StringComparison.Ordinal) => ValidationCodes.EmailValue,
+        // The binder's sentences name the key and never the value (Orkeon #465); a number written for
+        // an enumeration is one of them (#464).
+        _ when problem.Contains(" is not one of ", StringComparison.Ordinal)
+            || problem.Contains(" is not a list of ", StringComparison.Ordinal)
+            || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
+            || problem.EndsWith(" is neither true nor false", StringComparison.Ordinal)
+            || problem.EndsWith(" is not a whole number", StringComparison.Ordinal) => ValidationCodes.EmailValue,
         _ when problem.StartsWith("the account name ", StringComparison.Ordinal) => ValidationCodes.EmailName,
         _ when problem.StartsWith("Address ", StringComparison.Ordinal) => ValidationCodes.EmailAddress,
         _ when problem.StartsWith("Rights is required", StringComparison.Ordinal) => ValidationCodes.EmailRights,
