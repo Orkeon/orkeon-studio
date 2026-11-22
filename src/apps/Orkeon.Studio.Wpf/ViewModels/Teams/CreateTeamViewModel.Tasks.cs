@@ -6,7 +6,7 @@ using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 namespace Orkeon.Studio.Wpf.ViewModels.Teams;
 
 /// <summary>
-/// One task of the Composer step's « Tâches » list: what it does, who does it, the file it writes,
+/// One task of the Composer step's "Tasks" list: what it does, who does it, the file it writes,
 /// what it waits for and under which condition, and the buttons that amend it through the same
 /// <c>edit</c> as the agent editor. A decision task is shown, never edited here: its questions
 /// are the assistant's to change.
@@ -51,7 +51,7 @@ public sealed class WizardTaskRow
     /// <summary>What the task does.</summary>
     public string Description { get; }
 
-    /// <summary>Who does it: its agent's role, or « Décision » for a decision task.</summary>
+    /// <summary>Who does it: its agent's role, or "Decision" for a decision task.</summary>
     public string Who { get; }
 
     /// <summary>The file it writes; empty for none.</summary>
@@ -60,13 +60,13 @@ public sealed class WizardTaskRow
     /// <summary>Whether it writes a file.</summary>
     public bool HasDeliverable => Deliverable.Length > 0;
 
-    /// <summary>« après : … », the tasks it waits for; empty when it waits for none.</summary>
+    /// <summary>"after: …", the tasks it waits for; empty when it waits for none.</summary>
     public string AfterLine { get; }
 
     /// <summary>Whether it waits for a task.</summary>
     public bool HasAfter => AfterLine.Length > 0;
 
-    /// <summary>« si : … », its condition; empty when it has none.</summary>
+    /// <summary>"if: …", its condition; empty when it has none.</summary>
     public string WhenLine { get; }
 
     /// <summary>Whether it runs under a condition.</summary>
@@ -93,7 +93,7 @@ public sealed class WizardTaskRow
 
 public sealed partial class CreateTeamViewModel
 {
-    /// <summary>The blueprint's tasks, in its order: the Composer step's « Tâches » list.</summary>
+    /// <summary>The blueprint's tasks, in its order: the Composer step's "Tasks" list.</summary>
     public ObservableCollection<WizardTaskRow> Tasks { get; } = [];
 
     /// <summary>Whether the blueprint has tasks to list.</summary>
@@ -102,7 +102,7 @@ public sealed partial class CreateTeamViewModel
     /// <summary>The task editor modal.</summary>
     public TaskEditorViewModel TaskEditor { get; private set; } = null!;
 
-    /// <summary>« Ajouter une tâche »: the task editor for a new task.</summary>
+    /// <summary>"Add a task": the task editor for a new task.</summary>
     public RelayCommand AddTaskCommand { get; private set; } = null!;
 
     private void InitializeTasks()

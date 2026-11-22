@@ -5,7 +5,7 @@ using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Teams;
 
-/// <summary>One other task of the blueprint the edited task may wait for: a switch of « Après ».</summary>
+/// <summary>One other task of the blueprint the edited task may wait for: a switch of "After".</summary>
 public sealed class TaskDependencyOptionViewModel : ObservableObject
 {
     private bool _isChecked;
@@ -39,8 +39,8 @@ public sealed class TaskDependencyOptionViewModel : ObservableObject
 }
 
 /// <summary>
-/// The task editor modal: « ce qu'il faut faire » ↔ the blueprint task's <c>description</c>,
-/// « ce qu'on attend » ↔ its <c>expectedOutput</c>, who runs it ↔ its <c>agent</c>, the file it
+/// The task editor modal: "What to do" ↔ the blueprint task's <c>description</c>,
+/// "What is expected" ↔ its <c>expectedOutput</c>, who runs it ↔ its <c>agent</c>, the file it
 /// writes ↔ its <c>deliverable</c>, the tasks it waits for ↔ its <c>dependencies</c>, its own tools ↔
 /// its <c>tools</c>. Save hands the amended blueprint JSON to the wizard, which sends it over the
 /// engine's <c>edit</c>, as the agent editor does: the engine re-validates everything, so this
@@ -142,7 +142,7 @@ public sealed class TaskEditorViewModel : ObservableObject
     /// <summary>True when the editor adds a task rather than amending one.</summary>
     public bool IsNew => _taskKey is null;
 
-    /// <summary>« Ajouter une tâche » / « Modifier la tâche ».</summary>
+    /// <summary>"Add a task" / "Edit the task".</summary>
     public string Title => _strings[IsNew ? StudioStringKeys.TaskEditorTitleAdd : StudioStringKeys.TaskEditorTitleEdit];
 
     /// <summary>The add / save button label.</summary>
