@@ -280,10 +280,16 @@ public static class DecisionPreflight
 
         // A model profile the launch lays in the environment is registered beside those of the file: a
         // decision profile of the same name refuses the start, as two of the file do, and before the
-        // judge is looked at.
-        if (status is { RefusalStage: DecisionRefusalStage.None or DecisionRefusalStage.Judge }
+        // judge is looked at. The registry judges the decision profiles in turn: the first that takes the
+        // reserved name, a name of the file or one the launch lays is the refusal.
+        if (status is { RefusalStage: DecisionRefusalStage.None or DecisionRefusalStage.Judge or DecisionRefusalStage.Profiles }
             && offeredProfiles is { Count: > 0 }
-            && status.DecisionProfiles.FirstOrDefault(name => offeredProfiles.Contains(name, StringComparer.OrdinalIgnoreCase)) is { } twice)
+            && status.DecisionProfiles.FirstOrDefault(name =>
+                Orkeon.Application.Interfaces.Ports.LlmProfiles.IsDefault(name)
+                || offeredProfiles.Contains(name, StringComparer.OrdinalIgnoreCase)
+                || (status.RefusalStage == DecisionRefusalStage.Profiles && status.Refusal == DecisionSection.SharedProfileNameRefusal(name))) is { } twice
+            && !Orkeon.Application.Interfaces.Ports.LlmProfiles.IsDefault(twice)
+            && offeredProfiles.Contains(twice, StringComparer.OrdinalIgnoreCase))
         {
             status = status with { Refusal = DecisionSection.SharedProfileNameRefusal(twice), RefusalStage = DecisionRefusalStage.Profiles };
         }
@@ -332,7 +338,9 @@ public static class DecisionPreflight
         // Orkeon #451): a crew that needs the decision models is refused, a fail-closed guarded profile
         // blocks and a lenient runner withholds the tool, as for any other off cause. Any other crew keeps
         // the warning of the key below.
-        var keyOff = status is { CircuitOn: true, KeyMissing: true };
+        // A fail-closed judge refuses the start for that very cause (RefusalStage.Judge): the key is off all the same.
+        var keyOff = status is { KeyMissing: true, Enabled: true, Provider: not null }
+            && (status.CircuitOn || status.RefusalStage == DecisionRefusalStage.Judge);
         // Off for sure: the run's own switch, or the circuit of the very file the run reads.
         var offForSure = noDecision || (known && status is { CircuitOn: false });
         var offForSureForNeeds = offForSure || (known && keyOff);

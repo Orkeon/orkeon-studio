@@ -84,7 +84,7 @@ public sealed class GuardianAndDecisionProfileProblemsTests
         var document = AppSettingsDocument.Parse("""
             { "Orkeon": {
                 "Guardian": { "Enabled": true, "DefaultPolicy": { "MaxDelegationDepth": 3 }, "Llm": { "Phases": ["input"], "Risks": { "leak": "a secret leaves" }, "FailMode": "Open" } },
-                "Decision": { "Enabled": true, "Provider": "typesafe", "Route": { "Ladder": ["default", "default"] },
+                "Decision": { "Enabled": true, "Provider": "typesafe", "Route": { "Ladder": ["default", "p"] },
                     "Profiles": { "p": { "Target": "default", "FailClosed": true, "Stages": [ { "Kind": "guard", "Risks": { "x": "y" } } ] } } },
                 "TypeSafe": { "Model": "m" } } }
             """);

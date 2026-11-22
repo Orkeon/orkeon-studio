@@ -176,10 +176,25 @@ public sealed class AppSettingsValidator
             .Concat(document.BridgeServer.Problems())
             .Concat(document.Guardian.Problems())
             .Concat(document.AgentCli.Problems())
-            .Concat(document.Decision.ProfileProblems())
-            .Concat(document.Decision.UnknownKeys())
+            .Concat(document.Decision.Problems())
             .Where(found => load is null || found != load.Value))
             messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path));
+
+        // What the start refuses in the decision settings beyond their keys (a switch that is no boolean,
+        // the choice of a provider, the ladder, the provider's section, a profile's name, a fail-closed
+        // judge), unless a section above said that very sentence. A judge the run's environment may give
+        // a provider or a key to is warned of.
+        if (load is null)
+        {
+            foreach (var (path, problem, certain) in document.Decision.StartRefusals())
+            {
+                if (messages.Any(said => said.Text == problem))
+                    continue;
+                messages.Add(certain
+                    ? ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path)
+                    : ValidationMessage.Warning(ValidationCodes.EngineSettingRefused, problem, path));
+            }
+        }
 
         // Like Orkeon:Rag:LlmProfile: the profile may come from the environment a run is launched with.
         if (document.Compaction.UnknownProfile() is { } unknown)

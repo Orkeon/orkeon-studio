@@ -431,6 +431,36 @@ public sealed class DecisionPreflightTests
         Assert.Null(DecisionPreflight.Check(Optional, judged, settingsKnown: true, noDecision: false));
     }
 
+    /// <summary>
+    /// A fail-closed LLM judge refuses the start when the provider in use has no key (the circuit off,
+    /// <c>no-key</c>), in the engine's sentence, whether the key is awaited in the provider's own variable
+    /// or in one its setting names; a check included. The key is said off all the same.
+    /// </summary>
+    [Fact]
+    public void A_fail_closed_llm_judge_refuses_a_provider_without_its_key_a_check_included()
+    {
+        static DecisionStatus Judged(string liquid) => AppSettingsDocument.Parse(
+            $$"""{ "Orkeon": { "Liquid": {{liquid}}, "Guardian": { "Llm": { "Enabled": true } } } }""").Decision.Resolve(_ => null);
+
+        var own = Judged("""{ "Model": "m" }""");
+        var named = Judged("""{ "Model": "m", "ApiKeyEnvVar": "STUDIO_UNSET_KEY" }""");
+
+        Assert.Equal(DecisionRefusalStage.Judge, own.RefusalStage);
+        Assert.False(own.CircuitOn);
+        Assert.Contains("the decision circuit is off: no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey", own.Refusal, StringComparison.Ordinal);
+        Assert.Contains("no Liquid API key: set the variable named by Orkeon:Liquid:ApiKeyEnvVar, or Orkeon:Liquid:ApiKey", named.Refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain("STUDIO_UNSET_KEY", named.Refusal, StringComparison.Ordinal);
+
+        var finding = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(DeclaredRequired, own, settingsKnown: true, noDecision: false));
+        Assert.Equal(DecisionPreflightKind.ProviderRefused, finding.Kind);
+        Assert.True(finding.BlocksLaunch);
+        Assert.True(finding.BlocksValidate);
+        // A fail-open judge lets the run go without the models: the key is said as for any crew that needs them.
+        var open = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "Model": "m" }, "Guardian": { "Llm": { "Enabled": true, "FailMode": "Open" } } } }""").Decision.Resolve(_ => null);
+        Assert.Null(open.Refusal);
+        Assert.Equal([DecisionOffReason.NoKey], DecisionPreflight.Check(DeclaredRequired, open, settingsKnown: true, noDecision: false)?.Reasons);
+    }
+
     [Fact]
     public void Every_reason_the_run_goes_without_the_model_is_said_in_the_order_it_is_best_fixed()
     {

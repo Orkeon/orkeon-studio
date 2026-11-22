@@ -150,9 +150,13 @@ public sealed class DecisionSectionLayersTests
         Assert.Equal(
             "Orkeon:TypeSafe:TimeoutSeconds: one second or more.",
             Refusal("""{"Orkeon":{"TypeSafe":{"TimeoutSeconds":0}}}"""));
+        // The host lists each failure apart and throws the first; a check says each one.
+        const string twoFailures = """{"Orkeon":{"TypeSafe":{"TimeoutSeconds":-5,"MaxRetries":-1}}}""";
+        Assert.Equal("Orkeon:TypeSafe:TimeoutSeconds: one second or more.", Refusal(twoFailures));
         Assert.Equal(
-            "Orkeon:TypeSafe:TimeoutSeconds: one second or more.; Orkeon:TypeSafe:MaxRetries: zero or more.",
-            Refusal("""{"Orkeon":{"TypeSafe":{"TimeoutSeconds":-5,"MaxRetries":-1}}}"""));
+            [("Orkeon:TypeSafe:TimeoutSeconds", "Orkeon:TypeSafe:TimeoutSeconds: one second or more."), ("Orkeon:TypeSafe:MaxRetries", "Orkeon:TypeSafe:MaxRetries: zero or more.")],
+            AppSettingsDocument.Parse(twoFailures).Decision.StartRefusals().Select(refusal => (refusal.Path, refusal.Problem)));
+        Assert.All(AppSettingsDocument.Parse(twoFailures).Decision.StartRefusals(), refusal => Assert.True(refusal.Certain));
         Assert.Equal(
             "Orkeon:Liquid:BaseUrl: an absolute URL.",
             Refusal("""{"Orkeon":{"Liquid":{"BaseUrl":"not-a-url"}}}"""));

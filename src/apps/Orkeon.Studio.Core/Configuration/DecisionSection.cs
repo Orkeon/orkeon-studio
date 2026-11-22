@@ -263,25 +263,67 @@ public sealed class DecisionSection
             return status with { Refusal = picksRefusal, RefusalStage = DecisionRefusalStage.Picks };
         if ((guardianRefusal ?? enabledRefusal) is { } unconverted)
             return status with { Refusal = unconverted, RefusalStage = DecisionRefusalStage.Switches };
-        if (status.Provider is { } chosen && RefuseOptions(configuration, chosen) is { } options)
+        if (status.Provider is { } chosen && OptionRefusals(configuration, chosen) is [var options, ..])
             return status with { Refusal = options, RefusalStage = DecisionRefusalStage.Provider };
 
-        // A decision profile is registered as a profile, after the model profiles: one name for two
-        // refuses the start, in the spelling of the decision profile.
+        // A decision profile is registered as a profile, after the model profiles, and the registry judges
+        // each registration in turn (LlmProfileRegistry): the reserved name of the default profile, then a
+        // name for two, in the spelling of the decision profile.
         var modelProfiles = configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren().Select(profile => profile.Key).ToList();
-        if (decisionProfiles.FirstOrDefault(name => modelProfiles.Contains(name, StringComparer.OrdinalIgnoreCase)) is { } twice)
-            return status with { Refusal = SharedProfileNameRefusal(twice), RefusalStage = DecisionRefusalStage.Profiles };
+        foreach (var name in decisionProfiles)
+        {
+            if (LlmProfiles.IsDefault(name))
+                return status with { Refusal = DefaultProfileNameRefusal, RefusalStage = DecisionRefusalStage.Profiles };
+            if (modelProfiles.Contains(name, StringComparer.OrdinalIgnoreCase))
+                return status with { Refusal = SharedProfileNameRefusal(name), RefusalStage = DecisionRefusalStage.Profiles };
+        }
 
-        // Last, a fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, the
-        // settings' switch named before the missing provider, as the engine names them.
-        return closedJudge && !status.CircuitOn
+        // Last, a fail-closed LLM judge cannot judge with the circuit off: the host refuses to start, in the
+        // circuit's own cause, the settings' switch first, then the missing provider, then the missing key
+        // (DecisionCircuit, as the host resolves it).
+        return closedJudge && JudgeCircuit(status) is { } off
             ? status with
             {
-                Refusal = GuardianLlmOptions.CircuitRefusal(DecisionCircuit.OffBy(
-                    enabled ? DecisionCircuitCause.NoProvider : DecisionCircuitCause.Settings).OffReason!),
+                Refusal = GuardianLlmOptions.CircuitRefusal(off.OffReason!),
                 RefusalStage = DecisionRefusalStage.Judge,
             }
             : status;
+    }
+
+    /// <summary>
+    /// The engine's sentence for a decision profile under the reserved name of the host's default profile
+    /// (<c>LlmProfileRegistry</c>): the start is refused.
+    /// </summary>
+    internal const string DefaultProfileNameRefusal =
+        $"'{LlmProfiles.Default}' is the reserved name of the host's default profile; a profile cannot take it.";
+
+    /// <summary>
+    /// The circuit the host resolves for <paramref name="status"/>, when it is off: by the settings'
+    /// switch, by the missing provider, by the provider's missing key, in that order; null when it is on.
+    /// </summary>
+    private static DecisionCircuit? JudgeCircuit(DecisionStatus status)
+    {
+        if (!status.Enabled)
+            return DecisionCircuit.OffBy(DecisionCircuitCause.Settings);
+        if (status.Provider is not { } provider)
+            return DecisionCircuit.OffBy(DecisionCircuitCause.NoProvider);
+        return status.KeyMissing
+            ? DecisionCircuit.OffBy(DecisionCircuitCause.NoKey) with { Detail = MissingKeySentence(provider, status.MissingKeyVariable is not null) }
+            : null;
+    }
+
+    /// <summary>
+    /// What the engine says the provider lacks (<c>DecisionApiKey.Missing</c>, internal to it):
+    /// <c>no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey</c>. The
+    /// variable is named only when it is the provider's default, else the setting that names it.
+    /// </summary>
+    internal static string MissingKeySentence(DecisionProviderDescriptor provider, bool defaultVariable)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        var remedy = defaultVariable
+            ? $"set the environment variable {provider.DefaultApiKeyVariable}, or {provider.Section}:ApiKey"
+            : $"set the variable named by {provider.Section}:ApiKeyEnvVar, or {provider.Section}:ApiKey";
+        return $"no {provider.DisplayName} API key: {remedy}";
     }
 
     /// <summary>
@@ -303,13 +345,68 @@ public sealed class DecisionSection
     /// them), and a probability that is no finite number; each with its path, in the engine's sentence,
     /// which may say more after it. The host says them after the rules of every section.
     /// </summary>
-    public IReadOnlyList<(string Path, string Problem)> UnknownKeys()
+    public IReadOnlyList<(string Path, string Problem)> UnknownKeys() => [.. WalkedKeys(ToConfiguration(_document.Root)).Select(found => (found.Path, found.Problem))];
+
+    /// <summary>
+    /// The decision profiles' problems (<see cref="ProfileProblems"/>) and the walk of the decision sections
+    /// (<see cref="UnknownKeys"/>), merged as the host's start merges a walk with what came before it
+    /// (<see cref="SettingsBinding.AddWalked"/>): one sentence per key, a key written without a value
+    /// replacing what a rule said of the default the binder then wrote.
+    /// </summary>
+    public IReadOnlyList<(string Path, string Problem)> Problems()
     {
         var configuration = ToConfiguration(_document.Root);
-        return
+        var problems = ProfileProblemsOf(configuration).ToList();
+        SettingsBinding.AddWalked(problems, WalkedKeys(configuration));
+        return problems;
+    }
+
+    /// <summary>
+    /// What the host's start refuses in the decision settings of the file alone, beyond
+    /// <see cref="Problems"/>: the refusal of <see cref="Resolve"/> over no environment, at the key it
+    /// names; every failure of the provider's section when that is the refusal. A refusal that the
+    /// environment of a run may lift (a fail-closed judge left without a provider or without its key,
+    /// which a run may find there) is not <c>Certain</c>. Empty when the file loads no refusal of its own
+    /// here, or when the refusal is one of <see cref="Problems"/> or of the file's load.
+    /// </summary>
+    public IReadOnlyList<(string Path, string Problem, bool Certain)> StartRefusals()
+    {
+        var status = Resolve(_ => null);
+        if (status.Refusal is not { } refusal || status.RefusalStage is DecisionRefusalStage.None or DecisionRefusalStage.File)
+            return [];
+        if (Problems().Any(problem => problem.Problem == refusal))
+            return [];
+
+        switch (status.RefusalStage)
+        {
+            case DecisionRefusalStage.Provider when status.Provider is { } provider:
+                return [.. OptionRefusals(ToConfiguration(_document.Root), provider).Select(failure => (PathNamed(failure, provider.Section), failure, true))];
+            case DecisionRefusalStage.Profiles:
+                var named = status.DecisionProfiles.FirstOrDefault(name => refusal.Contains($"'{name}'", StringComparison.Ordinal)) ?? LlmProfiles.Default;
+                return [($"{ProfilesPath}:{named}", refusal, true)];
+            case DecisionRefusalStage.Judge:
+                return [(GuardianLlmOptions.SectionName, refusal, !status.Enabled)];
+            default:
+                return [(PathNamed(refusal, SectionPath), refusal, true)];
+        }
+    }
+
+    // The key a sentence of the engine names: the path the binder quotes, else the sentence's first word
+    // when it is a path of the settings, else the fallback.
+    private static string PathNamed(string problem, string fallback)
+    {
+        const string At = "the configuration value at '";
+        var at = problem.IndexOf(At, StringComparison.Ordinal);
+        if (at >= 0 && problem.IndexOf('\'', at + At.Length) is var end and > 0)
+            return problem[(at + At.Length)..end];
+        var first = problem.Split(' ', 2)[0].TrimEnd(':');
+        return first.StartsWith("Orkeon:", StringComparison.Ordinal) && first.Contains(':', StringComparison.Ordinal) ? first : fallback;
+    }
+
+    private static List<SettingsBinding.Walked> WalkedKeys(IConfiguration configuration) =>
         [
             // The runner's switch, a section of its own the host declares (a key without a value refused, #450).
-            .. SettingsBinding.UnknownKeys(configuration, CrewFactoryPath, typeof(CrewFactoryShape)).Select(found => (found.Path, found.Problem)),
+            .. SettingsBinding.UnknownKeys(configuration, CrewFactoryPath, typeof(CrewFactoryShape)),
             // The readers of the section in the host's order, which the sentence lists the keys in.
             .. SettingsBinding.UnknownKeysOfReaders(
                 configuration,
@@ -317,11 +414,9 @@ public sealed class DecisionSection
                 (ConfigurationPath.GetSectionKey(AgentRouteOptions.SectionName), typeof(AgentRouteOptions)),
                 (ConfigurationPath.GetSectionKey(AgentEffortOptions.SectionName), typeof(AgentEffortOptions)),
                 (null, typeof(DecisionCircuitOptions)),
-                (null, typeof(DecisionProfilesOptions))).Select(found => (found.Path, found.Problem)),
-            .. Providers.SelectMany(provider => SettingsBinding.UnknownKeys(configuration, provider.Section, typeof(SystemOneProviderOptions)))
-                .Select(found => (found.Path, found.Problem)),
+                (null, typeof(DecisionProfilesOptions))),
+            .. Providers.SelectMany(provider => SettingsBinding.UnknownKeys(configuration, provider.Section, typeof(SystemOneProviderOptions))),
         ];
-    }
 
     private const string CrewFactoryPath = "Orkeon:CrewFactory";
 
@@ -494,9 +589,11 @@ public sealed class DecisionSection
     /// What the host's start refuses in the section of the provider in use, as the engine binds and
     /// validates it (<c>AddOrkeonDecisionProvider</c>, validated at start): a value the binder cannot
     /// convert, a timeout under one second, retries under zero, an API root that is no absolute URL.
-    /// The sections left aside are bound by nobody. Null when the section is accepted.
+    /// The sections left aside are bound by nobody. Each failure is one refusal of the host
+    /// (<c>OptionsValidationException.Failures</c>, listed one by one), so the start raises the first;
+    /// empty when the section is accepted.
     /// </summary>
-    private static string? RefuseOptions(IConfiguration configuration, DecisionProviderDescriptor provider)
+    private static List<string> OptionRefusals(IConfiguration configuration, DecisionProviderDescriptor provider)
     {
         var options = new SystemOneProviderOptions();
         provider.ApplyDefaults(options);
@@ -506,14 +603,14 @@ public sealed class DecisionSection
         }
         catch (InvalidOperationException ex)
         {
-            return SettingsBinding.WithoutValue(ex);
+            return [SettingsBinding.WithoutValue(ex)];
         }
 
         // FillBlanks, for the one default the rules below read.
         if (options.BaseUrl is null || string.IsNullOrWhiteSpace(options.BaseUrl.OriginalString))
             options.BaseUrl = provider.DefaultBaseUrl;
 
-        // The engine's own wording, joined as OptionsValidationException joins its failures.
+        // The engine's own wording, each failure apart, in the validator's order.
         var failures = new List<string>();
         if (options.TimeoutSeconds <= 0)
             failures.Add($"{provider.Section}:TimeoutSeconds: one second or more.");
@@ -521,7 +618,7 @@ public sealed class DecisionSection
             failures.Add($"{provider.Section}:MaxRetries: zero or more.");
         if (!options.BaseUrl.IsAbsoluteUri)
             failures.Add($"{provider.Section}:BaseUrl: an absolute URL.");
-        return failures.Count > 0 ? string.Join("; ", failures) : null;
+        return failures;
     }
 
     /// <summary>
@@ -618,8 +715,9 @@ public sealed class DecisionSection
 /// written twice, an unknown name, two providers that could be deduced, a Kev address the key may not
 /// travel to, a decision profile it refuses (<see cref="DecisionSection.ProfileProblems"/>), a ladder or
 /// levels it refuses, a switch or a value of the guardian that does not convert or breaks a rule of
-/// its section, a section of the provider in use its validation refuses, a name
-/// a decision profile shares with a model profile, a fail-closed judge left without a circuit); null
+/// its section, a section of the provider in use its validation refuses, a decision profile under the
+/// reserved name <c>default</c> or a name it shares with a model profile, a fail-closed judge left
+/// without a circuit, the provider's missing key included); null
 /// otherwise.
 /// One sentence: the first the host meets among those (<see cref="DecisionStatus.RefusalStage"/>).
 /// Under a refusal the other members still hold what the file tells, each as it says.
@@ -631,7 +729,12 @@ public sealed record DecisionStatus(
     IReadOnlyList<string> IgnoredSections,
     string? Refusal)
 {
-    /// <summary>Whether a run asks the decision model: the switch is on and a provider is chosen.</summary>
+    /// <summary>
+    /// Whether a run asks the decision model as far as the settings go: the switch is on, a provider is
+    /// chosen and the start refuses nothing. The provider's key is aside (<see cref="KeyMissing"/>): the
+    /// engine turns the circuit off without it, which a consumer says as a warning, the key being one a
+    /// launch may still give; a fail-closed judge refuses the start for it (<see cref="DecisionRefusalStage.Judge"/>).
+    /// </summary>
     public bool CircuitOn => Enabled && Provider is not null && Refusal is null;
 
     /// <summary>
@@ -762,10 +865,10 @@ public enum DecisionRefusalStage
     /// <summary>The section of the provider in use: the last section judged, before the keys no section carries.</summary>
     Provider,
 
-    /// <summary>A name two profiles share: said after the keys no section carries.</summary>
+    /// <summary>A decision profile named <c>default</c>, or a name two profiles share: said after the keys no section carries.</summary>
     Profiles,
 
-    /// <summary>A fail-closed LLM judge left without a circuit: said last.</summary>
+    /// <summary>A fail-closed LLM judge left without a circuit (switched off, no provider, the provider's key missing): said last.</summary>
     Judge,
 }
 
