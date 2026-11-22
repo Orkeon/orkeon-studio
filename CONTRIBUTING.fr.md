@@ -31,7 +31,7 @@ L'exécuteur de tests est **Microsoft.Testing.Platform, pas VSTest** (`global.js
 
 Studio consomme Orkeon par des paquets NuGet, à la version que fixe `OrkeonVersion` dans `Directory.Packages.props`. Les tests de dérive d'`Orkeon.Studio.Core.Tests` lisent des fichiers d'un checkout d'Orkeon : renseignez `ORKEON_SOURCE_ROOT`, ou clonez Orkeon sous `../orkeon`.
 
-Les paquets viennent de nuget.org. Pour construire contre un Orkeon plus récent, portez `OrkeonVersion` à une version publiée : la CI clone l'étiquette d'Orkeon `v<OrkeonVersion>` pour les tests de dérive, les deux avancent donc ensemble, et un `../orkeon` local devrait lui aussi être extrait sur cette étiquette. Ne retéléchargez jamais ce que le cache `packages/` contient déjà.
+Les paquets viennent de nuget.org (ou, temporairement, d'un `dev-feed/` suivi de paquets empaquetés depuis un commit d'Orkeon non tagué, que nomme `OrkeonSourceRef` dans `Directory.Packages.props` et que la CI clone à la place du tag ; le commit qui passe au tag d'Orkeon retire les deux). Pour construire contre un Orkeon plus récent, portez `OrkeonVersion` à une version publiée : la CI clone l'étiquette d'Orkeon `v<OrkeonVersion>` pour les tests de dérive, les deux avancent donc ensemble, et un `../orkeon` local devrait lui aussi être extrait sur cette étiquette. Ne retéléchargez jamais ce que le cache `packages/` contient déjà.
 
 ## Structure du projet
 
