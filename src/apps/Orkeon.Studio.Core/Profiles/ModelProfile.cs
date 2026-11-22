@@ -183,6 +183,8 @@ public sealed record ModelProfile
             Temperature = Temperature,
             TimeoutSeconds = TimeoutSeconds is > 0 ? TimeoutSeconds : null,
             StreamIdleSeconds = StreamIdleSeconds is > 0 ? StreamIdleSeconds : null,
+            // What a launch lays (OverrideValues): a run outside Studio reads the same call mode.
+            CallMode = CallMode is { } callMode && IsKnownCallMode(callMode) ? callMode : null,
             MaxTokens = MaxTokens is > 0 ? MaxTokens : null,
             ThinkingEnabled = ThinkingEnabled,
             ThinkingEffort = string.IsNullOrWhiteSpace(ThinkingEffort) ? null : ThinkingEffort.Trim(),

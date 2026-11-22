@@ -869,17 +869,44 @@ public static partial class TeamCatalog
     /// <param name="to">Its name now.</param>
     public static IReadOnlyList<string> RenameSetting(string root, string from, string to)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentException.ThrowIfNullOrEmpty(from);
         ArgumentException.ThrowIfNullOrEmpty(to);
 
+        return RenameSettings(root, [(from, to)]);
+    }
+
+    /// <summary>
+    /// <see cref="RenameSetting"/> for several settings renamed at once — a connection whose models
+    /// swap their names, or a chain <c>a → b</c>, <c>b → c</c>: each team is read once and its
+    /// setting looked up among the former names, so a swap swaps and a chain moves each team once,
+    /// never onto the end of the chain. A former name listed twice follows its first rename.
+    /// </summary>
+    /// <param name="root">The teams directory.</param>
+    /// <param name="renames">Each renamed setting, its name before and after.</param>
+    public static IReadOnlyList<string> RenameSettings(string root, IReadOnlyList<(string From, string To)> renames)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        ArgumentNullException.ThrowIfNull(renames);
+
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (from, to) in renames)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(from);
+            ArgumentException.ThrowIfNullOrEmpty(to);
+            map.TryAdd(from, to);
+        }
+
         var renamed = new List<string>();
+        if (map.Count == 0)
+            return renamed;
+
         foreach (var team in List(root, TeamListFilter.All))
         {
             // A companion file that cannot be read names no setting here: it is never written over.
             // A team that follows the default names no setting, whatever name was left beside the flag.
-            if (team.Metadata is { UseDefaultLlm: not true } metadata
-                && string.Equals(metadata.Profile, from, StringComparison.Ordinal)
+            if (team.Metadata is { UseDefaultLlm: not true, Profile: { } profile } metadata
+                && map.TryGetValue(profile, out var to)
+                && !string.Equals(profile, to, StringComparison.Ordinal)
                 && TryWriteMetadata(team.Path, metadata with { Profile = to }))
             {
                 renamed.Add(team.Path);

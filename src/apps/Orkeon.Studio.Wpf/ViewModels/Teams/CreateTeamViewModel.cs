@@ -936,8 +936,26 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         ArgumentException.ThrowIfNullOrEmpty(from);
         ArgumentException.ThrowIfNullOrEmpty(to);
 
-        if (string.Equals(_adoptProfileName, from, StringComparison.Ordinal))
-            AdoptProfileName = to;
+        FollowRenamedSettings([(from, to)]);
+    }
+
+    /// <summary>
+    /// <see cref="FollowRenamedSetting"/> for a save that renamed several settings at once: the name
+    /// the adoption holds is looked up once among the former names, so a swap or a chain moves it
+    /// once.
+    /// </summary>
+    public void FollowRenamedSettings(IReadOnlyList<(string From, string To)> renames)
+    {
+        ArgumentNullException.ThrowIfNull(renames);
+
+        foreach (var (from, to) in renames)
+        {
+            if (string.Equals(_adoptProfileName, from, StringComparison.Ordinal))
+            {
+                AdoptProfileName = to;
+                return;
+            }
+        }
     }
 
     /// <summary>The language switched: the step-4 card titles its setting's card in it (STUDIO-54).</summary>

@@ -67,8 +67,12 @@ public sealed record ModelProfilesLinks
     /// <summary>Opens a vendor's console from the editor.</summary>
     public IShellOpener? ShellOpener { get; init; }
 
-    /// <summary>Called with a setting's former name and its new one when the editor renames it.</summary>
-    public Action<string, string>? FollowRename { get; init; }
+    /// <summary>
+    /// Called once with every setting the editor renames in one save, each former name with its new
+    /// one: applied at once, each resolved from the names before the save, so two models swapping
+    /// their names swap, and a chain moves each team once.
+    /// </summary>
+    public Action<IReadOnlyList<(string From, string To)>>? FollowRename { get; init; }
 }
 
 /// <summary>
@@ -1524,7 +1528,7 @@ public sealed class ModelProfilesViewModel : ObservableObject
     private readonly IShellOpener? _opener;
     private ModelProfileSet _set = ModelProfileSet.Empty;
     private readonly Func<IReadOnlyList<TeamSummary>>? _loadTeams;
-    private readonly Action<string, string>? _followRename;
+    private readonly Action<IReadOnlyList<(string From, string To)>>? _followRename;
     private ModelProfileEditorViewModel? _editor;
     private string? _loadFailure;
     private string? _keyStoreFailure;
@@ -1847,10 +1851,11 @@ public sealed class ModelProfilesViewModel : ObservableObject
         var upsert = _set.UpsertConnection(connection, previousName, previousPairNames);
 
         // A rename (STUDIO-52): the teams naming each renamed pair follow it first — compared as every
-        // launch finds a setting, ordinal —, then the change rebuilds « Used by », mirrors the
-        // settings file and writes the launchers of the teams it moved.
-        foreach (var (from, to) in upsert.Renames)
-            _followRename?.Invoke(from, to);
+        // launch finds a setting, ordinal —, all at once, so a swap or a chain never sends a team
+        // twice; then the change rebuilds « Used by », mirrors the settings file and writes the
+        // launchers of the teams it moved.
+        if (upsert.Renames.Count > 0)
+            _followRename?.Invoke(upsert.Renames);
 
         Mutate(upsert.Set, upsert.Renames);
         Editor = null;

@@ -54,9 +54,7 @@ public sealed partial class LlmSection
     /// replay and the section of the agent-cli provider module (<c>Llm:AgentCli</c>, Orkeon #470),
     /// which every profile on that provider shares.
     /// </summary>
-    // What "no model" leaves in the section: the profiles, and the agent-cli module's section they share.
-    private static readonly string[] KeysKeptWithoutADefault = [ConfigurationKeys.LlmProfiles, "AgentCli"];
-
+    // Also what "no model" leaves in the section (Remove): each of them serves the profiles too.
     internal static readonly string[] KeysBesideTheDefault = [ConfigurationKeys.LlmProfiles, "ModelCapabilities", "Replay", "AgentCli"];
 
     /// <summary>
@@ -281,10 +279,12 @@ public sealed partial class LlmSection
     };
 
     /// <summary>
-    /// Removes the default provider — every key of the section but <c>Profiles</c> — which is
-    /// the WIN-01 state. The named profiles stay: choosing « no model » for the default says
-    /// nothing about them, and an entry written by hand is never Studio's to delete (STUDIO-48).
-    /// The section goes entirely only when no profile is left in it.
+    /// Removes the default provider — every key of the section but those that describe none
+    /// (<see cref="KeysBesideTheDefault"/>) — which is the WIN-01 state. The named profiles stay:
+    /// choosing « no model » for the default says nothing about them, and an entry written by hand is
+    /// never Studio's to delete (STUDIO-48); so do the capabilities declared per model, the replay and
+    /// the agent-cli module's section, host-wide settings the profiles read too. The section goes
+    /// entirely only when nothing is left in it.
     /// </summary>
     public void Remove()
     {
@@ -296,7 +296,7 @@ public sealed partial class LlmSection
 
         foreach (var key in section
                      .Select(property => property.Key)
-                     .Where(key => !KeysKeptWithoutADefault.Contains(key, StringComparer.OrdinalIgnoreCase))
+                     .Where(key => !KeysBesideTheDefault.Contains(key, StringComparer.OrdinalIgnoreCase))
                      .ToList())
         {
             section.Remove(key);

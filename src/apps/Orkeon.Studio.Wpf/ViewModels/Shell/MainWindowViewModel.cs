@@ -178,7 +178,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 Balances = Balances,
                 ShellOpener = shellOpener,
                 // STUDIO-52: a renamed setting's teams follow it before the change is mirrored.
-                FollowRename = FollowRenamedSetting,
+                FollowRename = FollowRenamedSettings,
             }),
             Mode,
             // STUDIO-14 settings (D-13, P-1): the folders tab also lists each adopted team's own
@@ -912,14 +912,15 @@ public sealed class MainWindowViewModel : ObservableObject
     private string? RestoreArchivedTeam(string teamPath) => Teams.RestoreTeam(teamPath);
 
     /// <summary>
-    /// A setting the settings screen renamed (STUDIO-52, decision 1), before the change reaches the
-    /// cards, the settings file and the launchers: every team of the catalog naming it — archived
-    /// ones included — names its new name, and so does the team the wizard is adopting.
+    /// The settings one save of the settings screen renamed (STUDIO-52, decision 1), before the change
+    /// reaches the cards, the settings file and the launchers: every team of the catalog naming one —
+    /// archived ones included — names its new name, and so does the team the wizard is adopting; all
+    /// at once, so a swap swaps and a chain moves each team once.
     /// </summary>
-    private void FollowRenamedSetting(string from, string to)
+    private void FollowRenamedSettings(IReadOnlyList<(string From, string To)> renames)
     {
-        TeamCatalog.RenameSetting(_teamsHome, from, to);
-        CreateTeam.FollowRenamedSetting(from, to);
+        TeamCatalog.RenameSettings(_teamsHome, renames);
+        CreateTeam.FollowRenamedSettings(renames);
         Teams.Refresh();
         Run.RefreshTeams();
     }

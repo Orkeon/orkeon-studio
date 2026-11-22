@@ -992,6 +992,42 @@ public sealed class TeamCatalogTests : IDisposable
     }
 
     /// <summary>
+    /// Two models of a connection that swap their names swap their teams: the renames apply at once,
+    /// each team's setting looked up among the former names — never every team on one model.
+    /// </summary>
+    [Fact]
+    public void Two_settings_that_swap_their_names_swap_their_teams()
+    {
+        var teams = Path.Combine(_root, "teams");
+        var onFlash = Path.Combine(teams, "rapide");
+        TeamCatalog.SaveMetadata(onFlash, new StudioTeamMetadata { Name = "Rapide", Profile = "ds.flash" });
+        var onPro = Path.Combine(teams, "lente");
+        TeamCatalog.SaveMetadata(onPro, new StudioTeamMetadata { Name = "Lente", Profile = "ds.pro" });
+
+        var renamed = TeamCatalog.RenameSettings(teams, [("ds.flash", "ds.pro"), ("ds.pro", "ds.flash")]);
+
+        Assert.Equal(2, renamed.Count);
+        Assert.Equal("ds.pro", TeamCatalog.Describe(onFlash).Profile);
+        Assert.Equal("ds.flash", TeamCatalog.Describe(onPro).Profile);
+    }
+
+    /// <summary>A chain a → b, b → c moves the team of a to b, and the team of b to c: each once.</summary>
+    [Fact]
+    public void A_chain_of_renames_moves_each_team_once()
+    {
+        var teams = Path.Combine(_root, "teams");
+        var onA = Path.Combine(teams, "premiere");
+        TeamCatalog.SaveMetadata(onA, new StudioTeamMetadata { Name = "Premiere", Profile = "a" });
+        var onB = Path.Combine(teams, "seconde");
+        TeamCatalog.SaveMetadata(onB, new StudioTeamMetadata { Name = "Seconde", Profile = "b" });
+
+        TeamCatalog.RenameSettings(teams, [("a", "b"), ("b", "c")]);
+
+        Assert.Equal("b", TeamCatalog.Describe(onA).Profile);
+        Assert.Equal("c", TeamCatalog.Describe(onB).Profile);
+    }
+
+    /// <summary>
     /// STUDIO-73: a team that follows the default says so with its flag and names no setting; pinned
     /// again, the flag goes and the name comes back — every other field kept both ways.
     /// </summary>

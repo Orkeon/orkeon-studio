@@ -145,12 +145,22 @@ public sealed class ModelProfileFileStore : IModelProfileStore
             // STUDIO-55: JSON reads 1e400 as an infinity, a number it has no text for — a setting that
             // could never be written again, and whose launch would pass "Infinity" to the run. Such a
             // file is refused like one the serializer cannot convert, its reason naming the setting.
+            // The connection's own temperature is judged too: when every one of its models pins its own,
+            // no pair shows it, yet the file could never be written again.
             set = WithoutNulls(set);
-            return set.Profiles.FirstOrDefault(profile => profile.Temperature is { } t && !double.IsFinite(t)) is { } infinite
+            if (set.Profiles.FirstOrDefault(profile => profile.Temperature is { } t && !double.IsFinite(t)) is { } infinite)
+            {
+                return new ModelProfileLoadResult(
+                    ModelProfileSet.Empty,
+                    string.Create(CultureInfo.InvariantCulture,
+                        $"{FilePath}: setting '{infinite.Name}': Temperature is not a finite number ({infinite.Temperature})."));
+            }
+
+            return set.Connections.FirstOrDefault(connection => connection.Temperature is { } t && !double.IsFinite(t)) is { } infiniteConnection
                 ? new ModelProfileLoadResult(
                     ModelProfileSet.Empty,
                     string.Create(CultureInfo.InvariantCulture,
-                        $"{FilePath}: setting '{infinite.Name}': Temperature is not a finite number ({infinite.Temperature})."))
+                        $"{FilePath}: connection '{infiniteConnection.Name}': Temperature is not a finite number ({infiniteConnection.Temperature})."))
                 : new ModelProfileLoadResult(WithCards(set));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)

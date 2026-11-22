@@ -316,6 +316,36 @@ public sealed class TeamSettingFollowsTests : IDisposable
             Assert.DoesNotContain("API_KEY", launcher, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Two models of a connection that swap their names swap their teams, and the wizard's adoption
+    /// follows the same way: the renames reach the teams at once, never every team on one model.
+    /// </summary>
+    [Fact]
+    public void Two_models_that_swap_their_names_swap_their_teams_and_the_wizard()
+    {
+        static ModelConnection Connection(string first, string second) => new()
+        {
+            Name = "ds", Provider = "DeepSeek", BaseUrl = "https://api.deepseek.com", KeyEnvName = "DEEPSEEK_API_KEY",
+            Models =
+            [
+                new ConnectionModel { Alias = first, Model = "deepseek-v4-flash" },
+                new ConnectionModel { Alias = second, Model = "deepseek-v4-pro" },
+            ],
+        };
+
+        var onFlash = PromotedTeam("rapide", new StudioTeamMetadata { Name = "Rapide", Profile = "ds.flash" });
+        var onPro = PromotedTeam("lente", new StudioTeamMetadata { Name = "Lente", Profile = "ds.pro" });
+        var window = Window();
+        window.Settings.Profiles.CommitEdit(Connection("flash", "pro"), previousName: null, previousPairNames: null);
+        window.CreateTeam.AdoptProfileName = "ds.flash";
+
+        window.Settings.Profiles.CommitEdit(Connection("pro", "flash"), previousName: "ds", previousPairNames: ["ds.flash", "ds.pro"]);
+
+        Assert.Equal("ds.pro", TeamCatalog.ProfileFor(onFlash));
+        Assert.Equal("ds.flash", TeamCatalog.ProfileFor(onPro));
+        Assert.Equal("ds.pro", window.CreateTeam.AdoptProfileName);
+    }
+
     [Fact]
     public void A_setting_with_no_model_renamed_carries_its_teams_too()
     {

@@ -203,18 +203,20 @@ public sealed class ConnectionEditorTests
     public void Renaming_the_connection_has_the_teams_follow_each_of_its_settings()
     {
         var document = AppSettingsDocument.Parse("{}");
-        var followed = new List<(string From, string To)>();
+        var followed = new List<IReadOnlyList<(string From, string To)>>();
         var profiles = new ModelProfilesViewModel(
             new InMemoryModelProfileStore(), new LlmSectionViewModel(() => document, () => { }),
             probe: new FakeLlmEndpointProbe(), keyStore: new FakeApiKeyStore(),
-            links: new ModelProfilesLinks { FollowRename = (from, to) => followed.Add((from, to)) });
+            links: new ModelProfilesLinks { FollowRename = followed.Add });
         SaveTwoModels(profiles);
 
         profiles.BeginEdit(profiles.Set.Find("mydeepseek.flash")!);
         profiles.Editor!.Name = "ds";
         profiles.Editor.SaveCommand.Execute(null);
 
-        Assert.Equal([("mydeepseek.flash", "ds.flash"), ("mydeepseek.pro", "ds.pro")], followed);
+        // One call carrying every rename: the teams follow them at once.
+        var renames = Assert.Single(followed);
+        Assert.Equal([("mydeepseek.flash", "ds.flash"), ("mydeepseek.pro", "ds.pro")], renames);
     }
 
     [Fact]

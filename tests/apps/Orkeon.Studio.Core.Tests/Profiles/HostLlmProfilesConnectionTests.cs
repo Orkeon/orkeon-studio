@@ -142,4 +142,156 @@ public sealed class HostLlmProfilesConnectionTests
         Assert.Equal(status, HostLlmProfiles.Classify(set)[name].Status);
         Assert.Empty(HostLlmProfiles.Offered(set));
     }
+
+    private static ModelConnection Ladder(params (string Alias, string Model)[] models) => new()
+    {
+        Name = "x",
+        Provider = "deepseek",
+        BaseUrl = "https://api.deepseek.com",
+        KeyEnvName = "DEEPSEEK_API_KEY",
+        Models = [.. models.Select(model => new ConnectionModel { Alias = model.Alias, Model = model.Model })],
+    };
+
+    /// <summary>The connection x of three models a, b, c, mirrored, its pairs the rungs of the ladder.</summary>
+    private static (AppSettingsDocument Document, ModelProfileSet Set) ThreeRungs()
+    {
+        var document = AppSettingsDocument.Parse("{}");
+        var set = ModelProfileSet.Empty.UpsertConnection(Ladder(("a", "m-a"), ("b", "m-b"), ("c", "m-c"))).Set;
+        HostLlmProfiles.Mirror(document, ModelProfileSet.Empty, set);
+        document.SetInt32("Llm:Profiles:x-b:MaxRetries", 3);
+        document.Decision.RouteLadder = ["x-a", "x-b", "x-c"];
+        return (document, set);
+    }
+
+    /// <summary>
+    /// Removing a and renaming b to a and c to b in one save: the removal comes first, so each entry
+    /// lands under its new id — none left behind under a staging id —, the rung of the removed model
+    /// goes rather than name another model twice, and what named a falls back before the move points
+    /// what named b at the new a.
+    /// </summary>
+    [Fact]
+    public void Removing_a_model_and_shifting_the_others_onto_its_name_moves_each_entry_once()
+    {
+        var (document, set) = ThreeRungs();
+        document.Rag.LlmProfile = "x-a";
+        document.Compaction.Profile = "x-b";
+
+        var upsert = set.UpsertConnection(Ladder(("a", "m-b"), ("b", "m-c")), previousPairNames: ["x.b", "x.c"]);
+        Assert.Equal([("x.b", "x.a"), ("x.c", "x.b")], upsert.Renames);
+        HostLlmProfiles.Mirror(document, set, upsert.Set, upsert.Renames);
+
+        Assert.Equal(["x-a", "x-b"], document.Llm.Profiles.Ids.Order(StringComparer.Ordinal));
+        Assert.Equal("m-b", document.Llm.Profiles.Get("x-a")?.Model);
+        Assert.Equal(3, document.GetInt32("Llm:Profiles:x-a:MaxRetries"));
+        Assert.Equal("m-c", document.Llm.Profiles.Get("x-b")?.Model);
+        Assert.Equal(["x-a", "x-b"], document.Decision.RouteLadder);
+        Assert.Null(document.Rag.LlmProfile);
+        Assert.Equal("x-a", document.Compaction.Profile);
+    }
+
+    /// <summary>The single variant: removing a and renaming b to a moves b's entry onto the freed id.</summary>
+    [Fact]
+    public void Removing_a_model_and_renaming_another_onto_its_name_moves_the_entry_onto_the_freed_id()
+    {
+        var (document, set) = ThreeRungs();
+
+        var upsert = set.UpsertConnection(Ladder(("a", "m-b"), ("c", "m-c")), previousPairNames: ["x.b", "x.c"]);
+        Assert.Equal([("x.b", "x.a")], upsert.Renames);
+        HostLlmProfiles.Mirror(document, set, upsert.Set, upsert.Renames);
+
+        Assert.Equal(["x-a", "x-c"], document.Llm.Profiles.Ids.Order(StringComparer.Ordinal));
+        Assert.Equal("m-b", document.Llm.Profiles.Get("x-a")?.Model);
+        Assert.Equal(3, document.GetInt32("Llm:Profiles:x-a:MaxRetries"));
+        Assert.Equal(["x-a", "x-c"], document.Decision.RouteLadder);
+    }
+
+    /// <summary>A chain a → b, b → c with no removal moves each entry once, never onto the end of the chain.</summary>
+    [Fact]
+    public void A_chain_of_renames_moves_each_entry_once()
+    {
+        var document = AppSettingsDocument.Parse("{}");
+        var set = ModelProfileSet.Empty.UpsertConnection(Ladder(("a", "m-a"), ("b", "m-b"))).Set;
+        HostLlmProfiles.Mirror(document, ModelProfileSet.Empty, set);
+        document.Decision.RouteLadder = ["x-a", "x-b"];
+
+        var upsert = set.UpsertConnection(Ladder(("b", "m-a"), ("c", "m-b")), previousPairNames: ["x.a", "x.b"]);
+        HostLlmProfiles.Mirror(document, set, upsert.Set, upsert.Renames);
+
+        Assert.Equal(["x-b", "x-c"], document.Llm.Profiles.Ids.Order(StringComparer.Ordinal));
+        Assert.Equal("m-a", document.Llm.Profiles.Get("x-b")?.Model);
+        Assert.Equal("m-b", document.Llm.Profiles.Get("x-c")?.Model);
+        Assert.Equal(["x-b", "x-c"], document.Decision.RouteLadder);
+    }
+
+    private static ModelProfile Legacy(string name) => new()
+    {
+        Name = name,
+        Provider = "deepseek",
+        BaseUrl = "https://api.deepseek.com",
+        Model = "deepseek-v4-flash",
+        KeyEnvName = "DEEPSEEK_API_KEY",
+    };
+
+    /// <summary>What an older Studio wrote for a setting named « Auto », before <c>auto</c> was reserved.</summary>
+    private const string LegacyAutoFile = """
+        { "Llm": { "Model": "qwen3", "Profiles": { "auto": { "BaseUrl": "https://api.deepseek.com", "Model": "deepseek-v4-flash", "ApiKeyEnvVar": "DEEPSEEK_API_KEY", "MaxRetries": 2 } } } }
+        """;
+
+    /// <summary>
+    /// The entry an older Studio wrote under <c>auto</c> follows its setting renamed to a free name,
+    /// what Studio does not model with it: the engine refuses to start on <c>Llm:Profiles:auto</c>.
+    /// </summary>
+    [Fact]
+    public void A_legacy_entry_under_auto_follows_its_setting_renamed_to_a_free_name()
+    {
+        var document = AppSettingsDocument.Parse(LegacyAutoFile);
+        var set = ModelProfileSet.Empty.Upsert(Legacy("Auto"));
+        Assert.Equal(HostProfileStatus.AutoName, HostLlmProfiles.Classify(set)["Auto"].Status);
+
+        var renamed = set.Upsert(Legacy("Auto pick"), previousName: "Auto");
+        Assert.True(HostLlmProfiles.Mirror(document, set, renamed, "Auto", "Auto pick"));
+
+        Assert.Equal(["auto-pick"], document.Llm.Profiles.Ids);
+        Assert.Equal(2, document.GetInt32("Llm:Profiles:auto-pick:MaxRetries"));
+    }
+
+    /// <summary>
+    /// Left under its name, the setting is offered to no crew, and its legacy entry goes at the next
+    /// change of the settings; an <c>auto</c> entry no setting answers to was written by hand, and stays.
+    /// </summary>
+    [Fact]
+    public void A_legacy_entry_under_auto_goes_at_the_next_change_and_a_hand_written_one_stays()
+    {
+        var document = AppSettingsDocument.Parse(LegacyAutoFile);
+        var set = ModelProfileSet.Empty.Upsert(Legacy("Auto"));
+
+        HostLlmProfiles.Mirror(document, set, set.Upsert(Legacy("Other")));
+
+        Assert.Equal(["other"], document.Llm.Profiles.Ids);
+
+        var handWritten = AppSettingsDocument.Parse(LegacyAutoFile);
+        var none = ModelProfileSet.Empty.Upsert(Legacy("Z"));
+        HostLlmProfiles.Mirror(handWritten, none, none.Upsert(Legacy("Other")));
+
+        Assert.Contains("auto", handWritten.Llm.Profiles.Ids);
+    }
+
+    /// <summary>
+    /// The call mode a setting pins is written into its entry and, elected, into <c>Llm</c>, as a
+    /// Studio launch lays it: a run outside Studio reads the same one.
+    /// </summary>
+    [Fact]
+    public void The_call_mode_a_setting_pins_is_written_in_its_entry_and_in_llm_when_elected()
+    {
+        var document = AppSettingsDocument.Parse("{}");
+        var profile = Legacy("Stream") with { CallMode = "Stream" };
+        var set = ModelProfileSet.Empty.Upsert(profile);
+
+        HostLlmProfiles.Mirror(document, ModelProfileSet.Empty, set);
+        HostLlmProfiles.ElectDefault(document, profile);
+
+        Assert.Equal("Stream", document.Llm.Profiles.Get("stream")?.CallMode);
+        Assert.Equal("Stream", document.GetString("Llm:CallMode"));
+        Assert.Equal("Stream", profile.HostEnvironment("stream", _ => null)["ORKEON_Llm__Profiles__stream__CallMode"]);
+    }
 }

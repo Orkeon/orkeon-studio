@@ -86,6 +86,28 @@ public sealed class LlmProfilesSectionTests
         Assert.Null(document.GetString("Llm:Model"));
     }
 
+    /// <summary>
+    /// « No model » for the default takes the default provider out, and only it: the capabilities
+    /// declared per model and the replay are host-wide settings the profiles read too.
+    /// </summary>
+    [Fact]
+    public void Choosing_no_model_keeps_the_model_capabilities_and_the_replay()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Llm": { "Model": "qwen3", "BaseUrl": "http://localhost:11434",
+                       "ModelCapabilities": { "qwen3": { "Vision": true } }, "Replay": { "Path": "/x" },
+                       "Profiles": { "sub": { "Model": "qwen3:32b" } } } }
+            """);
+
+        document.Llm.Remove();
+
+        Assert.False(document.Llm.Exists);
+        Assert.Null(document.GetString("Llm:Model"));
+        Assert.True(document.GetBoolean("Llm:ModelCapabilities:qwen3:Vision"));
+        Assert.Equal("/x", document.GetString("Llm:Replay:Path"));
+        Assert.Equal("qwen3:32b", document.GetString("Llm:Profiles:sub:Model"));
+    }
+
     [Fact]
     public void A_section_holding_profiles_alone_raises_the_win01_warning()
     {

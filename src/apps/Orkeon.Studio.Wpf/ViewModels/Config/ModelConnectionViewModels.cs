@@ -53,7 +53,7 @@ public sealed class ConnectionModelRowViewModel : ObservableObject
     private readonly ModelProfileEditorViewModel _editor;
     private string _alias;
     private string? _model;
-    private ThinkingChoice _thinking;
+    private bool? _thinking;
     private string _effortText;
     private string _maxTokensText;
     private string _timeoutText;
@@ -67,7 +67,7 @@ public sealed class ConnectionModelRowViewModel : ObservableObject
         UsedByTeams = usedBy;
         _alias = model.Alias ?? "";
         _model = model.Model;
-        _thinking = editor.ModelThinkingChoices.FirstOrDefault(choice => choice.Value == model.ThinkingEnabled) ?? editor.ModelThinkingChoices[0];
+        _thinking = model.ThinkingEnabled;
         _effortText = model.ThinkingEffort ?? "";
         _maxTokensText = Text(model.MaxTokens);
         _timeoutText = Text(model.TimeoutSeconds);
@@ -115,13 +115,17 @@ public sealed class ConnectionModelRowViewModel : ObservableObject
         }
     }
 
-    /// <summary>The thinking switch the model pins: the connection's, on, or off.</summary>
+    /// <summary>
+    /// The thinking switch the model pins: the connection's, on, or off. Held by its value and found
+    /// again among the editor's choices, so a language switch, which rebuilds them under new labels,
+    /// keeps the row on its choice.
+    /// </summary>
     public ThinkingChoice Thinking
     {
-        get => _thinking;
+        get => _editor.ModelThinkingChoices.FirstOrDefault(choice => choice.Value == _thinking) ?? _editor.ModelThinkingChoices[0];
         set
         {
-            if (value is not null && SetProperty(ref _thinking, value))
+            if (value is not null && SetProperty(ref _thinking, value.Value))
                 _editor.OnModelRowChanged(this);
         }
     }
@@ -220,7 +224,7 @@ public sealed class ConnectionModelRowViewModel : ObservableObject
     {
         Alias = _alias.Trim().Length == 0 ? null : _alias.Trim(),
         Model = _model,
-        ThinkingEnabled = _thinking.Value,
+        ThinkingEnabled = _thinking,
         ThinkingEffort = _effortText.Trim().Length == 0 ? null : _effortText.Trim(),
         MaxTokens = ModelProfileEditorViewModel.PositiveInt(_maxTokensText),
         TimeoutSeconds = ModelProfileEditorViewModel.PositiveInt(_timeoutText),
@@ -231,7 +235,7 @@ public sealed class ConnectionModelRowViewModel : ObservableObject
     internal void Refresh() =>
         OnPropertiesChanged(
             nameof(PairName), nameof(AliasMissing), nameof(AliasTaken), nameof(NameCollision), nameof(HostProfile),
-            nameof(HostIdText), nameof(IsHostIdIssue), nameof(IsValid), nameof(MaxTokensHint), nameof(UsedByText));
+            nameof(HostIdText), nameof(IsHostIdIssue), nameof(IsValid), nameof(MaxTokensHint), nameof(UsedByText), nameof(Thinking));
 
     internal void RaiseCanRemove() => RemoveCommand.RaiseCanExecuteChanged();
 

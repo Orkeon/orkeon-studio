@@ -248,7 +248,11 @@ public static class HostLlmProfiles
     /// <c>Orkeon:Rag:LlmProfile</c>, <c>Orkeon:Compaction:Profile</c> and the rungs of
     /// <c>Orkeon:Decision:Route:Ladder</c>. When its profile goes, the first falls back to the default
     /// and the second to the agent's own model (the host refuses to start on a profile it does not
-    /// define); a rung stays, a ladder being refused under two rungs. Entries written by hand are
+    /// define); a rung stays, a ladder being refused under two rungs — unless a setting renamed in the
+    /// same change takes the id, the removals coming before the moves. Renames apply at once, each
+    /// resolved from the names before the change: a swap swaps, a chain moves each entry once. An
+    /// entry an older Studio wrote under an id the engine reserves since (<c>auto</c>) follows its
+    /// setting to a free name, or goes (<see cref="LegacyReserved"/>). Entries written by hand are
     /// never touched.
     /// </summary>
     /// <param name="document">The settings file being edited.</param>
@@ -291,33 +295,73 @@ public static class HostLlmProfiles
         var section = document.Llm.Profiles;
         var changed = false;
 
+        // Each setting's successor: its new name when renamed — resolved from the names before the
+        // change, so a swap or a chain moves each entry once —, its own name otherwise.
+        var renamedTo = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (from, to) in renames)
+            renamedTo.TryAdd(from, to);
+
+        // What the change does to each entry a setting owned: kept in place, moved under its
+        // successor's id, or removed. The entries an older Studio wrote under a now-reserved id
+        // (LegacyReserved) are moved or removed alone: nothing that names them is followed.
+        var moves = new List<(string Old, string New, bool Legacy)>();
+        var removals = new List<(string Id, bool Legacy)>();
+        var owned = was.Select(pair => (Name: pair.Key, Id: pair.Value, Legacy: false))
+            .Concat(LegacyReserved(document, before).Select(pair => (Name: pair.Key, Id: pair.Value, Legacy: true)));
+        // A name another setting is renamed onto, and that is not renamed itself, lost its setting:
+        // removed, or absorbed by the rename. Its successor is none, whoever bears the name now.
+        var targetNames = new HashSet<string>(renamedTo.Values, StringComparer.Ordinal);
+        string? Successor(string name) =>
+            renamedTo.TryGetValue(name, out var to) ? to : targetNames.Contains(name) ? null : name;
+
+        foreach (var (name, id, legacy) in owned)
+        {
+            if (Successor(name) is not { } successor || !now.TryGetValue(successor, out var newId))
+                removals.Add((id, legacy));
+            else if (!string.Equals(id, newId, StringComparison.OrdinalIgnoreCase))
+                moves.Add((id, newId, legacy));
+        }
+
+        // Removed first, so that a move onto the id of a setting removed in the same change finds the
+        // place free. What named the removed setting is let go before the move points it at the
+        // setting that now answers to the id: the RAG and the compaction fall back, and a rung is
+        // dropped from the ladder, where it would name another setting — twice, which the engine
+        // refuses. A rung whose id nobody takes stays, a ladder being refused under two rungs.
+        var targets = new HashSet<string>(moves.Select(move => move.New), StringComparer.OrdinalIgnoreCase);
+        var offeredNow = new HashSet<string>(now.Values, StringComparer.OrdinalIgnoreCase);
+        foreach (var (id, legacy) in removals)
+        {
+            var taken = targets.Contains(id);
+            // An id another setting still answers to in place keeps its entry, rewritten below.
+            if (!taken && offeredNow.Contains(id))
+                continue;
+
+            changed |= section.Remove(id);
+            if (legacy)
+                continue;
+
+            changed |= MoveProfileReferences(document, id, null);
+            if (taken)
+                changed |= DropRungs(document, id);
+        }
+
         // Moved in two passes through ids no profile bears, so that two settings swapping their names
         // never write one entry over the other.
-        var moves = renames
-            .Select(rename => (Old: was.GetValueOrDefault(rename.From), New: now.GetValueOrDefault(rename.To)))
-            .Where(move => move.Old is not null && move.New is not null && !string.Equals(move.Old, move.New, StringComparison.OrdinalIgnoreCase))
-            .Select(move => (Old: move.Old!, New: move.New!))
-            .ToList();
-        var staged = new List<(string Staging, string New)>();
-        foreach (var (oldId, newId) in moves)
+        var staged = new List<(string Staging, string New, bool Legacy)>();
+        foreach (var (oldId, newId, legacy) in moves)
         {
             var staging = moves.Count == 1 ? newId : $"{oldId}-moving-{staged.Count}";
             changed |= section.Rename(oldId, staging);
-            changed |= MoveProfileReferences(document, oldId, staging);
-            staged.Add((staging, newId));
+            if (!legacy)
+                changed |= MoveProfileReferences(document, oldId, staging);
+            staged.Add((staging, newId, legacy));
         }
 
-        foreach (var (staging, newId) in staged.Where(move => !string.Equals(move.Staging, move.New, StringComparison.Ordinal)))
+        foreach (var (staging, newId, legacy) in staged.Where(move => !string.Equals(move.Staging, move.New, StringComparison.Ordinal)))
         {
             changed |= section.Rename(staging, newId);
-            changed |= MoveProfileReferences(document, staging, newId);
-        }
-
-        var offeredNow = new HashSet<string>(now.Values, StringComparer.OrdinalIgnoreCase);
-        foreach (var id in was.Values.Where(id => !offeredNow.Contains(id)))
-        {
-            changed |= section.Remove(id);
-            changed |= MoveProfileReferences(document, id, null);
+            if (!legacy)
+                changed |= MoveProfileReferences(document, staging, newId);
         }
 
         foreach (var (name, id) in now)
@@ -410,6 +454,49 @@ public static class HostLlmProfiles
         }
 
         return environment;
+    }
+
+    /// <summary>
+    /// The entries an older Studio wrote under an id the engine reserves since — a setting named
+    /// « Auto » became <c>Llm:Profiles:auto</c> before <c>auto</c> named the automatic pick —, by the
+    /// name of the setting that wrote them: each setting of <paramref name="set"/> that names a
+    /// provider and answers to such an id, when the file holds an entry under it. The engine refuses
+    /// to start on that entry, and no setting is offered under the id any more, so the entry would
+    /// otherwise stay for good. It is Studio's — its setting is still in the set —: the next change
+    /// of the settings moves it with a rename of its setting to a free name, and removes it
+    /// otherwise. An entry under the id that no setting answers to was written by hand, and stays.
+    /// </summary>
+    private static Dictionary<string, string> LegacyReserved(AppSettingsDocument document, ModelProfileSet set)
+    {
+        var legacy = new Dictionary<string, string>(StringComparer.Ordinal);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, check) in Classify(set))
+        {
+            if (check.Status == HostProfileStatus.AutoName
+                && set.Find(name) is { DescribesProvider: true }
+                && document.Llm.Profiles.Find(check.Id!) is not null
+                && ids.Add(check.Id!))
+            {
+                legacy[name] = check.Id!;
+            }
+        }
+
+        return legacy;
+    }
+
+    /// <summary>
+    /// Drops from <c>Orkeon:Decision:Route:Ladder</c> each rung naming <paramref name="id"/>: the
+    /// profile it named is gone, and another setting answers to the id now.
+    /// </summary>
+    private static bool DropRungs(AppSettingsDocument document, string id)
+    {
+        var ladder = document.Decision.RouteLadder;
+        bool Names(string? rung) => string.Equals(rung?.Trim(), id, StringComparison.OrdinalIgnoreCase);
+        if (!ladder.Any(Names))
+            return false;
+
+        document.Decision.RouteLadder = [.. ladder.Where(rung => !Names(rung))];
+        return true;
     }
 
     /// <summary>

@@ -57,6 +57,26 @@ public sealed class ModelProfileStoreFiniteTemperatureTests : IDisposable
         Assert.Equal(read, loaded.Set.Profiles.Single(profile => profile.Name == "Kimi").Temperature);
     }
 
+    /// <summary>
+    /// A connection's own infinite temperature that every model overrides shows on no pair, yet the
+    /// file could never be written again: it is refused at the load, naming the connection.
+    /// </summary>
+    [Fact]
+    public async Task A_connection_temperature_every_model_overrides_still_refuses_the_file()
+    {
+        await File.WriteAllTextAsync(_path, """
+            { "Profiles": [ { "Name": "ds", "Provider": "deepseek", "BaseUrl": "https://api.deepseek.com", "Temperature": 1e400,
+                "Models": [ { "Alias": "flash", "Model": "deepseek-v4-flash", "Temperature": 0.2 }, { "Alias": "pro", "Model": "deepseek-v4-pro", "Temperature": 0.5 } ] } ] }
+            """, TestContext.Current.CancellationToken);
+
+        var loaded = await new ModelProfileFileStore(_path).LoadAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(loaded.Failed);
+        Assert.Empty(loaded.Set.Profiles);
+        Assert.Contains("connection 'ds'", loaded.Error, StringComparison.Ordinal);
+        Assert.Contains("Temperature is not a finite number", loaded.Error, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_null_in_the_list_is_no_setting_and_does_not_throw()
     {
