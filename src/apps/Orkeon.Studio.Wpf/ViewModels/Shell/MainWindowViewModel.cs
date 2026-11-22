@@ -565,11 +565,25 @@ public sealed class MainWindowViewModel : ObservableObject
                 CreateTeam.RefreshDecisionNotice();
             }
         };
-        // The bridge's token stored: the launch a missing token blocked is judged again at once.
-        Config.ToolBridge.TokenStored += (_, _) =>
+        // The bridge's token stored: the launch a missing token blocked is judged again at once. So is
+        // an edit of either bridge section: while no settings file is saved, the machine's bridge the
+        // launchers warn of is the document being edited, read live like the decision models'.
+        void RefreshBridge()
         {
             Launch.RefreshDecision();
             Run.Trial.RefreshDecision();
+        }
+
+        Config.ToolBridge.TokenStored += (_, _) => RefreshBridge();
+        Config.ToolBridge.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ToolBridgeSectionViewModel.ProblemsText) or nameof(ToolBridgeSectionViewModel.Token) or "" or null)
+                RefreshBridge();
+        };
+        Config.BridgeServer.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(BridgeServerSectionViewModel.ProblemsText) or "" or null)
+                RefreshBridge();
         };
         Settings.Profiles.PropertyChanged += (_, e) =>
         {

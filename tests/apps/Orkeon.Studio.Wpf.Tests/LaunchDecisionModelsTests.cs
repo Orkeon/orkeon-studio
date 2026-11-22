@@ -778,6 +778,47 @@ public sealed class LaunchDecisionModelsTests : IDisposable
     }
 
     /// <summary>
+    /// While no settings file is saved, the machine's bridge the launcher warns of is the document of
+    /// the settings screen: an expert's edit of the bridge's section is judged at once, not at the next save.
+    /// </summary>
+    [Fact]
+    public void An_edit_of_the_bridge_before_any_save_reaches_the_launchers_warning()
+    {
+        var team = NewTeam();
+        var window = new MainWindowViewModel(
+            new StudioServices
+            {
+                SettingsStore = new FakeAppSettingsStore(),
+                Directories = new FakeDirectoryProbe(team),
+                TargetProbe = new FakeTargetProbe().WithDirectory(team).WithDirectory(Path.Combine(team, "agents")),
+                Picker = new FakePathPicker(),
+                ProcessRunner = new OrkeonProcessRunner(
+                    new FakeProcessLauncher(), new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
+                HistoryStore = new FakeLaunchHistoryStore(),
+                KeyStore = new FakeApiKeyStore(),
+                EnvironmentNames = () => [],
+            },
+            globalPathOverride: Path.Combine(_root, "global", "appsettings.json"),
+            forgeWorkspace: Path.Combine(_root, "forge"),
+            teamsRoot: Path.Combine(_root, "teams"));
+        // The expert's edits wait for an explicit save; the novice's save at once.
+        window.Mode.SetExpertCommand.Execute(null);
+        var tab = window.Launch;
+        tab.Target.Select(team);
+        Assert.False(tab.HasBridgeWarning);
+
+        window.Config.ToolBridge.Address = "https://desk.example:7410/";
+        window.Config.ToolBridge.AllowText = "*";
+
+        Assert.True(tab.HasBridgeWarning);
+        Assert.Contains("ORKEON_BRIDGE_TOKEN, which is not set", tab.BridgeWarning, StringComparison.Ordinal);
+
+        window.Config.ToolBridge.AllowText = "";
+
+        Assert.DoesNotContain("ORKEON_BRIDGE_TOKEN", tab.BridgeWarning, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A fail-closed decision profile with a guard stage blocks every call once the circuit is off:
     /// the launch is stopped with its own words, whatever turns the circuit off; a check loads the crew.
     /// </summary>
