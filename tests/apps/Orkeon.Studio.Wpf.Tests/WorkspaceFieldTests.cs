@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 using Orkeon.Constants.Llm;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Presets;
@@ -60,6 +62,37 @@ public sealed class WorkspaceFieldTests
         Assert.Equal("wrkspc_01", profiles.Set.Find("Claude")!.WorkspaceId);
         Assert.Equal("wrkspc_01", document.Llm.Profiles.Get("claude")?.WorkspaceId);
     }
+
+    [Fact]
+    public void The_field_is_not_under_an_element_gated_by_the_expert_mode()
+    {
+        // #25: the field once sat in the URL panel, collapsed outside Expert unless the card was the
+        // catch-all, so a novice on an Anthropic card never saw it. MainWindow.xaml is read as XML.
+        var root = XDocument.Load(MainWindowXaml()).Root!;
+        var field = Assert.Single(root.Descendants(), e => e.Name.LocalName == "TextBox"
+            && ((string?)e.Attribute("Text") ?? "").StartsWith("{Binding WorkspaceId", StringComparison.Ordinal));
+
+        var gated = field.Ancestors().Where(GatedByExpert).Select(e => e.Name.LocalName).ToList();
+
+        Assert.True(gated.Count == 0, "The workspace field sits under an element gated by IsExpert: " + string.Join(", ", gated));
+        Assert.Contains(field.Ancestors(), e => ((string?)e.Attribute("Visibility") ?? "").Contains("ShowWorkspace", StringComparison.Ordinal));
+    }
+
+    private static bool GatedByExpert(XElement element)
+    {
+        if (((string?)element.Attribute("Visibility") ?? "").Contains("IsExpert", StringComparison.Ordinal))
+            return true;
+        var ownStyle = element.Elements().Where(child => child.Name.LocalName == element.Name.LocalName + ".Style");
+        return ownStyle.SelectMany(style => style.Descendants())
+            .Where(trigger => trigger.Name.LocalName == "DataTrigger"
+                           && ((string?)trigger.Attribute("Binding") ?? "").Contains("IsExpert", StringComparison.Ordinal))
+            .Any(trigger => trigger.Descendants().Any(setter => setter.Name.LocalName == "Setter"
+                                                              && (string?)setter.Attribute("Property") == "Visibility"));
+    }
+
+    private static string MainWindowXaml([CallerFilePath] string thisFile = "") =>
+        Path.GetFullPath(Path.Combine(Path.GetDirectoryName(thisFile)!,
+            "..", "..", "..", "src", "apps", "Orkeon.Studio.Wpf", "Views", "MainWindow.xaml"));
 
     private static (ModelProfilesViewModel Profiles, FakeLlmEndpointProbe Probe, AppSettingsDocument Document) Screen()
     {

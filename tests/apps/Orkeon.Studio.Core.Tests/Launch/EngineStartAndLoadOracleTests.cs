@@ -142,7 +142,7 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         // number or a list (#464).
         static bool OfTheWalk(string problem) =>
             problem.Contains(" is not a setting: ", StringComparison.Ordinal)
-            || problem.Contains(" is not a finite number: NaN, an infinity and a number past the type's range are refused.", StringComparison.Ordinal)
+            || problem.Contains(" is not a finite number: write a number within the type's range.", StringComparison.Ordinal)
             || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
             || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
             || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
@@ -345,55 +345,76 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             Assert.Contains(studio[0], refusal, StringComparison.Ordinal);
     }
 
-    /// <summary>The <c>Provider</c> of <c>Llm</c> and of a profile, as a hand-written file may hold it (Orkeon #457).</summary>
-    public static TheoryData<string, string> ProviderSettings
+    /// <summary>
+    /// The <c>Provider</c> of <c>Llm</c> and of a profile, as a hand-written file may hold it (Orkeon #457),
+    /// and whether the host starts on it.
+    /// </summary>
+    public static TheoryData<string, string, bool> ProviderSettings
     {
         get
         {
-            var data = new TheoryData<string, string>();
-            (string What, string Keys)[] cases =
+            var data = new TheoryData<string, string, bool>();
+            const string Local = ", \"BaseUrl\": \"http://localhost:11434/v1\"";
+            (string What, string Keys, bool Starts)[] cases =
             [
-                ("a vendor of the catalogue", "\"Provider\": \"openai\", \"Model\": \"gpt-4o\""),
-                ("a vendor in another letter case, with blanks", "\"Provider\": \" Anthropic \", \"Model\": \"claude-x\""),
-                ("a vendor's alias", "\"Provider\": \"azure\", \"Model\": \"gpt-4o\""),
-                ("the custom endpoint", "\"Provider\": \"custom\", \"Model\": \"m\""),
-                ("the Docker Model Runner", "\"Provider\": \"docker-model-runner\", \"Model\": \"m\""),
-                ("a name no module answers", "\"Provider\": \"acme\", \"Model\": \"m\""),
-                ("a name no module answers, with a responses file", "\"Provider\": \"acme\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
-                ("a vendor with a responses file", "\"Provider\": \"openai\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
-                ("the mock without its file", "\"Provider\": \"mock\", \"Model\": \"m\""),
-                ("the mock in capitals with its file", "\"Provider\": \"MOCK\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\""),
-                ("a blank provider", "\"Provider\": \" \", \"Model\": \"m\", \"BaseUrl\": \"http://localhost:11434/v1\""),
+                ("a vendor of the catalogue", "\"Provider\": \"openai\", \"Model\": \"gpt-4o\"", false),
+                ("a vendor in another letter case, with blanks", "\"Provider\": \" Anthropic \", \"Model\": \"claude-x\"", false),
+                ("a vendor's alias", "\"Provider\": \"azure\", \"Model\": \"gpt-4o\"", false),
+                ("the custom endpoint", "\"Provider\": \"custom\", \"Model\": \"m\"", false),
+                ("the Docker Model Runner", "\"Provider\": \"docker-model-runner\", \"Model\": \"m\"", false),
+                ("a name no module answers", "\"Provider\": \"acme\", \"Model\": \"m\"", false),
+                ("a name no module answers, with a responses file", "\"Provider\": \"acme\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),
+                ("a vendor with a responses file", "\"Provider\": \"openai\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),
+                ("the mock without its file", "\"Provider\": \"mock\", \"Model\": \"m\"", false),
+                ("the mock with a blank file", "\"Provider\": \"mock\", \"Model\": \"m\", \"Responses\": \" \"", false),
+                ("the mock in capitals with its file", "\"Provider\": \"MOCK\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", true),
+                // Matched untrimmed first, the padded mock is read as a module's key: its file is refused.
+                ("the mock padded with blanks, with its file", "\"Provider\": \" mock \", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),
+                ("the mock padded with blanks, without a file", "\"Provider\": \" mock \", \"Model\": \"m\"" + Local, true),
+                ("a blank provider", "\"Provider\": \" \", \"Model\": \"m\"" + Local, true),
+                ("a responses file without a provider", "\"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"" + Local, true),
+                // The JSON configuration gives a switch as True, a number as written.
+                ("a provider written as a switch", "\"Provider\": true, \"Model\": \"m\"", false),
+                ("a provider written as a number", "\"Provider\": 1.50, \"Model\": \"m\"", false),
             ];
-            foreach (var (what, keys) in cases)
+            foreach (var (what, keys, starts) in cases)
             {
-                data.Add("under Llm: " + what, $$"""{ "Llm": { {{keys}} } }""");
+                data.Add("under Llm: " + what, $$"""{ "Llm": { {{keys}} } }""", starts);
                 data.Add("under a profile: " + what, $$"""
                     { "Llm": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "Profiles": { "p": { {{keys}} } } } }
-                    """);
+                    """, starts);
             }
 
+            // The configuration binds a section whatever the letter case of its keys: Studio judges it all the same.
+            data.Add("under llm, in lowercase: a vendor of the catalogue", """{ "llm": { "Provider": "openai", "Model": "gpt-4o" } }""", false);
+            data.Add("under a profile of LLM, in capitals: the mock without its file", """
+                { "LLM": { "Provider": "mock", "Model": "mock", "Responses": "/crew/responses.jsonl", "PROFILES": { "p": { "provider": "mock", "Model": "m" } } } }
+                """, false);
+            data.Add("under llm, in lowercase: the mock with its file", """{ "llm": { "provider": "mock", "model": "mock", "responses": "/crew/responses.jsonl" } }""", true);
             return data;
         }
     }
 
     /// <summary>
     /// The host refuses to start on a <c>Provider</c> that is neither <c>mock</c> with its file nor the
-    /// key of a provider module, and Studio's settings check says so in its sentence (Orkeon #457).
+    /// key of a provider module, and Studio's settings check says so in its sentence (Orkeon #457), as a
+    /// launch of the file does (<see cref="LlmProviderRules.Check(AppSettingsDocument)"/>).
     /// </summary>
     [Theory]
     [MemberData(nameof(ProviderSettings))]
-    public void The_host_refuses_a_provider_as_Studio_says(string what, string settings)
+    public void The_host_refuses_a_provider_as_Studio_says(string what, string settings, bool starts)
     {
         var (host, refusal) = Start(settings);
         host?.Dispose();
-        var studio = new AppSettingsValidator().Validate(AppSettingsDocument.Parse(settings))
+        var document = AppSettingsDocument.Parse(settings);
+        var studio = new AppSettingsValidator().Validate(document)
             .Where(message => message.Code == ValidationCodes.LlmProvider)
             .ToList();
 
         Assert.True((refusal is null) == (studio.Count == 0), $"{what}: the engine says «{refusal}», Studio says «{string.Join(" | ", studio.Select(message => message.Text))}».");
-        // Only the mock with its file and a blank provider start: the rows are not vacuous.
-        Assert.Equal(!(what.EndsWith("the mock in capitals with its file", StringComparison.Ordinal) || what.EndsWith("a blank provider", StringComparison.Ordinal)), refusal is not null);
+        // The rows are not vacuous: each starts or not as it says.
+        Assert.Equal(starts, refusal is null);
+        Assert.Equal(studio.Select(message => message.Text), LlmProviderRules.Check(document).Select(message => message.Text));
         if (refusal is not null)
         {
             Assert.Contains(studio[0].Text, refusal, StringComparison.Ordinal);
@@ -483,6 +504,49 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
 
     private const string Strong = ", \"Profiles\": { \"strong\": { \"Provider\": \"mock\", \"Model\": \"mock\", \"Responses\": \"/crew/responses.jsonl\" } }";
 
+    /// <summary>A Liquid provider deduced from its section, whose key is in neither the file nor its variable: the engine turns the circuit off (<c>no-key</c>, Orkeon #451).</summary>
+    private const string KeylessProvider = "\"Liquid\": {}";
+
+    /// <summary>What <c>Orkeon:Liquid:ApiKeyEnvVar</c> holds in each row of <see cref="The_host_names_the_missing_key_as_Studio_does"/>; null leaves it unset.</summary>
+    public static TheoryData<string, string?> ApiKeyVariables => new()
+    {
+        { "unset", null },
+        { "the provider's own default, written out", " LIQUID_API_KEY " },
+        { "a custom variable", "STUDIO_ORACLE_UNSET_KEY" },
+        { "a key pasted in place of the variable", "sk_live_0123456789abcdef" },
+    };
+
+    /// <summary>
+    /// The remedy of a missing key, the packed engine's (<c>DecisionApiKey.Remedy</c>, read in the
+    /// <c>Detail</c> of the circuit the host turns off, Orkeon #451/#467) against Studio's
+    /// (<see cref="DecisionStatus.MissingKeyVariable"/> or <see cref="DecisionStatus.MissingKeyVariableSetting"/>):
+    /// the variable is named when it is the provider's own, unset or written out; any other value is
+    /// named by its setting alone, and never repeated.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(ApiKeyVariables))]
+    public void The_host_names_the_missing_key_as_Studio_does(string what, string? written)
+    {
+        var liquid = written is null ? "\"Liquid\": {}" : $"\"Liquid\": {{ \"ApiKeyEnvVar\": \"{written}\" }}";
+        var settings = Settings(liquid);
+        var (host, refusal) = Start(settings);
+        Assert.True(host is not null, $"{what}: the host refused to start: {refusal}");
+        Orkeon.Application.Crew.Execution.DecisionCircuit circuit;
+        using (host)
+            circuit = Orkeon.Application.Crew.Execution.DecisionCircuit.OfHost(host.Services);
+
+        var status = AppSettingsDocument.Parse(settings).Decision.Resolve(MachineEnvironment);
+        Assert.True(status.KeyMissing, what);
+        Assert.False(circuit.Enabled, what);
+        Assert.Equal(Orkeon.Application.Crew.Execution.DecisionCircuitCause.NoKey, circuit.Cause);
+        var remedy = status.MissingKeyVariable is { } variable
+            ? $"set the environment variable {variable}, or Orkeon:Liquid:ApiKey"
+            : $"set the variable named by {status.MissingKeyVariableSetting}, or Orkeon:Liquid:ApiKey";
+        Assert.Equal("no Liquid API key: " + remedy, circuit.Detail);
+        if (written is not null && written.Trim() != "LIQUID_API_KEY")
+            Assert.DoesNotContain(written, circuit.Detail, StringComparison.Ordinal);
+    }
+
     public static TheoryData<string, string, string, string> Loads => new()
     {
         {
@@ -561,10 +625,46 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             Crew("agents:\n  analyst: { role: Analyst, goal: read }\n  idle: { role: Idle, goal: wait, llm: { profile: auto } }", OneTask)
         },
         {
-            "a fail-closed guarded profile, no provider", DecisionProfile.Replace("\"Target\"", "\"FailClosed\": true, \"Target\"", StringComparison.Ordinal), "",
+            "a holder of the tool, a provider without its key, strict tools", KeylessProvider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, tools: [system_one_decide] }", OneTask)
+        },
+        {
+            "a holder of the tool, a provider whose variable, named by its setting, is empty, strict tools",
+            "\"Liquid\": { \"ApiKeyEnvVar\": \"STUDIO_ORACLE_UNSET_KEY\" }", "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, tools: [system_one_decide] }", OneTask)
+        },
+        {
+            "a holder of the tool in a crew that states required, a provider without its key", KeylessProvider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, tools: [system_one_decide] }", OneTask, "decision: { mode: required }\n")
+        },
+        {
+            "a crew that states required, a provider with its key", Provider, "",
+            Crew(Agents, OneTask, "decision: { mode: required }\n")
+        },
+        {
+            "a crew that states required, a provider without its key", KeylessProvider, "",
+            Crew(Agents, OneTask, "decision: { mode: required }\n")
+        },
+        {
+            "a relayed decision task in a crew that states optional, a provider without its key", KeylessProvider, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read }\n  judge: { role: Judge, goal: judge }", OneTask + RelayedPick, "decision: { mode: optional }\n")
+        },
+        {
+            "a fail-closed guarded profile, no provider", FailClosedProfile, "",
             Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: guarded } }", OneTask)
         },
+        {
+            "a fail-closed guarded profile, a provider without its key", KeylessProvider + ", " + FailClosedProfile, "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: guarded } }", OneTask)
+        },
+        {
+            "a holder of the tool, a provider without its key, lenient tools", KeylessProvider + ", \"CrewFactory\": { \"StrictTools\": false }", "",
+            Crew("agents:\n  analyst: { role: Analyst, goal: read, tools: [system_one_decide] }", OneTask)
+        },
     };
+
+    private static readonly string FailClosedProfile =
+        DecisionProfile.Replace("\"Target\"", "\"FailClosed\": true, \"Target\"", StringComparison.Ordinal);
 
     /// <summary>
     /// The engine loads the crew exactly when Studio does not block the launch for the load: a tool
@@ -572,7 +672,10 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
     /// offered, a profile to pick or a decision profile under the mode none. A crew that states
     /// <c>required</c> loads, the tool withheld with a warning, and so does a crew on a fail-closed
     /// guarded profile with the circuit off: Studio blocks them for the run the engine then refuses or
-    /// blocks, which is no load.
+    /// blocks, which is no load. Of a crew it loads, the engine refuses the run before its first task
+    /// (<c>DecisionUnavailableException.Refusing</c>, exit code 69) exactly when Studio says it does
+    /// (<see cref="DecisionPreflightFinding.RefusedByMode"/>): a provider without its key turns the
+    /// circuit off as the other causes do (<c>no-key</c>, Orkeon #451).
     /// </summary>
     [Theory]
     [MemberData(nameof(Loads))]
@@ -583,6 +686,9 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         var (host, refusal) = Start(settings);
         Assert.True(host is not null, $"{what}: the host refused to start: {refusal}");
         string? loadRefusal = null;
+        Orkeon.Application.Crew.Execution.DecisionUnavailableException? runRefusal = null;
+        bool? toolWithheld = null;
+        bool? profileBlocks = null;
         using (host)
         {
             var scope = host.Services.CreateAsyncScope();
@@ -592,7 +698,36 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             try
             {
                 var definition = await loader.LoadFromStringAsync(yaml, TestContext.Current.CancellationToken);
-                await factory.CreateFromConfigAsync(definition, TestContext.Current.CancellationToken);
+                var crew = await factory.CreateFromConfigAsync(definition, TestContext.Current.CancellationToken);
+                var circuit = Orkeon.Application.Crew.Execution.DecisionCircuit.Of(scope.ServiceProvider);
+                runRefusal = Orkeon.Application.Crew.Execution.DecisionUnavailableException.Refusing(crew, circuit);
+
+                // The tool, withheld or offered to the agents the crew loaded.
+                if (yaml.Contains("system_one_decide", StringComparison.Ordinal))
+                {
+                    var agents = await scope.ServiceProvider.GetRequiredService<Orkeon.Domain.Agent.IAgentRepository>()
+                        .GetByIdsAsync(crew.Agents, TestContext.Current.CancellationToken);
+                    Assert.NotEmpty(agents);
+                    toolWithheld = !agents.Any(agent => agent.Tools.Any(tool => tool.Name == "system_one_decide"));
+                }
+
+                // A call through the guarded profile: blocked by the profile built with the circuit off. With the
+                // circuit on its guard would ask the provider, which no row reaches: it does not block for want of it.
+                if (yaml.Contains("profile: guarded", StringComparison.Ordinal))
+                {
+                    if (circuit.Enabled)
+                    {
+                        profileBlocks = false;
+                    }
+                    else
+                    {
+                        var profile = scope.ServiceProvider.GetRequiredService<Orkeon.Application.Interfaces.Ports.ILlmProfileRegistry>().Resolve("guarded");
+                        var response = await profile.Provider.ChatAsync(
+                            [Orkeon.Domain.SharedKernel.ValueObjects.LlmMessage.User("hello")],
+                            cancellationToken: TestContext.Current.CancellationToken);
+                        profileBlocks = response.ErrorType == Orkeon.Infrastructure.LLMs.Decision.DecisionLlmProvider.BlockedErrorType;
+                    }
+                }
             }
             catch (Exception ex) when (ex is InvalidOperationException or Orkeon.Domain.Exceptions.DomainException)
             {
@@ -613,5 +748,31 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         Assert.True(
             (loadRefusal is not null) == blocksForTheLoad,
             $"{what}: the engine says «{loadRefusal ?? "loads"}», Studio says «{finding?.Kind.ToString() ?? "nothing"}» (blocks: {finding?.BlocksLaunch}).");
+        if (loadRefusal is null)
+        {
+            Assert.True(
+                (runRefusal is not null) == finding is { RefusedByMode: true, BlocksLaunch: true },
+                $"{what}: the engine's run says «{runRefusal?.Message ?? "runs"}», Studio says «{finding?.Kind.ToString() ?? "nothing"}» (blocks: {finding?.BlocksLaunch}).");
+        }
+
+        // The tool withheld, and every call through a fail-closed guarded profile blocked, exactly when Studio
+        // says the run goes without the decision models: whatever turns the circuit off, the missing key included.
+        if (toolWithheld is { } withheld)
+        {
+            Assert.True(
+                withheld == finding is { Kind: DecisionPreflightKind.ToolWithheld or DecisionPreflightKind.RequiredWithoutModel },
+                $"{what}: the engine {(withheld ? "withholds" : "offers")} the tool, Studio says «{finding?.Kind.ToString() ?? "nothing"}».");
+        }
+
+        if (profileBlocks is { } blocks)
+        {
+            Assert.True(
+                blocks == finding is { Kind: DecisionPreflightKind.ProfileBlockedWithoutModel },
+                $"{what}: the engine {(blocks ? "blocks" : "lets through")} a call through the profile, Studio says «{finding?.Kind.ToString() ?? "nothing"}».");
+        }
+
+        // A provider without its key: the circuit the engine resolves is off for it, and Studio says so.
+        if (what.Contains("without its key", StringComparison.Ordinal) || what.Contains("named by its setting, is empty", StringComparison.Ordinal))
+            Assert.True(status.KeyMissing, what);
     }
 }

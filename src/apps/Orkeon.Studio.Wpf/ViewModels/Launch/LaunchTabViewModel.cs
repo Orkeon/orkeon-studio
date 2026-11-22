@@ -483,6 +483,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _settingsDecisionKnown = known && document is not null;
         _settingsDecisionDocument = _settingsDecisionKnown ? document : null;
         RefreshDecisionVerdict();
+        RaiseLlmProviderChanged();
     }
 
     /// <summary>
@@ -797,7 +798,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     private bool CanValidate() =>
         IsBinaryAvailable && !IsRunning && Target.IsResolved && !IsBlockedByUndeclaredFolders && !IsBlockedByUnknownMountIds
         && !IsTargetArchived && !_fileSystemScopeRefusals.Any(refusal => refusal.Kind == FileSystemScopeRefusalKind.Load)
-        && _decisionFinding?.BlocksValidate != true && !IsBlockedByBridge;
+        && _decisionFinding?.BlocksValidate != true && !IsBlockedByBridge && !IsBlockedByLlmProvider;
 
     private async Task<ProcessRunResult?> LaunchAsync(bool validate, CancellationToken cancellationToken)
     {
@@ -827,6 +828,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         if (IsBlockedByBridge)
         {
             StatusMessage = BridgeMessage;
+            return null;
+        }
+
+        if (IsBlockedByLlmProvider)
+        {
+            StatusMessage = LlmProviderMessage;
             return null;
         }
 
@@ -1345,7 +1352,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 return;
 
             _runUsesDefaultLlm = value;
-            // Unticked, the list offers the first setting rather than nothing.
+            // Off, the list offers the first setting rather than nothing.
             if (!value && _runLlmProfile is null && LlmProfiles is [var first, ..])
                 _runLlmProfile = first;
             RaiseRunLlmChanged();
@@ -1403,7 +1410,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public IReadOnlyList<string> LlmProfiles =>
         _modelSettings is null ? [] : [.. _modelSettings().Profiles.Select(profile => profile.Name)];
 
-    /// <summary>Whether this machine has a setting at all: otherwise the box is greyed and « Configure a model » shows.</summary>
+    /// <summary>Whether this machine has a setting at all: otherwise the switch is greyed and « Configure a model » shows.</summary>
     public bool HasLlmProfiles => LlmProfiles.Count > 0;
 
     /// <summary>« Use the default model (X) », X the setting elected; without one, says so.</summary>
@@ -1690,7 +1697,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public string DecisionInfo => HasDecisionInfo ? DescribeDecision(_decisionFinding!) : "";
 
     /// <summary>
-    /// Whether the information alert offers the decision models settings: not when the run's own box is
+    /// Whether the information alert offers the decision models settings: not when the run's own switch is
     /// all that turns them off, which the settings cannot change.
     /// </summary>
     public bool ShowsDecisionSettingsAction =>
@@ -1714,8 +1721,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             ? _settingsDecisionDocument?.Decision.Resolve(_keyStore.Peek)
             : _machineDecisionStatus();
         // What the crew asks once the settings are read: a profile it names may be a decision profile.
-        // First of all: the box is offered only to a crew that asks the models and, hidden, sends no
-        // --no-decision, so the run's switch is read once the box is offered or withdrawn for this crew.
+        // First of all: the switch is offered only to a crew that asks the models and, hidden, sends no
+        // --no-decision, so the run's switch is read once it is offered or withdrawn for this crew.
         var effective = DecisionPreflight.Effective(_decisionUsage, status);
         _usesDecisionModels = effective.Mode != CrewDecisionMode.None || _decisionUsage.Unknown;
         Options.OffersDecisionModels = _usesDecisionModels;
@@ -1774,6 +1781,10 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             DecisionOffReason.RunSwitch => _strings[StudioStringKeys.RunDecisionOffRunSwitch],
             DecisionOffReason.SettingsSwitch when file is not null => _strings.Format(StudioStringKeys.RunDecisionOffSettingsInFile, file),
             DecisionOffReason.SettingsSwitch => _strings[StudioStringKeys.RunDecisionOffSettings],
+            DecisionOffReason.NoKey when finding.Status?.MissingKeyVariableSetting is { } setting
+                => _strings.Format(StudioStringKeys.RunDecisionOffNoKeyNamedBySetting, finding.Status?.Provider?.DisplayName ?? "", setting),
+            DecisionOffReason.NoKey => _strings.Format(
+                StudioStringKeys.RunDecisionOffNoKey, finding.Status?.Provider?.DisplayName ?? "", finding.Status?.MissingKeyVariable ?? ""),
             _ => _strings[StudioStringKeys.RunDecisionOffNoProvider],
         }));
         var provider = finding.Status?.Provider?.DisplayName ?? "";
@@ -1816,7 +1827,11 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             case DecisionPreflightKind.RequiredUnknownSettings:
                 return _strings.Format(StudioStringKeys.RunWarnDecisionRequiredUnknown, DecisionNeeds(finding), reasons).TrimEnd();
             case DecisionPreflightKind.ProviderKeyMissing:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider, finding.Status?.MissingKeyVariable ?? "");
+                // The variable is named when it is the provider's own; another one by its setting, never
+                // the value written there, which may be a key pasted by mistake (as the engine, Orkeon #467).
+                return finding.Status?.MissingKeyVariableSetting is { } setting
+                    ? _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting, provider, setting)
+                    : _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider, finding.Status?.MissingKeyVariable ?? "");
             case DecisionPreflightKind.ToolWithheld:
                 return _strings.Format(StudioStringKeys.RunWarnDecisionToolDropped, Quoted(finding.Usage.ToolHolders), reasons).TrimEnd();
             default:
@@ -2183,8 +2198,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// <c>--allow-external-mounts</c>; a team's own <c>./output</c>, resolved under the team
     /// folder — which is the launch's working directory — needs no such flag, a declared folder
     /// elsewhere on the disk does. So the flag follows the sidecar instead of waiting for the
-    /// user to find an expert checkbox: it goes on when a team folder reaches outside the team
-    /// and off when none does. The checkbox itself stays, for the per-launch mounts.
+    /// user to find an expert switch: it goes on when a team folder reaches outside the team
+    /// and off when none does. The switch itself stays, for the per-launch mounts.
     /// </para>
     /// </summary>
     private bool ReachesOutsideTheTeam()

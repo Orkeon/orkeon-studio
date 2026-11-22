@@ -17,6 +17,25 @@ public sealed class DriveValidationTests
             .Where(message => message.Code.StartsWith("STUDIO-DRIVE-", StringComparison.Ordinal))
             .ToList();
 
+    /// <summary>
+    /// The configuration binds the section whatever the case of its keys: one written in lowercase is
+    /// judged all the same, and a value set through Studio goes into it, not into a twin beside it.
+    /// </summary>
+    [Fact]
+    public void A_section_in_another_letter_case_is_judged_and_written_where_it_stands()
+    {
+        var json = """{ "orkeon": { "tools": { "drive": { "Accounts": { "work": { "Provider": "GoogleDrive", "Rights": "Read", "Auth": { "ClientId": "c" } } } } } } }""";
+
+        var finding = Assert.Single(new AppSettingsValidator().ValidateJson(json), message => message.Code.StartsWith("STUDIO-DRIVE-", StringComparison.Ordinal));
+        Assert.Equal(ValidationCodes.DriveAuth, finding.Code);
+
+        var document = AppSettingsDocument.Parse(json);
+        Assert.Equal(["work"], document.Drive.AccountNames);
+        document.Drive.DefaultAccount = "work";
+        Assert.Equal("work", document.GetString("orkeon:tools:drive:DefaultAccount"));
+        Assert.False(document.ContainsPath("Orkeon"));
+    }
+
     [Fact]
     public void A_usable_account_raises_nothing()
     {

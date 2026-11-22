@@ -43,6 +43,13 @@ public sealed record OrkeonEvent
             ? value.GetString()
             : null;
 
+    /// <summary>
+    /// String property, null when absent, not a string, or blank (empty or white space): a sentence the
+    /// screen appends, which a blank value would leave as a dangling separator.
+    /// </summary>
+    public string? GetNonBlankString(string name) =>
+        GetString(name) is { } text && !string.IsNullOrWhiteSpace(text) ? text : null;
+
     /// <summary>Boolean property, null when absent.</summary>
     public bool? GetBool(string name) =>
         Root.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False

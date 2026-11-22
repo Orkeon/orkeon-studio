@@ -291,7 +291,8 @@ public sealed class EmailSection
     }
 
     /// <summary>The section's object, or null when the file holds none.</summary>
-    private JsonObject? Section => _document.GetNode(SectionPath) as JsonObject;
+    /// <remarks>The key is found whatever its letter case (<c>orkeon:tools:email</c>), as the configuration binds it.</remarks>
+    private JsonObject? Section => _document.GetNode(_document.PathAsWritten(SectionPath)) as JsonObject;
 
     /// <summary>The accounts dictionary as the file holds it, whatever the case of its key; null when there is none.</summary>
     internal JsonObject? AccountsNode => Node(Section, Keys.Accounts) as JsonObject;
@@ -305,7 +306,7 @@ public sealed class EmailSection
             return section;
 
         section = [];
-        _document.SetNode(SectionPath, section);
+        _document.SetNode(_document.PathAsWritten(SectionPath), section);
         return section;
     }
 

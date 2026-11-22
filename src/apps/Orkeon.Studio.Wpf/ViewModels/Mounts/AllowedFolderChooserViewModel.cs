@@ -112,7 +112,7 @@ public sealed class AllowedFolderRowViewModel : ObservableObject
                 return;
 
             // One mount point takes one folder: when the modal was opened to bind a named
-            // virtual path, ticking a second row would silently overwrite the first.
+            // virtual path, turning a second row on would silently overwrite the first.
             if (value && _owner.TargetVirtualPath is not null)
                 _owner.KeepOnly(this);
 
@@ -122,7 +122,7 @@ public sealed class AllowedFolderRowViewModel : ObservableObject
 
     internal void CheckSilently() => _isChecked = IsSelectable;
 
-    /// <summary>Clears the tick without re-entering the owner — used to enforce single choice.</summary>
+    /// <summary>Turns the row off without re-entering the owner — used to enforce single choice.</summary>
     internal void UncheckSilently()
     {
         if (!_isChecked)
@@ -262,7 +262,7 @@ public sealed class AllowedFolderChooserViewModel : ObservableObject
         _onAdd = onAdd;
         TargetVirtualPath = targetVirtualPath;
         OnPropertiesChanged(nameof(TargetVirtualPath), nameof(IsBindingOneMount), nameof(Title));
-        // A fresh open starts on a clean selection: Rebuild carries the ticks over, which is
+        // A fresh open starts on a clean selection: Rebuild carries the rows turned on over, which is
         // what a declaration made mid-selection needs and what a reopen must not inherit.
         Rows.Clear();
         Rebuild();
@@ -309,7 +309,7 @@ public sealed class AllowedFolderChooserViewModel : ObservableObject
         OnPropertiesChanged(nameof(TargetVirtualPath), nameof(IsBindingOneMount), nameof(Title));
     }
 
-    /// <summary>Rebuilds the rows from the settings, keeping what is already ticked.</summary>
+    /// <summary>Rebuilds the rows from the settings, keeping the rows already on.</summary>
     private void Rebuild()
     {
         var checkedBefore = Rows

@@ -274,21 +274,26 @@ public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverabl
 
     /// <summary>
     /// The off circuit's own sentence beside <see cref="Cause"/>, in English as the engine writes it
-    /// (<c>detail</c>, Orkeon #467); null when the cause has none, or the engine predates it.
+    /// (<c>detail</c>, Orkeon #467); null when the cause has none, the engine writes it blank, or predates it.
     /// </summary>
     public string? Detail { get; init; }
 
     /// <summary>
     /// The error as Studio shows it, in the engine's words: <c>CODE: message</c>, followed by
-    /// <see cref="Detail"/> when the engine gave one (the message's closing full stop gives way to it).
+    /// <see cref="Detail"/> when the engine gave one the message does not already say (the message's
+    /// closing full stop gives way to it). The engine's <c>FORGE-DECISION-UNAVAILABLE</c> message ends
+    /// its off reason with the detail (<c>... and the decision circuit is off: no Liquid API key: ...</c>):
+    /// said once, never twice.
     /// </summary>
     public string Headline
     {
         get
         {
             var head = Message.Length > 0 ? $"{Code}: {Message}" : Code;
-            return Detail is { Length: > 0 } detail
-                ? $"{head.TrimEnd().TrimEnd('.')}: {detail}"
+            return Detail is { } detail
+                && !string.IsNullOrWhiteSpace(detail)
+                && !Message.Contains(detail.Trim(), StringComparison.Ordinal)
+                ? $"{head.TrimEnd().TrimEnd('.')}: {detail.Trim()}"
                 : head;
         }
     }
@@ -676,7 +681,7 @@ public sealed class ForgeSessionModel
                 CrewDecision = ForgeCrewDecisions.Normalize(orkeonEvent.GetString("crewDecision"));
                 ForgeCircuit = orkeonEvent.GetString("forgeCircuit");
                 ForgeCircuitCause = orkeonEvent.GetString("forgeCircuitCause");
-                ForgeCircuitDetail = orkeonEvent.GetString("forgeCircuitDetail");
+                ForgeCircuitDetail = orkeonEvent.GetNonBlankString("forgeCircuitDetail");
                 SystemOneAnswers = 0;
                 EngineVersion = orkeonEvent.GetString("engine");
                 FinishedStatus = null;
@@ -849,7 +854,7 @@ public sealed class ForgeSessionModel
                 {
                     Terminal = orkeonEvent.GetBool("terminal"),
                     Cause = orkeonEvent.GetString("cause"),
-                    Detail = orkeonEvent.GetString("detail"),
+                    Detail = orkeonEvent.GetNonBlankString("detail"),
                 };
                 // An error the process goes no further after (terminal, Orkeon #453) is said last before
                 // session.finished: the trial it interrupts is over, and the bench that failed on the

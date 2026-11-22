@@ -66,8 +66,9 @@ public enum ToolRequirement
     /// The tool is registered only once a decision provider resolves: named by the setting in
     /// <see cref="ToolInfo.Argument"/>, or deduced from an <c>Orkeon:TypeSafe</c> or
     /// <c>Orkeon:Liquid</c> section, else from the <c>TYPESAFE_API_KEY</c> or <c>LIQUID_API_KEY</c>
-    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). TypeSafe and Liquid
-    /// refuse every call without their key. No tab of Studio writes the settings.
+    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). Without the key of
+    /// TypeSafe or Liquid the engine turns the decision circuit off (<c>no-key</c>, Orkeon #451) and
+    /// withholds the tool. No tab of Studio writes the settings.
     /// </summary>
     OnlyWithDecisionProvider,
 

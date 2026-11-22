@@ -167,6 +167,25 @@ public sealed partial class EmailValidationTests : IDisposable
         Assert.Equal(Assert.Throws<EmailToolException>(() => Registry(email).Resolve(null)).Message, message.Text);
     }
 
+    /// <summary>
+    /// The configuration binds the section whatever the case of its keys: one written in lowercase is
+    /// judged all the same, and a value set through Studio goes into it, not into a twin beside it.
+    /// </summary>
+    [Fact]
+    public void A_section_in_another_letter_case_is_judged_and_written_where_it_stands()
+    {
+        var json = $$"""{ "orkeon": { "tools": { "email": { "DefaultAccount": "perso", "Accounts": { "gmail": {{GmailAccount}} } } } } }""";
+
+        var message = Assert.Single(Mail(new AppSettingsValidator().ValidateJson(json)));
+        Assert.Equal(ValidationCodes.EmailDefault, message.Code);
+        Assert.Equal($"{EmailSection.SectionPath}:DefaultAccount", message.Path);
+
+        var document = AppSettingsDocument.Parse(json);
+        document.Email.DefaultAccount = "gmail";
+        Assert.Equal("gmail", document.GetString("orkeon:tools:email:DefaultAccount"));
+        Assert.False(document.ContainsPath("Orkeon"));
+    }
+
     [Fact]
     public void A_default_account_is_found_whatever_its_case_and_a_blank_one_names_nothing_to_find()
     {

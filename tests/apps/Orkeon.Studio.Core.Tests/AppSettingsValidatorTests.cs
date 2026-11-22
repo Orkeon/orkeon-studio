@@ -295,6 +295,20 @@ public sealed class AppSettingsValidatorTests
         Assert.DoesNotContain(messages, m => m.Severity == ValidationSeverity.Error);
     }
 
+    /// <summary>
+    /// A section that names its <c>Provider</c> is built by that name, its address unread: the run
+    /// says nothing of an address without a path (RunnerHost.WarnSilentAddresses), and neither does Studio.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Llm": { "Provider": "mock", "Responses": "/r.jsonl", "Model": "m", "BaseUrl": "http://localhost:8080" } }""")]
+    [InlineData("""{ "Llm": { "Model": "m", "Profiles": { "p": { "Provider": "MOCK", "Responses": "/r.jsonl", "Model": "m", "BaseUrl": "http://localhost:8080" } } } }""")]
+    public void ShouldNotReportASilentAddress_WhenTheSectionNamesItsProvider(string json)
+    {
+        var messages = Validator().Validate(AppSettingsDocument.Parse(json), ValidationScope.Saving);
+
+        Assert.DoesNotContain(messages, m => m.Code == ValidationCodes.LlmEndpoint);
+    }
+
     [Fact]
     public void An_unknown_rag_profile_is_an_error_listing_the_known_ones()
     {
@@ -553,8 +567,12 @@ public sealed class AppSettingsValidatorTests
 
         var messages = Validator().Validate(document);
 
-        Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error
+        var refusal = Assert.Single(messages, m => m.Severity == ValidationSeverity.Error
             && m.Path == "Llm:ModelCapabilities:openrouter/google/gemini-3.7:Thinking");
+        // The engine's sentence (Orkeon #465): the key and the names, never the value.
+        Assert.Equal(
+            "Llm:ModelCapabilities:openrouter/google/gemini-3.7:Thinking is not a thinking support: write one of None, EffortOnly, Toggle, Budget.",
+            refusal.Text);
     }
 
     [Theory]

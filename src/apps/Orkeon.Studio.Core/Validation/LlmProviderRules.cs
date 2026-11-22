@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Orkeon.Constants.Configuration;
 using Orkeon.Constants.Llm;
 using Orkeon.Studio.Core.Configuration;
 
@@ -37,11 +38,54 @@ public static class LlmProviderRules
         || key is LlmProviderKeys.Custom or LlmProviderKeys.DockerModelRunner or LlmProviderKeys.AzureShort;
 
     /// <summary>
+    /// The refusals of every <c>Provider</c> of <paramref name="document"/>: the <c>Llm</c> section's,
+    /// then each <c>Llm:Profiles</c> entry's, the keys found whatever their letter case, as the
+    /// configuration reads them. What a launch is told of the settings file the run reads.
+    /// </summary>
+    public static IReadOnlyList<ValidationMessage> Check(AppSettingsDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        if (SectionOf(document) is not { } section)
+            return [];
+
+        var messages = new List<ValidationMessage>(Check(section, LlmSection.SectionPath));
+        if (Node(section, ConfigurationKeys.LlmProfiles) is JsonObject profiles)
+        {
+            foreach (var (id, entry) in profiles)
+            {
+                if (entry is JsonObject profile)
+                    messages.AddRange(Check(profile, $"{LlmProfilesSection.SectionPath}:{id}"));
+            }
+        }
+
+        return messages;
+    }
+
+    /// <summary>
+    /// The <c>Llm</c> section of <paramref name="document"/>, however the file spells its key (<c>llm</c>,
+    /// <c>LLM</c>): the configuration binds it whatever the case. Null when the file holds none.
+    /// </summary>
+    public static JsonObject? SectionOf(AppSettingsDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return document.GetNode(document.PathAsWritten(LlmSection.SectionPath)) as JsonObject;
+    }
+
+    /// <summary>
     /// The refusals of <paramref name="section"/>'s <c>Provider</c>, at <paramref name="sectionPath"/>
     /// (<c>Llm</c>, or <c>Llm:Profiles:&lt;name&gt;</c>); none when it names no provider.
     /// </summary>
-    public static IReadOnlyList<ValidationMessage> Check(JsonObject section, string sectionPath)
+    public static IReadOnlyList<ValidationMessage> Check(JsonObject section, string sectionPath) =>
+        Check(section, sectionPath, CliModuleKeys);
+
+    /// <summary>
+    /// <see cref="Check(JsonObject, string)"/> on a host that registers the provider modules of
+    /// <paramref name="modules"/>, by key.
+    /// </summary>
+    public static IReadOnlyList<ValidationMessage> Check(JsonObject section, string sectionPath, IReadOnlyList<string> modules)
     {
+        ArgumentNullException.ThrowIfNull(section);
+        ArgumentNullException.ThrowIfNull(modules);
         if (Value(section, ProviderKey) is not { } provider || string.IsNullOrWhiteSpace(provider))
             return [];
 
@@ -61,7 +105,7 @@ public static class LlmProviderRules
         if (IsVendorKey(key))
         {
             return [Refused($"{sectionPath}:{ProviderKey}",
-                $"{sectionPath}:{ProviderKey}: '{named}' is a vendor of the catalogue, which Provider never names. "
+                $"{sectionPath}:{ProviderKey} names a vendor of the catalogue, which Provider never names. "
                 + "Leave Provider out and the provider follows from BaseUrl, the model's name and the key; "
                 + "Provider takes 'mock' or the key of a provider module.")];
         }
@@ -69,25 +113,29 @@ public static class LlmProviderRules
         if (!string.IsNullOrWhiteSpace(responses))
         {
             return [Refused($"{sectionPath}:{ResponsesKey}",
-                $"{sectionPath}:{ResponsesKey}: only the mock provider reads a responses file; Provider is '{named}'.")];
+                $"{sectionPath}:{ResponsesKey}: only the mock provider reads a responses file, and {sectionPath}:{ProviderKey} names another.")];
         }
 
-        if (key == LlmProviderKeys.Mock || CliModuleKeys.Contains(key, StringComparer.OrdinalIgnoreCase))
+        if (key == LlmProviderKeys.Mock || modules.Contains(key, StringComparer.OrdinalIgnoreCase))
             return [];
 
-        var known = CliModuleKeys.Count == 0 ? "this host registers none" : "registered: " + string.Join(", ", CliModuleKeys.Order(StringComparer.Ordinal));
+        var known = modules.Count == 0 ? "this host registers none" : "registered: " + string.Join(", ", modules.Order(StringComparer.Ordinal));
         return [Refused($"{sectionPath}:{ProviderKey}",
-            $"{sectionPath}:{ProviderKey}: '{named}' names no provider of this host. "
-            + $"Provider takes '{LlmProviderKeys.Mock}' or the key of a provider module ({known}); "
+            $"{sectionPath}:{ProviderKey} names no provider of this host: "
+            + $"write {LlmProviderKeys.Mock} or the key of a provider module ({known}); "
             + "leave it out and the provider follows from BaseUrl, the model's name and the key.")];
     }
 
     private static ValidationMessage Refused(string path, string text) =>
         ValidationMessage.Error(ValidationCodes.LlmProvider, text, path);
 
-    /// <summary>The single value at <paramref name="key"/>, the key compared without case as the configuration binds it.</summary>
+    /// <summary>
+    /// The single value at <paramref name="key"/>, the key compared without case as the configuration
+    /// binds it, in the text the JSON configuration gives the engine (a switch reads <c>True</c>).
+    /// </summary>
     private static string? Value(JsonObject section, string key) =>
-        section.FirstOrDefault(property => string.Equals(property.Key, key, StringComparison.OrdinalIgnoreCase)).Value is JsonValue value
-            ? AppSettingsDocument.ReadString(value)
-            : null;
+        Node(section, key) is JsonValue value ? EmailAccountRules.ConfigurationText(value) : null;
+
+    private static JsonNode? Node(JsonObject section, string key) =>
+        section.FirstOrDefault(property => string.Equals(property.Key, key, StringComparison.OrdinalIgnoreCase)).Value;
 }

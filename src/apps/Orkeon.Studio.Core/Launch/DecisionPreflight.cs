@@ -48,8 +48,8 @@ public enum DecisionPreflightKind
     /// <summary>
     /// An agent or a task names a decision profile of the settings that is fail-closed and carries a
     /// guard stage (<see cref="DecisionStatus.BlockingProfiles"/>), and this run goes without the
-    /// decision models: the guard cannot judge, and the engine blocks every call made through the
-    /// profile. The launch is blocked when the settings are those of the file the run reads, warned of
+    /// decision models (any off cause, the provider's missing key included): the guard cannot judge, and
+    /// the engine blocks every call made through the profile. The launch is blocked when the settings are those of the file the run reads, warned of
     /// otherwise; a check loads the crew and says nothing of it.
     /// </summary>
     ProfileBlockedWithoutModel,
@@ -62,13 +62,17 @@ public enum DecisionPreflightKind
 
     /// <summary>
     /// The provider the run uses needs a key and none is in place, neither in the file nor in its
-    /// variable: each request it gets fails, and with it each decision task that asks it. A warning.
+    /// variable: the engine turns the circuit off (<see cref="DecisionOffReason.NoKey"/>) and sends the
+    /// provider no request, and the crew runs without the decision models (its relays, its fallbacks,
+    /// its <c>otherwise</c> tasks). A warning, for a crew that can run without them: one that needs them
+    /// is refused, a fail-closed guarded profile blocks and a lenient runner withholds the tool, as for
+    /// any other off cause.
     /// </summary>
     ProviderKeyMissing,
 
     /// <summary>
-    /// A holder of <c>system_one_decide</c> runs with the circuit off while the runner resolves tools
-    /// leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine withholds the tool with a
+    /// A holder of <c>system_one_decide</c> runs with the circuit off (any off cause, the provider's
+    /// missing key included) while the runner resolves tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine withholds the tool with a
     /// warning and runs the crew without it. A warning.
     /// </summary>
     ToolWithheld,
@@ -106,6 +110,16 @@ public enum DecisionOffReason
     /// <summary>The settings switch the circuit off (<c>Orkeon:Decision:Enabled</c> is false).</summary>
     SettingsSwitch,
 
+    /// <summary>
+    /// The provider needs a key and none is in place (<see cref="DecisionStatus.KeyMissing"/>): the engine
+    /// turns the circuit off (cause <c>no-key</c>, Orkeon #451). Said of a crew the engine refuses for it
+    /// (<see cref="DecisionPreflightKind.RequiredWithoutModel"/>, <see cref="DecisionPreflightKind.RequiredUnknownSettings"/>),
+    /// of a fail-closed guarded profile it blocks (<see cref="DecisionPreflightKind.ProfileBlockedWithoutModel"/>)
+    /// and of the tool a lenient runner withholds (<see cref="DecisionPreflightKind.ToolWithheld"/>); any
+    /// other crew is warned of the key (<see cref="DecisionPreflightKind.ProviderKeyMissing"/>).
+    /// </summary>
+    NoKey,
+
     /// <summary>The run switches the circuit off (<c>--no-decision</c>).</summary>
     RunSwitch,
 }
@@ -118,7 +132,8 @@ public enum DecisionOffReason
 /// <param name="SwitchedOffForRun">Whether the run itself switches the circuit off (<c>--no-decision</c>).</param>
 /// <param name="Reasons">
 /// Why the run goes without the decision models, in the order they are best fixed (no provider, the
-/// settings switch, the run's switch); empty when the finding is not about the circuit being off.
+/// settings switch, the provider's missing key, the run's switch); empty when the finding is not about
+/// the circuit being off.
 /// </param>
 public sealed record DecisionPreflightFinding(
     DecisionPreflightKind Kind,
@@ -313,18 +328,29 @@ public static class DecisionPreflight
 
         var noProvider = status is { Provider: null };
         var settingsOff = status is { Enabled: false };
+        // The engine turns the circuit the settings give off when the provider's key is missing (no-key,
+        // Orkeon #451): a crew that needs the decision models is refused, a fail-closed guarded profile
+        // blocks and a lenient runner withholds the tool, as for any other off cause. Any other crew keeps
+        // the warning of the key below.
+        var keyOff = status is { CircuitOn: true, KeyMissing: true };
         // Off for sure: the run's own switch, or the circuit of the very file the run reads.
         var offForSure = noDecision || (known && status is { CircuitOn: false });
+        var offForSureForNeeds = offForSure || (known && keyOff);
         // Off as far as is known: the machine's file says so, or nothing was read.
         var offAsFarAsKnown = noDecision || status is { CircuitOn: false };
+        var offWithKey = offAsFarAsKnown || keyOff;
         var mayBeOff = offAsFarAsKnown || status is null;
-        List<DecisionOffReason> Reasons(bool fromSettings)
+        // The missing key is said where the engine's circuit is off for it; a crew that runs either way is
+        // warned of the key instead (ProviderKeyMissing), unless another cause turns the circuit off.
+        List<DecisionOffReason> Reasons(bool fromSettings, bool withKey = true)
         {
             var reasons = new List<DecisionOffReason>();
             if (fromSettings && noProvider)
                 reasons.Add(DecisionOffReason.NoProvider);
             if (fromSettings && settingsOff)
                 reasons.Add(DecisionOffReason.SettingsSwitch);
+            if (fromSettings && keyOff && withKey)
+                reasons.Add(DecisionOffReason.NoKey);
             if (noDecision)
                 reasons.Add(DecisionOffReason.RunSwitch);
             return reasons;
@@ -338,25 +364,26 @@ public static class DecisionPreflight
             ? usage.Mode == CrewDecisionMode.Required
             : (holders && strictTools) || unanswered;
 
-        if (needsModel && offForSure)
+        if (needsModel && offForSureForNeeds)
             Say(DecisionPreflightKind.RequiredWithoutModel, Reasons(fromSettings: known));
-        else if (needsModel && !known && mayBeOff)
+        else if (needsModel && !known && (mayBeOff || keyOff))
             Say(DecisionPreflightKind.RequiredUnknownSettings, Reasons(fromSettings: status is not null));
 
-        // A fail-closed profile with a guard stage: its guard cannot judge, every call through it is blocked.
-        if (offAsFarAsKnown && BlockedHolders(usage, status).Count > 0)
+        // A fail-closed profile with a guard stage: its guard cannot judge, every call through it is
+        // blocked, whatever turns the circuit off (the missing key included).
+        if (offWithKey && BlockedHolders(usage, status).Count > 0)
             Say(DecisionPreflightKind.ProfileBlockedWithoutModel, Reasons(fromSettings: true));
 
-        if (holders && !strictTools && offAsFarAsKnown)
+        if (holders && !strictTools && offWithKey)
             Say(DecisionPreflightKind.ToolWithheld, Reasons(fromSettings: true));
 
         // A crew that asks nothing of the decision models is told nothing of their provider.
         var asks = usage.Mode != CrewDecisionMode.None;
-        if (asks && status?.MissingKeyVariable is not null && !offAsFarAsKnown)
+        if (asks && status is { KeyMissing: true } && !offAsFarAsKnown)
             Say(DecisionPreflightKind.ProviderKeyMissing);
 
         if (asks && offAsFarAsKnown)
-            Say(DecisionPreflightKind.OptionalWithoutModel, Reasons(fromSettings: true));
+            Say(DecisionPreflightKind.OptionalWithoutModel, Reasons(fromSettings: true, withKey: false));
 
         // A stable sort: the engine's order holds among those that weigh the same.
         return findings.OrderBy(finding => finding.Severity).FirstOrDefault();

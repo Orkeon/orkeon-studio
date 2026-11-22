@@ -326,7 +326,9 @@ public partial class MainWindow : Window
     /// The overlay's own step type, projected from the catalogue the campaign reads too. The
     /// targets of the create screen (<see cref="ViewModels.Shell.GuidedTourCatalog.CreateScreenTargets"/>)
     /// carry a <see cref="TourStep.Prepare"/> that brings that screen up at step 1: the tour
-    /// starts from the "?" button of any screen, and those targets exist nowhere else.
+    /// starts from the "?" button of any screen, and those targets exist nowhere else. The need
+    /// box is drawn on the « Need » tab only: its stop selects that tab, the first one of step 1
+    /// being « Decision models » (#22).
     /// </summary>
     internal IReadOnlyList<TourStep> BuildTourSteps() =>
         [.. ViewModels.Shell.GuidedTourCatalog.Steps.Select(step => new TourStep(
@@ -334,18 +336,20 @@ public partial class MainWindow : Window
             step.TitleKey,
             step.BodyKey,
             step.TargetName is { } target && ViewModels.Shell.GuidedTourCatalog.CreateScreenTargets.Contains(target)
-                ? ShowCreateStep1
+                ? () => ShowCreateStep1(onNeedTab: string.Equals(target, "NeedBox", StringComparison.Ordinal))
                 : null))];
 
     /// <summary>Brings the create screen up at its first step, where the need box and the step rail live.</summary>
-    private void ShowCreateStep1()
+    private void ShowCreateStep1(bool onNeedTab)
     {
         NavCreate.IsChecked = true;
-        if (DataContext is ViewModels.Shell.MainWindowViewModel shell
-            && shell.CreateTeam.GoStep1Command.CanExecute(null))
-        {
+        if (DataContext is not ViewModels.Shell.MainWindowViewModel shell)
+            return;
+
+        if (shell.CreateTeam.GoStep1Command.CanExecute(null))
             shell.CreateTeam.GoStep1Command.Execute(null);
-        }
+        if (onNeedTab)
+            shell.CreateTeam.Step1TabIndex = ViewModels.Teams.CreateTeamViewModel.Step1NeedTab;
     }
 
     private void OnAboutBackdropClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

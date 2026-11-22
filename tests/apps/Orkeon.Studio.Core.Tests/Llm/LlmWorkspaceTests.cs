@@ -67,32 +67,51 @@ public sealed class LlmWorkspaceTests
         Assert.Equal("", (profile with { WorkspaceId = null }).EnvironmentOverrides()["ORKEON_Llm__WorkspaceId"]);
     }
 
-    public static TheoryData<string, bool> Sections => new()
+    /// <summary>
+    /// A section, and the provider the run builds for it when it does not send the workspace (null when
+    /// it sends it, or builds no provider to warn).
+    /// </summary>
+    public static TheoryData<string, string?> Sections => new()
     {
-        // An Anthropic address sends it; a section without an address is not judged.
-        { """ "BaseUrl": "https://api.anthropic.com", "Model": "claude-x" """, false },
-        { """ "Model": "claude-x" """, false },
-        // Every other provider does not send it, and the run warns.
-        { """ "BaseUrl": "https://api.openai.com/v1", "Model": "gpt-x" """, true },
-        { """ "BaseUrl": "http://localhost:11434/v1", "Model": "qwen" """, true },
-        { """ "Provider": "mock", "Responses": "/r.jsonl", "Model": "m" """, true },
+        // An Anthropic address sends it, and so does a section without one whose model reads as Claude.
+        { """ "BaseUrl": "https://api.anthropic.com", "Model": "claude-x" """, null },
+        { """ "Model": "claude-x" """, null },
+        { """ "model": "Claude-Sonnet" """, null },
+        // Every other provider does not send it, and the run warns: by the address...
+        { """ "BaseUrl": "https://api.openai.com/v1", "Model": "gpt-x" """, "openai" },
+        { """ "BaseUrl": "http://localhost:11434/v1", "Model": "qwen" """, "ollama" },
+        // ... the address read before the model ...
+        { """ "BaseUrl": "https://api.deepseek.com", "Model": "claude-x" """, "deepseek" },
+        // ... else the model's name, then the key's prefix, else OpenAI.
+        { """ "Model": "gpt-4o" """, "openai" },
+        { """ "Model": "mistral-large" """, "mistral" },
+        { """ "Model": "m", "ApiKey": "xai-0123456789" """, "grok" },
+        { """ "Model": "m" """, "openai" },
+        // The mock a section names, in any case and padded.
+        { """ "Provider": "mock", "Responses": "/r.jsonl", "Model": "m" """, "mock" },
+        { """ "Provider": " Mock ", "Model": "claude-x" """, "mock" },
+        // A section that names another provider builds none of the catalogue: not judged.
+        { """ "Provider": "acme", "Model": "gpt-4o" """, null },
+        // An address the start refuses builds no provider: its error is said, not the workspace.
+        { """ "BaseUrl": "https://api.deepseek.com/anthropic", "Model": "m" """, null },
     };
 
     [Theory]
     [MemberData(nameof(Sections))]
-    public void A_workspace_the_provider_does_not_send_is_a_warning_on_the_default_and_on_a_profile(string keys, bool warned)
+    public void A_workspace_the_provider_does_not_send_is_a_warning_on_the_default_and_on_a_profile(string keys, string? provider)
     {
         foreach (var (json, path) in new[]
                  {
                      ($$"""{ "Llm": { {{keys}}, "WorkspaceId": "wrkspc_01" } }""", "Llm:WorkspaceId"),
-                     ($$"""{ "Llm": { "Model": "m", "Profiles": { "p": { {{keys}}, "WorkspaceId": "wrkspc_01" } } } }""", "Llm:Profiles:p:WorkspaceId"),
+                     ($$"""{ "llm": { {{keys}}, "workspaceid": "wrkspc_01" } }""", "Llm:WorkspaceId"),
+                     ($$"""{ "Llm": { "Model": "claude-x", "Profiles": { "p": { {{keys}}, "WorkspaceId": "wrkspc_01" } } } }""", "Llm:Profiles:p:WorkspaceId"),
                  })
         {
             var found = new AppSettingsValidator().Validate(AppSettingsDocument.Parse(json))
                 .Where(message => message.Code == ValidationCodes.LlmWorkspace)
                 .ToList();
 
-            if (!warned)
+            if (provider is null)
             {
                 Assert.Empty(found);
                 continue;
@@ -101,8 +120,39 @@ public sealed class LlmWorkspaceTests
             var warning = Assert.Single(found);
             Assert.Equal(ValidationSeverity.Warning, warning.Severity);
             Assert.Equal(path, warning.Path);
+            Assert.Equal(AppSettingsValidator.WorkspaceNotSent(path, provider), warning.Text);
             Assert.EndsWith("Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.", warning.Text, StringComparison.Ordinal);
         }
+    }
+
+    /// <summary>
+    /// The provider a section without an address is built on is the Domain's own reading, model then key
+    /// (<see cref="Orkeon.Domain.SharedKernel.ValueObjects.LlmEndpointReading.Of"/>), the one the run's
+    /// factory takes: Studio warns exactly where it reads another provider than Anthropic.
+    /// </summary>
+    [Theory]
+    [InlineData("claude-3-5-sonnet", null)]
+    [InlineData("gpt-4o", null)]
+    [InlineData("llama3.2", null)]
+    [InlineData("deepseek-chat", null)]
+    [InlineData("m", "hf_0123456789")]
+    [InlineData(null, null)]
+    public void A_section_without_an_address_is_read_by_the_model_then_the_key(string? model, string? apiKey)
+    {
+        var expected = Orkeon.Domain.SharedKernel.ValueObjects.LlmEndpointReading.Of(null, model, apiKey).ProviderKey;
+        var section = new System.Text.Json.Nodes.JsonObject { ["WorkspaceId"] = "wrkspc_01" };
+        if (model is not null)
+            section["Model"] = model;
+        if (apiKey is not null)
+            section["ApiKey"] = apiKey;
+        var document = AppSettingsDocument.Parse(new System.Text.Json.Nodes.JsonObject { ["Llm"] = section }.ToJsonString());
+
+        var found = new AppSettingsValidator().Validate(document).Where(message => message.Code == ValidationCodes.LlmWorkspace).ToList();
+
+        if (expected == Orkeon.Constants.Llm.LlmProviderKeys.Anthropic)
+            Assert.Empty(found);
+        else
+            Assert.Equal(AppSettingsValidator.WorkspaceNotSent("Llm:WorkspaceId", expected), Assert.Single(found).Text);
     }
 
     [Fact]

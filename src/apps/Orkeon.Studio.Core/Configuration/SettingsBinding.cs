@@ -130,12 +130,18 @@ internal static partial class SettingsBinding
             }
             catch (InvalidOperationException ex)
             {
-                var named = ConvertedPath().Match(ex.Message);
-                problems.Add((named.Success ? named.Groups[1].Value : sectionPath, WithoutValue(ex.Message)));
-                if (!named.Success || unconverted >= MaxUnconverted)
+                var keys = configuration.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (!TryReadBinderSentence(ex.Message, keys.Contains, out var path, out _))
+                {
+                    problems.Add((sectionPath, ex.Message));
+                    return options;
+                }
+
+                problems.Add((path, WithoutValue(ex.Message)));
+                if (unconverted >= MaxUnconverted)
                     return options;
 
-                configuration = Without(configuration, named.Groups[1].Value);
+                configuration = Without(configuration, path);
             }
         }
     }
@@ -312,7 +318,7 @@ internal static partial class SettingsBinding
 
         // The value is not echoed (Orkeon #465): written under the wrong key, it may be a secret.
         if (IsNotFinite(value, below.Number))
-            return $"{child.Path} is not a finite number: NaN, an infinity and a number past the type's range are refused.";
+            return $"{child.Path} is not a finite number: write a number within the type's range.";
 
         if (NotAMemberName(child.Path, value, below.Values) is { } notAName)
             return notAName;
@@ -524,20 +530,72 @@ internal static partial class SettingsBinding
     /// configuration value at '…' to type '…'.</c> The value is not of the key's type, so it may be
     /// anything written there by mistake, a key included. Any other message as it is.
     /// </summary>
+    /// <remarks>
+    /// Where the host's pattern reads the sentence, this is the host's own rewording, word for word. The
+    /// host's pattern takes a path without an apostrophe, and a dictionary key may hold one (a decision
+    /// profile named <c>l'equipe</c>): the host then says the binder's sentence as it is, the value
+    /// included. Studio never does: the path is read up to the type the sentence ends with, from the last
+    /// <c>' at '</c>, after which nothing of the value can stand.
+    /// </remarks>
     public static string WithoutValue(string message)
     {
         ArgumentNullException.ThrowIfNull(message);
-        var match = BinderSentence().Match(message);
-        return match.Success
-            ? $"Failed to convert the configuration value at '{match.Groups["path"].Value}' to type '{match.Groups["type"].Value}'."
+        return TryReadBinderSentence(message, isKey: null, out var path, out var type)
+            ? $"Failed to convert the configuration value at '{path}' to type '{type}'."
             : message;
     }
 
-    // The binder's sentence names the key: Failed to convert configuration value '…' at 'Section:Key' to type '…'.
-    [GeneratedRegex(@" at '([^']+)' to type '[^']+'\.$")]
-    private static partial Regex ConvertedPath();
+    /// <summary>
+    /// The path and the type the binder's sentence names: as the host's pattern reads them when it
+    /// does (a path without an apostrophe) and <paramref name="isKey"/>, when given, knows that path;
+    /// else the text after a <c>' at '</c> up to <c>' to type '…'.</c>, the last one whose path
+    /// <paramref name="isKey"/> knows, or the last one. The value ends before the <c>' at '</c> that
+    /// opens the path, so the last one stands at or after it and the path read never holds any of the
+    /// value.
+    /// </summary>
+    private static bool TryReadBinderSentence(string message, Func<string, bool>? isKey, out string path, out string type)
+    {
+        var host = BinderSentence().Match(message);
+        if (host.Success && (isKey is null || isKey(host.Groups["path"].Value)))
+        {
+            (path, type) = (host.Groups["path"].Value, host.Groups["type"].Value);
+            return true;
+        }
 
-    // The value may hold quotes; a path and a type hold none, so the last " at '" ends the value.
+        path = type = string.Empty;
+        var end = BinderSentenceEnd().Match(message);
+        if (!message.StartsWith(BinderSentenceStart, StringComparison.Ordinal) || !end.Success)
+            return false;
+
+        // Every "' at '" after the value's opening quote that ends before the type, overlapping ones included.
+        var openings = new List<int>();
+        for (var at = message.IndexOf(PathOpening, BinderSentenceStart.Length, StringComparison.Ordinal);
+             at >= 0 && at + PathOpening.Length <= end.Index;
+             at = message.IndexOf(PathOpening, at + 1, StringComparison.Ordinal))
+        {
+            openings.Add(at);
+        }
+
+        if (openings.Count == 0)
+            return false;
+
+        var paths = openings.Select(at => message[(at + PathOpening.Length)..end.Index]).Reverse().ToList();
+        path = paths.Find(candidate => isKey?.Invoke(candidate) == true) ?? paths[0];
+        type = end.Groups["type"].Value;
+        return true;
+    }
+
+    // The binder's sentence: Failed to convert configuration value '…' at 'Section:Key' to type '…'.
+    private const string BinderSentenceStart = "Failed to convert configuration value '";
+
+    private const string PathOpening = "' at '";
+
+    // The end of the binder's sentence: a type holds no quote.
+    [GeneratedRegex(@"' to type '(?<type>[^']*)'\.$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex BinderSentenceEnd();
+
+    // The host's pattern (BinderRefusal.Sentence): the value may hold quotes; a path and a type hold none,
+    // so the last " at '" ends the value.
     [GeneratedRegex(
         @"^Failed to convert configuration value '.*' at '(?<path>[^']*)' to type '(?<type>[^']*)'\.$",
         RegexOptions.Singleline | RegexOptions.CultureInvariant,

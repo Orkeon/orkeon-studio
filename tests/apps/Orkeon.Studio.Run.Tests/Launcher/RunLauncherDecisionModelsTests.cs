@@ -7,7 +7,8 @@ namespace Orkeon.Studio.Run.Tests.Launcher;
 /// The decision models (System One) in the terminal launcher, as the engine runs them: a holder of
 /// <c>system_one_decide</c> without a provider, and a decision task with no answer on a run with the
 /// circuit off, are errors; the tool still asks the provider when the circuit is off, and a provider
-/// without its key fails each request (warnings); a crew that runs either way is told its fallbacks; and
+/// without its key turns the circuit off (warnings, or errors for what it then refuses or blocks); a
+/// crew that runs either way is told its fallbacks; and
 /// the run's switch reaches the command line as <c>--no-decision</c>.
 /// </summary>
 public sealed class RunLauncherDecisionModelsTests : IDisposable
@@ -170,17 +171,57 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
     }
 
     [Fact]
-    public void A_provider_without_its_key_is_a_warning()
+    public void A_provider_without_its_key_is_a_warning_for_a_crew_that_can_run_without_it()
     {
-        var launcher = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: true), """{"Orkeon":{"Liquid":{}}}""");
+        var launcher = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: false, decisionTask: true), """{"Orkeon":{"Liquid":{}}}""");
 
         var messages = launcher.Validate();
 
         var warning = Assert.Single(messages, m => m.Code == ValidationCodes.DecisionKeyMissing);
         Assert.Equal(ValidationSeverity.Warning, warning.Severity);
-        Assert.Contains("LIQUID_API_KEY", warning.Text, StringComparison.Ordinal);
+        Assert.Contains("set LIQUID_API_KEY", warning.Text, StringComparison.Ordinal);
         Assert.DoesNotContain(messages, m => m.Code == ValidationCodes.DecisionRequired);
         Assert.False(launcher.HasBlockingErrors());
+    }
+
+    /// <summary>
+    /// The engine turns the circuit off when the provider's key is missing (cause <c>no-key</c>, Orkeon #451):
+    /// a crew that needs the decision models is refused as for the other off causes, and the reason says
+    /// which variable to set.
+    /// </summary>
+    [Fact]
+    public void A_provider_without_its_key_refuses_a_crew_that_needs_the_models()
+    {
+        var launcher = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: true), """{"Orkeon":{"Liquid":{}}}""");
+
+        var error = Assert.Single(launcher.Validate(), m => m.Code == ValidationCodes.DecisionRequired);
+
+        Assert.Equal(ValidationSeverity.Error, error.Severity);
+        Assert.Contains("Liquid has no API key, so the engine turns the decision models off: set LIQUID_API_KEY", error.Text, StringComparison.Ordinal);
+        Assert.True(launcher.HasBlockingErrors());
+        Assert.False(launcher.HasBlockingErrors(dryRun: true));
+    }
+
+    /// <summary>
+    /// What <c>ApiKeyEnvVar</c> holds when it is not the provider's own variable is never repeated: it may
+    /// be a key pasted there by mistake. The setting that holds it is named instead, as the engine does
+    /// (Orkeon #467).
+    /// </summary>
+    [Fact]
+    public void A_key_pasted_in_the_variable_setting_is_never_shown()
+    {
+        const string Pasted = "sk_live_0123456789abcdef";
+        var settings = """{"Orkeon":{"Liquid":{"ApiKeyEnvVar":"sk_live_0123456789abcdef"}}}""";
+
+        var warned = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: false, decisionTask: true), settings).Validate();
+        var warning = Assert.Single(warned, m => m.Code == ValidationCodes.DecisionKeyMissing);
+        Assert.Contains("set the variable named by Orkeon:Liquid:ApiKeyEnvVar (or ApiKey in its section)", warning.Text, StringComparison.Ordinal);
+
+        var refused = Pin(new LauncherFixture().WithInstalledCli(), Crew(decideTool: true), settings).Validate();
+        var error = Assert.Single(refused, m => m.Code == ValidationCodes.DecisionRequired);
+        Assert.Contains("set the variable named by Orkeon:Liquid:ApiKeyEnvVar", error.Text, StringComparison.Ordinal);
+
+        Assert.All(warned.Concat(refused), message => Assert.DoesNotContain(Pasted, message.Text, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -274,7 +315,7 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
     private const string OnAuto = "  analyst: { role: Analyst, goal: read, llm: { profile: auto } }";
     private const string OnGuarded = "  analyst: { role: Analyst, goal: read, llm: { profile: guarded } }";
     private const string None = "decision: { mode: none }\n";
-    private const string TwoRungs = """{"Llm":{"Profiles":{"strong":{"Provider":"mock"}}},"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
+    private const string TwoRungs = """{"Llm":{"Profiles":{"strong":{"Provider":"mock","Responses":"/r.jsonl"}}},"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
     private const string UnknownRung = """{"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
 
     private static string Guarded(bool failClosed, string provider = "") =>
@@ -482,6 +523,41 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         Assert.Contains("the decision stages of the profile of 'analyst' are skipped", info.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A provider without its key turns the circuit off (cause <c>no-key</c>, Orkeon #451) as the other
+    /// causes do: the fail-closed guarded profile blocks every call, and the reason names the key to set.
+    /// </summary>
+    [Fact]
+    public void A_provider_without_its_key_blocks_a_fail_closed_guarded_profile()
+    {
+        var launcher = Pin(new LauncherFixture().WithInstalledCli(), CrewOf(OnGuarded), Guarded(failClosed: true, "\"Liquid\":{},"));
+
+        var error = Only(launcher);
+        Assert.Equal(ValidationCodes.DecisionProfileBlocked, error.Code);
+        Assert.Equal(ValidationSeverity.Error, error.Severity);
+        Assert.Contains("Liquid has no API key, so the engine turns the decision models off: set LIQUID_API_KEY", error.Text, StringComparison.Ordinal);
+        Assert.True(launcher.HasBlockingErrors());
+        Assert.False(launcher.HasBlockingErrors(dryRun: true));
+    }
+
+    /// <summary>A lenient runner withholds the tool of a provider without its key, as for the other off causes.</summary>
+    [Fact]
+    public void A_lenient_runner_withholds_the_tool_of_a_provider_without_its_key()
+    {
+        var launcher = Pin(
+            new LauncherFixture().WithInstalledCli(),
+            Crew(decideTool: true),
+            """{"Orkeon":{"Liquid":{},"CrewFactory":{"StrictTools":false}}}""");
+
+        var messages = launcher.Validate();
+        var warning = Assert.Single(messages, m => m.Code == ValidationCodes.DecisionToolDropped);
+        Assert.Equal(ValidationSeverity.Warning, warning.Severity);
+        Assert.Contains("withholds the tool", warning.Text, StringComparison.Ordinal);
+        Assert.Contains("Liquid has no API key", warning.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain(messages, m => m.Code == ValidationCodes.DecisionKeyMissing);
+        Assert.False(launcher.HasBlockingErrors());
+    }
+
     /// <summary>What System One picks, each said with what becomes of it once the circuit is off.</summary>
     [Fact]
     public void Each_pick_of_System_One_is_told_what_it_falls_back_to()
@@ -543,7 +619,7 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         var defined = Pin(
             new LauncherFixture().WithInstalledCli(),
             Crew(decideTool: false),
-            """{"Llm":{"Profiles":{"cheap":{"Provider":"mock"}}},"Orkeon":{"Compaction":{"Profile":"cheap"}}}""");
+            """{"Llm":{"Profiles":{"cheap":{"Provider":"mock","Responses":"/r.jsonl"}}},"Orkeon":{"Compaction":{"Profile":"cheap"}}}""");
         Assert.DoesNotContain(defined.Validate(), m => m.Code == ValidationCodes.EngineSettingRefused);
     }
 }

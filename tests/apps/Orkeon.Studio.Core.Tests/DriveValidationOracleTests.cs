@@ -124,6 +124,9 @@ public sealed class DriveValidationOracleTests
         ["numbers for the provider and the rights"] = ("""
             { "Accounts": { "work": { "Provider": 1, "Rights": "63", "Auth": { "ClientId": "c" } } } }
             """, [ValidationCodes.DriveValue, ValidationCodes.DriveValue]),
+        ["the rights as a number alone"] = ("""
+            { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "3", "Auth": { "ClientId": "c" } } } }
+            """, [ValidationCodes.DriveValue]),
         ["the rights as a number among names"] = ("""
             { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "Read, 2", "Auth": { "ClientId": "c" } } } }
             """, [ValidationCodes.DriveValue]),
@@ -201,6 +204,34 @@ public sealed class DriveValidationOracleTests
         Assert.DoesNotContain("GOCSPX", finding.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Orkeon #465: a secret written in every typed key of an account whose name holds an apostrophe
+    /// is never said back, by the engine's binder or by Studio, and both say the same of it. The
+    /// binder's own refusal, which the engine's copy of the host's rewording cannot read under such a
+    /// name, is never met: every typed key is judged before the account is bound, and Studio's rules
+    /// say the binder's words for each of them, never its sentence.
+    /// </summary>
+    [Fact]
+    public void A_secret_in_every_typed_key_is_never_said_back()
+    {
+        const string Secret = "sk-ant-api03-studio-oracle' at 'secret";
+        const string Equipe = "l'equipe";
+        var value = System.Text.Json.JsonSerializer.Serialize(Secret);
+        var document = AppSettingsDocument.Parse($$"""
+            { "Orkeon": { "Tools": { "Drive": { "Accounts": { "{{Equipe}}": {
+              "Provider": {{value}}, "Rights": {{value}}, "MaxUploadMegabytes": {{value}}, "TimeoutSeconds": {{value}},
+              "Share": { "AllowPublicLinks": {{value}} } } } } } } }
+            """);
+
+        var findings = DriveAccountRules.Check(document, Equipe);
+        var engine = new DriveAccountRegistry(Options.Create(Bind(document))).Inspect(Equipe).Problems;
+
+        Assert.Equal(DriveOptionsBinder.TypedAccountSettings.Count, findings.Count(finding => finding.Code == ValidationCodes.DriveValue));
+        Assert.All(findings, finding => Assert.DoesNotContain("sk-ant", finding.Text, StringComparison.Ordinal));
+        Assert.All(engine, problem => Assert.DoesNotContain("sk-ant", problem, StringComparison.Ordinal));
+        AssertSameAsTheEngine(document, Equipe, findings);
+    }
+
     [Fact]
     public void Every_finding_on_an_account_is_a_warning_at_a_path_under_the_account()
     {
@@ -251,15 +282,12 @@ public sealed class DriveValidationOracleTests
         // Usable or set aside.
         Assert.Equal(resolution.Account is null, findings.Count > 0);
 
-        // The same number of problems in each family, and the same first sentence.
+        // The same families, and in each the same sentences, every one of them.
         var engine = resolution.Problems.ToLookup(FamilyOf);
         var studio = findings.ToLookup(finding => finding.Code, finding => finding.Text);
         Assert.Equal(engine.Select(family => family.Key).Order(StringComparer.Ordinal), studio.Select(family => family.Key).Order(StringComparer.Ordinal));
         foreach (var family in engine)
-        {
-            Assert.Equal(family.Count(), studio[family.Key].Count());
-            Assert.Equal(family.First(), studio[family.Key].First());
-        }
+            Assert.Equal(family, studio[family.Key]);
     }
 
     /// <summary>The code Studio files an engine sentence under: the drive families of <see cref="ValidationCodes"/>.</summary>

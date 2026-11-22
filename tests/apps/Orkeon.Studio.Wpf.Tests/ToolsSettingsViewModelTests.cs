@@ -85,7 +85,7 @@ public sealed class ToolsSettingsViewModelTests
         Assert.Equal(
             "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, "
                 + "or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; "
-                + "TypeSafe and Liquid refuse every call without their key",
+                + "without the key of TypeSafe or Liquid, the engine turns the decision models off and withholds the tool",
             Assert.Single(decision.Requirements, r => r.Name == "system_one_decide").Text);
 
         var mcp = Assert.Single(tools.Families, f => f.Key == ToolCatalog.McpFamily);

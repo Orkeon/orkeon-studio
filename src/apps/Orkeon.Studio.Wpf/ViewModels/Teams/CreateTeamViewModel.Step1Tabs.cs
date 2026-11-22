@@ -7,7 +7,8 @@ namespace Orkeon.Studio.Wpf.ViewModels.Teams;
 /// <summary>
 /// Step 1 in four tabs (refonte R14, #22): « Decision models », « Need », « The team's folders »,
 /// « Composition instruction ». The decision models come first, but the need opens the step and
-/// « Back » on it leads to them. The flow is the one it was: the folders tab exists
+/// « Back » on it leads to them; a resumed or reopened session whose mode this machine cannot serve
+/// opens on them instead, so their warning is seen (<see cref="OpenStep1WhereAttentionIsNeeded"/>). The flow is the one it was: the folders tab exists
 /// from the start (empty until the composition proposes them), and when the engine proposes
 /// the folders that tab opens and carries the step's wait point (R13). Each tab has a state —
 /// a check, an amber dot, an empty circle — a state subtitle, and its pane's own footer.
@@ -19,7 +20,7 @@ public sealed partial class CreateTeamViewModel
     /// <summary>The « Decision models » tab (#22): System One, first of the step.</summary>
     public const int Step1DecisionTab = 0;
 
-    /// <summary>The « Need » tab, the one the step opens on.</summary>
+    /// <summary>The « Need » tab, the one the step opens on unless a decision needs the user's attention.</summary>
     public const int Step1NeedTab = 1;
 
     /// <summary>The « The team's folders » tab.</summary>
@@ -248,6 +249,20 @@ public sealed partial class CreateTeamViewModel
         OnPropertiesChanged(nameof(WaitPointLabel), nameof(SessionStateLabel), nameof(Step1Hint));
         RefreshStep1Tabs();
         SyncProgress();
+    }
+
+    /// <summary>
+    /// A session just put on screen (a resume, a reopen) opens step 1 on « Decision models » when
+    /// what its mode meets on this machine is to be said (<see cref="CrewDecisionNotice"/>): « the
+    /// wizard still opens on « Need » unless a decision needs the user's attention » (#22). Only the
+    /// opening tab moves: a tab the session's wait point chose (the folders) stays, and nothing
+    /// moves later on, neither a compose nor a change of the decision settings, which leave the
+    /// user where they are with the tab's amber state as the cue.
+    /// </summary>
+    private void OpenStep1WhereAttentionIsNeeded()
+    {
+        if (_step1TabIndex == Step1NeedTab && CrewDecisionNotice.Length > 0)
+            Step1TabIndex = Step1DecisionTab;
     }
 
     /// <summary>Republishes every tab's state, subtitle and footer.</summary>

@@ -110,6 +110,6 @@ public sealed class GuardianAndDecisionProfileProblemsTests
         Assert.Equal(
             ["Orkeon:Guardian:Llm:BlockThreshold", "Orkeon:Decision:Profiles:p:Stages:0:Kind", "Orkeon:Decision:Profiles:p:Stages:0:Risk", "Orkeon:Kev:Modle"],
             errors.Select(error => error.Path));
-        Assert.Equal("Orkeon:Decision:Profiles:p:Stages:0:Kind: 'sentinel' is not a stage; expected route, guard or verify.", errors[1].Text);
+        Assert.Equal("Orkeon:Decision:Profiles:p:Stages:0:Kind is not a stage: write one of route, guard, verify.", errors[1].Text);
     }
 }

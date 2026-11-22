@@ -2,7 +2,7 @@
 
 # Release
 
-Orkeon Studio est publié depuis ce dépôt, avec sa propre version : `VersionPrefix` dans `src/Directory.Build.props`, la source unique de vérité, plus un élément `VersionSuffix` ajouté pour une pré-version seulement. La CLI `orkeon` est publiée par [Orkeon](https://github.com/Orkeon/orkeon) et s'installe à part : Studio ne l'embarque jamais.
+Orkeon Studio est publié depuis ce dépôt, avec sa propre version : `VersionPrefix` dans `src/Directory.Build.props`, la source unique de vérité, plus un élément `VersionSuffix` ajouté là pour une pré-version seulement. La CLI `orkeon` est publiée par [Orkeon](https://github.com/Orkeon/orkeon) et s'installe à part : Studio ne l'embarque jamais.
 
 ## Artefacts
 

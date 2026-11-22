@@ -167,6 +167,7 @@ public sealed class EmailValidationOracleTests
             [ValidationCodes.EmailValue, ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
         ["a provider and rights written as numbers"] = (Account("""{ "Provider": 1, "Address": "me@gmail.com", "Rights": 9, "Incoming": { "Security": " StartTls " }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
+        ["rights written as a number alone"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "3", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["rights written as numbers beside names"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read, 2", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["members separated by commas"] = (Account("""{ "Provider": "Custom, Gmail", "Address": "me@gmail.com", "Rights": "None, read , SEND", "Auth": { "Method": "+0", "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         ["a member left empty between commas"] = (Account("""{ "Provider": "Gmail,", "Address": "me@gmail.com", "Rights": "Read,", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
@@ -250,6 +251,37 @@ public sealed class EmailValidationOracleTests
         AssertSameAsTheEngine(document, Name, findings, document.Email.GetAccount(Name) ?? new EmailAccountDefinition { Name = Name });
     }
 
+    /// <summary>
+    /// Orkeon #465: a secret written in every typed key of an account whose name holds an apostrophe
+    /// is never said back, by the engine's binder or by Studio, and both say the same of it. The
+    /// binder's own refusal, which the engine's copy of the host's rewording cannot read under such a
+    /// name, is never met: every typed key is judged before the account is bound, and Studio's rules
+    /// say the binder's words for each of them, never its sentence.
+    /// </summary>
+    [Fact]
+    public void A_secret_in_every_typed_key_is_never_said_back()
+    {
+        const string Secret = "sk-ant-api03-studio-oracle' at 'secret";
+        const string Equipe = "l'equipe";
+        var value = System.Text.Json.JsonSerializer.Serialize(Secret);
+        var document = AppSettingsDocument.Parse($$"""
+            { "Orkeon": { "Tools": { "Email": { "Accounts": { "{{Equipe}}": {
+              "Provider": {{value}}, "Address": "me@gmail.com", "Rights": {{value}}, "TimeoutSeconds": {{value}}, "SaveSentCopy": {{value}},
+              "Incoming": { "Protocol": {{value}}, "Port": {{value}}, "Security": {{value}} },
+              "Outgoing": { "Protocol": {{value}}, "Port": {{value}}, "Security": {{value}} },
+              "Auth": { "Method": {{value}}, "PasswordEnvVar": "P" },
+              "Send": { "MaxRecipients": {{value}}, "MaxPerHour": {{value}} } } } } } } }
+            """);
+
+        var findings = EmailAccountRules.Check(document, Equipe);
+        var engine = new EmailAccountRegistry(Options.Create(Bind(document))).Inspect(Equipe).Problems;
+
+        Assert.Equal(EmailOptionsBinder.TypedAccountSettings.Count, findings.Count(finding => finding.Code == ValidationCodes.EmailValue));
+        Assert.All(findings, finding => Assert.DoesNotContain("sk-ant", finding.Text, StringComparison.Ordinal));
+        Assert.All(engine, problem => Assert.DoesNotContain("sk-ant", problem, StringComparison.Ordinal));
+        AssertSameAsTheEngine(document, Equipe, findings, document.Email.GetAccount(Equipe) ?? new EmailAccountDefinition { Name = Equipe });
+    }
+
     [Fact]
     public void Every_finding_on_an_account_is_a_warning_at_a_path_under_the_account()
     {
@@ -286,15 +318,12 @@ public sealed class EmailValidationOracleTests
         // Usable or set aside.
         Assert.Equal(resolution.Account is null, findings.Count > 0);
 
-        // The same number of problems in each family, and the same first sentence.
+        // The same families, and in each the same sentences, every one of them.
         var engine = resolution.Problems.ToLookup(FamilyOf);
         var studio = findings.ToLookup(finding => finding.Code, finding => finding.Text);
         Assert.Equal(engine.Select(family => family.Key).Order(StringComparer.Ordinal), studio.Select(family => family.Key).Order(StringComparer.Ordinal));
         foreach (var family in engine)
-        {
-            Assert.Equal(family.Count(), studio[family.Key].Count());
-            Assert.Equal(family.First(), studio[family.Key].First());
-        }
+            Assert.Equal(family, studio[family.Key]);
 
         // What a field left blank is worth. A value the binder could not read leaves the engine an
         // empty account, of which it says nothing more.

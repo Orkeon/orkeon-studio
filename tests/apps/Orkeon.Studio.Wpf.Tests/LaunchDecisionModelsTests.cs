@@ -1,6 +1,7 @@
 using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Launch;
+using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Core.Process;
 using Orkeon.Studio.Core.Teams;
 using Orkeon.Studio.Wpf.Tests.Doubles;
@@ -160,6 +161,34 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.True(tab.RunCommand.CanExecute(null));
     }
 
+    /// <summary>
+    /// A provider without its key turns the circuit off (cause <c>no-key</c>, Orkeon #451) as the other
+    /// causes do: a fail-closed guarded profile stops the launch, and a lenient runner withholds the tool,
+    /// each telling which variable to fill rather than warning of the key alone.
+    /// </summary>
+    [Fact]
+    public void A_provider_without_its_key_blocks_a_fail_closed_profile_and_withholds_the_tool()
+    {
+        var strings = EnglishStudioStrings.Instance;
+        var noKey = strings.Format(StudioStringKeys.RunDecisionOffNoKey, "Liquid", LiquidKey);
+        var guarded = """{"Orkeon":{"Liquid":{},"Decision":{"Profiles":{"guarded":{"Target":"default","FailClosed":true,"Stages":[{"Kind":"guard","Risks":{"x":"y"}}]}}}}}""";
+
+        var blocked = Launcher(TeamOf("llm: { profile: guarded }"), guarded, keys: new FakeApiKeyStore());
+        Assert.True(blocked.IsBlockedByDecision);
+        Assert.StartsWith("'writer' run on a decision profile whose guard stage blocks when it cannot judge (FailClosed)", blocked.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains(noKey, blocked.DecisionMessage, StringComparison.Ordinal);
+        Assert.False(blocked.RunCommand.CanExecute(null));
+        Assert.True(blocked.ValidateCommand.CanExecute(null));
+
+        var lenient = Launcher(
+            NewTeam(decideTool: true, name: "lenient"), """{"Orkeon":{"Liquid":{},"CrewFactory":{"StrictTools":false}}}""", keys: new FakeApiKeyStore());
+        Assert.False(lenient.IsBlockedByDecision);
+        Assert.True(lenient.HasDecisionWarning);
+        Assert.Contains("the engine withholds the tool", lenient.DecisionWarning, StringComparison.Ordinal);
+        Assert.Contains(noKey, lenient.DecisionWarning, StringComparison.Ordinal);
+        Assert.True(lenient.RunCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task Another_team_is_judged_on_its_own_file_never_on_the_file_of_the_team_before_it()
     {
@@ -203,6 +232,45 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.False(tab.IsBlockedByDecision);
         Assert.False(tab.HasDecisionWarning);
         Assert.True(tab.RunCommand.CanExecute(null));
+    }
+
+    /// <summary>
+    /// The engine turns the circuit off when the provider's key is missing (cause <c>no-key</c>, Orkeon #451):
+    /// a team that needs the decision models is stopped, as for the other off causes, and told which
+    /// variable to fill; one that can go without them is warned of the key. A variable other than the
+    /// provider's own is named by its setting, never by what is written there (Orkeon #467).
+    /// </summary>
+    [Fact]
+    public void A_provider_without_its_key_stops_a_team_that_needs_the_models_and_warns_the_others()
+    {
+        var strings = EnglishStudioStrings.Instance;
+        // The Liquid file, its key left out of the store.
+        var holder = Launcher(NewTeam(decideTool: true, name: "holder"), Liquid, keys: new FakeApiKeyStore());
+        Assert.True(holder.IsBlockedByDecision);
+        Assert.False(holder.RunCommand.CanExecute(null));
+        Assert.True(holder.ValidateCommand.CanExecute(null));
+        Assert.Contains(strings.Format(StudioStringKeys.RunDecisionOffNoKey, "Liquid", LiquidKey), holder.DecisionMessage, StringComparison.Ordinal);
+
+        var optional = Launcher(NewTeam(decisionTask: true, name: "optional"), Liquid, keys: new FakeApiKeyStore());
+        Assert.False(optional.IsBlockedByDecision);
+        Assert.True(optional.RunCommand.CanExecute(null));
+        Assert.True(optional.HasDecisionWarning);
+        Assert.Equal(strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, "Liquid", LiquidKey), optional.DecisionWarning);
+
+        const string Pasted = "sk_live_0123456789abcdef";
+        var pasted = "{\"Orkeon\":{\"Liquid\":{\"ApiKeyEnvVar\":\"" + Pasted + "\"}}}";
+        var customHolder = Launcher(NewTeam(decideTool: true, name: "custom-holder"), pasted);
+        Assert.True(customHolder.IsBlockedByDecision);
+        Assert.Contains(
+            strings.Format(StudioStringKeys.RunDecisionOffNoKeyNamedBySetting, "Liquid", "Orkeon:Liquid:ApiKeyEnvVar"),
+            customHolder.DecisionMessage,
+            StringComparison.Ordinal);
+        var customOptional = Launcher(NewTeam(decisionTask: true, name: "custom-optional"), pasted);
+        Assert.Equal(
+            strings.Format(StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting, "Liquid", "Orkeon:Liquid:ApiKeyEnvVar"),
+            customOptional.DecisionWarning);
+        Assert.DoesNotContain(Pasted, customHolder.DecisionMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain(Pasted, customOptional.DecisionWarning, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -554,7 +622,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
     }
 
     private const string StandIn = "Judged on this machine's settings; the settings file the CLI picks may say otherwise. ";
-    private const string TwoRungs = """{"Llm":{"Profiles":{"strong":{"Provider":"mock"}}},"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
+    private const string TwoRungs = """{"Llm":{"Profiles":{"strong":{"Provider":"mock","Responses":"/r.jsonl"}}},"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
     private const string UnknownRung = """{"Orkeon":{"Liquid":{"ApiKey":"in-file"},"Decision":{"Route":{"Ladder":["default","strong"]}}}}""";
     private const string BridgeWithoutToken = """{"Orkeon":{"Tools":{"Bridge":{"Address":"https://desk.example:7410/","Allow":["*"]}}}}""";
 
@@ -830,7 +898,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
     public void Each_pick_of_System_One_is_told_what_it_falls_back_to()
     {
         var team = TeamOf("llm:\n  profile: auto\n  thinking: { effort: auto }\nskills: { auto: true }\ncompaction: { prune: true }");
-        var tab = Launcher(team, """{"Llm":{"Profiles":{"strong":{"Provider":"mock"}}},"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}}}}""");
+        var tab = Launcher(team, """{"Llm":{"Profiles":{"strong":{"Provider":"mock","Responses":"/r.jsonl"}}},"Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}}}}""");
 
         Assert.True(tab.HasDecisionInfo);
         Assert.Contains("\u2022 'writer': no profile is picked, it runs on the default profile.", tab.DecisionInfo, StringComparison.Ordinal);

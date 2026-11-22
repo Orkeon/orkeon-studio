@@ -195,7 +195,7 @@ public sealed class AppSettingsValidator
     private static void ValidateEmail(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var email = document.Email;
-        if (document.GetNode(EmailSection.SectionPath) is JsonObject section)
+        if (document.GetNode(document.PathAsWritten(EmailSection.SectionPath)) is JsonObject section)
             messages.AddRange(EmailTwinKeys.Under(section, EmailSection.SectionPath, email.AccountsNode));
 
         if (EmailAccountRules.ScreeningProblem(document) is { } screening)
@@ -260,7 +260,7 @@ public sealed class AppSettingsValidator
     private static void ValidateDrive(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var drive = document.Drive;
-        if (document.GetNode(DriveSection.SectionPath) is JsonObject section)
+        if (document.GetNode(document.PathAsWritten(DriveSection.SectionPath)) is JsonObject section)
             messages.AddRange(DriveTwinKeys.Under(section, DriveSection.SectionPath, drive.AccountsNode));
 
         if (DriveAccountRules.ScreeningProblem(document) is { } screening)
@@ -450,7 +450,9 @@ public sealed class AppSettingsValidator
                 ValidationCodes.LlmSectionMissing, LlmNotConfiguredWarning, LlmSection.SectionPath));
         }
 
-        if (document.GetNode(LlmSection.SectionPath) is not JsonObject section)
+        // The section as the configuration binds it, whatever the case of its key ("llm"): the run
+        // reads it all the same, and judges every key of it.
+        if (LlmProviderRules.SectionOf(document) is not { } section)
             return;
 
         // STUDIO-55: the default is read as strictly as a profile at start (GAP-40) — its shape is
@@ -541,9 +543,10 @@ public sealed class AppSettingsValidator
                     }
                     else if (field.Text is { } thinking && !LlmModelCapabilityOverrides.TryParseThinking(thinking, out _))
                     {
+                        // The engine's sentence (Orkeon #465): the entry's path and the key, never the value.
                         messages.Add(ValidationMessage.Error(
                             ValidationCodes.InvalidFieldType,
-                            $"'{field.Path}': '{thinking}' is not a thinking support; the values are None, EffortOnly, Toggle and Budget.",
+                            $"{entry.Path}:Thinking is not a thinking support: write one of {string.Join(", ", Enum.GetNames<ThinkingSupport>())}.",
                             field.Path));
                     }
                 }
@@ -593,9 +596,11 @@ public sealed class AppSettingsValidator
 
     /// <summary>
     /// A <c>WorkspaceId</c> (Orkeon #468) on a section whose provider is not Anthropic: the run does not
-    /// send it and warns, in the remedy said here. The provider is the mock a section names, or the one
-    /// its address reads as; a section without an address is not judged, its provider following from
-    /// the model's name and the key.
+    /// send it and warns, in the remedy said here. The provider is read as the run builds it: the mock a
+    /// section names, else the one its address reads as, else - no address - its model's name, then the
+    /// prefix of the key written in the file, else OpenAI (<see cref="LlmEndpointReading.Of"/>). A
+    /// section that names another provider (a module, or a name the start refuses) is not judged, nor
+    /// one whose address the start refuses: no provider is built.
     /// </summary>
     private static void ValidateWorkspace(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
@@ -605,20 +610,34 @@ public sealed class AppSettingsValidator
             return;
         }
 
-        var provider = Child(section, LlmProviderRules.ProviderKey) is JsonValue providerNode
-            && string.Equals(AppSettingsDocument.ReadString(providerNode), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase)
-            ? LlmProviderKeys.Mock
-            : Child(section, "BaseUrl") is JsonValue addressNode
-              && AppSettingsDocument.ReadString(addressNode) is { } address
-              && LlmSection.IsAbsoluteHttpUrl(address)
-                ? StudioEndpointReading.ProviderOf(address)
-                : null;
-        if (provider is null || provider == LlmProviderKeys.None || provider == LlmProviderKeys.Anthropic)
+        var address = ConfigurationText(section, "BaseUrl");
+        if (!string.IsNullOrWhiteSpace(address) && LlmEndpointReading.Of(address, null, null).Notice == LlmEndpointNotice.Refused)
+            return;
+
+        string provider;
+        if (ConfigurationText(section, LlmProviderRules.ProviderKey) is { } named && !string.IsNullOrWhiteSpace(named))
+        {
+            if (!string.Equals(named.Trim(), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase))
+                return;
+            provider = LlmProviderKeys.Mock;
+        }
+        else
+        {
+            var model = ConfigurationText(section, "Model");
+            provider = LlmEndpointReading.Of(
+                address, string.IsNullOrWhiteSpace(model) ? null : model, ConfigurationText(section, "ApiKey")).ProviderKey;
+        }
+
+        if (provider == LlmProviderKeys.Anthropic)
             return;
 
         var path = $"{sectionPath}:{LlmProfilesSection.WorkspaceIdKey}";
         messages.Add(ValidationMessage.Warning(ValidationCodes.LlmWorkspace, WorkspaceNotSent(path, provider), path));
     }
+
+    /// <summary>The single value at <paramref name="relativePath"/>, in the text the JSON configuration gives the run; null for none.</summary>
+    private static string? ConfigurationText(JsonObject section, string relativePath) =>
+        Child(section, relativePath) is JsonValue value ? EmailAccountRules.ConfigurationText(value) : null;
 
     /// <summary>The warning of a workspace the provider does not send, ending on the run's own remedy.</summary>
     public static string WorkspaceNotSent(string path, string provider) =>
@@ -627,7 +646,8 @@ public sealed class AppSettingsValidator
 
     /// <summary>
     /// What the run will make of an absolute <c>BaseUrl</c> of a section of the <c>Llm</c> shape: an
-    /// error for an address it refuses, a notice for one it reads without a word.
+    /// error for an address it refuses, a notice for one it reads without a word - unless the section
+    /// names its <c>Provider</c>, which the run then builds without reading the address.
     /// </summary>
     private static void ValidateEndpointReading(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
@@ -647,8 +667,10 @@ public sealed class AppSettingsValidator
                 OperatorMessages.LlmVendorAnthropicPathRefused(path, address, reading.ProviderKey),
                 path));
         }
-        else if (reading.Notice == LlmEndpointNotice.Silent)
+        else if (reading.Notice == LlmEndpointNotice.Silent
+                 && string.IsNullOrWhiteSpace(ConfigurationText(section, LlmProviderRules.ProviderKey)))
         {
+            // A section that names its provider is not read by its address: the run says nothing.
             messages.Add(ValidationMessage.Information(
                 ValidationCodes.LlmEndpoint, OperatorMessages.LlmBaseUrlSilent(path, address), path));
         }

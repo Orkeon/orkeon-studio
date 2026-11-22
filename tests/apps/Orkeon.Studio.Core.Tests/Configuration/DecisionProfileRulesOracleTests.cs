@@ -78,12 +78,13 @@ public sealed class DecisionProfileRulesOracleTests
         var studio = AppSettingsDocument.Parse(json).Decision.ProfileProblems();
 
         Assert.Equal(engine, studio.Select(problem => problem.Problem).FirstOrDefault());
-        // Each problem names its key: a rule's sentence starts with it, and so does a single value written
-        // where a section is expected; the binder's, which the engine says inside a profile since #454,
-        // names it without the value ("Failed to convert the configuration value at '<key>'", Orkeon #465).
+        // Each problem names its key: a rule's sentence starts with it ("<key>: ..." or, for a closed list
+        // since Orkeon #465, "<key> is not a stage: ..."), and so does a single value written where a
+        // section is expected; the binder's, which the engine says inside a profile since #454, names it
+        // without the value ("Failed to convert the configuration value at '<key>'", Orkeon #465).
         Assert.All(studio, problem => Assert.True(
             (problem.Problem + ":").StartsWith(problem.Path + ":", StringComparison.Ordinal)
-                || problem.Problem.StartsWith(problem.Path + " is a single value where ", StringComparison.Ordinal)
+                || problem.Problem.StartsWith(problem.Path + " is ", StringComparison.Ordinal)
                 || problem.Problem.Contains($" at '{problem.Path}'", StringComparison.Ordinal),
             $"{problem.Path}: {problem.Problem}"));
     }

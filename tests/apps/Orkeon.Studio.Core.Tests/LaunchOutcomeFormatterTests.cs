@@ -87,8 +87,15 @@ public class LaunchOutcomeFormatterTests
         Assert.Equal(
             $"{LaunchOutcomeFormatter.ValidationFailed} — {run}",
             LaunchOutcomeFormatter.Describe(refused, dryRun: true, strings));
-        // The English launcher of the terminal keeps the engine's own sentence, which names the cause.
-        Assert.Contains("the crew requires System One", LaunchOutcomeFormatter.DescribeRun(refused), StringComparison.Ordinal);
+        // The English launcher of the terminal keeps the engine's own sentence, which names the cause,
+        // and never Studio's, whose remedy is a switch of the window (« Use the decision models »): the
+        // terminal's control is the --no-decision box, of the opposite polarity.
+        foreach (var terminal in new[] { LaunchOutcomeFormatter.DescribeRun(refused), LaunchOutcomeFormatter.Describe(refused, dryRun: false), LaunchOutcomeFormatter.Describe(refused, dryRun: true) })
+        {
+            Assert.Contains("the crew requires System One", terminal, StringComparison.Ordinal);
+            Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitDecisionUnavailable], terminal, StringComparison.Ordinal);
+            Assert.DoesNotContain("Use the decision models", terminal, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

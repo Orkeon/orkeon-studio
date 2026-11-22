@@ -316,9 +316,11 @@ public partial class CreateTeamWizardTests
     }
 
     /// <summary>
-    /// A provider in place without its key leaves the circuit on: the engine composes the team and
-    /// starts its trial, whose first request to the models fails (« No liquid API key »). The notice
-    /// says so for a mode that asks the models, and nothing once the key is there.
+    /// A provider in place without its key: the engine turns the circuit off for it (cause <c>no-key</c>,
+    /// Orkeon #451) and refuses the trial of a team that must have the models
+    /// (<c>FORGE-DECISION-UNAVAILABLE</c>). The notice says that refusal for the mode required, the missing
+    /// key for the mode optional, and nothing once the key is there. A variable other than the provider's
+    /// own is named by its setting, never by what is written there (Orkeon #467).
     /// </summary>
     [Fact]
     public void A_provider_without_its_key_is_said_for_a_mode_that_asks_the_models()
@@ -329,14 +331,25 @@ public partial class CreateTeamWizardTests
         var (vm, _, _) = Build(machineDecision: () => keyless);
         Assert.Equal("", vm.CrewDecisionNotice);
 
-        foreach (var mode in new[] { ForgeCrewDecisions.Required, ForgeCrewDecisions.Optional })
-        {
-            vm.SelectedCrewDecision = vm.CrewDecisionChoices.Single(choice => choice.Mode == mode);
-            Assert.Equal(
-                EnglishStudioStrings.Instance.Format(StudioStringKeys.RunWarnDecisionKeyMissing, "Liquid", "LIQUID_API_KEY"),
-                vm.CrewDecisionNotice);
-            Assert.DoesNotContain("will be refused", vm.CrewDecisionNotice, StringComparison.Ordinal);
-        }
+        var strings = EnglishStudioStrings.Instance;
+        vm.SelectedCrewDecision = vm.CrewDecisionChoices.Single(choice => choice.Mode == ForgeCrewDecisions.Optional);
+        Assert.Equal(strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, "Liquid", "LIQUID_API_KEY"), vm.CrewDecisionNotice);
+        Assert.DoesNotContain("will be refused", vm.CrewDecisionNotice, StringComparison.Ordinal);
+
+        vm.SelectedCrewDecision = vm.CrewDecisionChoices.Single(choice => choice.Mode == ForgeCrewDecisions.Required);
+        Assert.Equal(
+            strings.Format(StudioStringKeys.WizardCrewDecisionRequiredOff, strings[StudioStringKeys.RunNoteCauseNoKey]),
+            vm.CrewDecisionNotice);
+        Assert.Contains("will be refused", vm.CrewDecisionNotice, StringComparison.Ordinal);
+
+        const string Pasted = "sk_live_0123456789abcdef";
+        var pasted = AppSettingsDocument.Parse("{\"Orkeon\":{\"Liquid\":{\"ApiKeyEnvVar\":\"" + Pasted + "\"}}}").Decision.Resolve(_ => null);
+        var (custom, _, _) = Build(machineDecision: () => pasted);
+        custom.SelectedCrewDecision = custom.CrewDecisionChoices.Single(choice => choice.Mode == ForgeCrewDecisions.Optional);
+        Assert.Equal(
+            strings.Format(StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting, "Liquid", "Orkeon:Liquid:ApiKeyEnvVar"),
+            custom.CrewDecisionNotice);
+        Assert.DoesNotContain(Pasted, custom.CrewDecisionNotice, StringComparison.Ordinal);
 
         var keyed = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{}}}""").Decision.Resolve(name => name == "LIQUID_API_KEY" ? "secret" : null);
         var (served, _, _) = Build(machineDecision: () => keyed);
@@ -542,29 +555,39 @@ public partial class CreateTeamWizardTests
 
     /// <summary>
     /// A trial refused for the decision models off (<c>FORGE-DECISION-UNAVAILABLE</c>) says the engine's
-    /// own sentence of the circuit (<c>detail</c>, Orkeon #467) after its message, on the status line,
-    /// on the card and in the report: the user reads which variable and which setting to fill.
+    /// own sentence of the circuit (<c>detail</c>, Orkeon #467) once, on the status line, on the card and
+    /// in the report: the user reads which variable and which setting to fill. The engine's message
+    /// already ends its off reason with it (<c>ForgeCommand.UnavailableDecisionMessage</c>), so it is said
+    /// as written; a message that lacks it is followed by it.
     /// </summary>
-    [Fact]
-    public async Task A_decision_unavailable_refusal_says_the_engines_detail()
+    [Theory]
+    [InlineData(
+        "The crew's decision mode is 'required' and the decision circuit is off: " + NoKeyDetail + ": give the decision provider its key before its trial.",
+        "FORGE-DECISION-UNAVAILABLE: The crew's decision mode is 'required' and the decision circuit is off: " + NoKeyDetail + ": give the decision provider its key before its trial.")]
+    [InlineData("The decision models are off.", "FORGE-DECISION-UNAVAILABLE: The decision models are off: " + NoKeyDetail)]
+    public async Task A_decision_unavailable_refusal_says_the_engines_detail_once(string message, string expected)
     {
-        const string Detail = "no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey";
         var (vm, processes, _) = Build();
         processes.OutputToEmit.AddRange(
         [
             Out(OptionalSession),
-            Out("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"The decision models are off.","recoverable":false,"terminal":true,"cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":""" + System.Text.Json.JsonSerializer.Serialize(message) + ""","recoverable":false,"terminal":true,"cause":"no-key","detail":""" + System.Text.Json.JsonSerializer.Serialize(NoKeyDetail) + "}"),
         ]);
         FillStepOne(vm);
 
         await Compose(vm);
 
-        var expected = "FORGE-DECISION-UNAVAILABLE: The decision models are off: " + Detail;
         Assert.Equal(expected, vm.StatusMessage);
         Assert.Equal(WizardFailureKind.ConfigRefused, vm.Failure!.Kind);
         Assert.StartsWith(expected, vm.Failure.Detail, StringComparison.Ordinal);
-        Assert.Contains(expected, vm.Failure.BuildReport(), StringComparison.Ordinal);
+        var report = vm.Failure.BuildReport();
+        Assert.Contains(expected, report, StringComparison.Ordinal);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(vm.StatusMessage, System.Text.RegularExpressions.Regex.Escape(NoKeyDetail)));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(vm.Failure.Detail, System.Text.RegularExpressions.Regex.Escape(NoKeyDetail)));
     }
+
+    /// <summary>The off circuit's sentence of a Liquid provider without its key, as the engine writes it.</summary>
+    private const string NoKeyDetail = "no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey";
 
     [Fact]
     public async Task A_warning_that_follows_an_error_does_not_take_the_status_line_from_it()

@@ -523,21 +523,23 @@ public static class EmailAccountRules
     /// The account binders' sentence on an enumeration <paramref name="text"/> does not bind,
     /// without the value (Orkeon #465: written under the wrong key, it may be a secret): a number,
     /// a comma list where one name is expected, or a name the enumeration does not know.
-    /// <paramref name="typeName"/> is the engine's type name of a <c>[Flags]</c> enumeration.
+    /// <paramref name="typeName"/> is the engine's type name of a <c>[Flags]</c> enumeration, whose
+    /// list starts with <c>None</c>, as the binders list every name the key accepts (Orkeon #465).
     /// </summary>
     internal static string EnumerationProblem(string key, string? typeName, IReadOnlyList<string> names, bool flags, string text)
     {
-        var list = string.Join(", ", names);
         if (flags)
         {
+            var list = string.Join(", ", [nameof(EmailRights.None), .. names]);
             return HoldsNumber(text)
                 ? $"{key} holds a number where {typeName} takes names: write one or more of {list}, separated by commas"
                 : $"{key} is not a list of {list}, separated by commas";
         }
 
-        return HoldsNumber(text) ? $"{key} is a number where a name is expected: write one of {list}"
-            : text.Contains(',', StringComparison.Ordinal) ? $"{key} is a list where a single name is expected: write one of {list}"
-            : $"{key} is not one of {list}";
+        var one = string.Join(", ", names);
+        return HoldsNumber(text) ? $"{key} is a number where a name is expected: write one of {one}"
+            : text.Contains(',', StringComparison.Ordinal) ? $"{key} is a list where a single name is expected: write one of {one}"
+            : $"{key} is not one of {one}";
     }
 
     /// <summary>Whether a comma-separated token of <paramref name="text"/> is a whole number, as the binders test it.</summary>

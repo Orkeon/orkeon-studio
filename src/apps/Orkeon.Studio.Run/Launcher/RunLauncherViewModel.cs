@@ -147,6 +147,13 @@ internal sealed class RunLauncherViewModel
     private (string Path, string Problem)? _settingsCompactionProfile;
 
     /// <summary>
+    /// The <c>Provider</c> refusals of the <c>Llm</c> section and its profiles in the settings file read
+    /// here (<see cref="LlmProviderRules"/>): the host's start refuses each; empty while the CLI resolves
+    /// the file.
+    /// </summary>
+    private IReadOnlyList<ValidationMessage> _settingsLlmProvider = [];
+
+    /// <summary>
     /// The rungs of the ladder and the decision profiles of the settings file read here that the
     /// environment of this launcher lays as LLM profiles (the spawned CLI inherits them): the only
     /// profiles a run gets besides the file's, this launcher laying none itself. A rung is then served;
@@ -222,6 +229,13 @@ internal sealed class RunLauncherViewModel
         messages.AddRange(ValidateDeliverableWriters());
         messages.AddRange(ValidateDecisionModels(dryRun));
         messages.AddRange(ValidateToolBridge());
+        foreach (var refused in _settingsLlmProvider)
+        {
+            // The host refuses the start on it, a check included.
+            messages.Add(ValidationMessage.Error(
+                refused.Code, "The model settings stop the run at start: " + refused.Text, refused.Path));
+        }
+
         if (_settingsCompactionProfile is { } unknown)
         {
             // Nothing lays the profile for this run: the host refuses to start, a check included.
@@ -285,7 +299,7 @@ internal sealed class RunLauncherViewModel
         }
 
         var holders = Quoted(finding.Usage.ToolHolders);
-        var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason)));
+        var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason, finding.Status)));
         var blocks = dryRun ? finding.BlocksValidate : finding.BlocksLaunch;
         return finding.Kind switch
         {
@@ -328,8 +342,9 @@ internal sealed class RunLauncherViewModel
             DecisionPreflightKind.ProviderKeyMissing => [ValidationMessage.Warning(
                 ValidationCodes.DecisionKeyMissing,
                 $"The decision provider {finding.Status?.Provider?.DisplayName} needs an API key and none is in place: "
-                + $"set {finding.Status?.MissingKeyVariable} (or ApiKey in its section). Until then each request it gets fails, "
-                + "and with it each decision task and each system_one_decide call that asks it.",
+                + $"set {KeyVariableText(finding.Status)} (or ApiKey in its section). Until then the engine turns the decision models off "
+                + "and sends it no request: the crew runs without them, each decision task taking its relay's answer or its fallback, "
+                + "or letting its otherwise task run.",
                 target.RunPath)],
             DecisionPreflightKind.ToolWithheld => [ValidationMessage.Warning(
                 ValidationCodes.DecisionToolDropped,
@@ -406,13 +421,24 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>One reason the run goes without the decision models, and its fix.</summary>
-    private static string ReasonText(DecisionOffReason reason) => reason switch
+    private static string ReasonText(DecisionOffReason reason, DecisionStatus? status) => reason switch
     {
         DecisionOffReason.NoProvider => "No decision provider is configured (an Orkeon:TypeSafe or Orkeon:Liquid section, or its API key; Kev must be named in Orkeon:Decision:Provider).",
         DecisionOffReason.SettingsSwitch => "The settings switch the decision models off (Orkeon:Decision:Enabled is false).",
+        DecisionOffReason.NoKey => $"The decision provider {status?.Provider?.DisplayName} has no API key, so the engine turns the decision models off: "
+            + $"set {KeyVariableText(status)} (or ApiKey in its section).",
         DecisionOffReason.RunSwitch => "This run switches the decision models off: untick --no-decision.",
         _ => "",
     };
+
+    /// <summary>
+    /// The variable to set for a missing key: the provider's own by name; another one by the setting that
+    /// names it, never the value written there, which may be a key pasted by mistake (as the engine, Orkeon #467).
+    /// </summary>
+    private static string KeyVariableText(DecisionStatus? status) =>
+        status?.MissingKeyVariableSetting is { } setting
+            ? $"the variable named by {setting}"
+            : status?.MissingKeyVariable ?? "";
 
     /// <summary>What one decision task answers once the circuit is off.</summary>
     private static string FallbackText(CrewDecisionTask task) =>
@@ -571,6 +597,7 @@ internal sealed class RunLauncherViewModel
         _settingsDecision = null;
         _settingsBridge = null;
         _settingsCompactionProfile = null;
+        _settingsLlmProvider = [];
         _profilesLaidInEnvironment = [];
 
         if (string.IsNullOrWhiteSpace(path))
@@ -600,6 +627,7 @@ internal sealed class RunLauncherViewModel
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
         _settingsBridge = ToolBridgePreflight.Check(document, _environment);
+        _settingsLlmProvider = LlmProviderRules.Check(document);
 
         // The environment is listed once: a profile is looked up among the names it lays.
         var laid = ProfilesLaidIn(_environmentNames());

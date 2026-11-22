@@ -5,7 +5,7 @@ namespace Orkeon.Studio.Wpf.ViewModels.Config;
 
 /// <summary>
 /// The <c>LlmLogging</c> form (spec §4.1): the HTTP exchange capture switches. The switches are
-/// plain booleans that resolve an absent key to the engine's default (STUDIO-22): a check box
+/// plain booleans that resolve an absent key to the engine's default (STUDIO-22): a CheckBox
 /// bound to a nullable starts indeterminate and swallows the first click, and the file never
 /// needs to spell a value the engine already applies — a switch set back to its default removes
 /// the key.

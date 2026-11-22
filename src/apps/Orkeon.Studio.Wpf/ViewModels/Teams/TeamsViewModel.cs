@@ -194,8 +194,8 @@ public sealed class TeamCardViewModel : ObservableObject
         // and the Expert trash icon) arm the same confirmation: no path removes a team on
         // a single click. The banner replaces the action row in place — no MessageBox.
         AskDeleteCommand = new RelayCommand(() => owner.ArmDelete(this));
-        // STUDIO-27 (D-06/D-07): the schedule goes first, then the folder, then — when the box
-        // is left ticked — the workshop session rule R links to it.
+        // STUDIO-27 (D-06/D-07): the schedule goes first, then the folder, then — when the switch
+        // is left on — the workshop session rule R links to it.
         ConfirmDeleteCommand = new AsyncRelayCommand(() => owner.DeleteAsync(this));
         CancelDeleteCommand = new RelayCommand(() => IsConfirmingDelete = false);
         // STUDIO-27 (D-05): the engine installs and removes; the card shows what it answered.
@@ -288,7 +288,7 @@ public sealed class TeamCardViewModel : ObservableObject
         }
     }
 
-    /// <summary>The editor's box: the team follows the default.</summary>
+    /// <summary>The editor's switch: the team follows the default.</summary>
     public bool EditUsesDefaultLlm
     {
         get => _editUsesDefaultLlm;
@@ -297,13 +297,13 @@ public sealed class TeamCardViewModel : ObservableObject
             if (!SetProperty(ref _editUsesDefaultLlm, value))
                 return;
 
-            // Unticked, the list offers the first setting rather than nothing.
+            // Off, the list offers the first setting rather than nothing.
             if (!value && _editLlmProfile is null && LlmProfiles is [var first, ..])
                 EditLlmProfile = first;
         }
     }
 
-    /// <summary>The editor's setting, when the box is unticked.</summary>
+    /// <summary>The editor's setting, when the switch is off.</summary>
     public string? EditLlmProfile
     {
         get => _editLlmProfile;
@@ -317,7 +317,7 @@ public sealed class TeamCardViewModel : ObservableObject
     /// <summary>The settings of this machine, by name.</summary>
     public IReadOnlyList<string> LlmProfiles => _owner.LlmProfiles;
 
-    /// <summary>Whether this machine has a setting: otherwise the box is greyed and « Configure a model » shows.</summary>
+    /// <summary>Whether this machine has a setting: otherwise the switch is greyed and « Configure a model » shows.</summary>
     public bool HasLlmProfiles => LlmProfiles.Count > 0;
 
     /// <summary>« Use the default model (X) ».</summary>
@@ -650,7 +650,7 @@ public sealed class TeamCardViewModel : ObservableObject
     /// <summary>
     /// Deletes the team — only reachable from the armed banner: its schedule stopped first (a
     /// refusal keeps the team, and says what to run by hand), then the folder, then the workshop
-    /// session when <see cref="DeleteSessionToo"/> is ticked (STUDIO-27, D-06/D-07).
+    /// session when <see cref="DeleteSessionToo"/> is on (STUDIO-27, D-06/D-07).
     /// </summary>
     public AsyncRelayCommand ConfirmDeleteCommand { get; }
 
@@ -681,7 +681,7 @@ public sealed class TeamCardViewModel : ObservableObject
     /// </summary>
     public bool CanDeleteSessionToo => _linkedSession is not null;
 
-    /// <summary>The box « Also delete the workshop session », unticked by default (studio refonte, lot 2).</summary>
+    /// <summary>The switch « Also delete the workshop session », off by default (studio refonte, lot 2).</summary>
     public bool DeleteSessionToo
     {
         get => _deleteSessionToo;
@@ -753,7 +753,7 @@ public sealed class TeamCardViewModel : ObservableObject
     public bool HasDeleteConsequence => !_archivesInWorkshop;
 
     /// <summary>
-    /// Arms the banner's answers: the linked session, the box ticked, no refusal yet — and, with
+    /// Arms the banner's answers: the linked session, the switch on, no refusal yet — and, with
     /// <paramref name="archivesInWorkshop"/>, the workshop's question in place of the plain one.
     /// </summary>
     internal void PrepareDelete(ForgeSolutionSummary? linkedSession, bool archivesInWorkshop = false)
@@ -2643,13 +2643,13 @@ public sealed class TeamsViewModel : ObservableObject
     /// Deletes a team, and leaves nothing behind (STUDIO-27, D-06/D-07). Rule R names the linked
     /// session first — it reads this folder, and the copy test reads the original's. Then a
     /// schedule, declared or recorded as installed, is stopped: a refusal keeps the team, says
-    /// why and what to run by hand. Then the folder; then, box ticked, the session — never the
+    /// why and what to run by hand. Then the folder; then, switch on, the session — never the
     /// original's for a copy, which rule R links to no session.
     /// </summary>
     internal async Task DeleteAsync(TeamCardViewModel card)
     {
         var team = card.Summary;
-        // Only a session the banner offered: the box starts unticked, and never counts for a session
+        // Only a session the banner offered: the switch starts off, and never counts for a session
         // the user was not shown.
         var session = card.CanDeleteSessionToo && card.DeleteSessionToo ? LinkedSessionOf(team) : null;
 
@@ -2725,7 +2725,7 @@ public sealed class TeamsViewModel : ObservableObject
         switch (row)
         {
             case TeamCardViewModel card:
-                // The banner's box needs the session before it opens (STUDIO-27, D-07), and its
+                // The banner's switch needs the session before it opens (STUDIO-27, D-07), and its
                 // question needs to know whether Delete archives here (STUDIO-64).
                 card.PrepareDelete(LinkedSessionOf(card.Summary), WorkshopLayout.IsWorkshop(TeamsRoot));
                 card.IsConfirmingDelete = true;

@@ -71,7 +71,7 @@ internal static class DecisionProfileRules
                 if (stage.Risks.Count == 0)
                     yield return ($"{path}:Risks", $"{path}:Risks: a guard stage needs at least one risk.");
                 if (!IsOneOf<DecisionStagePhase>(stage.Phase))
-                    yield return ($"{path}:Phase", $"{path}:Phase: '{stage.Phase}' is not request, response or both.");
+                    yield return ($"{path}:Phase", $"{path}:Phase is not a stage phase: write one of request, response, both.");
                 if (Probability(path + ":BlockThreshold", stage.BlockThreshold) is { } block)
                     yield return block;
                 if (Probability(path + ":WarnThreshold", stage.WarnThreshold) is { } warn)
@@ -83,10 +83,10 @@ internal static class DecisionProfileRules
                 if (Probability(path + ":MinProbability", stage.MinProbability) is { } probability)
                     yield return probability;
                 if (!IsOneOf<DecisionVerifySteps>(stage.Steps))
-                    yield return ($"{path}:Steps", $"{path}:Steps: '{stage.Steps}' is not final or all.");
+                    yield return ($"{path}:Steps", $"{path}:Steps is not a verify scope: write one of final, all.");
                 break;
             default:
-                yield return ($"{path}:Kind", $"{path}:Kind: '{stage.Kind}' is not a stage; expected {RouteKind}, {GuardKind} or {VerifyKind}.");
+                yield return ($"{path}:Kind", $"{path}:Kind is not a stage: write one of {RouteKind}, {GuardKind}, {VerifyKind}.");
                 break;
         }
     }

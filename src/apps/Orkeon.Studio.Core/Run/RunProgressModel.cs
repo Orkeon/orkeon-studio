@@ -186,7 +186,7 @@ public sealed record RunDecisionCircuit(string? Mode, bool On, string? Cause)
     /// <summary>
     /// The off circuit's own sentence, in English as the engine writes it (<c>detail</c>, Orkeon #467): for
     /// <c>no-key</c>, the environment variable and the setting the key is read from, never the key; null when
-    /// the cause has none, or the engine predates it.
+    /// the cause has none, the engine writes it blank, or predates it.
     /// </summary>
     public string? Detail { get; init; }
 }
@@ -785,7 +785,7 @@ public sealed class RunProgressModel
             string.Equals(circuit, Orkeon.Constants.Protocol.DecisionCircuitStates.On, StringComparison.Ordinal),
             orkeonEvent.GetString("cause"))
         {
-            Detail = orkeonEvent.GetString("detail"),
+            Detail = orkeonEvent.GetNonBlankString("detail"),
         };
         return true;
     }

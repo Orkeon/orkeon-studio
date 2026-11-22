@@ -244,8 +244,9 @@ public sealed class DecisionSection
                 Provider = choice.Provider,
                 How = choice.How,
                 IgnoredSections = choice.IgnoredSections,
-                MissingKeyVariable = choice.Provider is { } provider ? MissingKey(configuration, provider, environment) : null,
             };
+            if (choice.Provider is { } provider && MissingKey(configuration, provider, environment) is { } missing)
+                status = status with { MissingKeyVariable = missing.Variable, MissingKeyVariableSetting = missing.Setting };
         }
         catch (InvalidOperationException ex)
         {
@@ -521,17 +522,34 @@ public sealed class DecisionSection
     }
 
     /// <summary>
-    /// The variable a provider that needs a key reads it from, when no key is in place there nor in the
-    /// file (<c>ApiKey</c>): every request it gets then fails. Null when the key is in place or optional.
+    /// What a provider that needs a key lacks, when no key is in place in the file (<c>ApiKey</c>) nor in
+    /// the variable it reads (<c>ApiKeyEnvVar</c>, the provider's own by default): the engine then turns
+    /// the circuit off (<c>no-key</c>, Orkeon #451). As the engine names it (<c>DecisionApiKey.Remedy</c>,
+    /// Orkeon #467): the variable when it is the provider's default (unset reads as that default), else
+    /// the setting that names it, never the value written there, which may be a key pasted by mistake.
+    /// Null when the key is in place or optional.
     /// </summary>
-    private static string? MissingKey(IConfiguration configuration, DecisionProviderDescriptor provider, Func<string, string?> environment)
+    private static (string? Variable, string? Setting)? MissingKey(
+        IConfiguration configuration, DecisionProviderDescriptor provider, Func<string, string?> environment)
     {
         if (!provider.KeyRequired || !string.IsNullOrWhiteSpace(configuration[$"{provider.Section}:ApiKey"]))
             return null;
 
         var written = configuration[$"{provider.Section}:ApiKeyEnvVar"];
         var variable = string.IsNullOrWhiteSpace(written) ? provider.DefaultApiKeyVariable : written.Trim();
-        return string.IsNullOrWhiteSpace(environment(variable)) ? variable : null;
+        if (!string.IsNullOrWhiteSpace(environment(variable)))
+            return null;
+
+        return string.Equals(variable, provider.DefaultApiKeyVariable, StringComparison.Ordinal)
+            ? (variable, null)
+            : (null, ApiKeyEnvVarSetting(provider));
+    }
+
+    /// <summary>The setting that names the variable a provider reads its key from: <c>Orkeon:Liquid:ApiKeyEnvVar</c>.</summary>
+    public static string ApiKeyEnvVarSetting(DecisionProviderDescriptor provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        return $"{provider.Section}:ApiKeyEnvVar";
     }
 
     /// <summary>
@@ -621,9 +639,26 @@ public sealed record DecisionStatus(
 
     /// <summary>
     /// The variable the chosen provider reads its key from, when it needs one and none is in place there
-    /// nor in the file: each request then fails. Null when the key is in place, optional, or no provider is chosen.
+    /// nor in the file, and that variable is the provider's default (<c>LIQUID_API_KEY</c>): the engine
+    /// then turns the circuit off (<c>no-key</c>, Orkeon #451). Null when the key is in place, optional,
+    /// no provider is chosen, or <c>ApiKeyEnvVar</c> names another variable
+    /// (<see cref="MissingKeyVariableSetting"/>): as the engine does (Orkeon #467), Studio never repeats
+    /// a value written there, which may be a key pasted by mistake.
     /// </summary>
     public string? MissingKeyVariable { get; init; }
+
+    /// <summary>
+    /// The setting that names the variable the chosen provider reads its key from
+    /// (<c>Orkeon:Liquid:ApiKeyEnvVar</c>), when the key is missing and that variable is not the
+    /// provider's default: what Studio names in its place. Null otherwise.
+    /// </summary>
+    public string? MissingKeyVariableSetting { get; init; }
+
+    /// <summary>
+    /// Whether the chosen provider needs a key and none is in place (<see cref="MissingKeyVariable"/> or
+    /// <see cref="MissingKeyVariableSetting"/>): the engine turns the circuit off for it (<c>no-key</c>).
+    /// </summary>
+    public bool KeyMissing => MissingKeyVariable is not null || MissingKeyVariableSetting is not null;
 
     /// <summary>
     /// Whether the runner resolves tools strictly (<c>Orkeon:CrewFactory:StrictTools</c>, on by default):

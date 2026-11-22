@@ -1604,7 +1604,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>此团队离不开决策模型（System One）：它声明了 decision.mode: required，或有智能体或任务使用 system_one_decide（模型关闭后引擎会扣留该工具），或有决策任务既无后备答案也无“otherwise”任务（模型关闭后运行会被拒绝）。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>引擎拒绝决策模型的设置（提供方、开关、模型配置阶梯、思考级别、决策配置，或依赖它们的评判器）：CLI 会在加载团队前停止。消息会说明被拒绝的内容。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：引擎会关闭决策模型，不会向它发送任何请求。离不开决策模型的团队会被拒绝；其他团队则在没有决策模型的情况下运行。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），而设置无法满足：设置中没有包含两个或更多模型配置的阶梯，或阶梯中的某个模型配置既未在设置中定义，也未在启动时提供给本次运行。引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>团队声明了 decision.mode: none，而某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），或指定了设置中的决策配置：该模式拒绝任何对 System One 的使用，因此引擎在加载团队时会拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED" xml:space="preserve"><value>某个智能体或任务使用设置中的决策配置，其防护阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。检查仍会加载团队。</value></data>
@@ -1989,7 +1989,7 @@
     <value>仅当设置文件中手动写入 {0} 时才会出现，且只有设置了 memory: true 的团队才持有它</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
-    <value>仅在“决策模型”选项卡中配置了决策提供方后才会出现：密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或设置文件中的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有密钥时，TypeSafe 和 Liquid 会拒绝所有调用</value>
+    <value>仅在“决策模型”选项卡中配置了决策提供方后才会出现：密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或设置文件中的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有 TypeSafe 或 Liquid 的密钥时，引擎会关闭决策模型并扣留该工具</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
     <value>需要一个标准数据集，即已授权文件夹中的一个 YAML 文件；它会自行用该数据集的语料填充集合</value>
@@ -2507,6 +2507,8 @@
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>设置关闭了决策模型：请在“设置 › 决策模型”中开启。</value></data>
   <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>本次运行读取的设置文件关闭了决策模型：请在 {0} 中将 Orkeon:Decision:Enabled 设为 true。</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>未配置决策提供方：请在“设置 › 决策模型”中配置一个。</value></data>
+  <data name="Studio.Run.DecisionOffNoKey" xml:space="preserve"><value>{0} 没有密钥（变量 {1} 为空，设置文件中也没有），因此引擎会关闭决策模型：请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.DecisionOffNoKeyNamedBySetting" xml:space="preserve"><value>{0} 没有密钥（{1} 所指定的变量为空，设置文件中也没有），因此引擎会关闭决策模型：请在“设置 › 决策模型”中保存密钥。</value></data>
   <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，没有决策模型时引擎会扣留该工具</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>决策任务 {0} 既无后备答案也无“otherwise”任务，因此需要开启决策模型</value></data>
   <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>它声明了 decision.mode: required，因此引擎会在第一个任务之前拒绝运行</value></data>
@@ -2519,7 +2521,8 @@
   <data name="Studio.Run.JudgedOnMachineSettings" xml:space="preserve"><value>以下按本机设置判断；CLI 选用的设置文件可能另有规定。{0}</value></data>
   <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>设置中没有可供选择的、包含两个或更多模型配置的阶梯</value></data>
   <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>阶梯中包含 {0}，设置中未定义对应的模型配置，Studio 也未提供给本次运行</value></data>
-  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此它收到的每个请求都会失败，询问它的每个决策任务也随之失败。请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此引擎会关闭决策模型，不会向它发送任何请求：团队在没有决策模型的情况下运行，每个决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行。请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissingNamedBySetting" xml:space="preserve"><value>{0} 没有密钥：{1} 所指定的变量为空，设置文件中也没有，因此引擎会关闭决策模型，不会向它发送任何请求：团队在没有决策模型的情况下运行，每个决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行。请在“设置 › 决策模型”中保存密钥。</value></data>
   <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，而本次运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。{1}</value></data>
   <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：团队在没有它们的情况下作答。{0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>任务“{0}”：{1}</value></data>
@@ -4209,6 +4212,7 @@
     <value>某个智能体的文件系统范围与此次运行的文件夹不符。</value>
   </data>
   <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>这些设置中的工具桥会在启动时中止运行：{0}</value></data>
+  <data name="Studio.Run.BlockedLlmProvider" xml:space="preserve"><value>本次运行读取的模型设置会在启动时中止运行：{0} 请在 {1} 中修正。</value></data>
   <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} 请在“设置 › 限制与索引”（专家模式）中工具桥的卡片上保存令牌。</value></data>
   <data name="Studio.Run.BridgeTokenRefusedOtherVariable" xml:space="preserve"><value>{0} 此设置文件从变量 {1} 读取令牌，而“设置 › 限制与索引”（专家模式）中工具桥的卡片将其保存在 {2} 下：请在环境中设置 {1}，或在文件中指定 {2}。</value></data>
   <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>这些设置指定了工具桥（{0}），但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
@@ -4281,7 +4285,7 @@
   <data name="Studio.Diagnostics.Problem.dotnet-runtime" xml:space="preserve"><value>找不到引擎所需的 .NET 运行时。</value></data>
   <data name="Studio.Diagnostics.Problem.esbuild" xml:space="preserve"><value>此计算机上缺少脚本编译器。</value></data>
   <data name="Studio.Diagnostics.Problem.install-channel" xml:space="preserve"><value>Studio 无法识别引擎的安装方式；将不会提供更新。</value></data>
-  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>尚未为团队配置模型。</value></data>
+  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>尚未为团队配置模型，或其设置需要注意。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profile-key" xml:space="preserve"><value>某个模型没有密钥，或找不到其密钥。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profiles" xml:space="preserve"><value>设置中有模型不完整。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-reachability" xml:space="preserve"><value>模型无响应：请检查其地址和密钥。</value></data>

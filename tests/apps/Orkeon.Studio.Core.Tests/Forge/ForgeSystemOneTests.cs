@@ -494,27 +494,75 @@ public sealed partial class ForgeSystemOneTests
         Assert.Null(model.LastError.Detail);
     }
 
+    /// <summary>The off circuit's sentence of a Liquid provider without its key, as the engine writes it (<c>DecisionApiKey.Missing</c>).</summary>
+    private const string NoKeyDetail = "no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey";
+
+    /// <summary>
+    /// The engine's <c>FORGE-DECISION-UNAVAILABLE</c> message for a <c>required</c> crew with the circuit off
+    /// for <c>no-key</c> (<c>ForgeCommand.UnavailableDecisionMessage</c> over <c>DecisionCircuit.OffReason</c>):
+    /// the off reason already ends with the detail. The method is internal to the CLI, which no package
+    /// carries: <see cref="The_engines_unavailable_message_ends_its_off_reason_with_the_detail"/> pins its parts.
+    /// </summary>
+    private const string NoKeyUnavailableMessage =
+        "The crew's decision mode is 'required' and the decision circuit is off: " + NoKeyDetail
+        + ": give the decision provider its key before its trial.";
+
     /// <summary>
     /// The refusal carries the off circuit's own sentence beside its cause (Orkeon #467): it is kept as
-    /// written, and the headline Studio shows follows the engine's message with it.
+    /// written, and the headline says it once. The engine's message already ends its off reason with it,
+    /// so the headline is the code and the message; a message that lacks it (an engine that words it
+    /// otherwise) is followed by it; a blank detail is no detail.
     /// </summary>
     [Fact]
-    public void A_decision_unavailable_error_keeps_the_engines_detail()
+    public void A_decision_unavailable_error_says_the_engines_detail_once()
     {
         var model = new ForgeSessionModel();
 
-        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"The crew's decision mode is 'required' and the decision provider has no key: give the decision provider its key before its trial.","recoverable":false,"terminal":true,"cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}"""));
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":""" + Json(NoKeyUnavailableMessage) + ""","recoverable":false,"terminal":true,"cause":"no-key","detail":""" + Json(NoKeyDetail) + "}"));
 
-        Assert.Equal("no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey", model.LastError!.Detail);
-        Assert.Equal(
-            "FORGE-DECISION-UNAVAILABLE: The crew's decision mode is 'required' and the decision provider has no key: give the decision provider its key before its trial: no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey",
-            model.LastError.Headline);
+        Assert.Equal(NoKeyDetail, model.LastError!.Detail);
+        Assert.Equal("FORGE-DECISION-UNAVAILABLE: " + NoKeyUnavailableMessage, model.LastError.Headline);
+        Assert.Single(Regex.Matches(model.LastError.Headline, Regex.Escape(NoKeyDetail)));
 
-        // Without a detail, the headline is the code and the message, as before.
+        // A message that does not say the detail is followed by it, its closing full stop giving way.
+        var other = new ForgeSessionModel();
+        other.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"The decision models are off.","recoverable":false,"terminal":true,"cause":"no-key","detail":""" + Json(NoKeyDetail) + "}"));
+        Assert.Equal("FORGE-DECISION-UNAVAILABLE: The decision models are off: " + NoKeyDetail, other.LastError!.Headline);
+
+        // Without a detail, or with a blank one, the headline is the code and the message, as before.
         var older = new ForgeSessionModel();
         older.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"Off.","recoverable":false,"terminal":true,"cause":"settings"}"""));
         Assert.Equal("FORGE-DECISION-UNAVAILABLE: Off.", older.LastError!.Headline);
+        var blank = new ForgeSessionModel();
+        blank.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"Off.","recoverable":false,"terminal":true,"cause":"no-key","detail":"  "}"""));
+        Assert.Null(blank.LastError!.Detail);
+        Assert.Equal("FORGE-DECISION-UNAVAILABLE: Off.", blank.LastError.Headline);
+        Assert.Equal("FORGE-DECISION-UNAVAILABLE: Off.", new ForgeErrorInfo("FORGE-DECISION-UNAVAILABLE", "Off.", false) { Detail = " " }.Headline);
     }
+
+    /// <summary>
+    /// The sentence the tests above feed is the engine's: the refusal joins the off reason and its remedy
+    /// (<c>ForgeCommand.UnavailableDecisionMessage</c>), the off reason of <c>no-key</c> ends with the
+    /// detail (<c>DecisionCircuit.OffReason</c>), and the error carries that same detail.
+    /// </summary>
+    [Fact]
+    public void The_engines_unavailable_message_ends_its_off_reason_with_the_detail()
+    {
+        var command = ForgeSource("ForgeCommand.cs");
+        Assert.Contains("$\"The crew's decision mode is 'required' and {hostCircuit.OffReason}: \"", command, StringComparison.Ordinal);
+        Assert.Contains("\"give the decision provider its key before its trial.\"", command, StringComparison.Ordinal);
+        Assert.Matches(@"ErrorWithCause\([^;]*hostCircuit\.Detail\)", command);
+
+        var circuitPath = Path.Combine(
+            Orkeon.Studio.Tests.Shared.OrkeonSources.Root(), "src", "core", "Orkeon.Application", "Crew", "Execution", "DecisionCircuit.cs");
+        Assert.True(File.Exists(circuitPath), "DecisionCircuit.cs is no longer in the Orkeon checkout.");
+        Assert.Contains(
+            "DecisionCircuitCause.NoKey => \"the decision circuit is off: \" + (Detail ?? ",
+            File.ReadAllText(circuitPath),
+            StringComparison.Ordinal);
+    }
+
+    private static string Json(string text) => System.Text.Json.JsonSerializer.Serialize(text);
 
     /// <summary>The session states the off circuit's own sentence beside its cause (<c>forgeCircuitDetail</c>, Orkeon #467).</summary>
     [Fact]

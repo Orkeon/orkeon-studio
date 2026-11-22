@@ -164,15 +164,72 @@ public sealed class DecisionSectionTests
         Assert.Equal("LIQUID_API_KEY", document.Decision.Resolve(NoEnvironment).MissingKeyVariable);
         Assert.Null(document.Decision.Resolve(name => name == "LIQUID_API_KEY" ? "k" : null).MissingKeyVariable);
 
-        var custom = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": "MY_KEY" } } }""");
-        Assert.Equal("MY_KEY", custom.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.True(document.Decision.Resolve(NoEnvironment).KeyMissing);
+        Assert.Null(document.Decision.Resolve(NoEnvironment).MissingKeyVariableSetting);
+
+        // The provider's own variable written out is named as when unset.
+        var ownWritten = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": " LIQUID_API_KEY " } } }""");
+        Assert.Equal("LIQUID_API_KEY", ownWritten.Decision.Resolve(NoEnvironment).MissingKeyVariable);
 
         var inFile = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKey": "k" } } }""");
         Assert.Null(inFile.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.False(inFile.Decision.Resolve(NoEnvironment).KeyMissing);
 
         // A local server needs no key.
         var kev = AppSettingsDocument.Parse("""{ "Orkeon": { "Decision": { "Provider": "kev" } } }""");
         Assert.Null(kev.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.False(kev.Decision.Resolve(NoEnvironment).KeyMissing);
+    }
+
+    /// <summary>
+    /// Another variable than the provider's own is read, and never named: what is written in
+    /// <c>ApiKeyEnvVar</c> may be a key pasted there by mistake, whatever its shape. As the engine
+    /// (<c>DecisionApiKey.Remedy</c>, Orkeon #467), Studio names the setting that holds it instead.
+    /// </summary>
+    [Theory]
+    [InlineData("MY_KEY")]
+    [InlineData("sk_live_0123456789abcdef")]
+    [InlineData("sk-ant-api03-0123456789")]
+    [InlineData("liquid_api_key")]
+    public void A_variable_other_than_the_providers_own_is_named_by_its_setting_never_by_its_value(string written)
+    {
+        var document = AppSettingsDocument.Parse($$"""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": "{{written}}" } } }""");
+
+        var missing = document.Decision.Resolve(NoEnvironment);
+        Assert.True(missing.KeyMissing);
+        Assert.Null(missing.MissingKeyVariable);
+        Assert.Equal("Orkeon:Liquid:ApiKeyEnvVar", missing.MissingKeyVariableSetting);
+
+        // That variable is the one read: holding a key, nothing is missing; the provider's own is not read.
+        var held = document.Decision.Resolve(name => name == written ? "k" : null);
+        Assert.False(held.KeyMissing);
+        Assert.True(document.Decision.Resolve(name => name == "LIQUID_API_KEY" ? "k" : null).KeyMissing);
+    }
+
+    /// <summary>
+    /// The engine's rule, read in the Orkeon checkout (<c>DecisionApiKey</c>): the variable read is
+    /// <c>ApiKeyEnvVar</c> trimmed, the provider's own when blank; it is named only when it is the
+    /// provider's own, compared ordinally; otherwise the remedy names the settings alone.
+    /// </summary>
+    [Fact]
+    public void The_engine_names_the_missing_keys_variable_as_Studio_does()
+    {
+        var path = Path.Combine(
+            Orkeon.Studio.Tests.Shared.OrkeonSources.Root(), "src", "core", "Orkeon.Infrastructure", "Decision", "SystemOne", "DecisionApiKey.cs");
+        Assert.True(File.Exists(path), "DecisionApiKey.cs is no longer in the Orkeon checkout.");
+        var source = File.ReadAllText(path);
+
+        Assert.Contains(
+            "string.IsNullOrWhiteSpace(options.ApiKeyEnvVar) ? provider.DefaultApiKeyVariable : options.ApiKeyEnvVar.Trim()",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "string.Equals(Variable(provider, options), provider.DefaultApiKeyVariable, StringComparison.Ordinal)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("$\"set the environment variable {provider.DefaultApiKeyVariable}, or {provider.Section}:ApiKey\"", source, StringComparison.Ordinal);
+        Assert.Contains("$\"set the variable named by {provider.Section}:ApiKeyEnvVar, or {provider.Section}:ApiKey\"", source, StringComparison.Ordinal);
+        Assert.Equal("Orkeon:Liquid:ApiKeyEnvVar", DecisionSection.ApiKeyEnvVarSetting(DecisionProviderDescriptor.Liquid));
     }
 
     [Fact]

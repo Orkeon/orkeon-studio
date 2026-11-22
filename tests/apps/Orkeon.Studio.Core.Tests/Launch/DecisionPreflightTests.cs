@@ -315,6 +315,9 @@ public sealed class DecisionPreflightTests
             (Guarded(NoProvider), false, DecisionOffReason.NoProvider),
             (Guarded(SwitchedOff), false, DecisionOffReason.SettingsSwitch),
             (Guarded(On), true, DecisionOffReason.RunSwitch),
+            // The engine turns the circuit off for a missing key too (no-key, Orkeon #451).
+            (Guarded(On with { MissingKeyVariable = "LIQUID_API_KEY" }), false, DecisionOffReason.NoKey),
+            (Guarded(On with { MissingKeyVariableSetting = "Orkeon:Liquid:ApiKeyEnvVar" }), false, DecisionOffReason.NoKey),
         })
         {
             var blocked = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(names, status, settingsKnown: true, noDecision));
@@ -327,7 +330,10 @@ public sealed class DecisionPreflightTests
         }
 
         // The profile is one of the machine's file, which only stands in: a warning, the run's switch included.
-        foreach (var (status, noDecision) in new[] { (Guarded(NoProvider), false), (Guarded(On), true) })
+        foreach (var (status, noDecision) in new[]
+        {
+            (Guarded(NoProvider), false), (Guarded(On), true), (Guarded(On with { MissingKeyVariable = "LIQUID_API_KEY" }), false),
+        })
         {
             var warned = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(names, status, settingsKnown: false, noDecision));
             Assert.Equal(DecisionPreflightKind.ProfileBlockedWithoutModel, warned.Kind);
@@ -437,16 +443,67 @@ public sealed class DecisionPreflightTests
     }
 
     [Fact]
-    public void A_provider_without_its_key_is_warned_for_a_crew_that_asks_it()
+    public void A_provider_without_its_key_is_warned_for_a_crew_that_can_run_without_it()
     {
         var keyless = On with { MissingKeyVariable = "LIQUID_API_KEY" };
 
-        Assert.Equal(DecisionPreflightKind.ProviderKeyMissing, DecisionPreflight.Check(Optional, keyless, settingsKnown: true, noDecision: false)?.Kind);
-        Assert.Equal(DecisionPreflightKind.ProviderKeyMissing, DecisionPreflight.Check(Required, keyless, settingsKnown: true, noDecision: false)?.Kind);
-        Assert.False(DecisionPreflight.Check(Required, keyless, settingsKnown: true, noDecision: false)!.BlocksLaunch);
+        var optional = DecisionPreflight.Check(Optional, keyless, settingsKnown: true, noDecision: false);
+        Assert.Equal(DecisionPreflightKind.ProviderKeyMissing, optional?.Kind);
+        Assert.False(optional!.BlocksLaunch);
+        Assert.Equal(DecisionPreflightKind.ProviderKeyMissing, DecisionPreflight.Check(DeclaredOptional, keyless, settingsKnown: true, noDecision: false)?.Kind);
         // The decision tasks go without the model: the key is not asked for.
         Assert.Equal(DecisionPreflightKind.OptionalWithoutModel, DecisionPreflight.Check(Optional, keyless, settingsKnown: true, noDecision: true)?.Kind);
         Assert.Null(DecisionPreflight.Check(CrewDecisionUsage.None, keyless, settingsKnown: true, noDecision: false));
+        // A variable named by its setting is warned of all the same.
+        Assert.Equal(
+            DecisionPreflightKind.ProviderKeyMissing,
+            DecisionPreflight.Check(Optional, On with { MissingKeyVariableSetting = "Orkeon:Liquid:ApiKeyEnvVar" }, settingsKnown: true, noDecision: false)?.Kind);
+    }
+
+    /// <summary>
+    /// The engine turns the circuit off when the provider's key is missing (cause <c>no-key</c>, Orkeon #451):
+    /// a crew that needs the decision models is refused as for the other off causes, « Launch now » blocked
+    /// (exit code 69 for a crew that states <c>required</c>) on the file the run reads, warned of on the
+    /// machine's while the CLI picks the file; the reason says the key.
+    /// </summary>
+    [Fact]
+    public void A_provider_without_its_key_refuses_a_crew_that_needs_the_model()
+    {
+        foreach (var keyless in new[] { On with { MissingKeyVariable = "LIQUID_API_KEY" }, On with { MissingKeyVariableSetting = "Orkeon:Liquid:ApiKeyEnvVar" } })
+        {
+            var declared = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(DeclaredRequired, keyless, settingsKnown: true, noDecision: false));
+            Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, declared.Kind);
+            Assert.Equal(DecisionPreflightSeverity.BlocksLaunch, declared.Severity);
+            Assert.True(declared.BlocksLaunch);
+            Assert.False(declared.BlocksValidate);
+            Assert.True(declared.RefusedByMode);
+            Assert.Equal([DecisionOffReason.NoKey], declared.Reasons);
+
+            // A crew that states no mode and holds the tool, withheld under strict tools.
+            var holders = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(Required, keyless, settingsKnown: true, noDecision: false));
+            Assert.Equal(DecisionPreflightKind.RequiredWithoutModel, holders.Kind);
+            Assert.False(holders.RefusedByMode);
+            // Lenient tools withhold the tool and go on, the circuit off for the key as for any other cause.
+            var withheld = Assert.IsType<DecisionPreflightFinding>(
+                DecisionPreflight.Check(Required, keyless with { StrictTools = false }, settingsKnown: true, noDecision: false));
+            Assert.Equal(DecisionPreflightKind.ToolWithheld, withheld.Kind);
+            Assert.Equal([DecisionOffReason.NoKey], withheld.Reasons);
+            Assert.False(withheld.BlocksLaunch);
+
+            // On the machine's settings, standing in for the file the CLI picks: said, never blocking.
+            var standIn = Assert.IsType<DecisionPreflightFinding>(DecisionPreflight.Check(DeclaredRequired, keyless, settingsKnown: false, noDecision: false));
+            Assert.Equal(DecisionPreflightKind.RequiredUnknownSettings, standIn.Kind);
+            Assert.False(standIn.BlocksLaunch);
+            Assert.Equal([DecisionOffReason.NoKey], standIn.Reasons);
+
+            // The run's own switch says both, the key first.
+            Assert.Equal(
+                [DecisionOffReason.NoKey, DecisionOffReason.RunSwitch],
+                DecisionPreflight.Check(DeclaredRequired, keyless, settingsKnown: true, noDecision: true)?.Reasons);
+        }
+
+        // With the key in place, nothing to say.
+        Assert.Null(DecisionPreflight.Check(DeclaredRequired, On, settingsKnown: true, noDecision: false));
     }
 
     public static TheoryData<DecisionStatus, bool> RunsWithoutTheModel() => new()

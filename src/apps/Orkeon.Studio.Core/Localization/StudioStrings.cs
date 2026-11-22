@@ -724,7 +724,7 @@ public static class StudioStringKeys
     /// <summary>"This machine's settings name a decision provider the engine refuses …" — the same, while the CLI picks the settings file itself; {0} is the engine's reason.</summary>
     public const string RunWarnDecisionProvider = "Studio.Run.WarnDecisionProvider";
 
-    /// <summary>"This team cannot run without the decision models …" — a launch refused: the crew needs System One and the run goes without it; {0} lists who holds <c>system_one_decide</c>, {1} is why the run goes without it (<see cref="RunDecisionOffRunSwitch"/>, <see cref="RunDecisionOffSettings"/> or <see cref="RunDecisionOffNoProvider"/>).</summary>
+    /// <summary>"This team cannot run without the decision models …" — a launch refused: the crew needs System One and the run goes without it; {0} lists who holds <c>system_one_decide</c>, {1} is why the run goes without it (<see cref="RunDecisionOffRunSwitch"/>, <see cref="RunDecisionOffSettings"/>, <see cref="RunDecisionOffNoProvider"/> or <see cref="RunDecisionOffNoKey"/>).</summary>
     public const string RunBlockedDecisionRequired = "Studio.Run.BlockedDecisionRequired";
 
     /// <summary>"This team cannot run without the decision models … the CLI picks the settings file itself …" — the warning of a crew that needs System One while the settings the run reads are not known; {0} lists who holds <c>system_one_decide</c>, {1} what this machine's file says, possibly empty.</summary>
@@ -741,6 +741,12 @@ public static class StudioStringKeys
 
     /// <summary>Why a run goes without the decision models: no provider is configured.</summary>
     public const string RunDecisionOffNoProvider = "Studio.Run.DecisionOffNoProvider";
+
+    /// <summary>Why a run goes without the decision models: the provider needs a key and none is in place, so the engine turns the circuit off (<c>no-key</c>); {0} the provider, {1} the provider's own variable, left empty.</summary>
+    public const string RunDecisionOffNoKey = "Studio.Run.DecisionOffNoKey";
+
+    /// <summary><see cref="RunDecisionOffNoKey"/> when <c>ApiKeyEnvVar</c> names another variable than the provider's own, which is never repeated; {0} the provider, {1} the setting that names it (<c>Orkeon:Liquid:ApiKeyEnvVar</c>).</summary>
+    public const string RunDecisionOffNoKeyNamedBySetting = "Studio.Run.DecisionOffNoKeyNamedBySetting";
 
     /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool, which the engine withholds once the circuit is off.</summary>
     public const string RunDecisionNeedTool = "Studio.Run.DecisionNeedTool";
@@ -780,6 +786,9 @@ public static class StudioStringKeys
 
     /// <summary>A warning: {0} the provider, {1} the empty key variable.</summary>
     public const string RunWarnDecisionKeyMissing = "Studio.Run.WarnDecisionKeyMissing";
+
+    /// <summary><see cref="RunWarnDecisionKeyMissing"/> when <c>ApiKeyEnvVar</c> names another variable than the provider's own, which is never repeated (a key may have been pasted there); {0} the provider, {1} the setting that names it (<c>Orkeon:Liquid:ApiKeyEnvVar</c>).</summary>
+    public const string RunWarnDecisionKeyMissingNamedBySetting = "Studio.Run.WarnDecisionKeyMissingNamedBySetting";
 
     /// <summary>A warning: {0} the holders of system_one_decide, withheld by a lenient runner (Orkeon:CrewFactory:StrictTools false) as the run goes without the decision models; {1} is why it does.</summary>
     public const string RunWarnDecisionToolDropped = "Studio.Run.WarnDecisionToolDropped";
@@ -905,6 +914,9 @@ public static class StudioStringKeys
 
     /// <summary>A launch refused by the tool bridge of the settings the run reads: {0} is the reason, the engine's sentence or <see cref="RunBridgeTokenRefused"/>.</summary>
     public const string RunBlockedBridge = "Studio.Run.BlockedBridge";
+
+    /// <summary>A launch and a check refused on a <c>Provider</c> of the <c>Llm</c> section or of a model profile, in the pinned or team file the run reads: {0} is the engine's sentence (one per refused provider), {1} the file to fix.</summary>
+    public const string RunBlockedLlmProvider = "Studio.Run.BlockedLlmProvider";
 
     /// <summary>The reason of <see cref="RunBlockedBridge"/> when the token is missing or too short: {0} is the engine's sentence, which names the variable.</summary>
     public const string RunBridgeTokenRefused = "Studio.Run.BridgeTokenRefused";
@@ -3429,6 +3441,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunDecisionOffSettings] = "The settings switch the decision models off: turn them on in Settings › Decision models.",
         [StudioStringKeys.RunDecisionOffSettingsInFile] = "The settings file this run reads switches the decision models off: set Orkeon:Decision:Enabled to true in {0}.",
         [StudioStringKeys.RunDecisionOffNoProvider] = "No decision provider is configured: set one up in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionOffNoKey] = "{0} has no key (the variable {1} is empty and the settings file holds none), so the engine turns the decision models off: store the key in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionOffNoKeyNamedBySetting] = "{0} has no key (the variable named by {1} is empty and the settings file holds none), so the engine turns the decision models off: store the key in Settings › Decision models.",
         [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which the engine withholds without the decision models",
         [StudioStringKeys.RunDecisionNeedAnswer] = "the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on",
         [StudioStringKeys.RunDecisionNeedMode] = "it states decision.mode: required, so the engine refuses the run before its first task",
@@ -3441,7 +3455,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunJudgedOnMachineSettings] = "Judged on this machine's settings; the settings file the CLI picks may say otherwise. {0}",
         [StudioStringKeys.RunDecisionLadderMissing] = "the settings give no ladder of two profiles or more to pick on",
         [StudioStringKeys.RunDecisionLadderUnknownRungs] = "the ladder names {0}, defined by no model profile of the settings and not given to the run by Studio",
-        [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so the engine turns the decision models off and sends it no request: the team runs without them, each decision task taking its relay's answer or its fallback, or letting its « otherwise » task run. Store the key in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting] = "{0} has no key: the variable named by {1} is empty and the settings file holds none, so the engine turns the decision models off and sends it no request: the team runs without them, each decision task taking its relay's answer or its fallback, or letting its « otherwise » task run. Store the key in Settings › Decision models.",
         [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}",
         [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): the team answers without them. {0}",
         [StudioStringKeys.RunInfoDecisionFallbackItem] = "Task '{0}': {1}",
@@ -3529,6 +3544,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
         [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
         [StudioStringKeys.RunBlockedBridge] = "The tool bridge of these settings stops the run at start: {0}",
+        [StudioStringKeys.RunBlockedLlmProvider] = "The model settings this run reads stop it at start: {0} Fix it in {1}.",
         [StudioStringKeys.RunBridgeTokenRefused] = "{0} Store the token in Settings › Limits & index (Expert mode), on the tool bridge's card.",
         [StudioStringKeys.RunBridgeTokenRefusedOtherVariable] = "{0} This settings file reads the token from the variable {1}, while the tool bridge's card in Settings › Limits & index (Expert mode) keeps it under {2}: set {1} in the environment, or name {2} in the file.",
         [StudioStringKeys.RunInfoBridgeIdle] = "These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
@@ -3738,7 +3754,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Problem.dotnet-runtime"] = "The .NET runtime the engine needs is not found.",
         ["Studio.Diagnostics.Problem.esbuild"] = "The script compiler is missing on this machine.",
         ["Studio.Diagnostics.Problem.install-channel"] = "Studio does not recognise how the engine was installed; updates will not be offered.",
-        ["Studio.Diagnostics.Problem.llm-config"] = "No model is set up for the teams.",
+        ["Studio.Diagnostics.Problem.llm-config"] = "No model is set up for the teams, or its settings need attention.",
         ["Studio.Diagnostics.Problem.llm-profile-key"] = "A model has no key, or its key is not found.",
         ["Studio.Diagnostics.Problem.llm-profiles"] = "A model is incomplete in the settings.",
         ["Studio.Diagnostics.Problem.llm-reachability"] = "The model does not answer: check its address and its key.",
@@ -3816,7 +3832,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): it states decision.mode: required, an agent or a task uses system_one_decide, which the engine withholds once the models are off, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The engine refuses the decision models settings (the provider, a switch, the ladder of profiles, the thinking levels, a decision profile, or the judge that depends on them): the CLI stops before it loads the team. The message says what it refuses.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: the engine turns the decision models off and sends it no request. A team that cannot run without them is refused; any other runs without them.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-LADDER"] = "An agent or a task lets System One pick its profile (llm.profile: auto) and the settings do not serve it: they give no ladder of two model profiles or more to pick on, or the ladder names a model profile that neither the settings define nor the launch gives the run. The engine refuses the team when it loads it.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-MODE"] = "The team states decision.mode: none and an agent or a task lets System One pick its profile (llm.profile: auto) or names a decision profile of the settings: the mode refuses any use of System One, so the engine refuses the team when it loads it.",
         ["Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED"] = "An agent or a task runs on a decision profile of the settings whose guard stage blocks when it cannot judge (FailClosed), and the run goes without the decision models (System One): the engine blocks every call made through that profile. A check loads the team all the same.",
@@ -4163,7 +4179,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
         [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
         [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
-        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; TypeSafe and Liquid refuse every call without their key",
+        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; without the key of TypeSafe or Liquid, the engine turns the decision models off and withholds the tool",
         [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
         [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",

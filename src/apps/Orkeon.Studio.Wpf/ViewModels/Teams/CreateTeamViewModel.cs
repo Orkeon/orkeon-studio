@@ -1339,9 +1339,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// What the mode the list shows meets on this machine, said before anything is composed and for
     /// the session under way alike: a team that must have the decision models while they are off here
     /// would be composed, then refused at its trial; one that takes them when available would be tried
-    /// without them only. A provider in place without its key leaves the circuit on: the trial is not
-    /// refused, but each request it sends the models fails, and with it each decision task that asks
-    /// them, which is said too. Empty when the mode asks nothing, the models are on with their key,
+    /// without them only. A provider in place without its key: the engine turns the circuit off for it
+    /// (cause <c>no-key</c>, Orkeon #451), so the trial of a team that must have the models is refused
+    /// (<c>FORGE-DECISION-UNAVAILABLE</c>), said as for the other off causes; for a team that takes them
+    /// when available, the missing key is said. Empty when the mode asks nothing, the models are on with their key,
     /// or their state is not known. Read again when the decision settings change
     /// (<see cref="RefreshDecisionNotice"/>).
     /// </summary>
@@ -1353,11 +1354,20 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             if (mode == ForgeCrewDecisions.None || _machineDecisionStatus() is not { } status)
                 return string.Empty;
 
+            if (status is { CircuitOn: true, KeyMissing: true } && mode == ForgeCrewDecisions.Required)
+                return _strings.Format(StudioStringKeys.WizardCrewDecisionRequiredOff, _strings[StudioStringKeys.RunNoteCauseNoKey]);
+
             if (status.CircuitOn)
             {
-                return status is { MissingKeyVariable: { } variable, Provider: { } provider }
-                    ? _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider.DisplayName, variable)
-                    : string.Empty;
+                // A custom variable is named by its setting, never by the value written there (Orkeon #467).
+                return status switch
+                {
+                    { MissingKeyVariableSetting: { } setting, Provider: { } provider }
+                        => _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting, provider.DisplayName, setting),
+                    { MissingKeyVariable: { } variable, Provider: { } provider }
+                        => _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider.DisplayName, variable),
+                    _ => string.Empty,
+                };
             }
 
             var why = status switch
@@ -2678,7 +2688,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         ForgetUseCases();
         // What the team asks of System One, and the assistant's own switch, were that creation's.
         // « Resume » on the session under way is the same creation going on: the engine never
-        // stores the switch, so the box keeps its tick and the resumed run goes as the user set it.
+        // stores the switch, so it stays on and the resumed run goes as the user set it.
         if (!string.Equals(solution.Slug, _model.Slug, StringComparison.Ordinal))
             ResetDecisionChoices();
         ResetProjection();
@@ -2689,6 +2699,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         ReferenceUseCaseId = _model.ReferenceUseCaseId;
         SessionActivated?.Invoke(this, EventArgs.Empty);
         SyncFromModel();
+        OpenStep1WhereAttentionIsNeeded();
 
         // A session parked at the --dry pause (saved state: Test, not yet run) reopens on
         // the Composer review — running the trial stays the user's click, on a resume as
@@ -2791,7 +2802,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         ClearFolderStep();
         ForgetUseCases();
         // The mode and the switch were the creation being left's, as on a resume: the reopened
-        // session states its own mode, and nobody ticked the box for this team.
+        // session states its own mode, and nobody turned the switch on for this team.
         ResetDecisionChoices();
         ResetProjection();
         _reopenedTeamPath = team.Path;
@@ -2836,6 +2847,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         if (HasFoldersToChoose)
             Step2TabIndex = Step2FoldersTab;
         SyncFromModel();
+        OpenStep1WhereAttentionIsNeeded();
 
         // The dry pause (a rebuilt session, or one adopted without a trial and reopened):
         // the Composer review, no engine — the trial stays the user's click, as in ResumeAsync.

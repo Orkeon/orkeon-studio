@@ -94,7 +94,7 @@
             </Border>
 
             <StackPanel IsEnabled="{Binding IsEditable}">
-              <!-- The team by name, then the model this run takes (STUDIO-73): the box « Use the
+              <!-- The team by name, then the model this run takes (STUDIO-73): the switch « Use the
                    default model (X) » and the settings by name, the team card's own editor.
                    R10: each label above its field; both lists are the theme's M width (320). -->
               <WrapPanel>
@@ -318,7 +318,7 @@
                 <controls:Alert Tone="Info" Margin="0,14,0,0" Message="{Binding DecisionInfo}"
                                 Visibility="{Binding HasDecisionInfo, Converter={StaticResource BooleanToVisibility}}">
                   <controls:Alert.Actions>
-                    <!-- Not when the run's own box is all that turns the models off: the settings cannot change it. -->
+                    <!-- Not when the run's own switch is all that turns the models off: the settings cannot change it. -->
                     <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenDecisionSettingsCommand}"
                             Visibility="{Binding ShowsDecisionSettingsAction, Converter={StaticResource BooleanToVisibility}}"
                             Content="{Binding [Studio.Run.OpenDecisionSettings], Source={x:Static services:I18n.Instance}}"/>
@@ -345,6 +345,9 @@
                 <!-- A bridge's address with no tool allowed on it: nothing is bridged. -->
                 <controls:Alert Tone="Info" Margin="0,14,0,0" Message="{Binding BridgeInfo}"
                                 Visibility="{Binding HasBridgeInfo, Converter={StaticResource BooleanToVisibility}}"/>
+                <!-- Orkeon #457: a Provider of Llm or of a profile in the file the run reads that the host's start refuses. -->
+                <controls:Alert Tone="Danger" Margin="0,14,0,0" Message="{Binding LlmProviderMessage}"
+                                Visibility="{Binding IsBlockedByLlmProvider, Converter={StaticResource BooleanToVisibility}}"/>
                 <!-- Orkeon #392: a task must write a file no agent that may run it can write, or a decision declares one. -->
                 <controls:Alert Tone="Warning" Margin="0,14,0,0" Message="{Binding DeliverableWriterWarning}"
                                 Visibility="{Binding HasDeliverableWriterWarning, Converter={StaticResource BooleanToVisibility}}"/>
@@ -392,7 +395,7 @@
               <CheckBox Margin="0,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Center"
                         IsChecked="{Binding Options.ValidateFirst}"
                         Content="{Binding [Studio.Run.ValidateFirst], Source={x:Static services:I18n.Instance}}"/>
-              <!-- System One: offered to a team that asks the decision models; unticked, the run goes without them. -->
+              <!-- System One: offered to a team that asks the decision models; off, the run goes without them. -->
               <CheckBox Margin="0,0,0,12" HorizontalAlignment="Left" VerticalAlignment="Center"
                         IsChecked="{Binding Options.UseDecisionModels}"
                         Visibility="{Binding UsesDecisionModels, Converter={StaticResource BooleanToVisibility}}"

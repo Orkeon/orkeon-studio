@@ -194,7 +194,8 @@ public static class ValidationCodes
 
     /// <summary>
     /// The decision provider the run uses needs a key and none is in place, neither in its variable nor
-    /// in the file: each request fails, and with it each decision task that asks it. A warning.
+    /// in the file: the engine turns the decision circuit off and sends the provider no request, and a
+    /// crew that can run without the decision models runs without them. A warning.
     /// </summary>
     public const string DecisionKeyMissing = "STUDIO-DECISION-KEY";
 
