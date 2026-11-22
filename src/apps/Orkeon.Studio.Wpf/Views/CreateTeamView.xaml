@@ -770,7 +770,31 @@
                 </DockPanel>
               </Border>
               <StackPanel>
-                <TextBlock Style="{StaticResource CardTitle}"
+                <!-- System One first (the step's opening choice): whether the assistant itself composes
+                     without asking the decision models, locked on while the settings switch them off,
+                     then what the team to compose asks of them (a new creation's choice, kept by its
+                     session), which stays free: a team can be meant for them before they run here. -->
+                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding DesignWithoutSystemOne}"
+                          IsEnabled="{Binding CanChooseDesignWithoutSystemOne}"
+                          Content="{Binding [Studio.Create.DesignWithoutSystemOne], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                           Text="{Binding [Studio.Create.DesignWithoutSystemOneHint], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding DesignWithoutSystemOneLockedLine}"
+                           Visibility="{Binding DesignWithoutSystemOneLockedLine, Converter={StaticResource StringPresentToVisibility}}"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Create.CrewDecisionLabel], Source={x:Static services:I18n.Instance}}"/>
+                <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="320"
+                          ItemsSource="{Binding CrewDecisionChoices}" SelectedItem="{Binding SelectedCrewDecision}"
+                          IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                           Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
+                <!-- The mode of the session on screen, when the list shows the pick of the next composition instead. -->
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding SessionCrewDecisionLine}"
+                           Visibility="{Binding SessionCrewDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
+                <!-- What the chosen mode meets on this machine, before anything is composed. -->
+                <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
+                                Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>
+                <TextBlock Style="{StaticResource CardTitle}" Margin="0,20,0,0"
                            Text="{Binding [Studio.Create.NeedTitle], Source={x:Static services:I18n.Instance}}"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,12" TextWrapping="Wrap"
                            Text="{Binding [Studio.Create.NeedSub], Source={x:Static services:I18n.Instance}}"/>
@@ -824,25 +848,6 @@
                     </Button>
                   </StackPanel>
                 </Border>
-                <!-- System One: what the team to compose asks of the decision models (a new creation's choice,
-                     kept by its session), and whether the assistant itself composes without asking them. -->
-                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,16,0,5"
-                           Text="{Binding [Studio.Create.CrewDecisionLabel], Source={x:Static services:I18n.Instance}}"/>
-                <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="320"
-                          ItemsSource="{Binding CrewDecisionChoices}" SelectedItem="{Binding SelectedCrewDecision}"
-                          IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
-                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
-                           Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
-                <!-- The mode of the session on screen, when the list shows the pick of the next composition instead. -->
-                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding SessionCrewDecisionLine}"
-                           Visibility="{Binding SessionCrewDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
-                <!-- What the chosen mode meets on this machine, before anything is composed. -->
-                <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
-                                Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>
-                <CheckBox Margin="0,10,0,0" IsChecked="{Binding DesignWithoutSystemOne}" Foreground="{DynamicResource InkBrush}"
-                          Content="{Binding [Studio.Create.DesignWithoutSystemOne], Source={x:Static services:I18n.Instance}}"/>
-                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
-                           Text="{Binding [Studio.Create.DesignWithoutSystemOneHint], Source={x:Static services:I18n.Instance}}"/>
                 <!-- The quick examples (UX lot 05, 009-014): one per line, full width, whole. -->
                 <TextBlock Style="{StaticResource Eyebrow}" Margin="0,16,0,8"
                            Text="{Binding [Studio.Create.Examples], Source={x:Static services:I18n.Instance}}"/>

@@ -358,7 +358,7 @@ public partial class CreateTeamWizardTests
         status = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{"ApiKey":"in-file"}}}""").Decision.Resolve(_ => null);
         vm.RefreshDecisionNotice();
 
-        Assert.Equal([nameof(CreateTeamViewModel.CrewDecisionNotice)], raised);
+        Assert.Contains(nameof(CreateTeamViewModel.CrewDecisionNotice), raised);
         Assert.Equal("", vm.CrewDecisionNotice);
     }
 
@@ -657,5 +657,54 @@ public partial class CreateTeamWizardTests
         Assert.Equal("The assistant works without the decision models.", await LineOf(""","forgeCircuit":"off" """));
         // An engine that predates the statement says nothing, and neither does the wizard.
         Assert.Equal("", await LineOf(""));
+    }
+
+    /// <summary>
+    /// With the decision models switched off in the settings, the assistant cannot ask them: the
+    /// switch reads on, is locked, and says why; the engine is told so. What the team asks of them
+    /// stays free, and the user's own choice comes back once the settings switch them on again.
+    /// </summary>
+    [Fact]
+    public async Task The_settings_switching_the_models_off_lock_the_assistants_switch_on_and_leave_the_mode_free()
+    {
+        var machine = AppSettingsDocument.Parse("""{"Orkeon":{"Decision":{"Enabled":false},"Liquid":{"ApiKey":"in-file"}}}""").Decision.Resolve(_ => null);
+        var (vm, _, _) = Build(machineDecision: () => machine);
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        Assert.True(vm.DesignWithoutSystemOne);
+        Assert.False(vm.CanChooseDesignWithoutSystemOne);
+        Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.WizardDesignWithoutSystemOneLocked], vm.DesignWithoutSystemOneLockedLine);
+        vm.DesignWithoutSystemOne = false;
+        Assert.True(vm.DesignWithoutSystemOne);
+
+        Assert.True(vm.CanChooseCrewDecision);
+        FillStepOne(vm);
+        vm.SelectedCrewDecision = vm.CrewDecisionChoices.Single(choice => choice.Mode == ForgeCrewDecisions.Required);
+        await Compose(vm);
+        Assert.Contains("--crew-decision required", vm.EngineCommandLine, StringComparison.Ordinal);
+        Assert.Contains("--no-decision", vm.EngineCommandLine, StringComparison.Ordinal);
+
+        // Switched on again: the switch is the user's once more, on the choice they had left (none).
+        machine = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{"ApiKey":"in-file"}}}""").Decision.Resolve(_ => null);
+        vm.RefreshDecisionNotice();
+        Assert.Contains(nameof(CreateTeamViewModel.DesignWithoutSystemOne), raised);
+        Assert.Contains(nameof(CreateTeamViewModel.CanChooseDesignWithoutSystemOne), raised);
+        Assert.False(vm.DesignWithoutSystemOne);
+        Assert.True(vm.CanChooseDesignWithoutSystemOne);
+        Assert.Equal("", vm.DesignWithoutSystemOneLockedLine);
+    }
+
+    /// <summary>A provider missing, the settings' switch on: the assistant's switch stays the user's.</summary>
+    [Fact]
+    public void Only_the_settings_switch_locks_the_assistants_switch()
+    {
+        var noProvider = AppSettingsDocument.CreateEmpty().Decision.Resolve(_ => null);
+        var (vm, _, _) = Build(machineDecision: () => noProvider);
+
+        Assert.False(vm.DesignWithoutSystemOne);
+        Assert.True(vm.CanChooseDesignWithoutSystemOne);
+        vm.DesignWithoutSystemOne = true;
+        Assert.True(vm.DesignWithoutSystemOne);
     }
 }

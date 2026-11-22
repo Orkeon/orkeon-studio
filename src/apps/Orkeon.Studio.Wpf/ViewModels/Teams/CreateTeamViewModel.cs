@@ -1377,7 +1377,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// The decision settings of this machine changed while the wizard is open: what the mode meets
     /// here is read again. The shell calls it from the hooks that judge the launch screens again.
     /// </summary>
-    public void RefreshDecisionNotice() => OnPropertyChanged(nameof(CrewDecisionNotice));
+    public void RefreshDecisionNotice() =>
+        OnPropertiesChanged(
+            nameof(CrewDecisionNotice), nameof(DesignWithoutSystemOne),
+            nameof(CanChooseDesignWithoutSystemOne), nameof(DesignWithoutSystemOneLockedLine));
 
     /// <summary>
     /// What the assistant itself asks of the decision models on this run of the engine, as the engine
@@ -1517,13 +1520,33 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// unticked when the wizard turns to another session (a resume from My teams, « Modify ») or back
     /// to a blank step 1. Not every command carries it: an adoption without a trial asks the decision
     /// models nothing, and the reopen behind « Modify », the rephrasing of the request and the
-    /// adoption itself take a fixed command line.
+    /// adoption itself take a fixed command line. With the decision models switched off in the
+    /// settings, the assistant cannot ask them: the switch reads on and is locked, the user's own
+    /// choice kept apart for when they are switched on again. What the team asks of them
+    /// (<see cref="SelectedCrewDecision"/>) stays free.
     /// </summary>
     public bool DesignWithoutSystemOne
     {
-        get => _designWithoutSystemOne;
-        set => SetProperty(ref _designWithoutSystemOne, value);
+        get => _designWithoutSystemOne || DecisionSettingsOff;
+        set
+        {
+            if (!DecisionSettingsOff)
+                SetProperty(ref _designWithoutSystemOne, value);
+        }
     }
+
+    /// <summary>Whether the switch can be changed: the decision models are not switched off in the settings.</summary>
+    public bool CanChooseDesignWithoutSystemOne => !DecisionSettingsOff;
+
+    /// <summary>Why the switch is locked on, said under it; empty while it can be changed.</summary>
+    public string DesignWithoutSystemOneLockedLine =>
+        DecisionSettingsOff ? _strings[StudioStringKeys.WizardDesignWithoutSystemOneLocked] : string.Empty;
+
+    /// <summary>
+    /// Whether the settings switch the decision models off. Only their switch counts: a missing
+    /// provider or key is said by <see cref="CrewDecisionNotice"/>, and locks nothing.
+    /// </summary>
+    private bool DecisionSettingsOff => _machineDecisionStatus() is { Enabled: false };
 
     /// <summary>« Inspired by: Competitive watch » — the title in the UI's language.</summary>
     public string ReferenceUseCaseLabel => _referenceUseCaseId is { } id
@@ -3036,7 +3059,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             // predates the option reads (« No » passes nothing, never --crew-decision none). The
             // builder keeps the mode to a new session, and the switch off an adoption and a reopen.
             CrewDecision = _crewDecisionPick == ForgeCrewDecisions.None ? null : _crewDecisionPick,
-            NoDecision = _designWithoutSystemOne,
+            NoDecision = DesignWithoutSystemOne,
         };
 
         IsEngineRunning = true;

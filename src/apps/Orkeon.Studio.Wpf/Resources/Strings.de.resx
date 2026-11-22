@@ -2370,6 +2370,7 @@
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Sie beantworten eine Frage mit einer Wahrscheinlichkeit: welcher Weg zu nehmen ist, ob eine Arbeit fertig ist. Die Wahl wird beim Zusammenstellen des Teams getroffen und bleibt bei ihm; mit „Wenn verfügbar“ läuft der Probelauf zweimal, mit ihnen und dann ohne sie.</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Zusammenstellen, ohne die Entscheidungsmodelle zu fragen</value></data>
   <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>Der Assistent selbst kann sie befragen, während er das Team zusammenstellt. Aktivieren Sie dies, wenn sie nicht eingerichtet sind, oder zum Vergleichen.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>Die Entscheidungsmodelle sind in den Einstellungen ausgeschaltet: Der Assistent stellt ohne sie zusammen. Das Team kann trotzdem dafür vorgesehen werden, sie zu nutzen.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>Der Assistent ist noch mit „{0}“ beschäftigt — stoppen Sie ihn, oder lassen Sie ihn fertig werden, bevor Sie ein Team öffnen.</value>
   </data>

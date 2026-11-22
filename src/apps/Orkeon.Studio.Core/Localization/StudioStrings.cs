@@ -198,6 +198,9 @@ public static class StudioStringKeys
     /// <summary>A meta line under the list of modes, when the list is the user's to change while a session holds the screen and that session's own mode is another: {0} is the session's mode, worded as the list words it.</summary>
     public const string WizardCrewDecisionSession = "Studio.Create.CrewDecisionSession";
 
+    /// <summary>A meta line under the assistant's switch, locked on because the decision models are switched off in the settings.</summary>
+    public const string WizardDesignWithoutSystemOneLocked = "Studio.Create.DesignWithoutSystemOneLocked";
+
     /// <summary>The pass of a two-pass trial under way, with the decision models: {0} the pass, {1} how many.</summary>
     public const string WizardTrialPassWith = "Studio.Create.TrialPassWith";
 
@@ -3583,6 +3586,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardCrewDecisionRequired] = "Always: the team cannot run without them",
         [StudioStringKeys.WizardCrewDecisionRequiredOff] = "The decision models are off on this machine ({0}): the team can be composed, but its trial will be refused until they are set up in Settings › Decision models.",
         [StudioStringKeys.WizardCrewDecisionOptionalOff] = "The decision models are off on this machine ({0}): the trial will run without them only.",
+        [StudioStringKeys.WizardDesignWithoutSystemOneLocked] = "The decision models are switched off in the settings: the assistant composes without them. The team can still be meant to use them.",
         [StudioStringKeys.WizardCrewDecisionSession] = "The team on screen was composed with « {0} » and keeps it: the choice above is for the next « Compose the team ».",
         [StudioStringKeys.WizardTrialPassWith] = "Pass {0} of {1}: with the decision models",
         [StudioStringKeys.WizardTrialPassWithout] = "Pass {0} of {1}: without the decision models",
