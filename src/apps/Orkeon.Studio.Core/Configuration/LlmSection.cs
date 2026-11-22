@@ -92,6 +92,17 @@ public sealed partial class LlmSection
         set => _document.SetString(Key($"{ConfigurationKeys.LlmApiKeyEnvVar}"), value);
     }
 
+    /// <summary>
+    /// The Anthropic workspace the default's key acts in (<c>Llm:WorkspaceId</c>, Orkeon #468), sent as
+    /// <c>anthropic-workspace-id</c>: an identity-linked key refuses every call without it. Not a secret.
+    /// Another provider does not send it, and the run warns.
+    /// </summary>
+    public string? WorkspaceId
+    {
+        get => _document.GetString(Key(LlmProfilesSection.WorkspaceIdKey));
+        set => _document.SetString(Key(LlmProfilesSection.WorkspaceIdKey), value);
+    }
+
     /// <summary>Sampling temperature (<c>Llm:Temperature</c>).</summary>
     public double? Temperature
     {

@@ -112,13 +112,15 @@ public sealed class ModelProfileSetTests
         Assert.Equal("", overrides["ORKEON_Llm__ApiKeyEnvVar"]);
         Assert.Equal("", overrides["ORKEON_Llm__TimeoutSeconds"]);
         Assert.Equal("", overrides["ORKEON_Llm__StreamIdleSeconds"]);
+        // The default's workspace belongs to its key, never to the profile's (Orkeon #468).
+        Assert.Equal("", overrides["ORKEON_Llm__WorkspaceId"]);
 
         var empty = new ModelProfile { Name = "empty" }.EnvironmentOverrides();
         Assert.Equal(
             [
                 "ORKEON_Llm__ApiKey", "ORKEON_Llm__ApiKeyEnvVar", "ORKEON_Llm__BaseUrl", "ORKEON_Llm__CallMode", "ORKEON_Llm__MaxTokens",
                 "ORKEON_Llm__Model", "ORKEON_Llm__StreamIdleSeconds", "ORKEON_Llm__Temperature", "ORKEON_Llm__Thinking__Effort",
-                "ORKEON_Llm__Thinking__Enabled", "ORKEON_Llm__TimeoutSeconds",
+                "ORKEON_Llm__Thinking__Enabled", "ORKEON_Llm__TimeoutSeconds", "ORKEON_Llm__WorkspaceId",
             ],
             empty.Keys.Order(StringComparer.Ordinal));
         Assert.All(empty.Values, value => Assert.Equal("", value));

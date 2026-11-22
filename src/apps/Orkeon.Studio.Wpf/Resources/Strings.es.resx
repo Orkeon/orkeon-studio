@@ -1591,6 +1591,7 @@
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>Un perfil de modelo lleva un nombre reservado («default», el de la propia sección Llm, o «auto», la elección de System One): el motor se niega a arrancar. Cámbiele el nombre.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Se rechaza el Provider de Llm o de un perfil: admite «mock» con su archivo Responses, o la clave de un módulo de proveedor. Sin él, el proveedor se deduce de la dirección, del nombre del modelo y de la clave.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE" xml:space="preserve"><value>Hay un WorkspaceId definido para un proveedor que no es Anthropic: la ejecución no lo envía. Solo Anthropic asocia una clave a un espacio de trabajo; quítelo para este proveedor.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve">
     <value>Dos carpetas llevan el mismo identificador: un identificador nombra una sola carpeta.</value>
   </data>
@@ -2381,6 +2382,8 @@
   <data name="Studio.Run.JournalCopy" xml:space="preserve">
     <value>Copiar</value>
   </data>
+  <data name="Studio.Settings.ProfileLblWorkspace" xml:space="preserve"><value>Espacio de trabajo de Anthropic (opcional)</value></data>
+  <data name="Studio.Settings.ProfileWorkspaceHint" xml:space="preserve"><value>Una clave de Anthropic vinculada a una identidad rechaza toda llamada sin su espacio de trabajo: pegue aquí su identificador. Una clave clásica no necesita ninguno. No es un secreto.</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve">
     <value>Temperatura (opcional)</value>
   </data>

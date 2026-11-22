@@ -109,6 +109,27 @@ public sealed class LlmConnectionTestTests
     }
 
     [Fact]
+    public void The_workspace_is_loaded_written_trimmed_and_sent_with_the_probe()
+    {
+        // Orkeon #468: an identity-linked Anthropic key acts in one workspace; the probe presents it as a run does.
+        var document = Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse(
+            """{ "Llm": { "BaseUrl": "https://api.anthropic.com", "Model": "claude-x", "WorkspaceId": "wrkspc_01" } }""");
+        var form = new LlmForm();
+        form.LoadFrom(document);
+
+        Assert.Equal("wrkspc_01", form.WorkspaceId);
+        Assert.Equal("wrkspc_01", form.ToProbeRequest(Environment()).WorkspaceId);
+
+        form.WorkspaceId = " wrkspc_02 ";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("wrkspc_02", document.Llm.WorkspaceId);
+
+        form.WorkspaceId = "";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath("Llm:WorkspaceId"));
+    }
+
+    [Fact]
     public void The_probe_carries_the_model_capability_overrides_of_the_document_as_it_stands_now()
     {
         // The form edits none of Llm:ModelCapabilities: the probe reads them where a run does.

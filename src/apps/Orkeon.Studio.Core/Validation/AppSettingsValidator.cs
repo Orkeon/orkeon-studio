@@ -1,4 +1,5 @@
 using Orkeon.Constants.Configuration;
+using Orkeon.Constants.Llm;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Orkeon.Studio.Core.Configuration;
@@ -89,7 +90,8 @@ public sealed class AppSettingsValidator
     // The keys of a section of the Llm shape — Llm itself and each entry of Llm:Profiles —, by the
     // kind the run reads them as (LlmSettings): relative to the section.
     private static readonly string[] LlmStringKeys =
-        ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort", LlmProviderRules.ProviderKey, LlmProviderRules.ResponsesKey];
+        ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort", LlmProviderRules.ProviderKey, LlmProviderRules.ResponsesKey,
+         LlmProfilesSection.WorkspaceIdKey];
     private static readonly string[] LlmIntegerKeys =
         ["MaxTokens", "TimeoutSeconds", "StreamIdleSeconds", "MaxRetries", LlmProfilesSection.ContextWindowTokensKey];
     private static readonly string[] LlmBooleanKeys = ["Thinking:Enabled", ConfigurationKeys.LlmGrammar];
@@ -590,6 +592,40 @@ public sealed class AppSettingsValidator
     }
 
     /// <summary>
+    /// A <c>WorkspaceId</c> (Orkeon #468) on a section whose provider is not Anthropic: the run does not
+    /// send it and warns, in the remedy said here. The provider is the mock a section names, or the one
+    /// its address reads as; a section without an address is not judged, its provider following from
+    /// the model's name and the key.
+    /// </summary>
+    private static void ValidateWorkspace(JsonObject section, string sectionPath, List<ValidationMessage> messages)
+    {
+        if (Child(section, LlmProfilesSection.WorkspaceIdKey) is not JsonValue workspaceNode
+            || string.IsNullOrWhiteSpace(AppSettingsDocument.ReadString(workspaceNode)))
+        {
+            return;
+        }
+
+        var provider = Child(section, LlmProviderRules.ProviderKey) is JsonValue providerNode
+            && string.Equals(AppSettingsDocument.ReadString(providerNode), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase)
+            ? LlmProviderKeys.Mock
+            : Child(section, "BaseUrl") is JsonValue addressNode
+              && AppSettingsDocument.ReadString(addressNode) is { } address
+              && LlmSection.IsAbsoluteHttpUrl(address)
+                ? StudioEndpointReading.ProviderOf(address)
+                : null;
+        if (provider is null || provider == LlmProviderKeys.None || provider == LlmProviderKeys.Anthropic)
+            return;
+
+        var path = $"{sectionPath}:{LlmProfilesSection.WorkspaceIdKey}";
+        messages.Add(ValidationMessage.Warning(ValidationCodes.LlmWorkspace, WorkspaceNotSent(path, provider), path));
+    }
+
+    /// <summary>The warning of a workspace the provider does not send, ending on the run's own remedy.</summary>
+    public static string WorkspaceNotSent(string path, string provider) =>
+        $"{path} is not sent: the provider of this section is '{provider}'. "
+        + "Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.";
+
+    /// <summary>
     /// What the run will make of an absolute <c>BaseUrl</c> of a section of the <c>Llm</c> shape: an
     /// error for an address it refuses, a notice for one it reads without a word.
     /// </summary>
@@ -667,6 +703,7 @@ public sealed class AppSettingsValidator
         }
 
         ValidateEndpointReading(section, sectionPath, messages);
+        ValidateWorkspace(section, sectionPath, messages);
         ValidateCache(section, sectionPath, messages);
         ValidateThinkingEffort(section, sectionPath, messages);
 

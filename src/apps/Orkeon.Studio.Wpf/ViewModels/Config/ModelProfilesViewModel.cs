@@ -290,6 +290,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     private bool _balanceKeyMissing;
     private string _name;
     private string? _baseUrl;
+    private string? _workspaceId;
     private string? _model;
     private string? _apiKeyEnv;
     private string _apiKeyInput = "";
@@ -364,6 +365,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         PreviousName = previousName;
         _name = profile.Name;
         _baseUrl = profile.BaseUrl;
+        _workspaceId = profile.WorkspaceId;
         _model = profile.Model;
         _apiKeyEnv = profile.KeyEnvName;
         _temperatureText = profile.Temperature is { } temperature
@@ -496,10 +498,36 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             SaveCommand.RaiseCanExecuteChanged();
             OnPropertyChanged(nameof(EndpointReadingLine));
             OnPropertyChanged(nameof(ShowLocalNote));
+            OnPropertyChanged(nameof(ShowWorkspace));
             ClearConnectionTestResult();   // the verdict was about the previous endpoint
             ReplaceAvailableModels([]);
         }
     }
+
+    /// <summary>
+    /// The Anthropic workspace the key acts in (<c>WorkspaceId</c>, Orkeon #468): an identity-linked key
+    /// refuses every call without it. Not a secret; empty for every other key.
+    /// </summary>
+    public string? WorkspaceId
+    {
+        get => _workspaceId;
+        set
+        {
+            if (!SetProperty(ref _workspaceId, value))
+                return;
+
+            OnPropertyChanged(nameof(ShowWorkspace));
+            ClearConnectionTestResult();   // the verdict was about the previous workspace
+        }
+    }
+
+    /// <summary>
+    /// Whether the workspace field shows: for an address a run reads as Anthropic, the one provider
+    /// that sends it, and for a setting that holds one, so it can be cleared.
+    /// </summary>
+    public bool ShowWorkspace =>
+        !string.IsNullOrWhiteSpace(_workspaceId)
+        || StudioEndpointReading.ProviderOf(_baseUrl) == LlmProviderKeys.Anthropic;
 
     /// <summary>Model identifier (expert field).</summary>
     public string? Model
@@ -1090,6 +1118,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             Provider = _selectedProvider?.Name,
             Model = _model,
             BaseUrl = _baseUrl,
+            WorkspaceId = string.IsNullOrWhiteSpace(_workspaceId) ? null : _workspaceId.Trim(),
             Temperature = ParsedTemperature,
             TimeoutSeconds = ParsedTimeoutSeconds,
             StreamIdleSeconds = ParsedStreamIdleSeconds,
@@ -1134,6 +1163,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         {
             BaseUrl = BaseUrl,
             ApiKey = apiKey,
+            WorkspaceId = string.IsNullOrWhiteSpace(_workspaceId) ? null : _workspaceId.Trim(),
             Model = _model,
             ThinkingEnabled = _thinkingEnabled,
             CheckCompletion = true,

@@ -241,11 +241,12 @@ public static class LlmProbeDialect
     /// <summary>
     /// Builds the test completion for <paramref name="provider"/> on a host whose settings carry
     /// <paramref name="overrides"/> (<c>Llm:ModelCapabilities</c>): the thinking switch is narrowed by
-    /// them as a run narrows it.
+    /// them as a run narrows it. An Anthropic request carries <paramref name="workspaceId"/>, when there
+    /// is one, as the run does (<see cref="AddWorkspace"/>).
     /// </summary>
     internal static HttpRequestMessage BuildCompletion(
         string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled,
-        IReadOnlyDictionary<string, ThinkingSupport?>? overrides)
+        IReadOnlyDictionary<string, ThinkingSupport?>? overrides, string? workspaceId = null)
     {
         var baseUrl = baseUri.AbsoluteUri.TrimEnd('/');
         var messages = new object[] { new Dictionary<string, object> { ["role"] = "user", ["content"] = CompletionPrompt } };
@@ -275,6 +276,7 @@ public static class LlmProbeDialect
             var anthropic = Post(url, payload);
             anthropic.Headers.Add("x-api-key", apiKey ?? "");
             anthropic.Headers.Add("anthropic-version", AnthropicVersion);
+            AddWorkspace(anthropic, workspaceId);
             return anthropic;
         }
 
@@ -386,6 +388,19 @@ public static class LlmProbeDialect
     }
 
     private static bool IsSeparator(char c) => c is '-' or '.' or ':' or '@' or '/';
+
+    /// <summary>The header the run sends an Anthropic workspace in (<c>HttpDefaults.AnthropicWorkspaceIdHeader</c>, Orkeon #468).</summary>
+    public const string AnthropicWorkspaceIdHeader = "anthropic-workspace-id";
+
+    /// <summary>
+    /// Adds <paramref name="workspaceId"/>, trimmed, to an Anthropic request: an identity-linked key
+    /// refuses every call without it, the catalogue included. Nothing for a blank one.
+    /// </summary>
+    internal static void AddWorkspace(HttpRequestMessage request, string? workspaceId)
+    {
+        if (!string.IsNullOrWhiteSpace(workspaceId))
+            request.Headers.Add(AnthropicWorkspaceIdHeader, workspaceId.Trim());
+    }
 
     private static HttpRequestMessage Post(string url, Dictionary<string, object> payload) =>
         new(HttpMethod.Post, url)

@@ -106,7 +106,7 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         var context = new StepContext(request, started);
 
         var catalogue = await RunStepAsync(
-            LlmProbeStage.Models, () => BuildRequest(reading, baseUri, request.ApiKey), context, linked.Token, cancellationToken)
+            LlmProbeStage.Models, () => BuildRequest(reading, baseUri, request.ApiKey, request.WorkspaceId), context, linked.Token, cancellationToken)
             .ConfigureAwait(false);
         if (!catalogue.Succeeded)
             return catalogue.Result!;
@@ -126,7 +126,7 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         var completion = await RunStepAsync(
             LlmProbeStage.Completion,
             () => LlmProbeDialect.BuildCompletion(
-                provider, baseUri, request.ApiKey, model, request.ThinkingEnabled, request.ModelThinkingOverrides),
+                provider, baseUri, request.ApiKey, model, request.ThinkingEnabled, request.ModelThinkingOverrides, request.WorkspaceId),
             context, linked.Token, cancellationToken).ConfigureAwait(false);
         if (!completion.Succeeded)
             return completion.Result!;
@@ -241,7 +241,7 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         string.IsNullOrWhiteSpace(apiKey) ? text : text.Replace(apiKey.Trim(), RedactedKey, StringComparison.Ordinal);
 
     /// <summary>Builds the catalogue request in the dialect the detected provider speaks.</summary>
-    private static HttpRequestMessage BuildRequest(LlmEndpointReading reading, Uri baseUri, string? apiKey)
+    private static HttpRequestMessage BuildRequest(LlmEndpointReading reading, Uri baseUri, string? apiKey, string? workspaceId)
     {
         var baseUrl = baseUri.AbsoluteUri.TrimEnd('/');
 
@@ -253,6 +253,7 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
             var anthropic = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/v1/models");
             anthropic.Headers.Add("x-api-key", apiKey ?? "");
             anthropic.Headers.Add("anthropic-version", LlmProbeDialect.AnthropicVersion);
+            LlmProbeDialect.AddWorkspace(anthropic, workspaceId);
             return anthropic;
         }
 

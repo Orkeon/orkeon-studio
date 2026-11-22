@@ -935,6 +935,13 @@
                 <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
                            Text="{Binding EndpointReadingLine}"
                            Visibility="{Binding EndpointReadingLine, Converter={StaticResource StringPresentToVisibility}}"/>
+                <!-- The Anthropic workspace (Orkeon #468): shown for an Anthropic address, or while set. -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding ShowWorkspace, Converter={StaticResource BooleanToVisibility}}">
+                  <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblWorkspace], Source={x:Static services:I18n.Instance}}"/>
+                  <TextBox Style="{StaticResource InputMono}" Text="{Binding WorkspaceId, UpdateSourceTrigger=PropertyChanged}"/>
+                  <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
+                             Text="{Binding [Studio.Settings.ProfileWorkspaceHint], Source={x:Static services:I18n.Instance}}"/>
+                </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="2">
                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>

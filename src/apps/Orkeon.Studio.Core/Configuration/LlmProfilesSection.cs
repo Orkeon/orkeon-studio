@@ -148,6 +148,9 @@ public sealed class LlmProfilesSection
     /// </summary>
     public const string ContextWindowTokensKey = "ContextWindowTokens";
 
+    /// <summary>The Anthropic workspace a section's key acts in, relative to the section (Orkeon #468).</summary>
+    public const string WorkspaceIdKey = "WorkspaceId";
+
     /// <summary>
     /// Writes the <c>Model</c> of the section of the <c>Llm</c> shape at <paramref name="path"/>, on
     /// the key the file spells in whatever letter case, and takes the section's
@@ -178,6 +181,7 @@ public sealed class LlmProfilesSection
             BaseUrl = document.GetString(Key("BaseUrl")),
             Model = document.GetString(Key("Model")),
             ApiKeyEnvVar = document.GetString(Key(ConfigurationKeys.LlmApiKeyEnvVar)),
+            WorkspaceId = document.GetString(Key(WorkspaceIdKey)),
             Temperature = document.GetDouble(Key("Temperature")),
             TimeoutSeconds = document.GetInt32(Key("TimeoutSeconds")),
             StreamIdleSeconds = document.GetInt32(Key("StreamIdleSeconds")),
@@ -205,6 +209,7 @@ public sealed class LlmProfilesSection
         document.SetString(Key("BaseUrl"), entry.BaseUrl);
         SetModel(document, path, entry.Model);
         document.SetString(Key(ConfigurationKeys.LlmApiKeyEnvVar), entry.ApiKeyEnvVar);
+        document.SetString(Key(WorkspaceIdKey), string.IsNullOrWhiteSpace(entry.WorkspaceId) ? null : entry.WorkspaceId.Trim());
         document.SetDouble(Key("Temperature"), entry.Temperature);
         document.SetInt32(Key("TimeoutSeconds"), entry.TimeoutSeconds);
         document.SetInt32(Key("StreamIdleSeconds"), entry.StreamIdleSeconds);
@@ -300,6 +305,12 @@ public sealed record LlmProfileEntry
     /// judges the key a section holds.
     /// </summary>
     public string? ApiKeyPlaceholder { get; init; }
+
+    /// <summary>
+    /// <c>WorkspaceId</c> (Orkeon #468): the Anthropic workspace the key acts in, which an
+    /// identity-linked key needs; null for every other key. Not a secret.
+    /// </summary>
+    public string? WorkspaceId { get; init; }
 
     /// <summary><c>Temperature</c>, when pinned.</summary>
     public double? Temperature { get; init; }

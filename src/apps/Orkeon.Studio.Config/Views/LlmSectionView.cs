@@ -41,6 +41,7 @@ internal sealed class LlmSectionView : SectionView
     private readonly Label _provider;
     private readonly Label _notice;
     private readonly Label _apiKeyWarning;
+    private readonly TextField _workspace;
     private readonly Button _testConnection;
     private readonly Label _status;
     private readonly ListView _profiles;
@@ -70,6 +71,7 @@ internal sealed class LlmSectionView : SectionView
         foreach (var line in LlmForm.ApiKeyRecommendationLines)
             FormLayout.AddLine(this, y++, line);
         _apiKeyWarning = FormLayout.AddChangingLine(this, y++, "");
+        _workspace = FormLayout.AddField(this, y++, LlmForm.WorkspaceCaption, _form.WorkspaceId);
         _temperature = FormLayout.AddField(this, y++, "Temperature", _form.Temperature);
         _maxTokens = FormLayout.AddField(this, y++, "Max tokens", _form.MaxTokens);
         _timeout = FormLayout.AddField(this, y++, "Timeout (seconds)", _form.TimeoutSeconds);
@@ -116,6 +118,7 @@ internal sealed class LlmSectionView : SectionView
         _baseUrl.Text = _form.BaseUrl;
         _apiKey.Text = _form.ApiKey;
         _apiKeyEnvVar.Text = _form.ApiKeyEnvVar;
+        _workspace.Text = _form.WorkspaceId;
         _temperature.Text = _form.Temperature;
         _maxTokens.Text = _form.MaxTokens;
         _timeout.Text = _form.TimeoutSeconds;
@@ -144,6 +147,7 @@ internal sealed class LlmSectionView : SectionView
         _form.BaseUrl = _baseUrl.Text ?? "";
         _form.ApiKey = _apiKey.Text ?? "";
         _form.ApiKeyEnvVar = _apiKeyEnvVar.Text ?? "";
+        _form.WorkspaceId = _workspace.Text ?? "";
         _form.Temperature = _temperature.Text ?? "";
         _form.MaxTokens = _maxTokens.Text ?? "";
         _form.TimeoutSeconds = _timeout.Text ?? "";
@@ -248,6 +252,7 @@ internal sealed class LlmSectionView : SectionView
             _baseUrl.Dispose();
             _apiKey.Dispose();
             _apiKeyEnvVar.Dispose();
+            _workspace.Dispose();
             _temperature.Dispose();
             _maxTokens.Dispose();
             _timeout.Dispose();

@@ -610,6 +610,7 @@
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-ENDPOINT" xml:space="preserve"><value>Une adresse de modèle est refusée ou reste muette : une adresse sous le chemin /anthropic d'un autre fournisseur est refusée, et une adresse sans chemin est lue comme un serveur compatible OpenAI à sa racine.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>Un profil de modèle porte un nom réservé (« default », celui de la section Llm elle-même, ou « auto », le choix de System One) : le moteur refuse de démarrer. Renommez-le.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Le Provider de Llm ou d'un profil est refusé : il prend « mock » avec son fichier Responses, ou la clé d'un module de fournisseur. Sans lui, le fournisseur se déduit de l'adresse, du nom du modèle et de la clé.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE" xml:space="preserve"><value>Un WorkspaceId est défini pour un fournisseur qui n'est pas Anthropic : le run ne l'envoie pas. Seul Anthropic rattache une clé à un espace de travail ; retirez-le pour ce fournisseur.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve"><value>Deux dossiers portent le même identifiant : un identifiant nomme un seul dossier.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED" xml:space="preserve"><value>Plusieurs entrées partagent un même nom interne : une équipe en choisit une par exécution, et le même dossier deux fois est de trop.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>La déclaration filesystem: d'un agent est mal formée, ou sa portée ou sa racine de travail demande un dossier que les montages de l'exécution n'accordent pas : le moteur refuse l'équipe au chargement, ou refuse cet agent quand l'exécution le démarre.</value></data>
@@ -928,6 +929,8 @@
   <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>Les modèles de décision sont désactivés dans les réglages : l'assistant compose sans eux. L'équipe peut quand même être prévue pour s'en servir.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve"><value>L'assistant est encore occupé avec « {0} » — arrêtez-le, ou laissez-le finir, avant d'ouvrir une équipe.</value></data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve"><value>Copier</value></data>
+  <data name="Studio.Settings.ProfileLblWorkspace" xml:space="preserve"><value>Espace de travail Anthropic (optionnel)</value></data>
+  <data name="Studio.Settings.ProfileWorkspaceHint" xml:space="preserve"><value>Une clé Anthropic liée à une identité refuse tout appel sans son espace de travail : collez-en l'identifiant ici. Une clé classique n'en demande aucun. Ce n'est pas un secret.</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve"><value>Température (optionnel)</value></data>
   <data name="Studio.Settings.TemperatureHint" xml:space="preserve"><value>Vide : rien n'est envoyé — le modèle applique son propre défaut. Certains modèles imposent une valeur — Kimi K3 n'accepte que 1.</value></data>
   <data name="Studio.Settings.LblTimeout" xml:space="preserve"><value>Délai de réponse (s, optionnel)</value></data>

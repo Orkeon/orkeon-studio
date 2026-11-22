@@ -81,6 +81,12 @@ public static class ValidationCodes
     /// </summary>
     public const string LlmProvider = "STUDIO-LLM-PROVIDER";
 
+    /// <summary>
+    /// A <c>WorkspaceId</c> of <c>Llm</c> or of a profile whose provider is not Anthropic (Orkeon #468):
+    /// the run does not send it, and warns.
+    /// </summary>
+    public const string LlmWorkspace = "STUDIO-LLM-WORKSPACE";
+
     /// <summary>A model address the run refuses (a vendor's <c>/anthropic</c> path) or reads silently (a custom address with no path).</summary>
     public const string LlmEndpoint = "STUDIO-LLM-ENDPOINT";
 

@@ -40,6 +40,12 @@ internal sealed class LlmForm : ISettingsForm
     /// </summary>
     public string ApiKeyEnvVar { get; set; } = "";
 
+    /// <summary>
+    /// The Anthropic workspace the key acts in (<c>Llm:WorkspaceId</c>, Orkeon #468): an identity-linked
+    /// key refuses every call without it. Not a secret; blank for every other key.
+    /// </summary>
+    public string WorkspaceId { get; set; } = "";
+
     /// <summary>Sampling temperature.</summary>
     public string Temperature { get; set; } = "";
 
@@ -61,6 +67,9 @@ internal sealed class LlmForm : ISettingsForm
     /// <summary>The "Read as: ..." line naming the provider a run reads the address as; never written to the file.</summary>
     public string ReadAsLine =>
         string.Create(CultureInfo.InvariantCulture, $"Read as: {StudioEndpointReading.ProviderOf(BaseUrl)} (read-only)");
+
+    /// <summary>The caption of <see cref="WorkspaceId"/>'s field: only Anthropic sends it.</summary>
+    public const string WorkspaceCaption = "Anthropic workspace";
 
     /// <summary>Shown under <see cref="ReadAsLine"/> while the reading has no notice: where the reading comes from.</summary>
     public const string ReadingNotice = "A run reads the base URL the same way.";
@@ -177,6 +186,7 @@ internal sealed class LlmForm : ISettingsForm
         {
             BaseUrl = FieldText.ToStringOrNull(BaseUrl),
             ApiKey = apiKey,
+            WorkspaceId = FieldText.ToStringOrNull(WorkspaceId),
             Model = FieldText.ToStringOrNull(Model),
             ThinkingEnabled = thinking,
             CheckCompletion = true,
@@ -214,6 +224,7 @@ internal sealed class LlmForm : ISettingsForm
         BaseUrl = FieldText.FromString(section.BaseUrl);
         ApiKey = FieldText.FromString(section.ApiKey);
         ApiKeyEnvVar = FieldText.FromString(section.ApiKeyEnvVar);
+        WorkspaceId = FieldText.FromString(section.WorkspaceId);
         // STUDIO-55: as the file writes them — a value the field cannot read is shown, and refused
         // when applied, never loaded empty and erased.
         Temperature = document.GetWritten($"{LlmSection.SectionPath}:Temperature");
@@ -266,6 +277,7 @@ internal sealed class LlmForm : ISettingsForm
         section.BaseUrl = FieldText.ToStringOrNull(BaseUrl);
         section.ApiKey = FieldText.ToStringOrNull(ApiKey);
         section.ApiKeyEnvVar = FieldText.ToStringOrNull(ApiKeyEnvVar);
+        section.WorkspaceId = FieldText.ToStringOrNull(WorkspaceId);
         section.Temperature = temperature;
         section.MaxTokens = maxTokens;
         section.TimeoutSeconds = timeout;

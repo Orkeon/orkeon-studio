@@ -3793,6 +3793,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-LLM-ENDPOINT"] = "A model address is refused or left silent: an address under another vendor's /anthropic path is refused, and one with no path is read as an OpenAI-compatible server at its root.",
         ["Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME"] = "A model profile bears a reserved name ('default', the Llm section's own, or 'auto', System One's pick): the engine refuses to start. Rename it.",
         ["Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER"] = "The Provider of Llm or of a profile is refused: it takes 'mock' with its Responses file, or the key of a provider module. Leave it out and the provider follows from the address, the model's name and the key.",
+        ["Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE"] = "A WorkspaceId is set for a provider that is not Anthropic: the run does not send it. Only Anthropic scopes a key to a workspace; remove it for this provider.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",

@@ -177,6 +177,42 @@ public sealed class HttpLlmEndpointProbeTests
         Assert.Null(handler.LastRequest.Authorization);
     }
 
+    /// <summary>
+    /// An identity-linked Anthropic key refuses every call without its workspace (Orkeon #468): the probe
+    /// sends it with both steps, trimmed, as the run does; no other dialect carries it.
+    /// </summary>
+    [Fact]
+    public async Task The_workspace_goes_with_both_steps_to_Anthropic_and_to_no_other_provider()
+    {
+        using var anthropic = new StubHttpMessageHandler { Body = """{ "data": [ { "id": "claude" } ] }""" };
+        using (var client = new HttpClient(anthropic, disposeHandler: false))
+        using (var probe = new HttpLlmEndpointProbe(client))
+        {
+            await probe.ProbeAsync(
+                new LlmProbeRequest { BaseUrl = LlmProviderEndpoints.Anthropic, ApiKey = "sk-ant", WorkspaceId = " wrkspc_01 ", Model = "claude-x", CheckCompletion = true },
+                TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(2, anthropic.Requests.Count);
+        Assert.All(anthropic.Requests, request => Assert.Equal("wrkspc_01", request.WorkspaceHeader));
+
+        using var openAi = new StubHttpMessageHandler { Body = """{ "data": [ { "id": "gpt" } ] }""" };
+        using (var client = new HttpClient(openAi, disposeHandler: false))
+        using (var probe = new HttpLlmEndpointProbe(client))
+        {
+            await probe.ProbeAsync(
+                new LlmProbeRequest { BaseUrl = "https://api.openai.com/v1", ApiKey = "sk", WorkspaceId = "wrkspc_01", Model = "gpt-x", CheckCompletion = true },
+                TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(2, openAi.Requests.Count);
+        Assert.All(openAi.Requests, request => Assert.Null(request.WorkspaceHeader));
+
+        using var none = new StubHttpMessageHandler { Body = """{ "data": [] }""" };
+        await ProbeAsync(none, LlmProviderEndpoints.Anthropic, apiKey: "sk-ant");
+        Assert.Null(none.LastRequest.WorkspaceHeader);
+    }
+
     [Fact]
     public async Task A_reachable_endpoint_answering_an_unknown_shape_still_succeeds()
     {
