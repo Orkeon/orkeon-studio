@@ -856,6 +856,16 @@
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}：System One 选择了思考级别 {1}（{2}%）。</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}：一次尝试失败后，思考级别由 {1} 提高到 {2}。</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}：思考级别 {1}，非 System One 选择（{2}）。</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>它自己的选择</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>其选择不够确定</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>它未给出可用的回答</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>决策模型已关闭</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>没有可供选择的阶梯</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>团队未向其提出任何请求</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>只允许一个级别</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>在一次失败的尝试后提高</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>限定在阶梯的最低级</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>限定在阶梯的最高级</value></data>
   <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}：技能 {1}（{2}）。</value></data>
   <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}：无技能（{1}）。</value></data>
   <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}：上下文已压缩，从 {1} 个令牌降至 {2} 个。</value></data>

@@ -322,7 +322,7 @@ public class RunProgressViewModelTests
             [
                 "Decision models off: this run goes without them (team mode: optional).",
                 "Analyst: System One picked the profile 'strong' (82 %).",
-                "Writer: profile 'default', not picked by System One (circuit-off).",
+                "Writer: profile 'default', not picked by System One (the decision models are off).",
                 "Analyst: thinking level raised from low to medium after a failed attempt.",
                 "Analyst: no skill (circuit-off).",
                 "Analyst: the context could not be compacted (failed).",
@@ -332,6 +332,48 @@ public class RunProgressViewModelTests
         // A new run starts from an empty panel.
         panel.Reset((_, _) => true);
         Assert.False(panel.HasAgentNotes);
+    }
+
+    /// <summary>Why a thinking level was not the model's pick is said in words, never as the engine's token.</summary>
+    [Theory]
+    [InlineData("single-level", "Writer: thinking level high, not picked by System One (a single level is allowed).")]
+    [InlineData("low-confidence", "Writer: thinking level high, not picked by System One (its pick was not sure enough).")]
+    [InlineData("no-answer", "Writer: thinking level high, not picked by System One (it gave no usable answer).")]
+    [InlineData("decision-none", "Writer: thinking level high, not picked by System One (the team asks it nothing).")]
+    [InlineData("something-newer", "Writer: thinking level high, not picked by System One (something-newer).")]
+    public void An_effort_reason_is_said_in_words(string reason, string said)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"agent.effort","taskId":"write","agentRole":"Writer","level":"high","reason":"{{reason}}"}""");
+
+        Assert.Equal([said], panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// Every reason the engine gives a route or a thinking level (its <c>AgentRouteReasons</c>,
+    /// <c>AgentEffortReasons</c> and <c>SystemOnePickReasons</c>, read off the packaged assembly) has its
+    /// words: a reason added there fails here rather than reach the panel raw.
+    /// </summary>
+    [Fact]
+    public void Every_reason_of_the_engine_has_its_words()
+    {
+        var engine = new[]
+            {
+                typeof(Orkeon.Application.Interfaces.Ports.AgentRouteReasons),
+                typeof(Orkeon.Application.Interfaces.Ports.AgentEffortReasons),
+                typeof(Orkeon.Application.Crew.Routing.SystemOnePickReasons),
+            }
+            .SelectMany(type => type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(engine);
+        Assert.Equal(engine, RunProgressViewModel.PickReasonKeys.Keys.Order(StringComparer.Ordinal));
     }
 
     /// <summary>

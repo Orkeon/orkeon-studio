@@ -357,6 +357,16 @@
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One picked the thinking level {1} ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: thinking level raised from {1} to {2} after a failed attempt.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: thinking level {1}, not picked by System One ({2}).</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>its own pick</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>its pick was not sure enough</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>it gave no usable answer</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>the decision models are off</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>no ladder to pick on</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>the team asks it nothing</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>a single level is allowed</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>raised after a failed attempt</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>held to the floor of the ladder</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>held to the ceiling of the ladder</value></data>
   <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: skills {1} ({2}).</value></data>
   <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: no skill ({1}).</value></data>
   <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: context compacted, from {1} to {2} tokens.</value></data>

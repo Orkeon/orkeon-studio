@@ -357,6 +357,16 @@
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0} : System One a choisi le niveau de réflexion {1} ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0} : niveau de réflexion relevé de {1} à {2} après une tentative échouée.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0} : niveau de réflexion {1}, non choisi par System One ({2}).</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>son propre choix</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>son choix n'était pas assez sûr</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>il n'a donné aucune réponse utilisable</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>les modèles de décision sont désactivés</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>aucune échelle où choisir</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>l'équipe ne lui demande rien</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>un seul niveau est permis</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>relevé après une tentative échouée</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>ramené au bas de l'échelle</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>ramené au haut de l'échelle</value></data>
   <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0} : compétences {1} ({2}).</value></data>
   <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0} : aucune compétence ({1}).</value></data>
   <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0} : contexte compacté, de {1} à {2} jetons.</value></data>

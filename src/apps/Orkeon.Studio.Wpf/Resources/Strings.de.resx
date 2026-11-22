@@ -856,6 +856,16 @@
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One hat die Denkstufe {1} gewählt ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: Denkstufe nach einem fehlgeschlagenen Versuch von {1} auf {2} angehoben.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: Denkstufe {1}, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>seine eigene Wahl</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>seine Wahl war nicht sicher genug</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>es gab keine verwertbare Antwort</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>die Entscheidungsmodelle sind ausgeschaltet</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>keine Leiter zur Auswahl</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>das Team fragt es nichts</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>nur eine Stufe ist erlaubt</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>nach einem fehlgeschlagenen Versuch erhöht</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>auf die unterste Stufe der Leiter begrenzt</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>auf die oberste Stufe der Leiter begrenzt</value></data>
   <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: Fähigkeiten {1} ({2}).</value></data>
   <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: keine Fähigkeit ({1}).</value></data>
   <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: Kontext verdichtet, von {1} auf {2} Tokens.</value></data>

@@ -856,6 +856,16 @@
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One eligió el nivel de razonamiento {1} ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: nivel de razonamiento elevado de {1} a {2} tras un intento fallido.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: nivel de razonamiento {1}, no elegido por System One ({2}).</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>su propia elección</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>su elección no era lo bastante segura</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>no dio ninguna respuesta utilizable</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>los modelos de decisión están desactivados</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>ninguna escala en la que elegir</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>el equipo no le pide nada</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>solo se permite un nivel</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>elevado tras un intento fallido</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>limitado al nivel inferior de la escala</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>limitado al nivel superior de la escala</value></data>
   <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: habilidades {1} ({2}).</value></data>
   <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: ninguna habilidad ({1}).</value></data>
   <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: contexto compactado, de {1} a {2} tokens.</value></data>

@@ -641,17 +641,45 @@ public sealed class RunProgressViewModel : ObservableObject
 #pragma warning disable ORKEXP008
     private const string RouteFloor = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Floor;
     private const string RouteCeiling = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Ceiling;
-#pragma warning restore ORKEXP008
 
     /// <summary>
-    /// One thing the run did around an agent's model calls, as the panel lists it. The engine's own
-    /// words (a reason, a mode, an outcome) are shown as written: they are what its documentation names.
+    /// The words of every reason the engine gives a profile or a thinking level it did not take from the
+    /// model's pick (<c>AgentRouteReasons</c>, <c>AgentEffortReasons</c>, <c>SystemOnePickReasons</c>), read from
+    /// its own constants: a renamed reason fails the build, a new one fails the drift test of the list.
+    /// A reason none of them names is shown as the engine wrote it.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> PickReasonKeys = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.Model] = StudioStringKeys.RunNoteReasonModel,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.LowConfidence] = StudioStringKeys.RunNoteReasonLowConfidence,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.NoAnswer] = StudioStringKeys.RunNoteReasonNoAnswer,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.CircuitOff] = StudioStringKeys.RunNoteReasonCircuitOff,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.NoLadder] = StudioStringKeys.RunNoteReasonNoLadder,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.DecisionNone] = StudioStringKeys.RunNoteReasonDecisionNone,
+        [Orkeon.Application.Interfaces.Ports.AgentEffortReasons.SingleLevel] = StudioStringKeys.RunNoteReasonSingleLevel,
+        [Orkeon.Application.Interfaces.Ports.AgentEffortReasons.Raised] = StudioStringKeys.RunNoteReasonRaised,
+        [RouteFloor] = StudioStringKeys.RunNoteReasonFloor,
+        [RouteCeiling] = StudioStringKeys.RunNoteReasonCeiling,
+    };
+#pragma warning restore ORKEXP008
+
+    /// <summary>The words of an engine's pick reason in the window's language; the engine's own when it is none Studio knows.</summary>
+    private string PickReason(string? reason) =>
+        reason is null ? "—"
+        : PickReasonKeys.TryGetValue(reason, out var key) ? _strings[key]
+        : reason;
+
+    /// <summary>
+    /// One thing the run did around an agent's model calls, as the panel lists it. Why a profile or a
+    /// thinking level was not the model's pick is said in the window's language (<see cref="PickReasonKeys"/>);
+    /// the engine's other words (a skills mode, an outcome) are shown as written: they are what its
+    /// documentation names.
     /// </summary>
     private string Describe(RunAgentNote note)
     {
         var who = note.AgentRole is { Length: > 0 } role ? role : note.TaskId ?? "\u2014";
         var value = note.Value ?? "\u2014";
-        var reason = note.Reason ?? "\u2014";
+        var reason = PickReason(note.Reason);
         var share = note.Probability is { } probability
             ? Math.Round(Math.Clamp(probability, 0, 1) * 100, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture)
             : "\u2014";

@@ -1687,6 +1687,36 @@ public static class StudioStringKeys
     /// <summary>A thinking level System One did not pick: {0} the agent, {1} the level, {2} the engine's reason.</summary>
     public const string RunNoteEffortDefault = "Studio.Run.NoteEffortDefault";
 
+    /// <summary>Why the model's pick was not taken, the engine's <c>model</c>: "its own pick".</summary>
+    public const string RunNoteReasonModel = "Studio.Run.NoteReasonModel";
+
+    /// <summary>The engine's <c>low-confidence</c>: "its pick was not sure enough".</summary>
+    public const string RunNoteReasonLowConfidence = "Studio.Run.NoteReasonLowConfidence";
+
+    /// <summary>The engine's <c>no-answer</c>: "it gave no usable answer".</summary>
+    public const string RunNoteReasonNoAnswer = "Studio.Run.NoteReasonNoAnswer";
+
+    /// <summary>The engine's <c>circuit-off</c>: "the decision models are off".</summary>
+    public const string RunNoteReasonCircuitOff = "Studio.Run.NoteReasonCircuitOff";
+
+    /// <summary>The engine's <c>no-ladder</c>: "no ladder to pick on".</summary>
+    public const string RunNoteReasonNoLadder = "Studio.Run.NoteReasonNoLadder";
+
+    /// <summary>The engine's <c>decision-none</c>: "the team asks it nothing".</summary>
+    public const string RunNoteReasonDecisionNone = "Studio.Run.NoteReasonDecisionNone";
+
+    /// <summary>The engine's <c>single-level</c>: "a single level is allowed".</summary>
+    public const string RunNoteReasonSingleLevel = "Studio.Run.NoteReasonSingleLevel";
+
+    /// <summary>The engine's <c>raised</c>: "raised after a failed attempt".</summary>
+    public const string RunNoteReasonRaised = "Studio.Run.NoteReasonRaised";
+
+    /// <summary>The engine's <c>floor</c>: "held to the floor of the ladder".</summary>
+    public const string RunNoteReasonFloor = "Studio.Run.NoteReasonFloor";
+
+    /// <summary>The engine's <c>ceiling</c>: "held to the ceiling of the ladder".</summary>
+    public const string RunNoteReasonCeiling = "Studio.Run.NoteReasonCeiling";
+
     /// <summary>The skills an agent carries: {0} the agent, {1} the skills, comma-separated, {2} how they were chosen (the engine's word).</summary>
     public const string RunNoteSkills = "Studio.Run.NoteSkills";
 
@@ -4284,6 +4314,16 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunNoteEffortPicked] = "{0}: System One picked the thinking level {1} ({2} %).",
         [StudioStringKeys.RunNoteEffortRaised] = "{0}: thinking level raised from {1} to {2} after a failed attempt.",
         [StudioStringKeys.RunNoteEffortDefault] = "{0}: thinking level {1}, not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteReasonModel] = "its own pick",
+        [StudioStringKeys.RunNoteReasonLowConfidence] = "its pick was not sure enough",
+        [StudioStringKeys.RunNoteReasonNoAnswer] = "it gave no usable answer",
+        [StudioStringKeys.RunNoteReasonCircuitOff] = "the decision models are off",
+        [StudioStringKeys.RunNoteReasonNoLadder] = "no ladder to pick on",
+        [StudioStringKeys.RunNoteReasonDecisionNone] = "the team asks it nothing",
+        [StudioStringKeys.RunNoteReasonSingleLevel] = "a single level is allowed",
+        [StudioStringKeys.RunNoteReasonRaised] = "raised after a failed attempt",
+        [StudioStringKeys.RunNoteReasonFloor] = "held to the floor of the ladder",
+        [StudioStringKeys.RunNoteReasonCeiling] = "held to the ceiling of the ladder",
         [StudioStringKeys.RunNoteSkills] = "{0}: skills {1} ({2}).",
         [StudioStringKeys.RunNoteSkillsNone] = "{0}: no skill ({1}).",
         [StudioStringKeys.RunNoteCompacted] = "{0}: context compacted, from {1} to {2} tokens.",
