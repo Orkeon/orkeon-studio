@@ -90,7 +90,10 @@ public sealed class LlmWorkspaceTests
         // The mock a section names, in any case and padded.
         { """ "Provider": "mock", "Responses": "/r.jsonl", "Model": "m" """, "mock" },
         { """ "Provider": " Mock ", "Model": "claude-x" """, "mock" },
-        // A section that names another provider builds none of the catalogue: not judged.
+        // The agent-cli module runs on its CLI's login, whatever the model: the run and doctor warn (Orkeon #470).
+        { """ "Provider": "agent-cli", "Model": "claude-sonnet-5-5" """, "agent-cli" },
+        { """ "Provider": " Agent-CLI ", "Model": "claude-x" """, "agent-cli" },
+        // A section that names a provider no module answers is refused: not judged.
         { """ "Provider": "acme", "Model": "gpt-4o" """, null },
         // An address the start refuses builds no provider: its error is said, not the workspace.
         { """ "BaseUrl": "https://api.deepseek.com/anthropic", "Model": "m" """, null },

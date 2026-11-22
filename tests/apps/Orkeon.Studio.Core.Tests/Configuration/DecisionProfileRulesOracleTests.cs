@@ -123,8 +123,8 @@ public sealed class DecisionProfileRulesOracleTests
         }
         catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException refusal)
         {
-            // The host's start says the binder's refusal without the value (Orkeon #465).
-            return EngineBinderRefusal.WithoutValue(refusal.Message);
+            // The host's start says the binder's refusal without the value (Orkeon #465, #469).
+            return EngineBinderRefusal.WithoutValue(refusal);
         }
     }
 }

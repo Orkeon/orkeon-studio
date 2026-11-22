@@ -23,9 +23,63 @@ public sealed partial class LlmProviderRulesTests
         var all = ModulesList().Match(source);
 
         Assert.True(all.Success, "CliLlmProviderModules.All is no longer written as a list Studio can read: re-read it and update LlmProviderRules.CliModuleKeys.");
-        // The tool ships no module yet: a first one means a key Studio must accept.
-        Assert.Equal("[]", Blanks().Replace(all.Groups["list"].Value, ""));
-        Assert.Empty(LlmProviderRules.CliModuleKeys);
+
+        // Each module the list builds (its options built beside it are no module), by the key the packed module answers to.
+        var keys = ModuleTypes().Matches(all.Groups["list"].Value)
+            .Select(match => KeyOf(match.Groups["type"].Value))
+            .OfType<string>()
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(LlmProviderRules.CliModuleKeys.Order(StringComparer.Ordinal), keys);
+    }
+
+    [Fact]
+    public void The_agent_cli_key_is_the_modules_own()
+    {
+        Assert.Equal(Orkeon.Interop.AgentCli.AgentCliDiagnostics.ProviderKey, LlmProviderRules.AgentCliKey);
+    }
+
+    /// <summary>
+    /// A section naming the agent-cli module is accepted, whatever its case, and needs no key: the module
+    /// runs on its CLI's login, as <c>orkeon llm probe</c> knows.
+    /// </summary>
+    [Theory]
+    [InlineData("agent-cli")]
+    [InlineData("Agent-CLI")]
+    [InlineData(" agent-cli ")]
+    public void A_section_naming_the_agent_cli_module_is_accepted(string provider)
+    {
+        var document = AppSettingsDocument.Parse($$"""{ "Llm": { "Provider": "{{provider}}", "Model": "claude-sonnet-5-5" } }""");
+
+        Assert.Empty(LlmProviderRules.Check(document));
+        Assert.DoesNotContain(new AppSettingsValidator().Validate(document), message => message.Severity == ValidationSeverity.Error);
+    }
+
+    /// <summary>
+    /// The key a provider module of the packed engine answers to, built on its default options as <c>All</c>
+    /// builds it; null for a type that is no module. A type the packages do not hold fails the test.
+    /// </summary>
+    private static string? KeyOf(string typeName)
+    {
+        var type = typeof(Orkeon.Interop.AgentCli.AgentCliProviderModule).Assembly.GetTypes()
+            .Concat(typeof(Orkeon.Application.Interfaces.Ports.ILlmProviderModule).Assembly.GetTypes())
+            .Single(candidate => candidate.Name == typeName);
+        if (!typeof(Orkeon.Application.Interfaces.Ports.ILlmProviderModule).IsAssignableFrom(type))
+            return null;
+
+        var constructor = type.GetConstructors().OrderBy(candidate => candidate.GetParameters().Length).First();
+        var module = (Orkeon.Application.Interfaces.Ports.ILlmProviderModule)constructor.Invoke(
+            [.. constructor.GetParameters().Select(parameter => Activator.CreateInstance(parameter.ParameterType))]);
+        try
+        {
+            return module.Key;
+        }
+        finally
+        {
+            (module as IDisposable)?.Dispose();
+            if (module is IAsyncDisposable asyncDisposable)
+                asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     /// <summary>
@@ -127,6 +181,6 @@ public sealed partial class LlmProviderRulesTests
     [GeneratedRegex(@"IReadOnlyList<ILlmProviderModule>\s+All\s*\{\s*get;\s*\}\s*=\s*(?<list>[^;]*);", RegexOptions.CultureInvariant, 1000)]
     private static partial Regex ModulesList();
 
-    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant, 1000)]
-    private static partial Regex Blanks();
+    [GeneratedRegex(@"\bnew\s+(?<type>[A-Za-z_][A-Za-z0-9_]*)\s*\(", RegexOptions.CultureInvariant, 1000)]
+    private static partial Regex ModuleTypes();
 }

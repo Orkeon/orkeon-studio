@@ -44,6 +44,8 @@
     <PackageReference Include="Orkeon" />
     <PackageReference Include="Orkeon.Tools" />
     <PackageReference Include="Orkeon.Scripting" ExcludeAssets="build" />
+    <!-- The agent-cli provider module the orkeon tool registers, and its start's refusals: read by the drift tests. -->
+    <PackageReference Include="Orkeon.Interop.AgentCli" />
   </ItemGroup>
 
   <ItemGroup>

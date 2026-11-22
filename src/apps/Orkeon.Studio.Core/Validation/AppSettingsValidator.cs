@@ -174,6 +174,7 @@ public sealed class AppSettingsValidator
             .Concat(document.ToolBridge.Problems())
             .Concat(document.BridgeServer.Problems())
             .Concat(document.Guardian.Problems())
+            .Concat(document.AgentCli.Problems())
             .Concat(document.Decision.ProfileProblems())
             .Concat(document.Decision.UnknownKeys())
             .Where(found => load is null || found != load.Value))
@@ -596,11 +597,11 @@ public sealed class AppSettingsValidator
 
     /// <summary>
     /// A <c>WorkspaceId</c> (Orkeon #468) on a section whose provider is not Anthropic: the run does not
-    /// send it and warns, in the remedy said here. The provider is read as the run builds it: the mock a
-    /// section names, else the one its address reads as, else - no address - its model's name, then the
-    /// prefix of the key written in the file, else OpenAI (<see cref="LlmEndpointReading.Of"/>). A
-    /// section that names another provider (a module, or a name the start refuses) is not judged, nor
-    /// one whose address the start refuses: no provider is built.
+    /// send it and warns, in the remedy said here. The provider is read as the run builds it: the mock or
+    /// the provider module a section names, else the one its address reads as, else - no address - its
+    /// model's name, then the prefix of the key written in the file, else OpenAI
+    /// (<see cref="LlmEndpointReading.Of"/>). A section that names a provider the start refuses is not
+    /// judged, nor one whose address the start refuses: no provider is built.
     /// </summary>
     private static void ValidateWorkspace(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
@@ -617,9 +618,16 @@ public sealed class AppSettingsValidator
         string provider;
         if (ConfigurationText(section, LlmProviderRules.ProviderKey) is { } named && !string.IsNullOrWhiteSpace(named))
         {
-            if (!string.Equals(named.Trim(), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase))
+            // The mock, or a provider module: none sends the workspace (the agent-cli module runs on its
+            // CLI's login and warns of it at run time, event 110; doctor says it too, Orkeon #470). A
+            // name no module answers is refused by LlmProviderRules.
+            var key = LlmProviderRules.CliModuleKeys.FirstOrDefault(module => string.Equals(module, named.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (string.Equals(named.Trim(), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase))
+                provider = LlmProviderKeys.Mock;
+            else if (key is not null)
+                provider = key;
+            else
                 return;
-            provider = LlmProviderKeys.Mock;
         }
         else
         {

@@ -23,10 +23,17 @@ public static class LlmProviderRules
     public const string ResponsesKey = "Responses";
 
     /// <summary>
-    /// The provider modules the <c>orkeon</c> tool registers in every host it builds, by key: Studio's
-    /// mirror of <c>CliLlmProviderModules.All</c>, which ships none yet. A drift test reads that list.
+    /// The key of the experimental <c>agent-cli</c> provider module (Orkeon ADR-020): Claude Code, run on
+    /// the subscription its CLI is signed in to, configured by <c>Llm:AgentCli</c>. The engine's
+    /// <c>AgentCliDiagnostics.ProviderKey</c>, held to it by a drift test.
     /// </summary>
-    public static IReadOnlyList<string> CliModuleKeys { get; } = [];
+    public const string AgentCliKey = "agent-cli";
+
+    /// <summary>
+    /// The provider modules the <c>orkeon</c> tool registers in every host it builds, by key: Studio's
+    /// mirror of <c>CliLlmProviderModules.All</c>. A drift test reads that list.
+    /// </summary>
+    public static IReadOnlyList<string> CliModuleKeys { get; } = [AgentCliKey];
 
     /// <summary>
     /// The vendor keys of the catalogue, which <c>Provider</c> never names: Studio's mirror of

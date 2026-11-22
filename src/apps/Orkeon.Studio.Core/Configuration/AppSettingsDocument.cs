@@ -52,6 +52,7 @@ public sealed class AppSettingsDocument
         Skills = new SkillsSection(this);
         ToolBridge = new ToolBridgeSection(this);
         BridgeServer = new BridgeServerSection(this);
+        AgentCli = new AgentCliSection(this);
     }
 
     /// <summary>The mutable JSON tree backing this document — the raw-edit surface of the UIs.</summary>
@@ -104,6 +105,9 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over <c>Orkeon:Bridge</c>: the tools <c>orkeon bridge serve</c> runs for a caller.</summary>
     public BridgeServerSection BridgeServer { get; }
+
+    /// <summary>What the host's start refuses in <c>Llm:AgentCli</c>, the section of the agent-cli provider module.</summary>
+    public AgentCliSection AgentCli { get; }
 
     /// <summary>Creates an empty document (<c>{}</c>).</summary>
     public static AppSettingsDocument CreateEmpty() => new(new JsonObject());

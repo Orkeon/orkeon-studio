@@ -111,7 +111,9 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
             return (RunnerHost.Build(
                 path,
                 new RunnerMountPlan { CliMounts = [$"{FileSystemMount.Quote(_root)}:/crew:ro"], AllowExternalMounts = true },
-                configureLogging: (_, logging) => logging.SetMinimumLevel(LogLevel.None)), null);
+                configureLogging: (_, logging) => logging.SetMinimumLevel(LogLevel.None),
+                // As the orkeon tool builds every host (CliLlmProviderModules.AddTo): with its provider module.
+                configureServices: (_, services) => Orkeon.Interop.AgentCli.DependencyInjection.AgentCliServiceCollectionExtensions.AddOrkeonAgentCli(services)), null);
         }
         catch (RunnerSettingsException ex)
         {
@@ -362,6 +364,10 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
                 ("a vendor's alias", "\"Provider\": \"azure\", \"Model\": \"gpt-4o\"", false),
                 ("the custom endpoint", "\"Provider\": \"custom\", \"Model\": \"m\"", false),
                 ("the Docker Model Runner", "\"Provider\": \"docker-model-runner\", \"Model\": \"m\"", false),
+                // The orkeon tool's provider module (ADR-020), whatever the case of its key.
+                ("the agent-cli module", "\"Provider\": \"agent-cli\", \"Model\": \"claude-x\"", true),
+                ("the agent-cli module in capitals, with blanks", "\"Provider\": \" Agent-CLI \", \"Model\": \"claude-x\"", true),
+                ("the agent-cli module with a responses file", "\"Provider\": \"agent-cli\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),
                 ("a name no module answers", "\"Provider\": \"acme\", \"Model\": \"m\"", false),
                 ("a name no module answers, with a responses file", "\"Provider\": \"acme\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),
                 ("a vendor with a responses file", "\"Provider\": \"openai\", \"Model\": \"m\", \"Responses\": \"/crew/responses.jsonl\"", false),

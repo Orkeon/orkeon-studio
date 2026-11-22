@@ -483,7 +483,7 @@ public sealed class DecisionSection
         catch (InvalidOperationException ex)
         {
             strictTools = true;
-            return SettingsBinding.WithoutValue(ex.Message);
+            return SettingsBinding.WithoutValue(ex);
         }
     }
 
@@ -503,7 +503,7 @@ public sealed class DecisionSection
         }
         catch (InvalidOperationException ex)
         {
-            return SettingsBinding.WithoutValue(ex.Message);
+            return SettingsBinding.WithoutValue(ex);
         }
 
         // FillBlanks, for the one default the rules below read.

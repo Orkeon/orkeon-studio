@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 
 namespace Orkeon.Studio.Core.Configuration;
@@ -131,13 +130,13 @@ internal static partial class SettingsBinding
             catch (InvalidOperationException ex)
             {
                 var keys = configuration.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                if (!TryReadBinderSentence(ex.Message, keys.Contains, out var path, out _))
+                if (!TryReadBinderSentence(ex.Message, keys.Contains, out var path))
                 {
-                    problems.Add((sectionPath, ex.Message));
+                    problems.Add((sectionPath, WithoutValue(ex)));
                     return options;
                 }
 
-                problems.Add((path, WithoutValue(ex.Message)));
+                problems.Add((path, WithoutValue(ex)));
                 if (unconverted >= MaxUnconverted)
                     return options;
 
@@ -525,80 +524,146 @@ internal static partial class SettingsBinding
     }
 
     /// <summary>
-    /// <paramref name="message"/> with the value taken out when it is the binder's sentence, as the
-    /// host rewords it (<c>BinderRefusal.WithoutValue</c>, Orkeon #465): <c>Failed to convert the
-    /// configuration value at '…' to type '…'.</c> The value is not of the key's type, so it may be
-    /// anything written there by mistake, a key included. Any other message as it is.
+    /// <paramref name="message"/> without the value it may quote, as the host rewords it
+    /// (<c>BinderRefusal.WithoutValue(string, string?)</c>, Orkeon #465 and #469), word for word: the binder's
+    /// sentence (<c>Failed to convert configuration value '...' at '...' to type '...'.</c>) becomes
+    /// <c>Failed to convert the configuration value at '...' to type '...'.</c>; a message that holds that
+    /// sentence but cannot be read back, or a converter's or a parser's sentence, becomes a fixed sentence
+    /// naming <paramref name="section"/> when given; any other message is kept. The value is not of the
+    /// key's type, so it may be anything written there by mistake, a key included.
     /// </summary>
     /// <remarks>
-    /// Where the host's pattern reads the sentence, this is the host's own rewording, word for word. The
-    /// host's pattern takes a path without an apostrophe, and a dictionary key may hold one (a decision
-    /// profile named <c>l'equipe</c>): the host then says the binder's sentence as it is, the value
-    /// included. Studio never does: the path is read up to the type the sentence ends with, from the last
-    /// <c>' at '</c>, after which nothing of the value can stand.
+    /// The sentence is read from its end, since the value comes first and may hold anything: the type
+    /// stands after the last <c>' to type '</c> and holds no quote, the path after the last <c>' at '</c>
+    /// before it. A path that holds <c>' at '</c> itself is then shown by its tail only.
     /// </remarks>
-    public static string WithoutValue(string message)
+    public static string WithoutValue(string message, string? section = null)
     {
         ArgumentNullException.ThrowIfNull(message);
-        return TryReadBinderSentence(message, isKey: null, out var path, out var type)
-            ? $"Failed to convert the configuration value at '{path}' to type '{type}'."
-            : message;
+        if (ReadBack(message) is var (path, type))
+            return Unconvertible(path, type);
+
+        return MayQuoteAValue(message) ? Withheld(section) : message;
     }
 
     /// <summary>
-    /// The path and the type the binder's sentence names: as the host's pattern reads them when it
-    /// does (a path without an apostrophe) and <paramref name="isKey"/>, when given, knows that path;
-    /// else the text after a <c>' at '</c> up to <c>' to type '…'.</c>, the last one whose path
-    /// <paramref name="isKey"/> knows, or the last one. The value ends before the <c>' at '</c> that
-    /// opens the path, so the last one stands at or after it and the path read never holds any of the
-    /// value.
+    /// The refusal of <paramref name="exception"/> without the value, as the host words it
+    /// (<c>BinderRefusal.WithoutValue(Exception, string?)</c>, Orkeon #469): the binder's sentence read back
+    /// from anywhere in the chain, else the fixed sentence when the chain may quote a value
+    /// (<see cref="QuotesAValue"/>), else the outer message.
     /// </summary>
-    private static bool TryReadBinderSentence(string message, Func<string, bool>? isKey, out string path, out string type)
+    public static string WithoutValue(Exception exception, string? section = null)
     {
-        var host = BinderSentence().Match(message);
-        if (host.Success && (isKey is null || isKey(host.Groups["path"].Value)))
+        ArgumentNullException.ThrowIfNull(exception);
+        for (var current = exception; current is not null; current = current.InnerException)
         {
-            (path, type) = (host.Groups["path"].Value, host.Groups["type"].Value);
+            if (ReadBack(current.Message) is var (path, type))
+                return Unconvertible(path, type);
+        }
+
+        return QuotesAValue(exception) ? Withheld(section) : exception.Message;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="exception"/> or one of its inner exceptions may quote a configured value, as
+    /// the host judges it (<c>BinderRefusal.QuotesAValue</c>): the binder's refusal, a converter's or a
+    /// parser's message, or a conversion exception whatever its wording.
+    /// </summary>
+    public static bool QuotesAValue(Exception? exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is FormatException or OverflowException or InvalidCastException || MayQuoteAValue(current.Message))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static string Unconvertible(string path, string type) =>
+        $"Failed to convert the configuration value at '{path}' to type '{type}'.";
+
+    private static string Withheld(string? section) =>
+        section is null
+            ? "Failed to convert a configuration value; the binder's message is withheld, since it quotes the value."
+            : $"Failed to convert a configuration value under '{section}'; the binder's message is withheld, since it quotes the value.";
+
+    private static bool MayQuoteAValue(string message) =>
+        message.Contains(BinderSentenceStart, StringComparison.Ordinal)
+        || message.Contains(ResourceKey, StringComparison.Ordinal)
+        || Array.Exists(ConverterMarkers, marker => message.Contains(marker, StringComparison.Ordinal));
+
+    /// <summary>The path and the type of the binder's sentence, read from its end as the host reads them; null when it does not read back.</summary>
+    private static (string Path, string Type)? ReadBack(string message)
+    {
+        if (!message.StartsWith(BinderSentenceStart, StringComparison.Ordinal) || !message.EndsWith(SentenceEnding, StringComparison.Ordinal))
+            return null;
+
+        var typeOpening = message.LastIndexOf(TypeOpening, StringComparison.Ordinal);
+        if (typeOpening < BinderSentenceStart.Length)
+            return null;
+
+        var type = message[(typeOpening + TypeOpening.Length)..^SentenceEnding.Length];
+        if (type.Length == 0 || type.Contains('\'', StringComparison.Ordinal))
+            return null;
+
+        var pathOpening = message.LastIndexOf(PathOpening, typeOpening - 1, StringComparison.Ordinal);
+        if (pathOpening < BinderSentenceStart.Length)
+            return null;
+
+        var path = message[(pathOpening + PathOpening.Length)..typeOpening];
+        return path.Length == 0 ? null : (path, type);
+    }
+
+    /// <summary>
+    /// The key the binder's sentence names, for the walk that sets it aside and binds again: the text
+    /// after a <c>' at '</c> up to the type, the last one <paramref name="isKey"/> knows, else the one
+    /// the host reads (<see cref="ReadBack"/>). The value ends before the <c>' at '</c> that opens the
+    /// path, so the last one stands at or after it and the path read never holds any of the value.
+    /// </summary>
+    private static bool TryReadBinderSentence(string message, Func<string, bool> isKey, out string path)
+    {
+        path = string.Empty;
+        if (ReadBack(message) is not var (hostPath, _))
+            return false;
+
+        var typeOpening = message.LastIndexOf(TypeOpening, StringComparison.Ordinal);
+        // Every "' at '" after the value's opening quote that ends before the type, overlapping ones included.
+        var candidates = new List<string>();
+        for (var at = message.IndexOf(PathOpening, BinderSentenceStart.Length, StringComparison.Ordinal);
+             at >= 0 && at + PathOpening.Length <= typeOpening;
+             at = message.IndexOf(PathOpening, at + 1, StringComparison.Ordinal))
+        {
+            candidates.Add(message[(at + PathOpening.Length)..typeOpening]);
+        }
+
+        candidates.Reverse();
+        if (candidates.Find(candidate => candidate.Length > 0 && isKey(candidate)) is { } known)
+        {
+            path = known;
             return true;
         }
 
-        path = type = string.Empty;
-        var end = BinderSentenceEnd().Match(message);
-        if (!message.StartsWith(BinderSentenceStart, StringComparison.Ordinal) || !end.Success)
-            return false;
-
-        // Every "' at '" after the value's opening quote that ends before the type, overlapping ones included.
-        var openings = new List<int>();
-        for (var at = message.IndexOf(PathOpening, BinderSentenceStart.Length, StringComparison.Ordinal);
-             at >= 0 && at + PathOpening.Length <= end.Index;
-             at = message.IndexOf(PathOpening, at + 1, StringComparison.Ordinal))
-        {
-            openings.Add(at);
-        }
-
-        if (openings.Count == 0)
-            return false;
-
-        var paths = openings.Select(at => message[(at + PathOpening.Length)..end.Index]).Reverse().ToList();
-        path = paths.Find(candidate => isKey?.Invoke(candidate) == true) ?? paths[0];
-        type = end.Groups["type"].Value;
+        path = hostPath;
         return true;
     }
 
-    // The binder's sentence: Failed to convert configuration value '…' at 'Section:Key' to type '…'.
+    // The binder's sentence: Failed to convert configuration value '...' at 'Section:Key' to type '...'.
     private const string BinderSentenceStart = "Failed to convert configuration value '";
-
     private const string PathOpening = "' at '";
+    private const string TypeOpening = "' to type '";
+    private const string SentenceEnding = "'.";
 
-    // The end of the binder's sentence: a type holds no quote.
-    [GeneratedRegex(@"' to type '(?<type>[^']*)'\.$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex BinderSentenceEnd();
+    // The binder's sentence when the runtime is trimmed with UseSystemResourceKeys: the resource key, then the arguments.
+    private const string ResourceKey = "Error_FailedBinding";
 
-    // The host's pattern (BinderRefusal.Sentence): the value may hold quotes; a path and a type hold none,
-    // so the last " at '" ends the value.
-    [GeneratedRegex(
-        @"^Failed to convert configuration value '.*' at '(?<path>[^']*)' to type '(?<type>[^']*)'\.$",
-        RegexOptions.Singleline | RegexOptions.CultureInvariant,
-        matchTimeoutMilliseconds: 1000)]
-    private static partial Regex BinderSentence();
+    // The converters' and the parsers' sentences that quote the input, as the host lists them (BinderRefusal.ConverterMarkers).
+    private static readonly string[] ConverterMarkers =
+    [
+        " is not a valid value for ",
+        "Requested value '",
+        "The input string '",
+        " was not in a correct format",
+        " was not recognized as a valid ",
+    ];
 }

@@ -6,10 +6,9 @@ using Orkeon.Studio.Core.Configuration;
 namespace Orkeon.Studio.Core.Tests.Configuration;
 
 /// <summary>
-/// The binder's refusal of a value it cannot convert is said without that value (Orkeon #465): in the
-/// host's own words wherever the host's pattern reads the sentence, and still without the value where
-/// it does not, a key path holding an apostrophe (a decision profile named <c>l'equipe</c>), which the
-/// host's pattern takes for the end of the value and then says the binder's sentence as it is.
+/// The binder's refusal of a value it cannot convert is said without that value (Orkeon #465), in the
+/// engine's own words in every case (#469): the sentence read from its end, a sentence that cannot be
+/// read back or a converter's message withheld behind a fixed sentence, an account's section named.
 /// </summary>
 public sealed class BinderRefusalWithoutValueTests
 {
@@ -21,10 +20,45 @@ public sealed class BinderRefusalWithoutValueTests
     [InlineData("Failed to convert configuration value 'it's' at 'Orkeon:Bridge:MaxSessions' to type 'System.Int32'.")]
     [InlineData("Failed to convert configuration value 'a' at 'b' at 'Orkeon:Bridge:MaxSessions' to type 'System.Int32'.")]
     [InlineData("Failed to convert configuration value 'two\nlines' at 'Orkeon:Bridge:MaxSessions' to type 'System.Int32'.")]
+    [InlineData("Failed to convert configuration value 'x' at '' to type 'System.Int32'.")]
+    [InlineData("Failed to convert configuration value 'x' at 'Orkeon:Bridge:MaxSessions' to type ''.")]
+    [InlineData("Failed to convert configuration value 'x' at 'Orkeon:Bridge:MaxSessions'")]
+    [InlineData("Error_FailedBinding, x, Orkeon:Bridge:MaxSessions, System.Int32")]
+    [InlineData("x is not a valid value for TimeSpan.")]
+    [InlineData("Requested value 'x' was not found.")]
+    [InlineData("The input string 'x' was not in a correct format.")]
+    [InlineData("String 'x' was not recognized as a valid Boolean.")]
     [InlineData("Some other refusal, said as it is.")]
-    public void A_sentence_the_hosts_pattern_reads_is_said_in_the_hosts_words(string message)
+    public void A_message_is_said_in_the_engines_words(string message)
     {
-        Assert.Equal(EngineBinderRefusal.WithoutValue(message), StudioWithoutValue(message));
+        Assert.Equal(EngineBinderRefusal.WithoutValue(message), Studio.WithoutValue(message));
+        Assert.Equal(
+            EngineBinderRefusal.WithoutValue(message, "Orkeon:Tools:Email:Accounts:work"),
+            Studio.WithoutValue(message, "Orkeon:Tools:Email:Accounts:work"));
+    }
+
+    /// <summary>The exception's chain, read as the engine reads it: the sentence anywhere in it, a conversion exception withheld.</summary>
+    public static TheoryData<Exception> Chains() =>
+    [
+        new InvalidOperationException("Some other refusal, said as it is."),
+        new InvalidOperationException("Outer.", new FormatException("whatever")),
+        new InvalidOperationException("Outer.", new OverflowException("whatever")),
+        new InvalidOperationException("Outer.", new InvalidCastException("whatever")),
+        new InvalidOperationException("Outer.", new UriFormatException("whatever")),
+        new InvalidOperationException(
+            "Outer.", new InvalidOperationException("Failed to convert configuration value 'x' at 'Orkeon:Bridge:MaxSessions' to type 'System.Int32'.")),
+        new InvalidOperationException("Outer.", new InvalidOperationException("Requested value 'x' was not found.")),
+    ];
+
+    [Theory]
+    [MemberData(nameof(Chains))]
+    public void An_exceptions_chain_is_said_in_the_engines_words(Exception exception)
+    {
+        Assert.Equal(EngineBinderRefusal.QuotesAValue(exception), Studio.QuotesAValue(exception));
+        Assert.Equal(EngineBinderRefusal.WithoutValue(exception), Studio.WithoutValue(exception));
+        Assert.Equal(
+            EngineBinderRefusal.WithoutValue(exception, "Orkeon:Tools:Drive:Accounts:work"),
+            Studio.WithoutValue(exception, "Orkeon:Tools:Drive:Accounts:work"));
     }
 
     [Theory]
@@ -33,75 +67,45 @@ public sealed class BinderRefusalWithoutValueTests
     [InlineData("Orkeon:Decision:Profiles:a' at 'b:Stages:0:MinConfidence")]
     public void A_path_holding_an_apostrophe_never_lets_the_value_through(string path)
     {
-        var message = BinderMessage(path, Secret);
-        Assert.Contains(Secret, message, StringComparison.Ordinal);
+        var refusal = BinderRefusal(path, Secret, new Probe());
+        Assert.Contains(Secret, refusal.Message, StringComparison.Ordinal);
 
-        var studio = StudioWithoutValue(message);
+        var studio = Studio.WithoutValue(refusal);
 
         Assert.DoesNotContain(Secret, studio, StringComparison.Ordinal);
-        Assert.StartsWith("Failed to convert the configuration value at '", studio, StringComparison.Ordinal);
+        Assert.Equal(EngineBinderRefusal.WithoutValue(refusal), studio);
         Assert.EndsWith("' to type 'System.Double'.", studio, StringComparison.Ordinal);
-        // The host says the binder's sentence as it is, the value included, while its pattern takes no
-        // apostrophe in a path: once it says it without the value, it must be Studio's sentence.
-        var engine = EngineBinderRefusal.WithoutValue(message);
-        if (!engine.Contains(Secret, StringComparison.Ordinal))
-            Assert.Equal(engine, studio);
     }
 
     /// <summary>
-    /// The e-mail and drive binders carry their own copy of the host's rewording (Orkeon #465): where
-    /// it reads the sentence, it says the host's words, which are Studio's.
+    /// The e-mail and drive binders word an account's refusal through the engine's rewording, naming the
+    /// account's section (#469): Studio's rewording on that section says the same.
     /// </summary>
     [Theory]
-    [InlineData("Failed to convert configuration value 'x' at 'Orkeon:Tools:Email:Accounts:work:Incoming:Port' to type 'System.Int32'.")]
-    [InlineData("Failed to convert configuration value 'it's' at 'Orkeon:Tools:Drive:Accounts:work:TimeoutSeconds' to type 'System.Int32'.")]
-    [InlineData("Failed to convert configuration value 'two\nlines' at 'Orkeon:Tools:Email:Accounts:work:Send:MaxPerHour' to type 'System.Int32'.")]
-    [InlineData("Some other refusal, said as it is.")]
-    public void The_account_binders_copies_say_the_hosts_words(string message)
+    [InlineData("work", "Port")]
+    [InlineData("l'equipe", "Port")]
+    [InlineData("a' at 'b", "TimeoutSeconds")]
+    public void An_accounts_refusal_is_said_as_the_account_binders_say_it(string account, string key)
     {
-        var host = EngineBinderRefusal.WithoutValue(message);
+        var email = BinderRefusal($"Orkeon:Tools:Email:Accounts:{account}:Incoming:{key}", Secret, new WholeNumberProbe());
+        var drive = BinderRefusal($"Orkeon:Tools:Drive:Accounts:{account}:{key}", Secret, new WholeNumberProbe());
 
-        Assert.Equal(host, Orkeon.Tools.Email.Configuration.EmailOptionsBinder.WithoutValue(message));
-        Assert.Equal(host, Orkeon.Tools.Drive.Configuration.DriveOptionsBinder.WithoutValue(message));
-        Assert.Equal(host, StudioWithoutValue(message));
-    }
+        var emailSaid = Orkeon.Tools.Email.Configuration.EmailOptionsBinder.Refusal(account, email);
+        var driveSaid = Orkeon.Tools.Drive.Configuration.DriveOptionsBinder.Refusal(account, drive);
 
-    /// <summary>
-    /// An account named with an apostrophe: the copies in the e-mail and drive binders inherit the
-    /// host's pattern, which then says the binder's sentence as it is; Studio never lets the value
-    /// through, and says the copies' words once they leave it out.
-    /// </summary>
-    [Theory]
-    [InlineData("Orkeon:Tools:Email:Accounts:l'equipe:Incoming:Port")]
-    [InlineData("Orkeon:Tools:Drive:Accounts:l'equipe:TimeoutSeconds")]
-    [InlineData("Orkeon:Tools:Drive:Accounts:a' at 'b:MaxUploadMegabytes")]
-    public void An_account_named_with_an_apostrophe_never_lets_the_value_through(string path)
-    {
-        var message = BinderMessage(path, Secret, new WholeNumberProbe());
-        Assert.Contains(Secret, message, StringComparison.Ordinal);
-
-        var studio = StudioWithoutValue(message);
-
-        Assert.DoesNotContain(Secret, studio, StringComparison.Ordinal);
-        Assert.StartsWith("Failed to convert the configuration value at '", studio, StringComparison.Ordinal);
-        Assert.EndsWith("' to type 'System.Int32'.", studio, StringComparison.Ordinal);
-        foreach (var copy in new[]
-                 {
-                     Orkeon.Tools.Email.Configuration.EmailOptionsBinder.WithoutValue(message),
-                     Orkeon.Tools.Drive.Configuration.DriveOptionsBinder.WithoutValue(message),
-                 })
-        {
-            if (!copy.Contains(Secret, StringComparison.Ordinal))
-                Assert.Equal(copy, studio);
-        }
+        Assert.Equal(emailSaid, Studio.WithoutValue(email, $"Orkeon:Tools:Email:Accounts:{account}"));
+        Assert.Equal(driveSaid, Studio.WithoutValue(drive, $"Orkeon:Tools:Drive:Accounts:{account}"));
+        Assert.DoesNotContain(Secret, emailSaid, StringComparison.Ordinal);
+        Assert.DoesNotContain(Secret, driveSaid, StringComparison.Ordinal);
     }
 
     [Fact]
     public void A_value_holding_the_words_of_the_sentence_never_gets_through()
     {
-        var message = BinderMessage("Orkeon:Decision:Profiles:l'equipe:Stages:0:MinConfidence", Secret + "' at 'x' to type 'y'.");
+        var refusal = BinderRefusal("Orkeon:Decision:Profiles:l'equipe:Stages:0:MinConfidence", Secret + "' at 'x' to type 'y'.", new Probe());
 
-        Assert.DoesNotContain(Secret, StudioWithoutValue(message), StringComparison.Ordinal);
+        Assert.DoesNotContain(Secret, Studio.WithoutValue(refusal), StringComparison.Ordinal);
+        Assert.Equal(EngineBinderRefusal.WithoutValue(refusal), Studio.WithoutValue(refusal));
     }
 
     [Fact]
@@ -125,25 +129,33 @@ public sealed class BinderRefusalWithoutValueTests
         Assert.DoesNotContain(problems, problem => problem.Path == DecisionProfilesOptions.SectionName);
     }
 
-    // Studio's rewording is internal to its Core: reached through reflection, as the engine's is.
-    private static readonly MethodInfo StudioReword = typeof(AppSettingsDocument).Assembly
-        .GetType("Orkeon.Studio.Core.Configuration.SettingsBinding", throwOnError: true)!
-        .GetMethod("WithoutValue", BindingFlags.Public | BindingFlags.Static, [typeof(string)])!;
+    /// <summary>Studio's rewording, internal to its Core: reached through reflection, as the engine's is.</summary>
+    private static class Studio
+    {
+        private static readonly Type Binding = typeof(AppSettingsDocument).Assembly
+            .GetType("Orkeon.Studio.Core.Configuration.SettingsBinding", throwOnError: true)!;
 
-    private static string StudioWithoutValue(string message) => (string)StudioReword.Invoke(null, [message])!;
+        public static string WithoutValue(string message, string? section = null) =>
+            (string)Binding.GetMethod("WithoutValue", BindingFlags.Public | BindingFlags.Static, [typeof(string), typeof(string)])!
+                .Invoke(null, [message, section])!;
 
-    /// <summary>The configuration binder's own refusal of <paramref name="value"/> at <paramref name="path"/>, bound as a double.</summary>
-    private static string BinderMessage(string path, string value) => BinderMessage(path, value, new Probe());
+        public static string WithoutValue(Exception exception, string? section = null) =>
+            (string)Binding.GetMethod("WithoutValue", BindingFlags.Public | BindingFlags.Static, [typeof(Exception), typeof(string)])!
+                .Invoke(null, [exception, section])!;
+
+        public static bool QuotesAValue(Exception exception) =>
+            (bool)Binding.GetMethod("QuotesAValue", BindingFlags.Public | BindingFlags.Static, [typeof(Exception)])!
+                .Invoke(null, [exception])!;
+    }
 
     /// <summary>The configuration binder's own refusal of <paramref name="value"/> at <paramref name="path"/>, bound onto <paramref name="probe"/>.</summary>
-    private static string BinderMessage(string path, string value, object probe)
+    private static InvalidOperationException BinderRefusal(string path, string value, object probe)
     {
         var last = path.LastIndexOf(':');
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> { [path] = value })
             .Build();
-        var ex = Assert.Throws<InvalidOperationException>(() => configuration.GetSection(path[..last]).Bind(probe));
-        return ex.Message;
+        return Assert.Throws<InvalidOperationException>(() => configuration.GetSection(path[..last]).Bind(probe));
     }
 
     private sealed class Probe
