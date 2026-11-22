@@ -294,6 +294,69 @@ public partial class CreateTeamWizardTests
         Assert.Empty(vm.Agents[1].Tools);
     }
 
+    /// <summary>
+    /// A new cycle whose settings the engine host refuses (Orkeon #475): one error line, then the session
+    /// closed «failed» — the engine deleted it and sent no <c>session.started</c>. The card is the
+    /// settings', with the host's sentence, and nothing offers to resume a session that is gone.
+    /// </summary>
+    [Fact]
+    public async Task A_settings_refusal_on_a_new_cycle_opens_the_settings_and_leaves_nothing_to_resume()
+    {
+        var (vm, processes, _) = Build();
+        processes.ExitCode = 1;
+        processes.OutputToEmit.AddRange(
+        [
+            Out($$"""{"v":2,"seq":1,"ts":"t","kind":"error","code":"{{ForgeErrorCodes.SettingsRefused}}","message":"Llm:AgentCli is not a setting.","recoverable":false,"terminal":true}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"session.finished","status":"failed","exitCode":1}"""),
+        ]);
+        FillStepOne(vm);
+
+        await Compose(vm);
+
+        Assert.Equal(WizardFailureKind.ConfigRefused, vm.Failure!.Kind);
+        Assert.Equal(1, vm.Failure.ExitCode);
+        Assert.Contains("Llm:AgentCli is not a setting.", vm.Failure.Detail, StringComparison.Ordinal);
+        Assert.True(vm.FailureOffersSettings);
+        Assert.False(vm.FailureOffersDiagnostic);
+        Assert.False(vm.CanTryTeam);
+        Assert.False(vm.CanResumeHere);
+    }
+
+    /// <summary>
+    /// The same refusal on a resumed session (Orkeon #475): the engine kept it (<c>recoverable: true</c>)
+    /// and closed the run on the status it holds. The card is still the settings' — the diagnostic has
+    /// nothing to say about a settings file — and the trial stays one click away once they are fixed.
+    /// </summary>
+    [Fact]
+    public async Task A_settings_refusal_on_a_resumed_session_opens_the_settings_and_keeps_it_resumable()
+    {
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/ws/.orkeon/forge/veille","format":"yaml","resumed":false}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"blueprint.ready","blueprint":{"crew":{"name":"veille"},"agents":[{"key":"a","role":"A","tools":[]}],"tasks":[{"key":"t","description":"d","agent":"a"}],"rationale":"r"},"iteration":1}"""),
+            Out("""{"v":2,"seq":3,"ts":"t","kind":"session.finished","status":"paused","exitCode":0}"""),
+        ]);
+        FillStepOne(vm);
+        await Compose(vm);
+
+        processes.ExitCode = 1;
+        processes.OutputToEmit.Clear();
+        processes.OutputToEmit.AddRange(
+        [
+            Out($$"""{"v":2,"seq":1,"ts":"t","kind":"error","code":"{{ForgeErrorCodes.SettingsRefused}}","message":"Llm:Provider names no provider of this host.","recoverable":true,"terminal":true}"""),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"session.finished","status":"paused","exitCode":1}"""),
+        ]);
+        await vm.TryTeamCommand.ExecuteAsync();
+
+        Assert.Equal(WizardFailureKind.ConfigRefused, vm.Failure!.Kind);
+        Assert.Equal(1, vm.Failure.ExitCode);
+        Assert.True(vm.FailureOffersSettings);
+        Assert.False(vm.FailureOffersDiagnostic);
+        Assert.Equal($"{ForgeErrorCodes.SettingsRefused}: Llm:Provider names no provider of this host.", vm.StatusMessage);
+        Assert.True(vm.CanTryTeam);
+    }
+
     [Fact]
     public async Task Composing_pauses_at_the_dry_boundary_and_the_trial_is_an_explicit_resume()
     {

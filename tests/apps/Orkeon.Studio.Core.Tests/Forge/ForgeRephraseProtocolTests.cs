@@ -55,6 +55,22 @@ public sealed class ForgeRephraseProtocolTests
         Assert.Equal("exit code 3", result.Error);
     }
 
+    /// <summary>
+    /// Settings the engine host refuses (Orkeon #473): the error line carries the host's sentence, where
+    /// the rephrase used to end on a stack trace and exit 134.
+    /// </summary>
+    [Fact]
+    public async Task A_settings_refusal_says_the_hosts_sentence()
+    {
+        var refused = new FakeProcessLauncher { ExitCode = 1 }.WithStandardOutput(
+            $$"""{"v":2,"seq":1,"ts":"t","kind":"error","code":"{{ForgeErrorCodes.SettingsRefused}}","message":"Llm:Provider names no provider of this host.","recoverable":false,"terminal":true}""");
+
+        var result = await Client(refused).RephraseAsync(new ForgeRephraseRequest { Need = "x" }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Success);
+        Assert.Equal("Llm:Provider names no provider of this host.", result.Error);
+    }
+
     [Fact]
     public async Task Without_the_binary_nothing_is_launched()
     {

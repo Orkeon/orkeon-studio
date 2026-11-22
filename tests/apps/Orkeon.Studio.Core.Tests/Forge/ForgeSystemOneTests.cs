@@ -562,6 +562,21 @@ public sealed partial class ForgeSystemOneTests
             StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The settings refusal's code (Orkeon #473, #475) is the engine's literal, and both the cycle and the
+    /// rephrase write it: the wizard sends that refusal to the settings, recoverable or not.
+    /// </summary>
+    [Fact]
+    public void The_settings_refusal_code_is_the_engines()
+    {
+        Assert.Contains(
+            $"public const string SettingsRefused = \"{ForgeErrorCodes.SettingsRefused}\";",
+            ForgeSource("ForgeBlueprintCompiler.cs"),
+            StringComparison.Ordinal);
+        Assert.Matches(@"events\.Error\(ForgeErrorCodes\.SettingsRefused,[^;]*recoverable: resumed", ForgeSource("ForgeCommand.cs"));
+        Assert.Contains("SettingsRefusedCode = ForgeErrorCodes.SettingsRefused;", ForgeSource("ForgeRephrase.cs"), StringComparison.Ordinal);
+    }
+
     private static string Json(string text) => System.Text.Json.JsonSerializer.Serialize(text);
 
     /// <summary>The session states the off circuit's own sentence beside its cause (<c>forgeCircuitDetail</c>, Orkeon #467).</summary>

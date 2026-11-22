@@ -3694,8 +3694,11 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             // the code and the message; FinishRun adds the exit code and the whole stderr. One the
             // engine says it carries on after (terminal false, Orkeon #453: a brief asked again, a
             // folder list refused) only reaches the status line; an engine that does not say it
-            // ends the run on every unrecoverable error, as before.
-            if (!error.Recoverable && error.GoesNoFurther)
+            // ends the run on every unrecoverable error, as before. A settings refusal (Orkeon #475)
+            // is the settings' card even when recoverable: the engine kept the resumed session, and
+            // what unblocks it is the settings screen, not the diagnostic.
+            if ((!error.Recoverable && error.GoesNoFurther)
+                || string.Equals(error.Code, ForgeErrorCodes.SettingsRefused, StringComparison.Ordinal))
                 FailWith(WizardFailureKind.ConfigRefused, ConfigRefusedDetail(), EngineCommandLine, exitCode: null);
         }
 
