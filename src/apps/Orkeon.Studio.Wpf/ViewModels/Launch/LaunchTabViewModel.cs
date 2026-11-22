@@ -1981,6 +1981,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         Succeeded,
         Failed,
         Cancelled,
+
+        // Exit code 75: the run stopped on a question and waits for its answer, neither done nor failed.
+        Waiting,
     }
 
     // Title, badge, tone and button label are four readings of one and the same state, so they
@@ -2001,6 +2004,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 RunOutcome.Success => RunCardState.Succeeded,
                 // A Stop is the user's own gesture, not a failure of the team.
                 RunOutcome.Cancelled => RunCardState.Cancelled,
+                RunOutcome.WaitingForInput => RunCardState.Waiting,
                 _ => RunCardState.Failed,
             };
         }
@@ -2033,6 +2037,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                     RunCardState.Idle => StudioStringKeys.RunBadgeIdle,
                     RunCardState.Succeeded => StudioStringKeys.RunBadgeDone,
                     RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
+                    RunCardState.Waiting => StudioStringKeys.HistStatusWaiting,
                     _ => StudioStringKeys.RunBadgeFailed,
                 }],
             };
@@ -2065,7 +2070,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 || MissingDeliverableCount > 0
             ? "warn"
             : "ok",
-        RunCardState.Cancelled => "warn",
+        RunCardState.Cancelled or RunCardState.Waiting => "warn",
         _ => "fail",
     };
 

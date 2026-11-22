@@ -200,6 +200,25 @@ public class RunLauncherViewModelTests
         Assert.Equal(OrkeonExitCodes.Success, recorded.ExitCode);
     }
 
+    /// <summary>A run that stopped on a question (exit code 75) says it waits for its answer, not an unexpected end.</summary>
+    [Fact]
+    public async Task A_run_waiting_for_input_says_so_and_is_recorded_waiting()
+    {
+        var fixture = new LauncherFixture().WithInstalledCli();
+        fixture.Processes.ExitCode = OrkeonExitCodes.WaitingForInput;
+        var crew = fixture.WithYamlCrew();
+        var launcher = fixture.Build();
+        launcher.Target.Select(crew);
+
+        var result = await launcher.LaunchAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(RunOutcome.WaitingForInput, result.Outcome);
+        var status = LaunchOutcomeFormatter.DescribeRun(result);
+        Assert.Contains("Waiting for input", status, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unexpected", status, StringComparison.Ordinal);
+        Assert.Equal(RunOutcome.WaitingForInput, Assert.Single(fixture.History.Recorded).Outcome);
+    }
+
     [Fact]
     public async Task Cancelling_a_launch_shows_exit_code_130()
     {

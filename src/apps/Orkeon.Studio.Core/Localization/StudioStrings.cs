@@ -155,6 +155,9 @@ public static class StudioStringKeys
     /// <summary>"run interrupted" — a run cancelled, or exit code 130.</summary>
     public const string LaunchExitCancelled = "Studio.Run.ExitCancelled";
 
+    /// <summary>"run waiting for input..." — exit code 75: the run stopped on a question and waits for its answer.</summary>
+    public const string LaunchExitWaitingForInput = "Studio.Run.ExitWaitingForInput";
+
     /// <summary>"unexpected end: check the output above" — any other exit code.</summary>
     public const string LaunchExitUnknown = "Studio.Run.ExitUnknown";
 
@@ -567,6 +570,9 @@ public static class StudioStringKeys
     /// <summary>"Interrupted before the end."</summary>
     public const string HistOutcomeCancelled = "Studio.History.OutcomeCancelled";
 
+    /// <summary>"Stopped on a question: waiting for its answer."</summary>
+    public const string HistOutcomeWaiting = "Studio.History.OutcomeWaiting";
+
     /// <summary>"Never started."</summary>
     public const string HistOutcomeNotStarted = "Studio.History.OutcomeNotStarted";
 
@@ -593,6 +599,9 @@ public static class StudioStringKeys
 
     /// <summary>"Cancelled".</summary>
     public const string HistStatusCancelled = "Studio.Run.OutcomeCancelled";
+
+    /// <summary>"Waiting for input": the run stopped on a question (exit code 75).</summary>
+    public const string HistStatusWaiting = "Studio.Run.OutcomeWaiting";
 
     /// <summary>"Not started".</summary>
     public const string HistStatusNotStarted = "Studio.History.OutcomeBadgeNotStarted";
@@ -1087,6 +1096,9 @@ public static class StudioStringKeys
 
     /// <summary>"failed" — the last run did not.</summary>
     public const string TeamsRunFail = "Studio.Teams.RunFail";
+
+    /// <summary>"waiting for input" — the last run stopped on a question.</summary>
+    public const string TeamsRunWaiting = "Studio.Teams.RunWaiting";
 
     /// <summary>"Never ran" — no history entry names this team.</summary>
     public const string TeamsNeverRan = "Studio.Teams.NeverRan";
@@ -3761,6 +3773,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsLastRun] = "Last run: {0}, {1}",
         [StudioStringKeys.TeamsRunOk] = "succeeded",
         [StudioStringKeys.TeamsRunFail] = "failed",
+        [StudioStringKeys.TeamsRunWaiting] = "waiting for input",
         [StudioStringKeys.TeamsNeverRan] = "Never ran",
         [StudioStringKeys.ConfigNotSavedWriteFailed] = "Not saved — the file could not be written: {0}",
         [StudioStringKeys.TeamsExportedTo] = "Team exported to {0}",
@@ -3780,9 +3793,11 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.HistStatusSucceeded] = "Succeeded",
         [StudioStringKeys.HistStatusFailed] = "Failed",
         [StudioStringKeys.HistStatusCancelled] = "Cancelled",
+        [StudioStringKeys.HistStatusWaiting] = "Waiting for input",
         [StudioStringKeys.HistStatusNotStarted] = "Not started",
         [StudioStringKeys.HistOutcomeFailed] = "Failed (code {0}).",
         [StudioStringKeys.HistOutcomeCancelled] = "Interrupted before the end.",
+        [StudioStringKeys.HistOutcomeWaiting] = "Stopped on a question: waiting for its answer.",
         [StudioStringKeys.HistOutcomeNotStarted] = "Never started.",
         [StudioStringKeys.DiagAllGood] = "Everything is in place.",
         [StudioStringKeys.DiagFixNeeded] = "{0} {0:plural:point|points} to fix before launching a team.",
@@ -4037,6 +4052,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchExitDecisionUnavailable] = "run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » on",
         [StudioStringKeys.LaunchExitRuntimeError] = "runtime error: the last log lines say why",
         [StudioStringKeys.LaunchExitCancelled] = "run interrupted",
+        [StudioStringKeys.LaunchExitWaitingForInput] = "run waiting for input: it stopped on a question and goes on once it is answered",
         [StudioStringKeys.LaunchExitUnknown] = "unexpected end: check the output above",
         [StudioStringKeys.LaunchExitNotStarted] = "the engine did not start",
         [StudioStringKeys.UsageTokens] = "{0} tokens",

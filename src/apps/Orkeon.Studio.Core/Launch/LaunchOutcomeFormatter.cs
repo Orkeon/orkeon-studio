@@ -104,6 +104,7 @@ public static class LaunchOutcomeFormatter
         RunOutcome.ScriptError => StudioStringKeys.LaunchExitScriptError,
         RunOutcome.RuntimeError => StudioStringKeys.LaunchExitRuntimeError,
         RunOutcome.Cancelled => StudioStringKeys.LaunchExitCancelled,
+        RunOutcome.WaitingForInput => StudioStringKeys.LaunchExitWaitingForInput,
         _ => StudioStringKeys.LaunchExitUnknown,
     };
 }

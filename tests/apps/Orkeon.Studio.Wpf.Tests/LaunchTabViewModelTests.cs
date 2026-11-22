@@ -870,6 +870,7 @@ public sealed class LaunchTabViewModelTests
     [InlineData(1, RunOutcome.ScriptError)]
     [InlineData(2, RunOutcome.RuntimeError)]
     [InlineData(130, RunOutcome.Cancelled)]
+    [InlineData(75, RunOutcome.WaitingForInput)]
     public async Task Should_InterpretTheExitCode(int exitCode, RunOutcome expected)
     {
         var probe = new FakeTargetProbe().WithFile("/crews/team.yaml");
@@ -882,6 +883,24 @@ public sealed class LaunchTabViewModelTests
         Assert.Equal(expected, tab.Outcome);
         Assert.Equal(exitCode, tab.ExitCode);
         Assert.False(string.IsNullOrWhiteSpace(tab.ExitDescription));
+    }
+
+    /// <summary>A run that stopped on a question (exit code 75) is painted waiting, never failed.</summary>
+    [Fact]
+    public async Task A_run_waiting_for_input_is_shown_waiting_not_failed()
+    {
+        var probe = new FakeTargetProbe().WithFile("/crews/team.yaml");
+        var (tab, launcher, _) = Build(probe);
+        launcher.ExitCode = OrkeonExitCodes.WaitingForInput;
+        tab.Target.Select("/crews/team.yaml");
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Waiting for input", tab.RunBadgeText);
+        Assert.Equal("warn", tab.RunBadgeTone);
+        Assert.Equal("Waiting for input", tab.RunPaneTitle);
+        Assert.Equal("Waiting for input", tab.RunTabSubtitle);
+        Assert.DoesNotContain("Unexpected", tab.ExitDescription, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2358,6 +2377,22 @@ public sealed class LaunchHistoryCardTests
         Assert.Contains("2 min 05 s", card.DateLine, StringComparison.Ordinal);
         Assert.Equal("Finished without errors.", card.OutcomeSentence);
         Assert.Equal("ok", card.OutcomeTone);
+    }
+
+    [Fact]
+    public void A_run_waiting_for_input_reads_waiting_and_is_no_error()
+    {
+        var entry = LaunchHistoryEntry
+            .Starting("t.yaml", ["run", "t.yaml"])
+            .WithResult(ProcessRunResult.FromExitCode(75, TimeSpan.FromSeconds(4)));
+
+        var card = new LaunchHistoryEntryViewModel(entry);
+
+        Assert.Equal("Stopped on a question: waiting for its answer.", card.OutcomeSentence);
+        Assert.Equal("Waiting for input", card.StatusText);
+        Assert.Equal("warn", card.OutcomeTone);
+        Assert.Equal("Warning", card.BadgeTone);
+        Assert.False(card.HasError);
     }
 
     [Fact]

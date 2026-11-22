@@ -64,7 +64,7 @@ public sealed class LaunchHistoryEntryViewModel : ObservableObject
     private bool _isShowingError;
 
     /// <summary>Whether the run did not succeed: « Show the error » is offered on its line.</summary>
-    public bool HasError => Outcome != RunOutcome.Success;
+    public bool HasError => Outcome is not (RunOutcome.Success or RunOutcome.WaitingForInput);
 
     /// <summary>Whether the line unfolds the plain-language reason of the failure under it.</summary>
     public bool IsShowingError
@@ -195,7 +195,7 @@ public sealed class LaunchHistoryEntryViewModel : ObservableObject
     public string BadgeTone => Outcome switch
     {
         RunOutcome.Success => "Success",
-        RunOutcome.Cancelled => "Warning",
+        RunOutcome.Cancelled or RunOutcome.WaitingForInput => "Warning",
         RunOutcome.NotStarted => "Neutral",
         _ => "Danger",
     };
@@ -205,6 +205,7 @@ public sealed class LaunchHistoryEntryViewModel : ObservableObject
     {
         RunOutcome.Success => _strings[StudioStringKeys.HistOutcomeSuccess],
         RunOutcome.Cancelled => _strings[StudioStringKeys.HistOutcomeCancelled],
+        RunOutcome.WaitingForInput => _strings[StudioStringKeys.HistOutcomeWaiting],
         RunOutcome.NotStarted => _strings[StudioStringKeys.HistOutcomeNotStarted],
         _ => _strings.Format(
             StudioStringKeys.HistOutcomeFailed, ExitCode ?? -1),
@@ -214,7 +215,7 @@ public sealed class LaunchHistoryEntryViewModel : ObservableObject
     public string OutcomeTone => Outcome switch
     {
         RunOutcome.Success => "ok",
-        RunOutcome.Cancelled => "warn",
+        RunOutcome.Cancelled or RunOutcome.WaitingForInput => "warn",
         RunOutcome.NotStarted => "idle",
         _ => "fail",
     };
@@ -412,6 +413,7 @@ public sealed class LaunchHistoryViewModel : ObservableObject
     {
         RunOutcome.Success => StudioStringKeys.HistStatusSucceeded,
         RunOutcome.Cancelled => StudioStringKeys.HistStatusCancelled,
+        RunOutcome.WaitingForInput => StudioStringKeys.HistStatusWaiting,
         RunOutcome.NotStarted => StudioStringKeys.HistStatusNotStarted,
         _ => StudioStringKeys.HistStatusFailed,
     };

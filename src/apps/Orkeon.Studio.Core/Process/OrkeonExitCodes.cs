@@ -23,6 +23,12 @@ public enum RunOutcome
 
     /// <summary>Any other exit code. Never silent: the raw code is carried in the description.</summary>
     Unknown,
+
+    /// <summary>
+    /// Exit code 75: the run stopped on a question to a human and waits for the answer. Neither a
+    /// success nor a failure: resuming it with the answer carries it on.
+    /// </summary>
+    WaitingForInput,
 }
 
 /// <summary>
@@ -52,6 +58,9 @@ public static class OrkeonExitCodes
     /// </summary>
     public const int DecisionUnavailable = RunExitCodes.DecisionUnavailable;
 
+    /// <summary>The run stopped on a question to a human and waits for the answer (<c>EX_TEMPFAIL</c>).</summary>
+    public const int WaitingForInput = RunExitCodes.WaitingForInput;
+
     /// <summary>Maps a raw exit code onto its outcome; anything unmapped becomes <see cref="RunOutcome.Unknown"/>.</summary>
     public static RunOutcome Classify(int exitCode) => exitCode switch
     {
@@ -59,6 +68,7 @@ public static class OrkeonExitCodes
         ScriptError => RunOutcome.ScriptError,
         RuntimeError => RunOutcome.RuntimeError,
         DecisionUnavailable => RunOutcome.ScriptError,
+        WaitingForInput => RunOutcome.WaitingForInput,
         Cancelled => RunOutcome.Cancelled,
         _ => RunOutcome.Unknown,
     };
@@ -70,6 +80,7 @@ public static class OrkeonExitCodes
         ScriptError => "Script or configuration error (exit code 1) — check the crew file and the settings it resolved.",
         RuntimeError => "Runtime error (exit code 2) — the run started but failed; the last stderr lines say why.",
         Cancelled => "Interrupted (exit code 130).",
+        WaitingForInput => "Waiting for input (exit code 75): the run stopped on a question and resumes with its answer (orkeon run <crew> --resume <id> --input \"...\").",
         DecisionUnavailable => "Refused (exit code 69): the crew requires System One and the decision models are off or unavailable.",
         _ => string.Create(
             CultureInfo.InvariantCulture,

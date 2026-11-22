@@ -203,6 +203,7 @@
   <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » on</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>runtime error: the last log lines say why</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>run interrupted</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>run waiting for input: it stopped on a question and goes on once it is answered</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>unexpected end: check the output above</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>the engine did not start</value></data>
 
@@ -688,6 +689,7 @@
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Finished without errors.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Failed (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrupted before the end.</value></data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>Stopped on a question: waiting for its answer.</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve"><value>Never started.</value></data>
   <data name="Studio.History.Result" xml:space="preserve"><value>Open the result</value></data>
   <data name="Studio.History.ShowError" xml:space="preserve"><value>Show the error</value></data>
@@ -1065,6 +1067,7 @@
   <data name="Studio.Teams.LastRun" xml:space="preserve"><value>Last run: {0}, {1}</value></data>
   <data name="Studio.Teams.RunOk" xml:space="preserve"><value>succeeded</value></data>
   <data name="Studio.Teams.RunFail" xml:space="preserve"><value>failed</value></data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>waiting for input</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve"><value>Never ran</value></data>
   <data name="Studio.Teams.ChangeMounts" xml:space="preserve"><value>Change the folders</value></data>
   <data name="Studio.Teams.Export" xml:space="preserve"><value>Export</value></data>
@@ -2162,6 +2165,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>Succeeded</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>Failed</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>Waiting for input</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>exit code</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>AGENT</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>TOOL CALLS</value></data>

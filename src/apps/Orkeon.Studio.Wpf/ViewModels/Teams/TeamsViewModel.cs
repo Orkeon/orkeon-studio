@@ -990,7 +990,12 @@ public sealed class TeamCardViewModel : ObservableObject
 
             return _strings.Format(
                 StudioStringKeys.TeamsLastRun, date,
-                _strings[outcome == RunOutcome.Success ? StudioStringKeys.TeamsRunOk : StudioStringKeys.TeamsRunFail]);
+                _strings[outcome switch
+                {
+                    RunOutcome.Success => StudioStringKeys.TeamsRunOk,
+                    RunOutcome.WaitingForInput => StudioStringKeys.TeamsRunWaiting,
+                    _ => StudioStringKeys.TeamsRunFail,
+                }]);
         }
     }
 

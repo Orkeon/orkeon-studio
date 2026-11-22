@@ -203,6 +203,7 @@
   <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>exécution refusée : cette équipe ne peut pas s'exécuter sans les modèles de décision (System One) et ils sont désactivés. Configurez-les dans Réglages › Modèles de décision, et laissez « Utiliser les modèles de décision » activé</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>erreur pendant le lancement : les dernières lignes du journal disent pourquoi</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>lancement interrompu</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>lancement en attente d'une réponse : il s'est arrêté sur une question et reprend une fois qu'on y a répondu</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>fin inattendue : consultez la sortie ci-dessus</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>le moteur n'a pas démarré</value></data>
 
@@ -688,6 +689,7 @@
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Terminée sans erreur.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Échouée (code {0}).</value></data>
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve"><value>Interrompue avant la fin.</value></data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>Arrêtée sur une question : attend sa réponse.</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve"><value>N'a jamais démarré.</value></data>
   <data name="Studio.History.Result" xml:space="preserve"><value>Ouvrir le résultat</value></data>
   <data name="Studio.History.ShowError" xml:space="preserve"><value>Voir l'erreur</value></data>
@@ -1065,6 +1067,7 @@
   <data name="Studio.Teams.LastRun" xml:space="preserve"><value>Dernier lancement : {0}, {1}</value></data>
   <data name="Studio.Teams.RunOk" xml:space="preserve"><value>réussie</value></data>
   <data name="Studio.Teams.RunFail" xml:space="preserve"><value>échouée</value></data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>en attente d'une réponse</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve"><value>Jamais exécutée</value></data>
   <data name="Studio.Teams.ChangeMounts" xml:space="preserve"><value>Changer les dossiers</value></data>
   <data name="Studio.Teams.Export" xml:space="preserve"><value>Exporter</value></data>
@@ -2162,6 +2165,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>Réussie</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>Échouée</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>Annulée</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>En attente d'une réponse</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>code de sortie</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>AGENT</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>APPELS D’OUTILS</value></data>

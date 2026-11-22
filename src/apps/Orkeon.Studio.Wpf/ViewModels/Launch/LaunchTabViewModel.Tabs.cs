@@ -294,7 +294,7 @@ public sealed partial class LaunchTabViewModel
     {
         RunCardState.Running => "Working",
         RunCardState.Succeeded => "Done",
-        RunCardState.Failed or RunCardState.Cancelled => "Warning",
+        RunCardState.Failed or RunCardState.Cancelled or RunCardState.Waiting => "Warning",
         _ => "Empty",
     };
 
@@ -307,6 +307,7 @@ public sealed partial class LaunchTabViewModel
             : _strings[StudioStringKeys.RunPaneSucceeded],
         RunCardState.Failed => _strings[StudioStringKeys.RunTabRunFailed],
         RunCardState.Cancelled => _strings[StudioStringKeys.HistStatusCancelled],
+        RunCardState.Waiting => _strings[StudioStringKeys.HistStatusWaiting],
         _ => _strings[StudioStringKeys.RunTabRunIdle],
     };
 
@@ -317,6 +318,7 @@ public sealed partial class LaunchTabViewModel
         RunCardState.Succeeded => StudioStringKeys.RunPaneDone,
         RunCardState.Failed => StudioStringKeys.RunTabRunFailed,
         RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
+        RunCardState.Waiting => StudioStringKeys.HistStatusWaiting,
         _ => StudioStringKeys.RunStateIdle,
     }];
 

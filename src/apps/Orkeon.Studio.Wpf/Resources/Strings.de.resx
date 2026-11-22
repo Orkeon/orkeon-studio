@@ -488,6 +488,7 @@
   <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>Ausführung abgelehnt: Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen, und sie sind aus. Richten Sie sie unter Einstellungen › Entscheidungsmodelle ein, und lassen Sie „Die Entscheidungsmodelle verwenden“ eingeschaltet</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>Fehler während des Laufs: Die letzten Protokollzeilen nennen den Grund</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>Lauf abgebrochen</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>Lauf wartet auf eine Eingabe: Er hat bei einer Frage angehalten und setzt fort, sobald sie beantwortet ist</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>unerwartetes Ende: Prüfen Sie die Ausgabe oben</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>die Engine ist nicht gestartet</value></data>
   <data name="Studio.Settings.OllamaTitle" xml:space="preserve">
@@ -1715,6 +1716,7 @@
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve">
     <value>Vor dem Ende abgebrochen.</value>
   </data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>Bei einer Frage angehalten: wartet auf die Antwort.</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve">
     <value>Nie gestartet.</value>
   </data>
@@ -2630,6 +2632,7 @@
   <data name="Studio.Teams.RunFail" xml:space="preserve">
     <value>fehlgeschlagen</value>
   </data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>wartet auf Eingabe</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve">
     <value>Nie ausgeführt</value>
   </data>
@@ -3793,6 +3796,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>Erfolgreich</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>Fehlgeschlagen</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>Abgebrochen</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>Wartet auf Eingabe</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>Exit-Code</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>AGENT</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>TOOL-AUFRUFE</value></data>

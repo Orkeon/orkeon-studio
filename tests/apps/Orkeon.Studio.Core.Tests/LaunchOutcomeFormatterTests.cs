@@ -52,6 +52,7 @@ public class LaunchOutcomeFormatterTests
     [InlineData(OrkeonExitCodes.RuntimeError, "Exit code 2 — runtime error: the last log lines say why")]
     [InlineData(OrkeonExitCodes.Cancelled, "Exit code 130 — run interrupted")]
     [InlineData(42, "Exit code 42 — unexpected end: check the output above")]
+    [InlineData(OrkeonExitCodes.WaitingForInput, "Exit code 75 — run waiting for input: it stopped on a question and goes on once it is answered")]
     [InlineData(
         OrkeonExitCodes.DecisionUnavailable,
         "Exit code 69 — run refused: this team cannot run without the decision models (System One) and they are off. "

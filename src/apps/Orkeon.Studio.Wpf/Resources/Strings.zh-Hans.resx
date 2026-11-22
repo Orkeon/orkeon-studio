@@ -488,6 +488,7 @@
   <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>运行被拒绝：此团队离不开决策模型（System One），而它们已关闭。请在“设置 › 决策模型”中完成配置，并保持开启“使用决策模型”</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>运行时错误：日志的最后几行说明了原因</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>运行已中断</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>运行正在等待输入：它在一个问题处停下，回答后继续</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>意外结束：请查看上方的输出</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>引擎未启动</value></data>
   <data name="Studio.Settings.OllamaTitle" xml:space="preserve">
@@ -1715,6 +1716,7 @@
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve">
     <value>在结束前被中断。</value>
   </data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>在一个问题处停下：等待回答。</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve">
     <value>从未启动。</value>
   </data>
@@ -2630,6 +2632,7 @@
   <data name="Studio.Teams.RunFail" xml:space="preserve">
     <value>失败</value>
   </data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>等待输入</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve">
     <value>从未执行</value>
   </data>
@@ -3793,6 +3796,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>成功</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>失败</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>等待输入</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>退出代码</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>智能体</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>工具调用</value></data>
