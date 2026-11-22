@@ -4671,6 +4671,8 @@
   <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>之后：{0}</value></data>
   <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>条件：{0}</value></data>
   <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>无法移除：{0} 的条件读取了它的答案</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>无法移除：决策 {0} 依据它的输出作出决定</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>无法移除：团队至少保留一项任务</value></data>
   <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>决策需通过与助手对话来修改</value></data>
   <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>任务</value></data>
   <data name="Studio.Create.AddTask" xml:space="preserve"><value>添加任务</value></data>

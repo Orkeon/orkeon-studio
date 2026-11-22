@@ -137,6 +137,45 @@ public sealed class BlueprintTasksTests
     }
 
     [Fact]
+    public void A_task_a_decision_decides_on_is_named_as_a_blocker()
+    {
+        const string json = """
+            {"tasks":[
+              {"key":"collecte","description":"Collecter","agent":"a"},
+              {"key":"tri","description":"Trier","decision":{"questions":{"q":{"choice":{"x":"X"}}},"state":["collecte"]}},
+              {"key":"suite","description":"Suite","agent":"a"}
+            ]}
+            """;
+
+        Assert.Equal(["tri"], BlueprintTasks.StateOf(json, "collecte"));
+        Assert.Empty(BlueprintTasks.StateOf(json, "suite"));
+        var removal = BlueprintTasks.RemovalOf(json, "collecte");
+        Assert.Equal(BlueprintTaskRemovalVerdict.ReadByDecision, removal.Verdict);
+        Assert.Equal(["tri"], removal.Readers);
+        Assert.False(removal.IsAllowed);
+        Assert.True(BlueprintTasks.RemovalOf(json, "suite").IsAllowed);
+    }
+
+    [Fact]
+    public void The_only_task_a_decision_task_and_a_task_a_condition_reads_are_not_removed()
+    {
+        Assert.Equal(BlueprintTaskRemovalVerdict.OnlyTask,
+            BlueprintTasks.RemovalOf("""{"tasks":[{"key":"seule","agent":"a"}]}""", "seule").Verdict);
+        // A decision task a condition reads names its reader; one nothing reads is still the assistant's.
+        Assert.Equal(BlueprintTaskRemovalVerdict.ReadByCondition, BlueprintTasks.RemovalOf(Blueprint, "controle").Verdict);
+        Assert.Equal(BlueprintTaskRemovalVerdict.DecisionTask, BlueprintTasks.RemovalOf(
+            """{"tasks":[{"key":"t","agent":"a"},{"key":"d","decision":{"questions":{"q":{"choice":{"x":"X"}}}}}]}""", "d").Verdict);
+        Assert.Equal(BlueprintTaskRemovalVerdict.Allowed, BlueprintTasks.RemovalOf(Blueprint, "rediger").Verdict);
+        Assert.Equal(BlueprintTaskRemovalVerdict.Allowed, BlueprintTasks.RemovalOf(Blueprint, "lire").Verdict);
+        Assert.Equal(BlueprintTaskRemovalVerdict.Unknown, BlueprintTasks.RemovalOf(Blueprint, "absente").Verdict);
+
+        const string conditioned = """{"tasks":[{"key":"d","agent":"a"},{"key":"x","agent":"a","when":{"d":"otherwise"}}]}""";
+        var removal = BlueprintTasks.RemovalOf(conditioned, "d");
+        Assert.Equal(BlueprintTaskRemovalVerdict.ReadByCondition, removal.Verdict);
+        Assert.Equal(["x"], removal.Readers);
+    }
+
+    [Fact]
     public void Move_shifts_a_task_and_stays_within_the_list()
     {
         Assert.Equal(["controle", "lire", "rediger"], BlueprintTasks.Read(BlueprintTasks.Move(Blueprint, "lire", 1)).Select(task => task.Key));

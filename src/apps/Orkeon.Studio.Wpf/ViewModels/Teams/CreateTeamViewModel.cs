@@ -1774,6 +1774,9 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             SaveTeamCommand.RaiseCanExecuteChanged();
             TryTeamCommand.RaiseCanExecuteChanged();
             AdoptWithoutTrialCommand.RaiseCanExecuteChanged();
+            // CanEditAgents reads CanTryTeam, which reads IsEngineRunning: the dry pause opens the edit point.
+            OnPropertiesChanged(nameof(CanEditAgents));
+            RaiseEditCommandsChanged();
             // The engine starting or dying moves the wait point too: a wait it held ends with
             // it, and the adoption becomes the one expected once the session reached its end.
             SyncWaitPoint();
@@ -3799,7 +3802,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         RefreshStep2Tabs();
         SyncWaitPoint();
         SaveTeamCommand.RaiseCanExecuteChanged();
-        AddAgentCommand.RaiseCanExecuteChanged();
+        RaiseEditCommandsChanged();
         TryTeamCommand.RaiseCanExecuteChanged();
         AdoptWithoutTrialCommand.RaiseCanExecuteChanged();
     }

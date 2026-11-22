@@ -125,10 +125,9 @@ public sealed class TaskEditorViewModel : ObservableObject
             AgentEditorViewModel.FirstScope(teamMounts, readWrite: true),
             OnChanged);
 
-        var blockers = _taskKey is null ? [] : BlueprintTasks.ConditionedOn(blueprintJson, _taskKey);
-        _removeBlockedBy = blockers.Count == 0
+        _removeBlockedBy = _taskKey is null
             ? ""
-            : _strings.Format(StudioStringKeys.TaskRemoveBlocked, string.Join(" ; ", blockers.Select(key => LabelOf(tasks, key))));
+            : RemoveBlockedText(BlueprintTasks.RemovalOf(blueprintJson, _taskKey), key => LabelOf(tasks, key), _strings);
 
         IsOpen = true;
         OnPropertiesChanged(
@@ -210,7 +209,7 @@ public sealed class TaskEditorViewModel : ObservableObject
     /// <summary>What a task cannot be written without: what to do, what is expected, and who does it.</summary>
     public bool CanSave => _description.Trim().Length > 0 && _expectedOutput.Trim().Length > 0 && _agent is not null;
 
-    /// <summary>Whether the task may be removed: an existing one no other task's condition reads.</summary>
+    /// <summary>Whether the task may be removed: an existing one <see cref="BlueprintTasks.RemovalOf"/> allows.</summary>
     public bool CanRemove => !IsNew && _removeBlockedBy.Length == 0;
 
     /// <summary>Why the task cannot be removed; empty when it can.</summary>
@@ -269,6 +268,23 @@ public sealed class TaskEditorViewModel : ObservableObject
     {
         var line = text.ReplaceLineEndings(" ").Trim();
         return line.Length <= DependencyLabelLength ? line : string.Concat(line.AsSpan(0, DependencyLabelLength - 1).TrimEnd(), "…");
+    }
+
+    /// <summary>
+    /// Why a task cannot be removed, for its remove button; empty when it can. <paramref name="label"/>
+    /// names a reading task on screen.
+    /// </summary>
+    internal static string RemoveBlockedText(BlueprintTaskRemoval removal, Func<string, string> label, IStudioStrings strings)
+    {
+        var readers = string.Join(" ; ", removal.Readers.Select(label));
+        return removal.Verdict switch
+        {
+            BlueprintTaskRemovalVerdict.Allowed or BlueprintTaskRemovalVerdict.Unknown => "",
+            BlueprintTaskRemovalVerdict.OnlyTask => strings[StudioStringKeys.TaskRemoveOnly],
+            BlueprintTaskRemovalVerdict.DecisionTask => strings[StudioStringKeys.TaskDecisionTip],
+            BlueprintTaskRemovalVerdict.ReadByCondition => strings.Format(StudioStringKeys.TaskRemoveBlocked, readers),
+            _ => strings.Format(StudioStringKeys.TaskRemoveState, readers),
+        };
     }
 
     private static string LabelOf(IReadOnlyList<BlueprintTaskView> tasks, string key) =>

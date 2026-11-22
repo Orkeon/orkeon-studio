@@ -75,7 +75,10 @@ public sealed class WizardTaskRow
     /// <summary>Whether it is a decision task: shown, not edited here.</summary>
     public bool IsDecision { get; }
 
-    /// <summary>Why it cannot be removed (another task's condition reads it); empty when it can.</summary>
+    /// <summary>
+    /// Why it cannot be removed (the team's only task, a decision task, or one another task's
+    /// condition or decision reads); empty when it can.
+    /// </summary>
     public string RemoveTooltip { get; }
 
     /// <summary>Opens the task editor over it.</summary>
@@ -89,6 +92,15 @@ public sealed class WizardTaskRow
 
     /// <summary>Removes it from the team.</summary>
     public RelayCommand RemoveCommand { get; }
+
+    /// <summary>Re-reads whether its buttons are actionable: the wizard's edit point moved.</summary>
+    internal void RaiseCanExecuteChanged()
+    {
+        EditCommand.RaiseCanExecuteChanged();
+        MoveUpCommand.RaiseCanExecuteChanged();
+        MoveDownCommand.RaiseCanExecuteChanged();
+        RemoveCommand.RaiseCanExecuteChanged();
+    }
 }
 
 public sealed partial class CreateTeamViewModel
@@ -130,10 +142,8 @@ public sealed partial class CreateTeamViewModel
             var when = task.WhenTerms.Count == 0
                 ? ""
                 : _strings.Format(StudioStringKeys.TaskWhen, string.Join(" ; ", task.WhenTerms.Select(term => $"{term.Answer} = {term.Value}")));
-            var blockers = BlueprintTasks.ConditionedOn(json, task.Key);
-            var blocked = blockers.Count == 0
-                ? ""
-                : _strings.Format(StudioStringKeys.TaskRemoveBlocked, string.Join(" ; ", blockers.Select(key => descriptions.GetValueOrDefault(key, key))));
+            var blocked = TaskEditorViewModel.RemoveBlockedText(
+                BlueprintTasks.RemovalOf(json, task.Key), key => descriptions.GetValueOrDefault(key, key), _strings);
             Tasks.Add(new WizardTaskRow(
                 i + 1, task, who, after, when, blocked, i == 0, i == tasks.Count - 1,
                 () => CanEditAgents, EditTask, MoveTask, RemoveTask));
@@ -141,6 +151,21 @@ public sealed partial class CreateTeamViewModel
 
         OnPropertiesChanged(nameof(HasTasks));
         AddTaskCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Re-reads every button gated on <see cref="CanEditAgents"/>: adding an agent or a task, an
+    /// agent card's and a task row's buttons. Called wherever the edit point may move, the engine
+    /// starting or dying included, which is silent on the event stream.
+    /// </summary>
+    private void RaiseEditCommandsChanged()
+    {
+        AddAgentCommand.RaiseCanExecuteChanged();
+        AddTaskCommand.RaiseCanExecuteChanged();
+        foreach (var agent in Agents)
+            agent.EditCommand.RaiseCanExecuteChanged();
+        foreach (var task in Tasks)
+            task.RaiseCanExecuteChanged();
     }
 
     /// <summary>Opens the task editor, over a task or for a new one when null.</summary>
@@ -161,7 +186,7 @@ public sealed partial class CreateTeamViewModel
     private void RemoveTask(string taskKey)
     {
         if (CanEditAgents
-            && BlueprintTasks.ConditionedOn(_model.BlueprintJson, taskKey).Count == 0
+            && BlueprintTasks.RemovalOf(_model.BlueprintJson, taskKey).IsAllowed
             && BlueprintTasks.Remove(_model.BlueprintJson, taskKey) is { } amended)
             ApplyEditedBlueprint(amended);
     }

@@ -46,6 +46,37 @@ public sealed record BlueprintTaskEdit(
     string? Deliverable,
     IReadOnlyList<string> Tools);
 
+/// <summary>Whether a task of a blueprint may be removed (<see cref="BlueprintTasks.RemovalOf"/>).</summary>
+public enum BlueprintTaskRemovalVerdict
+{
+    /// <summary>It may.</summary>
+    Allowed,
+
+    /// <summary>No task of the blueprint has that key.</summary>
+    Unknown,
+
+    /// <summary>It is the team's only task: a blueprint holds at least one.</summary>
+    OnlyTask,
+
+    /// <summary>It is a decision task: shown, never edited here.</summary>
+    DecisionTask,
+
+    /// <summary>Another task's condition reads its answer.</summary>
+    ReadByCondition,
+
+    /// <summary>A decision task decides on its output (<c>decision.state</c>).</summary>
+    ReadByDecision,
+}
+
+/// <summary>A removal verdict, with the tasks that read the task when they are what refuses it.</summary>
+/// <param name="Verdict">Whether, and if not why.</param>
+/// <param name="Readers">The keys of the tasks that read it: the conditions or the decisions that refuse the removal.</param>
+public sealed record BlueprintTaskRemoval(BlueprintTaskRemovalVerdict Verdict, IReadOnlyList<string> Readers)
+{
+    /// <summary>Whether the task may be removed.</summary>
+    public bool IsAllowed => Verdict == BlueprintTaskRemovalVerdict.Allowed;
+}
+
 /// <summary>One agent of a blueprint, as a task editor offers it: its key, and its role to show.</summary>
 public sealed record BlueprintAgentRef(string Key, string Role);
 
@@ -159,6 +190,47 @@ public static class BlueprintTasks
                 string.Equals(term.Answer, key, StringComparison.Ordinal)
                 || term.Answer.StartsWith(key + ".", StringComparison.Ordinal)))
             .Select(task => task.Key)];
+
+    /// <summary>
+    /// The keys of the decision tasks whose <c>decision.state</c> names <paramref name="key"/>: the
+    /// engine decides on that task's output and waits for it as for a dependency. The decision is the
+    /// assistant's to change, so removing the task is refused rather than its state rewritten.
+    /// </summary>
+    public static IReadOnlyList<string> StateOf(string? blueprintJson, string key)
+    {
+        if (BlueprintJson.Parse(blueprintJson)?["tasks"] is not JsonArray tasks)
+            return [];
+
+        return [.. tasks.OfType<JsonObject>()
+            .Where(task => task["decision"] is JsonObject decision
+                && BlueprintJson.Strings(decision["state"]).Contains(key, StringComparer.Ordinal))
+            .Select(task => BlueprintJson.Text(task["key"]))
+            .OfType<string>()];
+    }
+
+    /// <summary>
+    /// Whether the task <paramref name="key"/> may be removed, and if not why: the team's only task
+    /// (the engine wants at least one), a task another task's condition reads
+    /// (<see cref="ConditionedOn"/>), one a decision decides on (<see cref="StateOf"/>), or a
+    /// decision task (shown, never edited here: its questions, and the decisions a
+    /// <c>required</c> crew must keep, are the assistant's to change).
+    /// </summary>
+    public static BlueprintTaskRemoval RemovalOf(string? blueprintJson, string key)
+    {
+        var tasks = Read(blueprintJson);
+        if (tasks.FirstOrDefault(task => string.Equals(task.Key, key, StringComparison.Ordinal)) is not { } target)
+            return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.Unknown, []);
+        if (tasks.Count == 1)
+            return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.OnlyTask, []);
+        // The tasks that read it first: they name what to change before it may go.
+        if (ConditionedOn(blueprintJson, key) is { Count: > 0 } readers)
+            return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.ReadByCondition, readers);
+        if (StateOf(blueprintJson, key) is { Count: > 0 } deciders)
+            return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.ReadByDecision, deciders);
+        if (target.IsDecision)
+            return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.DecisionTask, []);
+        return new BlueprintTaskRemoval(BlueprintTaskRemovalVerdict.Allowed, []);
+    }
 
     /// <summary>Removes the task <paramref name="key"/> and drops it from the others' dependencies.</summary>
     public static string? Remove(string? blueprintJson, string key)

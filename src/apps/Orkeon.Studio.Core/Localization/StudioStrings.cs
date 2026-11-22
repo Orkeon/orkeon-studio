@@ -1023,6 +1023,12 @@ public static class StudioStringKeys
     /// <summary>Why a task cannot be removed; {0} names the tasks whose condition reads it.</summary>
     public const string TaskRemoveBlocked = "Studio.Create.TaskRemoveBlocked";
 
+    /// <summary>Why a task cannot be removed; {0} names the decision tasks that decide on its output.</summary>
+    public const string TaskRemoveState = "Studio.Create.TaskRemoveState";
+
+    /// <summary>Why the team's only task cannot be removed.</summary>
+    public const string TaskRemoveOnly = "Studio.Create.TaskRemoveOnly";
+
     /// <summary>The tooltip of a decision task's row: it is not edited here.</summary>
     public const string TaskDecisionTip = "Studio.Create.TaskDecisionTip";
 
@@ -3731,6 +3737,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TaskAfter] = "after: {0}",
         [StudioStringKeys.TaskWhen] = "if: {0}",
         [StudioStringKeys.TaskRemoveBlocked] = "Cannot be removed: the condition of {0} reads its answer",
+        [StudioStringKeys.TaskRemoveState] = "Cannot be removed: the decision {0} decides on its output",
+        [StudioStringKeys.TaskRemoveOnly] = "Cannot be removed: a team keeps at least one task",
         [StudioStringKeys.TaskDecisionTip] = "A decision is changed by talking to the assistant",
         [StudioStringKeys.TasksTitle] = "Tasks",
         [StudioStringKeys.AddTask] = "Add a task",

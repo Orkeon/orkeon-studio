@@ -2953,6 +2953,8 @@
   <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>after: {0}</value></data>
   <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>if: {0}</value></data>
   <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>Cannot be removed: the condition of {0} reads its answer</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>Cannot be removed: the decision {0} decides on its output</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>Cannot be removed: a team keeps at least one task</value></data>
   <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>A decision is changed by talking to the assistant</value></data>
   <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Tasks</value></data>
   <data name="Studio.Create.AddTask" xml:space="preserve"><value>Add a task</value></data>

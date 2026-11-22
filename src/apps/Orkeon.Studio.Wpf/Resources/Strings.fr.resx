@@ -2953,6 +2953,8 @@
   <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>après : {0}</value></data>
   <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>si : {0}</value></data>
   <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>Retrait impossible : la condition de {0} lit sa réponse</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>Retrait impossible : la décision {0} décide sur son résultat</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>Retrait impossible : une équipe garde au moins une tâche</value></data>
   <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>Une décision se modifie en parlant à l'assistant</value></data>
   <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Tâches</value></data>
   <data name="Studio.Create.AddTask" xml:space="preserve"><value>Ajouter une tâche</value></data>

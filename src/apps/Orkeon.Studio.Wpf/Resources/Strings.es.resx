@@ -4671,6 +4671,8 @@
   <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>después de: {0}</value></data>
   <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>si: {0}</value></data>
   <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>No se puede quitar: la condición de {0} lee su respuesta</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>No se puede quitar: la decisión {0} decide sobre su resultado</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>No se puede quitar: un equipo conserva al menos una tarea</value></data>
   <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>Una decisión se cambia hablando con el asistente</value></data>
   <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Tareas</value></data>
   <data name="Studio.Create.AddTask" xml:space="preserve"><value>Añadir una tarea</value></data>
