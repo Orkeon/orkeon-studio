@@ -29,9 +29,25 @@ public sealed record ForgeToolPalette(IReadOnlyList<string> TeamTools, IReadOnly
     };
 
     /// <summary>
-    /// Reads the palette of <paramref name="blueprintJson"/>. Besides the denied tools, the catalogue
-    /// offers neither a script-only tool nor one the engine registers only once something is set (a
-    /// key, an MCP server, a decision provider, a cognitive memory): on most machines the engine
+    /// The tools of <c>orkeon run</c> the forge's host never holds, so its catalogue
+    /// (<c>ForgeSandbox.SelectCrewTools</c> over the host's <c>IBaseTool</c>s) refuses each with
+    /// <c>FORGE-TOOL-UNKNOWN</c>: <c>human_input</c>, which <c>AddOrkeonHumanInput</c> registers
+    /// (<c>RunnerExecution</c> calls it, the forge's <c>RunnerHost.Build</c> does not);
+    /// <c>semantic_search</c>, which <c>AddSemanticSearchTool</c> registers (<c>orkeon run</c> calls
+    /// it, the forge does not); and the two coworker tools, never registered at all but built per
+    /// agent from its <c>allowDelegation</c> by <c>AgentDelegationToolsProvider</c>. Pinned on the
+    /// engine's composition by a drift test, so a registration the forge gains or loses fails there.
+    /// </summary>
+    public static IReadOnlySet<string> OutsideTheForgeHost { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "human_input", "semantic_search", "ask_question_to_coworker", "delegate_work_to_coworker",
+    };
+
+    /// <summary>
+    /// Reads the palette of <paramref name="blueprintJson"/>. Besides the denied tools and the ones
+    /// outside the forge's host (<see cref="OutsideTheForgeHost"/>), the catalogue offers neither a
+    /// script-only tool nor one the engine registers only once something is set (a key, an MCP
+    /// server, a decision provider, a cognitive memory): on most machines the engine
     /// would refuse it as unknown. A tool the blueprint already names stays offered whatever its
     /// kind: the engine accepted it, and an edit never drops it silently.
     /// </summary>
@@ -61,7 +77,7 @@ public sealed record ForgeToolPalette(IReadOnlyList<string> TeamTools, IReadOnly
     {
         ArgumentNullException.ThrowIfNull(tool);
 
-        return !DeniedTools.Contains(tool.Name) && tool.Requirement is not (
+        return !DeniedTools.Contains(tool.Name) && !OutsideTheForgeHost.Contains(tool.Name) && tool.Requirement is not (
             ToolRequirement.ScriptOnly
             or ToolRequirement.OnlyWithStoredKey
             or ToolRequirement.OnlyWithMcpServer
