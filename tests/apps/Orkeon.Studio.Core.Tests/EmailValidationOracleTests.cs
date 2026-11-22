@@ -160,6 +160,10 @@ public sealed class EmailValidationOracleTests
         ["a port written in words"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "abc" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a port with a decimal point"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Outgoing": { "Port": 465.0 }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a port written as text"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": " 1993 " }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
+        // The binder's converter reads a hexadecimal number (Int32Converter): 0x3E1 and #3E1 are port 993.
+        ["a port written in hexadecimal"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x3E1" }, "Send": { "MaxPerHour": "#A" }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
+        ["a port written in hexadecimal out of range"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x10000" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailServer]),
+        ["a port with a hexadecimal sign but no digit"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a blank port"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "  " }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a switch that is neither true nor false"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "SaveSentCopy": "yes", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a switch written as text"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "SaveSentCopy": " TRUE ", "Auth": { "PasswordEnvVar": "P" } }"""), []),

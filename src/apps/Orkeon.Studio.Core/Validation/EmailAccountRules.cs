@@ -500,6 +500,14 @@ public static class EmailAccountRules
     }
 
     /// <summary>
+    /// Whether the account binders read <paramref name="text"/> as a whole number: through the converter
+    /// the configuration binder itself uses (<c>TypeDescriptor.GetConverter(typeof(int))</c>, as
+    /// <c>EmailOptionsBinder.Converts</c> and <c>DriveOptionsBinder.Converts</c> do), which also takes a
+    /// hexadecimal number written <c>0x1F</c> or <c>#1F</c>.
+    /// </summary>
+    internal static bool BindsAsInteger(string text) => AppSettingsDocument.ConvertInt32(text) is not null;
+
+    /// <summary>
     /// The binder's sentence on a typed setting it cannot convert, or null when it reads
     /// <paramref name="text"/> — or when the key is absent, or optional and empty.
     /// </summary>
@@ -510,7 +518,7 @@ public static class EmailAccountRules
 
         return kind switch
         {
-            Kind.Integer => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{key} is not a whole number",
+            Kind.Integer => BindsAsInteger(text) ? null : $"{key} is not a whole number",
             Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} is neither true nor false",
             Kind.Rights => EnumerationValue(EmailSection.RightNames, text, flags: true) is { } value && (value & ~(long)EmailSection.AllRights) == 0
                 ? null

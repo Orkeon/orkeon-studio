@@ -302,10 +302,26 @@ public sealed class AppSettingsDocument
     public static int? ReadInt32(JsonNode? node) => node switch
     {
         JsonValue value when Number(value) is { } number && number.TryGetInt32(out var integer) => integer,
-        JsonValue value when value.TryGetValue<string>(out var text)
-            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) => parsed,
+        JsonValue value when value.TryGetValue<string>(out var text) && ConvertInt32(text) is { } parsed => parsed,
         _ => null,
     };
+
+    /// <summary>
+    /// <paramref name="text"/> read as a whole number by the converter the configuration binder itself
+    /// uses (<c>TypeDescriptor.GetConverter(typeof(int))</c>), which also takes a hexadecimal number
+    /// written <c>0x1F</c> or <c>#1F</c>; null when the binder cannot convert it.
+    /// </summary>
+    internal static int? ConvertInt32(string text)
+    {
+        try
+        {
+            return System.ComponentModel.TypeDescriptor.GetConverter(typeof(int)).ConvertFromInvariantString(text) as int?;
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Writes an integer value; <see langword="null"/> removes the key.</summary>
     public void SetInt32(string path, int? value) =>

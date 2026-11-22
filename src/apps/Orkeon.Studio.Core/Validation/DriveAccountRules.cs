@@ -337,7 +337,7 @@ public static class DriveAccountRules
 
         return kind switch
         {
-            Kind.Integer => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{key} is not a whole number",
+            Kind.Integer => EmailAccountRules.BindsAsInteger(text) ? null : $"{key} is not a whole number",
             Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} is neither true nor false",
             Kind.Rights => EmailAccountRules.EnumerationValue(DriveSection.RightNames, text, flags: true) is { } value && (value & ~(long)DriveSection.AllRights) == 0
                 ? null

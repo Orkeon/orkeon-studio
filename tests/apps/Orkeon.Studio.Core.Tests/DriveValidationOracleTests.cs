@@ -120,6 +120,11 @@ public sealed class DriveValidationOracleTests
                 "share": { "allowedrecipients": ["*@example.com"], "allowpubliclinks": "True" },
                 "maxuploadmegabytes": "250", "timeoutseconds": 60 } } }
             """, []),
+        // The binder's converter reads a hexadecimal number (Int32Converter): 0x1E is thirty seconds.
+        ["a limit and a timeout written in hexadecimal"] = ("""
+            { "Accounts": { "work": { "Provider": "GoogleDrive", "Rights": "Read", "Auth": { "ClientId": "c", "ClientSecretEnvVar": "S" },
+              "MaxUploadMegabytes": "#FA", "TimeoutSeconds": "0x1E" } } }
+            """, []),
         // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
         ["numbers for the provider and the rights"] = ("""
             { "Accounts": { "work": { "Provider": 1, "Rights": "63", "Auth": { "ClientId": "c" } } } }
