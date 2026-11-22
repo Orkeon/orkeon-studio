@@ -111,6 +111,18 @@ public sealed record ModelProfile
     /// </summary>
     public string? ThinkingEffort { get; init; }
 
+    /// <summary>
+    /// The connection this setting is a model of (<see cref="ModelConnection"/>), or null for a setting
+    /// built on its own. Computed with the pair, never stored: the screens group by it without reading
+    /// the name back.
+    /// </summary>
+    [JsonIgnore]
+    public string? Connection { get; init; }
+
+    /// <summary>The model's alias in its connection, or null for the one model of a connection that names none.</summary>
+    [JsonIgnore]
+    public string? Alias { get; init; }
+
     /// <summary>Endpoint base URL.</summary>
     [SuppressMessage("Design", "CA1056",
         Justification = "User-typed form value round-tripped verbatim into a JSON string field; " +
