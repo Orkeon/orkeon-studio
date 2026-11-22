@@ -840,9 +840,12 @@
   <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>esta ejecución prescinde de ellos</value></data>
   <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>los ajustes los desactivan</value></data>
   <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>no hay ningún proveedor de decisión configurado</value></data>
+  <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>el proveedor de decisión no tiene clave de API: defina su variable de entorno, o su ApiKey en los ajustes</value></data>
   <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>esta pasada de la prueba prescinde de ellos</value></data>
   <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One eligió el perfil «{1}» ({2} %).</value></data>
   <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: perfil «{1}», no elegido por System One ({2}).</value></data>
+  <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0}: perfil «{1}», el mínimo de la escala al que se ajusta la elección de System One.</value></data>
+  <data name="Studio.Run.NoteRouteCeiling" xml:space="preserve"><value>{0}: perfil «{1}», el máximo de la escala al que se ajusta la elección de System One.</value></data>
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One eligió el nivel de razonamiento {1} ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: nivel de razonamiento elevado de {1} a {2} tras un intento fallido.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: nivel de razonamiento {1}, no elegido por System One ({2}).</value></data>

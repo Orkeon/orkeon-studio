@@ -367,6 +367,10 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
         { """{ "gpt-4o": { "Vision": true, "vision": null } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
         { """{ "gpt-4o": { "Vision": {}, "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
         { """{ "gpt-4o": { "Vision": [], "vision": true } }""", "Llm:ModelCapabilities:gpt-4o:Vision" },
+        // An entry written as a single value, and a switch written as blanks alone (Orkeon #454).
+        { """{ "gpt-4o": "x" }""", "Llm:ModelCapabilities:gpt-4o" },
+        { """[ "x" ]""", "Llm:ModelCapabilities:0" },
+        { """{ "gpt-4o": { "AudioOutput": " " } }""", "Llm:ModelCapabilities:gpt-4o:AudioOutput" },
     };
 
     /// <summary>
@@ -424,14 +428,12 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
     /// <summary><c>Llm:ModelCapabilities</c> written in a way the real host starts on.</summary>
     public static TheoryData<string> ModelCapabilitiesTheHostAccepts() => new()
     {
-        // Left out, each in its own way: an empty list, an empty object, a null, a blank.
-        """{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""",
+        // Left out, each in its own way: an empty list, an empty object, a null, an empty text.
+        """{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": "", "ReasoningEfforts": [] } }""",
         """{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""",
         // An entry that holds nothing to judge.
-        """{ "gpt-4o": "x" }""",
         """{ "gpt-4o": [] }""",
         """{ "gpt-4o": {} }""",
-        """[ "x" ]""",
         """[ { "Thinking": "Toggle" } ]""",
         // Vendor efforts are the run's to send; a list may be written as an object, and its items left empty.
         """{ "gpt-4o": { "ReasoningEfforts": ["none", "minimal", 3] } }""",

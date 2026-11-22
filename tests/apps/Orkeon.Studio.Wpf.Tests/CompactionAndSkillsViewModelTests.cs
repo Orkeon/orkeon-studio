@@ -69,6 +69,25 @@ public sealed class CompactionAndSkillsViewModelTests
         Assert.Null(document.Compaction.TriggerShare);
     }
 
+    /// <summary>NaN and the infinities parse as numbers, and the engine refuses them at start (Orkeon #454): nothing is written.</summary>
+    [Theory]
+    [InlineData("NaN")]
+    [InlineData("Infinity")]
+    [InlineData("-Infinity")]
+    public void A_share_that_is_no_finite_number_changes_nothing(string typed)
+    {
+        var (compaction, _, document, _) = Forms();
+        compaction.TriggerShare = "0.6";
+        compaction.PruneFillShare = "0.5";
+
+        compaction.TriggerShare = typed;
+        compaction.PruneFillShare = typed;
+
+        Assert.Equal(0.6, document.Compaction.TriggerShare);
+        Assert.Equal(0.5, document.Compaction.PruneFillShare);
+        Assert.Equal("0.6", compaction.TriggerShare);
+    }
+
     [Fact]
     public void What_the_engines_start_refuses_is_said_under_the_fields()
     {

@@ -69,7 +69,7 @@ public sealed class SkillsSection
             problems.Add(load);
         var skills = SettingsBinding.Bind<AgentSkillsOptions>(configuration, SectionPath, problems);
         problems.AddRange(AgentSkillsOptions.Problems(skills).Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentSkillsOptions)));
+        SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(AgentSkillsOptions)));
         return problems;
     }
 

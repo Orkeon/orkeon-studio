@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Orkeon.Infrastructure.Configuration;
 using Orkeon.Infrastructure.Decision;
@@ -39,7 +40,7 @@ public sealed class GuardianSection
             problems.Add(load);
         Read(configuration, problems, out var refused);
         problems.AddRange(refused);
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(GuardianOptions)));
+        SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(GuardianOptions)));
         return problems;
     }
 
@@ -55,11 +56,20 @@ public sealed class GuardianSection
         var problems = new List<(string, string)>();
 
         // The phases are judged as the file writes them, not as the binder read them: it leaves out an
-        // item it cannot convert. A number that names a member is that member to the engine.
-        var phases = configuration.GetSection(PhasesPath).GetChildren()
+        // item it cannot convert. A phase is a name, never a number (Orkeon #455), and the list a list:
+        // a single value binds an empty one, which judges both phases.
+        var written = configuration.GetSection(PhasesPath);
+        if (written is { Value: { Length: > 0 } single } && !written.GetChildren().Any())
+        {
+            problems.Add((PhasesPath,
+                $"{PhasesPath} is '{single}', a single value where a list is expected: write its items as a list, "
+                + $"[\"{single}\"] (the environment variable Orkeon__Guardian__Llm__Phases__0={single}), or leave the key out to judge both phases."));
+        }
+
+        var phases = written.GetChildren()
             .Select(phase => phase.Value)
             .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Where(value => !Enum.TryParse<GuardianJudgePhase>(value, ignoreCase: true, out var phase) || !Enum.IsDefined(phase))
+            .Where(value => !DecisionProfileRules.IsNameOf<GuardianJudgePhase>(value))
             .ToList();
         if (phases.Count > 0)
         {
@@ -69,19 +79,25 @@ public sealed class GuardianSection
                 + "remove the other values or leave the list empty to judge both."));
         }
 
+        // One sentence per threshold, naming it and the value it holds, in the invariant culture (Orkeon #456).
         var llm = guardian.Llm ?? new GuardianLlmOptions();
-        if (llm.BlockThreshold is not (>= 0 and <= 1) || llm.WarnThreshold is not (>= 0 and <= 1))
+        foreach (var (key, value) in new[] { ("BlockThreshold", llm.BlockThreshold), ("WarnThreshold", llm.WarnThreshold) })
         {
-            // One sentence for the two keys: said at the first that breaks it.
-            var key = llm.BlockThreshold is not (>= 0 and <= 1) ? "BlockThreshold" : "WarnThreshold";
-            problems.Add(($"{GuardianLlmOptions.SectionName}:{key}",
-                $"{GuardianLlmOptions.SectionName}:BlockThreshold and WarnThreshold: probabilities in [0, 1]."));
+            if (value is not (>= 0 and <= 1))
+            {
+                problems.Add(($"{GuardianLlmOptions.SectionName}:{key}", string.Create(
+                    CultureInfo.InvariantCulture, $"{GuardianLlmOptions.SectionName}:{key}: {value} is not a probability between 0 and 1.")));
+            }
         }
 
         if (llm.MaxContentChars <= 0)
             problems.Add(($"{GuardianLlmOptions.SectionName}:MaxContentChars", $"{GuardianLlmOptions.SectionName}:MaxContentChars: one character or more."));
 
-        refused = problems;
+        // A key written without a value replaces what a rule says of the default the binder wrote.
+        var merged = new List<(string Path, string Problem)>(problems);
+        SettingsBinding.AddWalked(merged, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(GuardianOptions))
+            .Where(found => found.Kind == SettingsBinding.WalkFinding.Empty));
+        refused = [.. problems.Where(merged.Contains)];
         return guardian;
     }
 }

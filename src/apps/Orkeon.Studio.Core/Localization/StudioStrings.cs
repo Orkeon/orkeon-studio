@@ -1543,6 +1543,9 @@ public static class StudioStringKeys
     /// <summary>Why the decision models are off: no provider.</summary>
     public const string RunNoteCauseNoProvider = "Studio.Run.NoteCauseNoProvider";
 
+    /// <summary>Why the decision models are off: the provider in use needs an API key and none is in place (Orkeon #451).</summary>
+    public const string RunNoteCauseNoKey = "Studio.Run.NoteCauseNoKey";
+
     /// <summary>Why the decision models are off, inside the circuit line: the pass of a creation's trial that tries the team without them.</summary>
     public const string RunNoteCauseTrial = "Studio.Run.NoteCauseTrial";
 
@@ -1551,6 +1554,12 @@ public static class StudioStringKeys
 
     /// <summary>A profile System One did not pick: {0} the agent, {1} the profile, {2} the engine's reason.</summary>
     public const string RunNoteRouteDefault = "Studio.Run.NoteRouteDefault";
+
+    /// <summary>A note: the profile is the floor of the ladder, the model's pick held to it (Orkeon #460).</summary>
+    public const string RunNoteRouteFloor = "Studio.Run.NoteRouteFloor";
+
+    /// <summary>A note: the profile is the ceiling of the ladder, the model's pick held to it (Orkeon #460).</summary>
+    public const string RunNoteRouteCeiling = "Studio.Run.NoteRouteCeiling";
 
     /// <summary>A thinking level System One picked: {0} the agent, {1} the level, {2} how likely, a whole percentage.</summary>
     public const string RunNoteEffortPicked = "Studio.Run.NoteEffortPicked";
@@ -4028,9 +4037,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunNoteCauseSwitch] = "this run goes without them",
         [StudioStringKeys.RunNoteCauseSettings] = "the settings switch them off",
         [StudioStringKeys.RunNoteCauseNoProvider] = "no decision provider is configured",
+        [StudioStringKeys.RunNoteCauseNoKey] = "the decision provider has no API key: set its environment variable, or its ApiKey in the settings",
         [StudioStringKeys.RunNoteCauseTrial] = "this pass of the trial runs without them",
         [StudioStringKeys.RunNoteRoutePicked] = "{0}: System One picked the profile '{1}' ({2} %).",
         [StudioStringKeys.RunNoteRouteDefault] = "{0}: profile '{1}', not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteRouteFloor] = "{0}: profile '{1}', the ladder's floor System One's pick is held to.",
+        [StudioStringKeys.RunNoteRouteCeiling] = "{0}: profile '{1}', the ladder's ceiling System One's pick is held to.",
         [StudioStringKeys.RunNoteEffortPicked] = "{0}: System One picked the thinking level {1} ({2} %).",
         [StudioStringKeys.RunNoteEffortRaised] = "{0}: thinking level raised from {1} to {2} after a failed attempt.",
         [StudioStringKeys.RunNoteEffortDefault] = "{0}: thinking level {1}, not picked by System One ({2}).",

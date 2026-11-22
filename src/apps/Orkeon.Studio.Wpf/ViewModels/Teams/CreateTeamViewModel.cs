@@ -3650,8 +3650,11 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             _statusHoldsError = true;
             StatusMessage = error.Message is { Length: > 0 } ? $"{error.Code}: {error.Message}" : error.Code;
             // STUDIO-13: an unrecoverable one is the end of the run, and the card says so with
-            // the code and the message; FinishRun adds the exit code and the whole stderr.
-            if (!error.Recoverable)
+            // the code and the message; FinishRun adds the exit code and the whole stderr. One the
+            // engine says it carries on after (terminal false, Orkeon #453: a brief asked again, a
+            // folder list refused) only reaches the status line; an engine that does not say it
+            // ends the run on every unrecoverable error, as before.
+            if (!error.Recoverable && error.GoesNoFurther)
                 FailWith(WizardFailureKind.ConfigRefused, ConfigRefusedDetail(), EngineCommandLine, exitCode: null);
         }
 

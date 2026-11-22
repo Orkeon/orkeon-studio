@@ -119,6 +119,44 @@ public sealed class RunDecisionAndNotesTests
         Assert.Equal(4, dropped.AgentNotes[0].Count);
     }
 
+    /// <summary>
+    /// The engine says the circuit is off for a decision provider with no API key (Orkeon #451): the cause
+    /// is kept as written and has its own sentence, never the unknown fallback.
+    /// </summary>
+    [Fact]
+    public void A_circuit_off_for_a_missing_key_has_its_own_sentence()
+    {
+        var model = Fold("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"no-key"}""");
+
+        Assert.Equal(new RunDecisionCircuit("optional", false, "no-key"), model.DecisionCircuit);
+        Assert.Equal(Orkeon.Studio.Core.Localization.StudioStringKeys.RunNoteCauseNoKey, DecisionCircuitCauseKeys.KeyOf("no-key"));
+    }
+
+    /// <summary>
+    /// Where a declarative crew picks a profile or a level before any task, or prunes outside one
+    /// (Orkeon #460, #461), the event carries no <c>taskId</c>, only the agent's role: the note is kept
+    /// under that role. A route can stop at the ladder's <c>floor</c> or <c>ceiling</c>, and a level set
+    /// for the first time names no <c>previous</c>.
+    /// </summary>
+    [Fact]
+    public void Notes_without_a_task_are_kept_under_the_agents_role()
+    {
+        var model = Fold(
+            """{"v":2,"seq":1,"ts":"t","kind":"agent.route","agentRole":"Analyst","profile":"fast","reason":"floor","ladder":["fast","strong"]}""",
+            """{"v":2,"seq":2,"ts":"t","kind":"agent.route","agentRole":"Writer","profile":"strong","reason":"ceiling","ladder":["fast","strong"]}""",
+            """{"v":2,"seq":3,"ts":"t","kind":"agent.effort","agentRole":"Analyst","level":"low","reason":"model","picked":"low","probability":0.7}""",
+            """{"v":2,"seq":4,"ts":"t","kind":"agent.pruned","agentRole":"Analyst","cut":2,"dropped":0,"freedTokens":5000}""");
+
+        Assert.Equal(4, model.AgentNotes.Count);
+        Assert.All(model.AgentNotes, note => Assert.Null(note.TaskId));
+        Assert.Equal(["Analyst", "Writer", "Analyst", "Analyst"], model.AgentNotes.Select(note => note.AgentRole));
+        Assert.Equal(("floor", "fast"), (model.AgentNotes[0].Reason, model.AgentNotes[0].Value));
+        Assert.Equal(("ceiling", "strong"), (model.AgentNotes[1].Reason, model.AgentNotes[1].Value));
+        Assert.Null(model.AgentNotes[2].Previous);
+        Assert.Equal(2, model.AgentNotes[3].Count);
+        Assert.Empty(model.Tasks);
+    }
+
     [Fact]
     public void Each_of_them_tells_the_screen_it_changed()
     {

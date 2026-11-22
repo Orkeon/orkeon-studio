@@ -475,8 +475,9 @@ public sealed class AppSettingsValidator
     /// them (GAP-40): an entry carries its five keys and no other, so a typo refuses the start, and so does
     /// a model id holding a <c>:</c> (<c>llama3.2:latest</c> is read as the key <c>latest</c> of the entry
     /// <c>llama3.2</c>); a switch, <c>Thinking</c> and each item of <c>ReasoningEfforts</c> are single
-    /// values, so a list or an object that holds anything there refuses the start. A blank value, a JSON
-    /// null, <c>[]</c> and <c>{}</c> read as left out. The text of a <c>ReasoningEfforts</c> item is not
+    /// values, so a list or an object that holds anything there refuses the start; an entry is a section of
+    /// keys, so a single value written for it refuses the start too (Orkeon #454). An empty value, a JSON
+    /// null, <c>[]</c> and <c>{}</c> read as left out; a switch written as blanks alone is refused. The text of a <c>ReasoningEfforts</c> item is not
     /// judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
     /// An entry under a blank id - <c>""</c>, <c>" "</c>, or what a key that starts with <c>:</c> is
     /// split into - refuses the start whatever it holds: the run's model table takes no blank id.
@@ -508,13 +509,24 @@ public sealed class AppSettingsValidator
                     entry.Path));
             }
 
+            else if (!entry.HasChildren && entry.Value is { Length: > 0 })
+            {
+                // An entry is a section of keys: a single value there binds nothing, and the host's
+                // start refuses it (Orkeon #454). The value is not echoed, as the engine does not.
+                messages.Add(ValidationMessage.Error(
+                    ValidationCodes.InvalidFieldType,
+                    $"'{entry.Path}' is a single value where a section of keys is expected: write its keys, or leave the key out.",
+                    entry.Path));
+            }
+
             foreach (var field in entry.Children)
             {
                 if (ModelCapabilityBooleanKeys.Contains(field.Key, StringComparer.OrdinalIgnoreCase))
                 {
+                    // Blanks alone are no boolean to the binder: only an empty text reads as left out (Orkeon #454).
                     if (field.HasChildren)
                         messages.Add(WrongType(field.Path, SingleValue));
-                    else if (field.Text is { } raw && !bool.TryParse(raw, out _))
+                    else if (field.Value is { Length: > 0 } raw && !bool.TryParse(raw, out _))
                         messages.Add(WrongType(field.Path, "true or false"));
                 }
                 else if (string.Equals(field.Key, "Thinking", StringComparison.OrdinalIgnoreCase))

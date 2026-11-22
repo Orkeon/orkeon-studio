@@ -20,6 +20,7 @@ public static class DecisionCircuitCauseKeys
         DecisionCircuitCauses.Switch => StudioStringKeys.RunNoteCauseSwitch,
         DecisionCircuitCauses.Settings => StudioStringKeys.RunNoteCauseSettings,
         DecisionCircuitCauses.NoProvider => StudioStringKeys.RunNoteCauseNoProvider,
+        DecisionCircuitCauses.NoKey => StudioStringKeys.RunNoteCauseNoKey,
         DecisionCircuitCauses.Trial => StudioStringKeys.RunNoteCauseTrial,
         _ => null,
     };

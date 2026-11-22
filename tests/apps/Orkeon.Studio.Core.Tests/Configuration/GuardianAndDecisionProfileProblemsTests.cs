@@ -74,7 +74,8 @@ public sealed class GuardianAndDecisionProfileProblemsTests
             "Orkeon:Guardian:Llm:Phases: 'Delegation' is not a phase a model judges. Only `Input` and `Output` are "
             + "(`ToolExecution` and `Delegation` are checked by rules); remove the other values or leave the list empty to judge both.",
             problems[1].Problem);
-        Assert.Equal("Orkeon:Guardian:Llm:BlockThreshold and WarnThreshold: probabilities in [0, 1].", problems[2].Problem);
+        // One sentence per threshold, in the invariant culture (Orkeon #456).
+        Assert.Equal("Orkeon:Guardian:Llm:WarnThreshold: 1.5 is not a probability between 0 and 1.", problems[2].Problem);
     }
 
     [Fact]

@@ -101,6 +101,9 @@ internal sealed class ContextForm : ISettingsForm
     // The fields as the file gave them: a field left as loaded is not written again.
     private Fields _loaded = new("", "", "", "", "", "", "", "", "", "", "", "");
 
+    // The switches the loaded file writes without a value, which the start refuses (Orkeon #450).
+    private HashSet<string> _withoutValue = new(StringComparer.OrdinalIgnoreCase);
+
     private Fields Current => new(
         CompactionEnabled, TriggerShare, KeepRecentTurns, Profile, ContextWindowTokens, PruneEnabled,
         PruneFillShare, PruneKeepRecentMessages, PruneHeadChars, SkillsLibrary, MaxSkillChars, MaxBlockChars);
@@ -115,11 +118,17 @@ internal sealed class ContextForm : ISettingsForm
         string Written(string path) => document.GetWritten(document.PathAsWritten(path));
 
         // A switch written without a value (a JSON null, an empty object) reads as no boolean and
-        // binds to false: shown as the run gets it, never as the default a blank field stands for nor
-        // as a text the screen would refuse. A text the start refuses is shown as written. The key
-        // stays as written until the field changes.
+        // binds to false, which the start refuses since Orkeon #450: shown as the false the binder
+        // would write, never as the default a blank field stands for nor as a text the screen would
+        // refuse, and the refusal is said. The next apply writes what the field shows (a blank removes
+        // the key), which mends it. Any other text the start refuses is shown as written, and a key
+        // stays as written until its field changes.
         var compaction = document.Compaction;
-        var refused = compaction.Problems().Select(problem => problem.Path).ToList();
+        var problems = compaction.Problems();
+        _withoutValue = new HashSet<string>(
+            problems.Where(problem => problem.Problem.Contains(CompactionSection.WrittenWithoutValue, StringComparison.Ordinal)).Select(problem => problem.Path),
+            StringComparer.OrdinalIgnoreCase);
+        var refused = problems.Select(problem => problem.Path).Where(path => !_withoutValue.Contains(path)).ToList();
         string Switch(string path, bool? asWritten, bool run, bool engineDefault)
         {
             var written = Written(path);
@@ -177,7 +186,7 @@ internal sealed class ContextForm : ISettingsForm
         void Write(AppSettingsDocument target)
         {
             var compaction = target.Compaction;
-            if (typed.CompactionEnabled != _loaded.CompactionEnabled)
+            if (typed.CompactionEnabled != _loaded.CompactionEnabled || _withoutValue.Contains(CompactionEnabledPath))
                 compaction.Enabled = enabled;
             if (typed.TriggerShare != _loaded.TriggerShare)
                 compaction.TriggerShare = trigger;
@@ -187,7 +196,7 @@ internal sealed class ContextForm : ISettingsForm
                 compaction.Profile = FieldText.ToStringOrNull(typed.Profile);
             if (typed.ContextWindowTokens != _loaded.ContextWindowTokens)
                 target.SetInt32(target.PathAsWritten(ContextWindowTokensPath), window);
-            if (typed.PruneEnabled != _loaded.PruneEnabled)
+            if (typed.PruneEnabled != _loaded.PruneEnabled || _withoutValue.Contains(PruneEnabledPath))
                 compaction.PruneEnabled = prune;
             if (typed.PruneFillShare != _loaded.PruneFillShare)
                 compaction.PruneFillShare = fill;

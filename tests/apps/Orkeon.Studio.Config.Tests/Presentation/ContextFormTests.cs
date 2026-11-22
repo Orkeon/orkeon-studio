@@ -201,29 +201,33 @@ public sealed class ContextFormTests
     }
 
     /// <summary>
-    /// A switch the file writes without a value (a JSON null, an empty object) binds to false: the
-    /// field shows false, what the run gets, not the blank that stands for the default; the key stays
-    /// as written until the field changes, and a field blanked removes it.
+    /// A switch the file writes without a value (a JSON null, an empty object) binds to false, which the
+    /// start refuses (Orkeon #450): the field shows the false the binder would write, not the blank that
+    /// stands for the default, and the refusal is said; the next apply writes what the fields show, a
+    /// blank removing its key, and the refusals go.
     /// </summary>
     [Fact]
     public void A_switch_written_without_a_value_is_shown_as_the_run_reads_it()
     {
         var document = AppSettingsDocument.Parse("""{"Orkeon":{"Compaction":{"Enabled":null,"Prune":{"Enabled":{}}}}}""");
-        var before = document.ToJson();
         var form = new ContextForm();
         form.LoadFrom(document);
 
         Assert.Equal("false", form.CompactionEnabled);
         Assert.Equal("false", form.PruneEnabled);
-        Assert.Empty(form.ApplyTo(document));
-        Assert.Equal(before, document.ToJson());
-        Assert.Equal("false", form.CompactionEnabled);
+        Assert.Equal(
+            ["Orkeon:Compaction:Enabled", "Orkeon:Compaction:Prune:Enabled"],
+            document.Compaction.Problems()
+                .Where(problem => problem.Problem.Contains(CompactionSection.WrittenWithoutValue, StringComparison.Ordinal))
+                .Select(problem => problem.Path));
 
         form.CompactionEnabled = "";
         Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath("Orkeon:Compaction:Enabled"));
         Assert.Equal(CompactionSection.DefaultEnabled, document.Compaction.IsEnabled);
+        Assert.Equal(false, document.Compaction.PruneEnabled);
+        Assert.Empty(document.Compaction.Problems());
         Assert.Equal("", form.CompactionEnabled);
-        Assert.False(document.Compaction.IsPruneEnabled);
         Assert.Equal("false", form.PruneEnabled);
 
         // No key: the blank that stands for the default.

@@ -13,6 +13,12 @@ namespace Orkeon.Studio.Core.Configuration;
 /// </summary>
 public sealed class CompactionSection
 {
+    /// <summary>
+    /// The words of the start's refusal of a key written without a value on a value type (Orkeon #450),
+    /// such as a switch written as a JSON null: <c>{key} is written without a value, which would bind it to ...</c>.
+    /// </summary>
+    public const string WrittenWithoutValue = SettingsBinding.WrittenWithoutValue;
+
     /// <summary>Configuration path of the section.</summary>
     public const string SectionPath = ContextCompactionOptions.SectionName;
 
@@ -145,7 +151,7 @@ public sealed class CompactionSection
         problems.AddRange(ToolResultPruningOptions.Problems(prune).Select(problem => (SettingsBinding.PathOf(problem, PrunePath), problem)));
 
         // One walk of the section, the pruning's keys met where the keys' order puts them, as the host walks it.
-        problems.AddRange(SettingsBinding.UnknownKeys(
+        SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(
             configuration, SectionPath, typeof(ContextCompactionOptions), (PruneKey, typeof(ToolResultPruningOptions))));
         return problems;
     }

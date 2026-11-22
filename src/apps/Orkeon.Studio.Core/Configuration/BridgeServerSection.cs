@@ -140,7 +140,7 @@ public sealed class BridgeServerSection
             Say("HeartbeatWindow", $"{SectionPath}:HeartbeatWindow must lie between {TimeSpan.FromSeconds(1)} and {ToolBridgeRules.MaxTimeout}.");
         problems.AddRange(ToolBridgeRules.SelectionProblems(SectionPath, values.Allow, values.Deny)
             .Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
+        SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
         return problems;
     }
 

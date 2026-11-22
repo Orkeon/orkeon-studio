@@ -17,7 +17,6 @@ public sealed class DecisionStatusTests
           "open": { "Target": "default", "Stages": [ { "Kind": "guard", "Risks": { "x": "y" } } ] },
           "closed-route": { "Target": "default", "FailClosed": true, "Stages": [ { "Kind": "route", "Routes": { "default": "all" } } ] },
           "Closed-Guard": { "Target": "default", "failClosed": "True", "Stages": [ { "Kind": "route", "Routes": { "default": "all" } }, { "kind": " GUARD ", "Risks": { "x": "y" } } ] },
-          "unreadable": { "Target": "default", "FailClosed": "maybe", "Stages": [ { "Kind": "guard", "Risks": { "x": "y" } } ] },
           "stages-as-an-object": { "Target": "default", "FailClosed": true, "Stages": { "0": { "Kind": "Guard", "Risks": { "x": "y" } } } }
         }
         """;
@@ -32,9 +31,24 @@ public sealed class DecisionStatusTests
 
         Assert.Null(status.Refusal);
         Assert.Equal(DecisionRefusalStage.None, status.RefusalStage);
-        Assert.Equal(["Closed-Guard", "closed-route", "open", "stages-as-an-object", "unreadable"], status.DecisionProfiles);
+        Assert.Equal(["Closed-Guard", "closed-route", "open", "stages-as-an-object"], status.DecisionProfiles);
         Assert.Equal(["Closed-Guard", "stages-as-an-object"], status.BlockingProfiles);
         Assert.Empty(Status("").BlockingProfiles);
+    }
+
+    /// <summary>
+    /// A value inside a profile the binder cannot convert was dropped without a word; the start refuses
+    /// it since Orkeon #454, in the binder's sentence, while the host is composed, as the profiles' rules are.
+    /// </summary>
+    [Fact]
+    public void A_profile_value_the_binder_cannot_convert_is_refused()
+    {
+        var status = Status("""
+              "Decision": { "Profiles": { "unreadable": { "Target": "default", "FailClosed": "maybe", "Stages": [ { "Kind": "guard", "Risks": { "x": "y" } } ] } } }
+            """);
+
+        Assert.Equal(DecisionRefusalStage.Composition, status.RefusalStage);
+        Assert.Contains("'maybe' at 'Orkeon:Decision:Profiles:unreadable:FailClosed'", status.Refusal, StringComparison.Ordinal);
     }
 
     public static TheoryData<string, DecisionRefusalStage, string> Refusals => new()
@@ -65,7 +79,7 @@ public sealed class DecisionStatusTests
         Assert.Contains(sentence, status.Refusal, StringComparison.Ordinal);
         Assert.Equal(stage, status.RefusalStage);
         Assert.False(status.CircuitOn);
-        Assert.Equal(5, status.DecisionProfiles.Count);
+        Assert.Equal(4, status.DecisionProfiles.Count);
         Assert.Equal(["Closed-Guard", "stages-as-an-object"], status.BlockingProfiles);
         Assert.Equal(orkeon.Contains("\"Llm\": { \"Enabled\": true }", StringComparison.Ordinal), status.ClosedJudge);
     }

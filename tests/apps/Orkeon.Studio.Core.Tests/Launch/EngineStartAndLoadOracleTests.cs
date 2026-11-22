@@ -136,9 +136,14 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
 
         string[] Decision(params DecisionRefusalStage[] stages) =>
             status.Refusal is { } refusal && stages.Contains(status.RefusalStage) ? [refusal] : [];
+        // The walk's sentences (SettingsValidation.Walk): a key, a value not finite, written without
+        // one (#450) or single where a list or a section is expected (#454).
         static bool OfTheWalk(string problem) =>
             problem.Contains(" is not a setting: ", StringComparison.Ordinal)
-            || problem.EndsWith(", which is not a finite number.", StringComparison.Ordinal);
+            || problem.EndsWith(", which is not a finite number.", StringComparison.Ordinal)
+            || problem.Contains(" is written without a value, which would bind it to ", StringComparison.Ordinal)
+            || problem.Contains(" is a single value where a list is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a single value where a section of keys is expected: ", StringComparison.Ordinal);
         List<string> context = [.. document.Compaction.Problems().Concat(document.Skills.Problems()).Select(problem => problem.Problem)];
         List<string> bridge = [.. document.ToolBridge.Problems().Concat(document.BridgeServer.Problems()).Select(problem => problem.Problem)];
         // The guardian's values and rules are the status's own refusal; its keys are walked with the others.
@@ -184,7 +189,7 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
         { "a misspelt bridge key", "\"Bridge\": { \"Port\": 7410 }" },
         { "a caller's address over http", "\"Tools\": { \"Bridge\": { \"Address\": \"http://desk.example:7410/\" } }" },
         { "a serving bridge as the card writes it", "\"Bridge\": { \"Allow\": [\"*\"], \"Deny\": [\"shell_command\"] }" },
-        // A key that is no setting, on the caller's side and at any depth; the engine's computed keys are settings to it.
+        // A key that is no setting, on the caller's side and at any depth; the engine's computed keys are none since Orkeon #449.
         { "a misspelt caller key", "\"Tools\": { \"Bridge\": { \"Adress\": \"https://desk.example:7410/\" } }" },
         { "the caller's computed keys", "\"Tools\": { \"Bridge\": { \"IsEnabled\": true, \"IsDockerHostOverHttp\": false } }" },
         { "a key under a share", "\"Compaction\": { \"TriggerShare\": { \"x\": 1 } }" },

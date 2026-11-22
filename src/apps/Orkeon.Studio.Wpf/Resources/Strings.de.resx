@@ -840,9 +840,12 @@
   <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>diese Ausführung verzichtet auf sie</value></data>
   <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>die Einstellungen schalten sie aus</value></data>
   <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>kein Entscheidungsanbieter ist konfiguriert</value></data>
+  <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>der Entscheidungsanbieter hat keinen API-Schlüssel: Setzen Sie seine Umgebungsvariable oder seinen ApiKey in den Einstellungen</value></data>
   <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>dieser Durchlauf des Probelaufs verzichtet auf sie</value></data>
   <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One hat das Profil „{1}“ gewählt ({2} %).</value></data>
   <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: Profil „{1}“, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0}: Profil „{1}“, die Untergrenze der Leiter, auf die die Wahl von System One gehoben wird.</value></data>
+  <data name="Studio.Run.NoteRouteCeiling" xml:space="preserve"><value>{0}: Profil „{1}“, die Obergrenze der Leiter, auf die die Wahl von System One begrenzt wird.</value></data>
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One hat die Denkstufe {1} gewählt ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: Denkstufe nach einem fehlgeschlagenen Versuch von {1} auf {2} angehoben.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: Denkstufe {1}, nicht von System One gewählt ({2}).</value></data>

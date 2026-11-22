@@ -1,3 +1,4 @@
+using System.Globalization;
 using Orkeon.Application.Interfaces.Ports;
 using Orkeon.Infrastructure.LLMs.Decision;
 using Orkeon.Infrastructure.LLMs.Decision.Stages;
@@ -108,12 +109,20 @@ internal static class DecisionProfileRules
         return KnownKinds.FirstOrDefault(known => string.Equals(known, trimmed, StringComparison.OrdinalIgnoreCase)) ?? trimmed;
     }
 
-    // The number is written as the engine writes it: in the culture of the process that says it.
+    // The number is written as the engine writes it: in the invariant culture (Orkeon #456).
     private static (string Path, string Problem)? Probability(string key, double value) =>
-        value is < 0 or > 1 || double.IsNaN(value) ? (key, $"{key}: {value} is not a probability between 0 and 1.") : null;
+        value is < 0 or > 1 || double.IsNaN(value)
+            ? (key, string.Create(CultureInfo.InvariantCulture, $"{key}: {value} is not a probability between 0 and 1."))
+            : null;
 
-    // A text left blank, or one that names a member of the engine's enumeration, trimmed, in any letter case.
+    // A text left blank, or one that names a member of the engine's enumeration by its name, trimmed,
+    // in any letter case: never a number, nor a list of flags (the engine's EnumSetting, Orkeon #455).
     private static bool IsOneOf<TEnum>(string? text)
         where TEnum : struct, Enum =>
-        string.IsNullOrWhiteSpace(text) || (Enum.TryParse<TEnum>(text.Trim(), ignoreCase: true, out var parsed) && Enum.IsDefined(parsed));
+        string.IsNullOrWhiteSpace(text) || IsNameOf<TEnum>(text);
+
+    /// <summary>Whether <paramref name="text"/> names a member of <typeparamref name="TEnum"/>, trimmed, in any letter case, as the engine reads an enumeration a setting writes.</summary>
+    internal static bool IsNameOf<TEnum>(string? text)
+        where TEnum : struct, Enum =>
+        Enum.GetNames<TEnum>().Contains(text?.Trim(), StringComparer.OrdinalIgnoreCase);
 }

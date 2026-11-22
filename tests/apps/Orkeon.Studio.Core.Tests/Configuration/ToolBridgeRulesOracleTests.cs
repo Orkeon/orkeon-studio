@@ -54,8 +54,6 @@ public sealed class ToolBridgeRulesOracleTests
         """{ "Allow": [], "Deny": [] }""",
         """{ "ConnectTimeout": null, "MaxFileBytes": {} }""",
         """{ "Allow": [null, "a*"], "Deny": { "1": "b*", "0": "c*" } }""",
-        // The engine's computed properties are keys to its start, which reads them and binds nothing.
-        """{ "IsEnabled": true, "IsDockerHostOverHttp": false }""",
     };
 
     public static TheoryData<string> ServerSettings => new()
@@ -243,7 +241,9 @@ public sealed class ToolBridgeRulesOracleTests
             .GetMethod("Walk", BindingFlags.NonPublic | BindingFlags.Static)!;
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
         var configuration = new ConfigurationBuilder().AddJsonStream(stream).Build();
-        return [.. (IEnumerable<string>)walk.Invoke(null, [configuration.GetSection(section), shape])!];
+        // The walk yields each refusal with its path and its kind; the refusal alone is compared.
+        var found = (System.Collections.IEnumerable)walk.Invoke(null, [configuration.GetSection(section), shape, false])!;
+        return [.. found.Cast<object>().Select(item => (string)item.GetType().GetField("Item2")!.GetValue(item)!)];
     }
 
     /// <summary>The token is read as the engine reads it: trimmed, set, sixteen characters or more.</summary>
@@ -270,8 +270,53 @@ public sealed class ToolBridgeRulesOracleTests
             (string)protocol.GetField("DefaultTokenEnvVar", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!);
     }
 
-    /// <summary>The engine's own verdict: its options class bound as its host binds it, then its <c>Problems()</c>.</summary>
+    /// <summary>
+    /// The engine's own verdict: its options class bound as its host binds it, then its <c>Problems()</c>,
+    /// then the value refusals of its walk merged as its start merges them (Orkeon #450, #454): a key
+    /// written without a value replaces what a rule said of the default the binder wrote, and a value
+    /// of the wrong form is said unless a rule already names its key. The keys that are no setting are
+    /// compared apart (<see cref="The_keys_that_are_no_setting_are_those_the_engines_walk_refuses"/>).
+    /// </summary>
     private static List<string> EngineProblems(string optionsType, string json)
+    {
+        var refusals = EngineRules(optionsType, json);
+        var validation = Hosting.GetType("Orkeon.Hosting.SettingsValidation", throwOnError: true)!;
+        var names = validation.GetMethod("Names", BindingFlags.NonPublic | BindingFlags.Static, [typeof(string), typeof(string)])!;
+        var namesExactly = validation.GetMethod("NamesExactly", BindingFlags.NonPublic | BindingFlags.Static, [typeof(string), typeof(string)])!;
+        foreach (var (path, refusal, kind) in EngineWalk(optionsType, json))
+        {
+            if (kind == "Empty")
+                refusals.RemoveAll(earlier => (bool)namesExactly.Invoke(null, [earlier, path])!);
+            else if (kind != "Value" || refusals.Any(earlier => (bool)names.Invoke(null, [earlier, path])!))
+                continue;
+
+            refusals.Add(refusal);
+        }
+
+        return [.. refusals.Distinct(StringComparer.Ordinal)];
+    }
+
+    /// <summary>The engine's walk of the section: each finding's path, refusal and kind.</summary>
+    private static List<(string Path, string Refusal, string Kind)> EngineWalk(string optionsType, string json)
+    {
+        var type = Hosting.GetType(optionsType, throwOnError: true)!;
+        var section = (string)type.GetField("SectionName", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        var shape = Hosting.GetType("Orkeon.Hosting.SettingsShape", throwOnError: true)!
+            .GetMethod("Of", BindingFlags.Public | BindingFlags.Static, [typeof(Type)])!
+            .Invoke(null, [type])!;
+        var walk = Hosting.GetType("Orkeon.Hosting.SettingsValidation", throwOnError: true)!
+            .GetMethod("Walk", BindingFlags.NonPublic | BindingFlags.Static)!;
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        var configuration = new ConfigurationBuilder().AddJsonStream(stream).Build();
+        var found = (System.Collections.IEnumerable)walk.Invoke(null, [configuration.GetSection(section), shape, false])!;
+        return [.. found.Cast<object>().Select(item => (
+            (string)item.GetType().GetField("Item1")!.GetValue(item)!,
+            (string)item.GetType().GetField("Item2")!.GetValue(item)!,
+            item.GetType().GetField("Item3")!.GetValue(item)!.ToString()!))];
+    }
+
+    /// <summary>The engine's rules alone: its options class bound as its host binds it, then its <c>Problems()</c>.</summary>
+    private static List<string> EngineRules(string optionsType, string json)
     {
         var type = Hosting.GetType(optionsType, throwOnError: true)!;
         var options = Activator.CreateInstance(type, nonPublic: true)!;

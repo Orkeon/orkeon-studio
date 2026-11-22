@@ -104,16 +104,19 @@ public sealed class SettingsBindingOracleTests
     /// <summary>
     /// The binder reads <c>True</c> and <c>False</c> for a JSON boolean and an empty text for an empty
     /// list, so that is what its refusal quotes; an empty object and a null are keys without a value,
-    /// which it reads as a number's zero and a switch's off: the engine's rules then judge that.
+    /// which it would read as a number's zero and a switch's off: the engine's start refuses them on a
+    /// value type, in place of what a rule says of that zero (Orkeon #450), and lets a text pass.
     /// </summary>
     [Theory]
     [InlineData("""{ "Orkeon": { "Compaction": { "KeepRecentTurns": true } } }""", "Failed to convert configuration value 'True' at 'Orkeon:Compaction:KeepRecentTurns' to type 'System.Int32'.")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": [] } } }""", "Failed to convert configuration value '' at 'Orkeon:Compaction:Enabled' to type 'System.Boolean'.")]
     [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "HeadChars": false } } } }""", "Failed to convert configuration value 'False' at 'Orkeon:Compaction:Prune:HeadChars' to type 'System.Int32'.")]
     [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": [] } } }""", "Failed to convert configuration value '' at 'Orkeon:Skills:MaxSkillChars' to type 'System.Int32'.")]
-    [InlineData("""{ "Orkeon": { "Compaction": { "TriggerShare": null } } }""", "Orkeon:Compaction:TriggerShare is '0', which is not a share of the window: write a number above 0 and at most 1, such as 0.75.")]
-    [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": {} } } }""", "Orkeon:Skills:MaxSkillChars is '0', which is not a number of characters: write 1 or more, such as 4000.")]
-    [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": {}, "Prune": { "Enabled": null }, "Profile": null }, "Skills": {} } }""", null)]
+    [InlineData("""{ "Orkeon": { "Compaction": { "TriggerShare": null } } }""", "Orkeon:Compaction:TriggerShare is written without a value, which would bind it to 0: write a number, or leave the key out and its default applies.")]
+    [InlineData("""{ "Orkeon": { "Skills": { "MaxSkillChars": {} } } }""", "Orkeon:Skills:MaxSkillChars is written without a value, which would bind it to 0: write a number, or leave the key out and its default applies.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Enabled": {} } } }""", "Orkeon:Compaction:Enabled is written without a value, which would bind it to false: write true or false, or leave the key out and its default applies.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Prune": { "Enabled": null } } } }""", "Orkeon:Compaction:Prune:Enabled is written without a value, which would bind it to false: write true or false, or leave the key out and its default applies.")]
+    [InlineData("""{ "Orkeon": { "Compaction": { "Profile": null }, "Skills": {} } }""", null)]
     public void A_boolean_and_an_empty_list_reach_the_binder_as_the_provider_writes_them(string json, string? refusal)
     {
         var document = AppSettingsDocument.Parse(json);
@@ -152,8 +155,8 @@ public sealed class SettingsBindingOracleTests
 
         Assert.Equal(
             [
+                // The rule names the key: the walk's 'not a finite number' is not said twice (Orkeon #450).
                 "Orkeon:Compaction:Prune:FillShare is 'Infinity', which is not a share of the window: write a number above 0 and at most 1, such as 0.4.",
-                "Orkeon:Compaction:Prune:FillShare is 'Infinity', which is not a finite number.",
                 "Orkeon:Compaction:Prune:Hx is not a setting: Orkeon:Compaction:Prune carries Enabled, FillShare, KeepRecentMessages, HeadChars.",
                 "Orkeon:Compaction:TriggerShare:x is not a setting: Orkeon:Compaction:TriggerShare is a single value.",
                 "Orkeon:Compaction:Tx is not a setting: Orkeon:Compaction carries Enabled, TriggerShare, KeepRecentTurns, Profile, Prune.",

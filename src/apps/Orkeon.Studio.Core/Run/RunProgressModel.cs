@@ -180,7 +180,7 @@ public sealed record RunErrorInfo(string Code, string Message, bool Recoverable)
 /// </summary>
 /// <param name="Mode">The crew's mode: <c>unspecified</c>, <c>none</c>, <c>optional</c>, <c>required</c> or <c>unknown</c>.</param>
 /// <param name="On">Whether the run asks the decision models.</param>
-/// <param name="Cause">Why it does not: <c>switch</c>, <c>settings</c>, <c>no-provider</c> or <c>trial</c>; null when it does.</param>
+/// <param name="Cause">Why it does not: <c>switch</c>, <c>settings</c>, <c>no-provider</c>, <c>no-key</c> or <c>trial</c>; null when it does.</param>
 public sealed record RunDecisionCircuit(string? Mode, bool On, string? Cause);
 
 /// <summary>What a <see cref="RunAgentNote"/> tells.</summary>

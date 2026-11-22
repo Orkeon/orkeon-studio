@@ -589,6 +589,13 @@ public sealed class RunProgressViewModel : ObservableObject
         return _strings.Format(StudioStringKeys.RunNoteDecisionOff, mode, cause);
     }
 
+    // The two clamps of a pick (Orkeon #460), read from the engine's own constants: a renamed reason
+    // fails the build. The type is experimental (ORKEXP008); only its literals are taken.
+#pragma warning disable ORKEXP008
+    private const string RouteFloor = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Floor;
+    private const string RouteCeiling = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Ceiling;
+#pragma warning restore ORKEXP008
+
     /// <summary>
     /// One thing the run did around an agent's model calls, as the panel lists it. The engine's own
     /// words (a reason, a mode, an outcome) are shown as written: they are what its documentation names.
@@ -603,6 +610,9 @@ public sealed class RunProgressViewModel : ObservableObject
             : "\u2014";
         return note.Kind switch
         {
+            // A bound of the ladder the model's pick is held to (Orkeon #460): neither the pick nor a fallback.
+            RunAgentNoteKind.Route when note.Reason == RouteFloor => _strings.Format(StudioStringKeys.RunNoteRouteFloor, who, value),
+            RunAgentNoteKind.Route when note.Reason == RouteCeiling => _strings.Format(StudioStringKeys.RunNoteRouteCeiling, who, value),
             RunAgentNoteKind.Route => note.Picked
                 ? _strings.Format(StudioStringKeys.RunNoteRoutePicked, who, value, share)
                 : _strings.Format(StudioStringKeys.RunNoteRouteDefault, who, value, reason),

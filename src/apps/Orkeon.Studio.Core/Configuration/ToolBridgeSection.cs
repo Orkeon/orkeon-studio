@@ -144,7 +144,7 @@ public sealed class ToolBridgeSection
             Say("MaxResponseBytes", $"{SectionPath}:MaxResponseBytes must be positive and at most {int.MaxValue.ToString(CultureInfo.InvariantCulture)}.");
         problems.AddRange(ToolBridgeRules.SelectionProblems(SectionPath, values.Allow, values.Deny)
             .Select(problem => (SettingsBinding.PathOf(problem, SectionPath), problem)));
-        problems.AddRange(SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
+        SettingsBinding.AddWalked(problems, SettingsBinding.UnknownKeys(configuration, SectionPath, typeof(Values)));
         return new Judgement(
             problems,
             bound && values.IsEnabled,
@@ -186,8 +186,8 @@ public sealed class ToolBridgeSection
     /// <summary>
     /// The section as the engine's <c>ToolBridgeClientOptions</c> shapes it: the same property names,
     /// types, defaults and order, so the binder reads the file here as it does there. Its public
-    /// properties are the keys the section may carry, the two computed ones included: the engine's
-    /// start takes every readable property of its class for a key. Nothing else may be public on it.
+    /// properties the binder writes or fills are the keys the section may carry; the two computed ones
+    /// are none, as the engine's start reads its class since Orkeon #449. Nothing else may be public on it.
     /// </summary>
     internal sealed class Values
     {

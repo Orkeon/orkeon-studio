@@ -307,6 +307,8 @@ public sealed class DecisionSection
         var configuration = ToConfiguration(_document.Root);
         return
         [
+            // The runner's switch, a section of its own the host declares (a key without a value refused, #450).
+            .. SettingsBinding.UnknownKeys(configuration, CrewFactoryPath, typeof(CrewFactoryShape)).Select(found => (found.Path, found.Problem)),
             // The readers of the section in the host's order, which the sentence lists the keys in.
             .. SettingsBinding.UnknownKeysOfReaders(
                 configuration,
@@ -314,17 +316,73 @@ public sealed class DecisionSection
                 (ConfigurationPath.GetSectionKey(AgentRouteOptions.SectionName), typeof(AgentRouteOptions)),
                 (ConfigurationPath.GetSectionKey(AgentEffortOptions.SectionName), typeof(AgentEffortOptions)),
                 (null, typeof(DecisionCircuitOptions)),
-                (null, typeof(DecisionProfilesOptions))),
-            .. Providers.SelectMany(provider => SettingsBinding.UnknownKeys(configuration, provider.Section, typeof(SystemOneProviderOptions))),
+                (null, typeof(DecisionProfilesOptions))).Select(found => (found.Path, found.Problem)),
+            .. Providers.SelectMany(provider => SettingsBinding.UnknownKeys(configuration, provider.Section, typeof(SystemOneProviderOptions)))
+                .Select(found => (found.Path, found.Problem)),
         ];
+    }
+
+    private const string CrewFactoryPath = "Orkeon:CrewFactory";
+
+    /// <summary>The keys of <c>Orkeon:CrewFactory</c> as the runner's host declares them (<c>CrewFactorySettingsShape</c>, private to it).</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1812", Justification = "Read by reflection: the walk takes its properties, never an instance.")]
+    private sealed class CrewFactoryShape
+    {
+        public bool StrictTools { get; set; } = true;
     }
 
     private static IEnumerable<(string Path, string Problem)> ProfileProblemsOf(IConfiguration configuration)
     {
         var unconverted = new List<(string Path, string Problem)>();
+        var entries = EntryProblems(configuration);
         var profiles = SettingsBinding.Bind<DecisionProfilesOptions>(configuration, DecisionProfilesOptions.SectionName, unconverted);
-        return unconverted.Concat(DecisionProfileRules.Problems(profiles));
+        return entries.Concat(unconverted).Concat(DecisionProfileRules.Problems(profiles)).Distinct();
     }
+
+    /// <summary>
+    /// What the engine refuses in the raw entries of the decision profiles before their rules
+    /// (<c>ValidateEntries</c>, Orkeon #454): a profile, its list of stages or a stage written as a
+    /// single value, and a value of a profile or of a stage the binder cannot convert, which it would
+    /// otherwise drop with its entry without a word. Each profile, then each of its stages, bound on
+    /// its own as the engine binds them.
+    /// </summary>
+    private static List<(string Path, string Problem)> EntryProblems(IConfiguration configuration)
+    {
+        var profiles = configuration.GetSection(ProfilesPath);
+        var problems = new List<(string Path, string Problem)>();
+        foreach (var profile in profiles.GetChildren())
+        {
+            if (SingleValue(profile, "a decision profile is expected: write its Target and Stages") is { } single)
+            {
+                problems.Add(single);
+                continue;
+            }
+
+            _ = SettingsBinding.Bind<DecisionProfileOptions>(configuration, profile.Path, problems);
+            var stages = profile.GetSection(nameof(DecisionProfileOptions.Stages));
+            if (SingleValue(stages, "a list of stages is expected: write each stage as an item of the list") is { } list)
+            {
+                problems.Add(list);
+                continue;
+            }
+
+            foreach (var stage in stages.GetChildren())
+            {
+                if (SingleValue(stage, "a stage is expected: write its Kind and the keys of that kind") is { } one)
+                    problems.Add(one);
+                else
+                    _ = SettingsBinding.Bind<DecisionStageOptions>(configuration, stage.Path, problems);
+            }
+        }
+
+        return problems;
+    }
+
+    // A section that holds a value and no key (an empty JSON array, read as "", aside); the value is not echoed.
+    private static (string Path, string Problem)? SingleValue(IConfigurationSection section, string expected) =>
+        section.Value is { Length: > 0 } && !section.GetChildren().Any()
+            ? (section.Path, $"{section.Path} is a single value where {expected}.")
+            : null;
 
     /// <summary>The engine's sentence for a name a decision profile and a model profile share: the start is refused.</summary>
     internal static string SharedProfileNameRefusal(string name) => $"Two LLM profiles are named '{name}'.";

@@ -341,9 +341,12 @@
   <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>this run goes without them</value></data>
   <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>the settings switch them off</value></data>
   <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>no decision provider is configured</value></data>
+  <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>the decision provider has no API key: set its environment variable, or its ApiKey in the settings</value></data>
   <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>this pass of the trial runs without them</value></data>
   <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One picked the profile '{1}' ({2} %).</value></data>
   <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: profile '{1}', not picked by System One ({2}).</value></data>
+  <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0}: profile '{1}', the ladder's floor System One's pick is held to.</value></data>
+  <data name="Studio.Run.NoteRouteCeiling" xml:space="preserve"><value>{0}: profile '{1}', the ladder's ceiling System One's pick is held to.</value></data>
   <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One picked the thinking level {1} ({2} %).</value></data>
   <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: thinking level raised from {1} to {2} after a failed attempt.</value></data>
   <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: thinking level {1}, not picked by System One ({2}).</value></data>

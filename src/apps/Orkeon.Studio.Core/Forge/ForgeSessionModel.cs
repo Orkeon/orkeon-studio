@@ -259,8 +259,25 @@ public sealed record ForgeMailActionView(
     }
 }
 
-/// <summary>An <c>error</c> event.</summary>
-public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverable);
+/// <summary>
+/// An <c>error</c> event. <see cref="Recoverable"/> says whether the session can be resumed later;
+/// <see cref="Terminal"/> whether this process goes no further (Orkeon #453), null from an engine that
+/// does not say it.
+/// </summary>
+public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverable)
+{
+    /// <summary>Whether the process ends after this error; null when the engine does not say.</summary>
+    public bool? Terminal { get; init; }
+
+    /// <summary>The cause of a decision circuit off (<c>FORGE-DECISION-UNAVAILABLE</c>), as the engine words it; null when none.</summary>
+    public string? Cause { get; init; }
+
+    /// <summary>
+    /// Whether the session goes no further in this process: what <see cref="Terminal"/> says, else, from an
+    /// engine that does not say it, a fatal error (not <see cref="Recoverable"/>), as before.
+    /// </summary>
+    public bool GoesNoFurther => Terminal ?? !Recoverable;
+}
 
 /// <summary>A <c>warning</c> event: something not done while what was asked for stands (STUDIO-26).</summary>
 public sealed record ForgeWarningInfo(string Code, string Message);
@@ -799,13 +816,17 @@ public sealed class ForgeSessionModel
                 LastError = new ForgeErrorInfo(
                     orkeonEvent.GetString("code") ?? "",
                     orkeonEvent.GetString("message") ?? "",
-                    orkeonEvent.GetBool("recoverable") ?? false);
-                // The engine says a fatal error last before session.finished: the trial it interrupts
-                // is over, and the bench that failed on the first pass of two never starts the second.
-                // A recoverable one says nothing about the run: the engine may carry on (an invalid
-                // edit, asked again) or stop (a spent budget), and then session.finished, or the end of
-                // the process, ends the trial.
-                if (!LastError.Recoverable)
+                    orkeonEvent.GetBool("recoverable") ?? false)
+                {
+                    Terminal = orkeonEvent.GetBool("terminal"),
+                    Cause = orkeonEvent.GetString("cause"),
+                };
+                // An error the process goes no further after (terminal, Orkeon #453) is said last before
+                // session.finished: the trial it interrupts is over, and the bench that failed on the
+                // first pass of two never starts the second. One it carries on after (an invalid edit,
+                // asked again; a spent budget at the arbitration) leaves the trial to session.finished,
+                // or to the end of the process. An engine that does not say it: a fatal error ends it.
+                if (LastError.GoesNoFurther)
                     EndTrial();
                 break;
 

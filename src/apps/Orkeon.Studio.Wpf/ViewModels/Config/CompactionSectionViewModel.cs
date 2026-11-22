@@ -143,7 +143,8 @@ public sealed class CompactionSectionViewModel : DocumentSectionViewModel
             return;
         }
 
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var share))
+        // NaN and the infinities parse, and the engine refuses them at start (Orkeon #454): never written.
+        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var share) && double.IsFinite(share))
             SetValue(current, Invariant(share), _ => write(share), propertyName);
         else
             OnPropertyChanged(propertyName);

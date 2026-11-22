@@ -650,6 +650,9 @@ public partial class CreateTeamWizardTests
         Assert.Equal(
             "The assistant works without the decision models: no decision provider is configured.",
             await LineOf(""","forgeCircuit":"off","forgeCircuitCause":"no-provider" """));
+        Assert.Equal(
+            "The assistant works without the decision models: the decision provider has no API key: set its environment variable, or its ApiKey in the settings.",
+            await LineOf(""","forgeCircuit":"off","forgeCircuitCause":"no-key" """));
         // A cause this build does not know is said as the engine wrote it; none is not invented.
         Assert.Equal(
             "The assistant works without the decision models: maintenance.",

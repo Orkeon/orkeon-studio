@@ -78,7 +78,14 @@ public sealed class DecisionProfileRulesOracleTests
         var studio = AppSettingsDocument.Parse(json).Decision.ProfileProblems();
 
         Assert.Equal(engine, studio.Select(problem => problem.Problem).FirstOrDefault());
-        Assert.All(studio, problem => Assert.StartsWith(problem.Path + ":", problem.Problem + ":", StringComparison.Ordinal));
+        // Each problem names its key: a rule's sentence starts with it, and so does a single value written
+        // where a section is expected; the binder's, which the engine says inside a profile since #454,
+        // quotes it ("Failed to convert configuration value 'x' at '<key>'").
+        Assert.All(studio, problem => Assert.True(
+            (problem.Problem + ":").StartsWith(problem.Path + ":", StringComparison.Ordinal)
+                || problem.Problem.StartsWith(problem.Path + " is a single value where ", StringComparison.Ordinal)
+                || problem.Problem.Contains($" at '{problem.Path}'", StringComparison.Ordinal),
+            $"{problem.Path}: {problem.Problem}"));
     }
 
     /// <summary>Every problem is said, the engine's first: what it says once the first is mended follows.</summary>
@@ -104,11 +111,13 @@ public sealed class DecisionProfileRulesOracleTests
         var configuration = new ConfigurationBuilder().AddJsonStream(stream).Build();
         var options = new DecisionProfilesOptions();
         configuration.GetSection(DecisionProfilesOptions.SectionName).Bind(options);
+        // The section goes with the options, as the host passes it: the engine reads the raw entries
+        // again for what the binder drops without a word (#454).
         var validate = typeof(DecisionProfileServiceCollectionExtensions)
-            .GetMethod("Validate", BindingFlags.NonPublic | BindingFlags.Static, [typeof(DecisionProfilesOptions)])!;
+            .GetMethod("Validate", BindingFlags.NonPublic | BindingFlags.Static, [typeof(DecisionProfilesOptions), typeof(IConfiguration)])!;
         try
         {
-            validate.Invoke(null, [options]);
+            validate.Invoke(null, [options, configuration.GetSection(DecisionProfilesOptions.SectionName)]);
             return null;
         }
         catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException refusal)

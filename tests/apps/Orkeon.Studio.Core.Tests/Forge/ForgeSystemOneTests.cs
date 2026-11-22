@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Orkeon.Constants.Protocol;
 using Orkeon.Studio.Core.Events;
 using Orkeon.Studio.Core.Forge;
 
@@ -299,6 +300,7 @@ public sealed partial class ForgeSystemOneTests
     [InlineData("ForgeEventWriter.cs", "session.started", "crewDecision", false)]
     [InlineData("ForgeEventWriter.cs", "session.started", "forgeCircuit", false)]
     [InlineData("ForgeEventWriter.cs", "session.started", "forgeCircuitCause", false)]
+    [InlineData("ForgeEventWriter.cs", "error", "terminal", false)]
     [InlineData("ForgeCost.cs", "cost.updated", "systemOneTokens", false)]
     [InlineData("ForgeRunStages.cs", "run.started", "passes", false)]
     [InlineData("ForgeRunStages.cs", "run.started", "pass", false)]
@@ -434,6 +436,44 @@ public sealed partial class ForgeSystemOneTests
         silent.Feed(Parse(FirstPass));
         silent.Feed(Parse("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"X","message":"m"}"""));
         Assert.False(silent.RunInProgress);
+    }
+
+    /// <summary>
+    /// Whether the process goes on is the engine's <c>terminal</c> (Orkeon #453), not <c>recoverable</c>,
+    /// which says the session can be resumed later: an unrecoverable error it carries on after leaves
+    /// the trial running, and a resumable one it stops on ends it. Without the field, as before.
+    /// </summary>
+    [Theory]
+    [InlineData("\"recoverable\":false,\"terminal\":false", false, false, true)]
+    [InlineData("\"recoverable\":true,\"terminal\":true", true, true, false)]
+    [InlineData("\"recoverable\":false,\"terminal\":true", false, true, false)]
+    [InlineData("\"recoverable\":true,\"terminal\":false", true, false, true)]
+    [InlineData("\"recoverable\":false", false, null, false)]
+    [InlineData("\"recoverable\":true", true, null, true)]
+    public void The_terminal_flag_says_whether_the_trial_goes_on(string flags, bool recoverable, bool? terminal, bool goesOn)
+    {
+        var model = new ForgeSessionModel();
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"run.started","run":1,"passes":2,"pass":1,"circuit":"on"}"""));
+
+        model.Feed(Parse("{\"v\":2,\"seq\":2,\"ts\":\"t\",\"kind\":\"error\",\"code\":\"FORGE-BRIEF-INVALID\",\"message\":\"m\"," + flags + "}"));
+
+        Assert.Equal(recoverable, model.LastError!.Recoverable);
+        Assert.Equal(terminal, model.LastError.Terminal);
+        Assert.Equal(!goesOn, model.LastError.GoesNoFurther);
+        Assert.Equal(goesOn, model.RunInProgress);
+    }
+
+    /// <summary>The cause of a circuit off rides on the refusal of a trial that needs it, <c>no-key</c> among them (Orkeon #451).</summary>
+    [Fact]
+    public void A_decision_unavailable_error_keeps_its_cause()
+    {
+        var model = new ForgeSessionModel();
+
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"the decision circuit is off: no TypeSafe API key: set the environment variable TYPESAFE_API_KEY, or Orkeon:TypeSafe:ApiKey","recoverable":false,"terminal":true,"cause":"no-key"}"""));
+
+        Assert.Equal(DecisionCircuitCauses.NoKey, model.LastError!.Cause);
+        Assert.True(model.LastError.GoesNoFurther);
+        Assert.Contains("TYPESAFE_API_KEY", model.LastError.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

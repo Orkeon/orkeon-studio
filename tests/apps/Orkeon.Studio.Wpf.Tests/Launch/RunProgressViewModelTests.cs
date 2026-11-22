@@ -334,6 +334,32 @@ public class RunProgressViewModelTests
         Assert.False(panel.HasAgentNotes);
     }
 
+    /// <summary>
+    /// A pick made outside any task (Orkeon #460) and a pruning of a script's own loop (#461) come
+    /// without a <c>taskId</c>: each line names the agent's role. A route held to a bound of the ladder
+    /// says so, and a level set for the first time is no raise.
+    /// </summary>
+    [Fact]
+    public void Notes_without_a_task_name_the_agent_and_a_clamped_route_says_its_bound()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        Assert.True(panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.route","agentRole":"Analyst","profile":"fast","reason":"floor","picked":"tiny","probability":0.9}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"agent.route","agentRole":"Writer","profile":"strong","reason":"ceiling"}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.effort","agentRole":"Analyst","level":"low","reason":"model","picked":"low","probability":0.7}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"agent.pruned","agentRole":"Analyst","cut":2,"dropped":0,"freedTokens":5000}"""));
+
+        Assert.Equal(
+            [
+                "Analyst: profile 'fast', the ladder's floor System One's pick is held to.",
+                "Writer: profile 'strong', the ladder's ceiling System One's pick is held to.",
+                "Analyst: System One picked the thinking level low (70 %).",
+                "Analyst: 2 tool results pruned, about " + 5000.ToString("N0", System.Globalization.CultureInfo.CurrentCulture) + " tokens freed.",
+            ],
+            panel.AgentNotes);
+    }
+
     [Fact]
     public void A_decision_task_its_relay_answered_says_so()
     {
@@ -521,6 +547,7 @@ public class RunProgressViewModelTests
     [InlineData("switch", "this run goes without them")]
     [InlineData("settings", "the settings switch them off")]
     [InlineData("no-provider", "no decision provider is configured")]
+    [InlineData("no-key", "the decision provider has no API key: set its environment variable, or its ApiKey in the settings")]
     [InlineData("trial", "this pass of the trial runs without them")]
     [InlineData("maintenance", "maintenance")]
     public void The_cause_of_a_circuit_off_is_said_in_a_sentence(string cause, string said)
@@ -543,7 +570,7 @@ public class RunProgressViewModelTests
             .Select(field => (string)field.GetRawConstantValue()!)
             .Order(StringComparer.Ordinal);
 
-        Assert.Equal(["no-provider", "settings", "switch", "trial"], engine);
+        Assert.Equal(["no-key", "no-provider", "settings", "switch", "trial"], engine);
     }
 }
 

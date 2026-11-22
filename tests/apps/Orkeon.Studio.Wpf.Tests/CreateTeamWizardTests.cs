@@ -3304,6 +3304,31 @@ public partial class CreateTeamWizardTests
         Assert.Equal(1, vm.Step);
     }
 
+    /// <summary>
+    /// An unrecoverable error the engine says it carries on after (terminal false, Orkeon #453: a brief
+    /// asked again) reaches the status line and raises no card; one it stops on raises it.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task An_unrecoverable_engine_error_ends_the_run_only_when_it_is_terminal(bool terminal, bool fails)
+    {
+        var (vm, processes, _) = Build();
+        processes.ExitCode = 0;
+        processes.OutputToEmit.AddRange(
+        [
+            Out("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/d","format":"yaml","resumed":false}"""),
+            Out($$"""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-BRIEF-INVALID","message":"the brief names no goal","recoverable":false,"terminal":{{(terminal ? "true" : "false")}}}"""),
+        ]);
+        FillStepOne(vm);
+
+        await Compose(vm);
+
+        Assert.Equal(fails, vm.Failure is { Kind: WizardFailureKind.ConfigRefused, EngineError.Code: "FORGE-BRIEF-INVALID" });
+        if (!fails)
+            Assert.Contains("FORGE-BRIEF-INVALID: the brief names no goal", vm.StatusMessage, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task An_unrecoverable_engine_error_names_its_code_and_message()
     {
