@@ -1,5 +1,9 @@
+using System.ComponentModel;
 using Orkeon.Studio.Core.Configuration;
+using Orkeon.Studio.Core.Profiles;
+using Orkeon.Studio.Wpf.Tests.Doubles;
 using Orkeon.Studio.Wpf.ViewModels.Config;
+using Orkeon.Studio.Wpf.ViewModels.Services;
 
 namespace Orkeon.Studio.Wpf.Tests;
 
@@ -132,5 +136,44 @@ public sealed class CompactionAndSkillsViewModelTests
         Assert.True(document.Compaction.IsEnabled);
         Assert.False(document.Compaction.IsPruneEnabled);
         Assert.NotEmpty(dirty);
+    }
+
+    /// <summary>
+    /// A summary profile typed that no profile bears joins the choices as it is typed: the combo shows
+    /// an item of its list only, and would blank a name the list was not said again with.
+    /// </summary>
+    [Fact]
+    public void A_profile_typed_that_no_profile_bears_is_said_with_the_choices()
+    {
+        var (compaction, _, _, _) = Forms();
+        var raised = new List<string?>();
+        compaction.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        compaction.Profile = "summariser";
+
+        Assert.Contains(nameof(CompactionSectionViewModel.ProfileChoices), raised);
+        Assert.Contains("summariser", compaction.ProfileChoices);
+    }
+
+    /// <summary>
+    /// A default model elected takes out the window stated for the one it replaces
+    /// (<c>Llm:ContextWindowTokens</c>): the compaction card's field says so at once, not at the next load.
+    /// </summary>
+    [Fact]
+    public void A_default_model_changed_empties_the_window_the_card_shows()
+    {
+        var config = new ConfigTabViewModel(
+            new StudioServices { SettingsStore = new FakeAppSettingsStore(), Directories = new FakeDirectoryProbe("/data") });
+        config.Compaction.ContextWindowTokens = 128000;
+        var raised = new List<string?>();
+        ((INotifyPropertyChanged)config.Compaction).PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        config.Llm.ElectDefault(new ModelProfile
+        {
+            Name = "DeepSeek", Provider = "DeepSeek", BaseUrl = "https://api.deepseek.com", Model = "deepseek-chat", KeyEnvName = "DEEPSEEK_API_KEY",
+        });
+
+        Assert.Null(config.Compaction.ContextWindowTokens);
+        Assert.Contains(nameof(CompactionSectionViewModel.ContextWindowTokens), raised);
     }
 }

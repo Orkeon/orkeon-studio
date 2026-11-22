@@ -139,17 +139,23 @@ public sealed class CompactionSectionViewModel : DocumentSectionViewModel
 
     /// <summary>
     /// Reads the verdict again after an edit made elsewhere in the document: a profile added, renamed or
-    /// removed changes what the summary's profile names.
+    /// removed changes what the summary's profile names, and a default model changed takes out the window
+    /// stated for the one it replaces (<c>Llm:ContextWindowTokens</c>), which the field shows.
     /// </summary>
-    public void RefreshVerdict() => OnPropertiesChanged(nameof(ProblemsText), nameof(ProfileWarning));
+    public void RefreshVerdict() => OnPropertiesChanged(
+        nameof(ProblemsText), nameof(ProfileWarning), nameof(ContextWindowTokens), nameof(ProfileChoices));
 
     // The one sentence of Core, which the validator says too.
     private IEnumerable<string> WindowProblem() =>
         LlmSection.ContextWindowProblem(LlmSection.SectionPath, Document.Llm.ContextWindowTokens) is { } problem ? [problem] : [];
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The choices are said again with the profile: a name typed that no profile bears joins them, or the
+    /// combo, which shows an item of its list only, would blank it.
+    /// </remarks>
     protected override void OnSectionChanged() => OnPropertiesChanged(
-        nameof(Exists), nameof(Enabled), nameof(TriggerShare), nameof(KeepRecentTurns), nameof(Profile), nameof(ContextWindowTokens),
+        nameof(Exists), nameof(Enabled), nameof(TriggerShare), nameof(KeepRecentTurns), nameof(ProfileChoices), nameof(Profile), nameof(ContextWindowTokens),
         nameof(PruneEnabled), nameof(PruneFillShare), nameof(PruneKeepRecentMessages), nameof(PruneHeadChars),
         nameof(ProblemsText), nameof(ProfileWarning));
 
