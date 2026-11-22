@@ -200,7 +200,7 @@
   <data name="Studio.Run.ExitCode" xml:space="preserve"><value>Exit code {0} — {1}</value></data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>run completed successfully</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>script or settings error: check the team file and the settings it uses</value></data>
-  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » ticked</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » on</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>runtime error: the last log lines say why</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>run interrupted</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>unexpected end: check the output above</value></data>
@@ -821,7 +821,7 @@
   <data name="Studio.Settings.MailTabRights" xml:space="preserve"><value>Rights</value></data>
   <data name="Studio.Settings.MailTabAuth" xml:space="preserve"><value>Sign-in</value></data>
   <data name="Studio.Settings.MailTabServers" xml:space="preserve"><value>Servers</value></data>
-  <data name="Studio.Settings.MailRightsIntro" xml:space="preserve"><value>Nothing ticked, nothing allowed: the engine refuses an account that grants no right.</value></data>
+  <data name="Studio.Settings.MailRightsIntro" xml:space="preserve"><value>Nothing turned on, nothing allowed: the engine refuses an account that grants no right.</value></data>
   <data name="Studio.Settings.MailRightRead" xml:space="preserve"><value>Read — list the folders, search, read messages and save attachments</value></data>
   <data name="Studio.Settings.MailRightOrganize" xml:space="preserve"><value>Organize — create and rename folders, move messages, mark them read or flagged</value></data>
   <data name="Studio.Settings.MailRightDraft" xml:space="preserve"><value>Draft — save drafts in the mailbox, without sending them</value></data>
@@ -944,7 +944,7 @@
   <data name="Studio.Create.TitleAdd" xml:space="preserve"><value>Add an agent</value></data>
   <data name="Studio.Create.TitleEdit" xml:space="preserve"><value>Edit the agent</value></data>
   <data name="Studio.Create.Add" xml:space="preserve"><value>Add to the team</value></data>
-  <data name="Studio.Teams.TeamMountsSub" xml:space="preserve"><value>Tick what this team may see. Any unticked folder becomes invisible to it, even if other teams use it.</value></data>
+  <data name="Studio.Teams.TeamMountsSub" xml:space="preserve"><value>Turn on what this team may see. Any folder turned off becomes invisible to it, even if other teams use it.</value></data>
   <data name="Studio.Teams.AddAnother" xml:space="preserve"><value>Allow another folder…</value></data>
   <data name="Studio.Settings.AllowedFoldersTitle" xml:space="preserve"><value>Add an allowed folder</value></data>
   <data name="Studio.Settings.BindTitle" xml:space="preserve"><value>Which folder sits behind {0}?</value></data>
@@ -986,13 +986,13 @@
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Give the agent meant to write it a tool that writes it (an MCP server's, a plugin's), or deliver a text format (.md, .html, .csv) instead.</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>Use the decision models (System One)</value></data>
-  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Unticked, the run goes without the decision models (--no-decision): a decision task gets its relay's answer or its fallback, or lets its « otherwise » task run; the engine withholds the system_one_decide tool; a team that cannot run without them is refused.</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Off, the run goes without the decision models (--no-decision): a decision task gets its relay's answer or its fallback, or lets its « otherwise » task run; the engine withholds the system_one_decide tool; a team that cannot run without them is refused.</value></data>
   <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>The engine refuses the settings this run reads, so the CLI will not start: {0} Fix it in {1}.</value></data>
   <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>The engine refuses the settings this run reads, so the CLI will not start: {0} A decision profile and a model profile cannot share a name: rename one of the two. The decision profile is under Orkeon:Decision:Profiles in {1}.</value></data>
   <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>The engine refuses the decision settings of this machine: unless the settings file the CLI picks says otherwise, it will not start. {0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. {1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}</value></data>
-  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>This run goes without them: tick « Use the decision models ».</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>This run goes without them: turn on « Use the decision models ».</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>The settings switch the decision models off: turn them on in Settings › Decision models.</value></data>
   <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>The settings file this run reads switches the decision models off: set Orkeon:Decision:Enabled to true in {0}.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>No decision provider is configured: set one up in Settings › Decision models.</value></data>
@@ -2141,7 +2141,7 @@
   <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task is answered by its relay or from its fallback, and what System One would pick falls back to what the team or the settings state.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Use the default model ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Use the default model</value></data>
-  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.</value></data>
+  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>On, the team runs on the setting elected default when a run starts, and follows it when it changes. Off, it stays on the setting chosen below.</value></data>
   <data name="Studio.Teams.PinnedLlm" xml:space="preserve"><value>Or run on this setting:</value></data>
   <data name="Studio.Teams.ChangeLlm" xml:space="preserve"><value>Change the model</value></data>
   <data name="Studio.Teams.LlmSaved" xml:space="preserve"><value>{0} now runs on: {1}.</value></data>
@@ -2526,7 +2526,7 @@
   <data name="Studio.Run.Stop" xml:space="preserve"><value>Stop</value></data>
   <data name="Studio.Chat.Subtitle" xml:space="preserve"><value>Changes nothing without your consent</value></data>
   <data name="Studio.Chat.YourQuestion" xml:space="preserve"><value>Your question</value></data>
-  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>Token-by-token text is only shown with the progress: tick « Show progress instead of raw output ».</value></data>
+  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>Token-by-token text is only shown with the progress: turn on « Show progress instead of raw output ».</value></data>
   <data name="Studio.History.Today" xml:space="preserve"><value>Today</value></data>
   <data name="Studio.History.Yesterday" xml:space="preserve"><value>Yesterday</value></data>
   <data name="Studio.History.AllTeams" xml:space="preserve"><value>All teams</value></data>
@@ -2586,6 +2586,9 @@
     <value>Described, {0} {0:plural:question settled|questions settled}</value>
   </data>
   <data name="Studio.Create.TabNeedEmpty" xml:space="preserve"><value>To describe</value></data>
+  <data name="Studio.Create.TabDecisionNone" xml:space="preserve"><value>Not used</value></data>
+  <data name="Studio.Create.TabDecisionOptional" xml:space="preserve"><value>When available</value></data>
+  <data name="Studio.Create.TabDecisionRequired" xml:space="preserve"><value>Always</value></data>
   <data name="Studio.Create.TabFoldersPending" xml:space="preserve"><value>{0} {0:plural:folder to confirm|folders to confirm}</value></data>
   <data name="Studio.Create.TabFoldersPendingToChoose" xml:space="preserve">
     <value>{0} {0:plural:folder|folders} · {1} to choose</value>
@@ -2721,6 +2724,7 @@
   <data name="Studio.Create.WaitPlaceholderAdopt" xml:space="preserve"><value>Adopt the team to finish, or ask a question</value></data>
   <data name="Studio.Create.WaitShowCard" xml:space="preserve"><value>Show the folder</value></data>
   <data name="Studio.Create.TabNeed" xml:space="preserve"><value>Need</value></data>
+  <data name="Studio.Create.TabDecision" xml:space="preserve"><value>Decision models</value></data>
   <data name="Studio.Create.TabFolders" xml:space="preserve"><value>The team's folders</value></data>
   <data name="Studio.Create.FoldersTabEmptyBody" xml:space="preserve"><value>The assistant proposes the team's folders once it has read your need, during the composition. They will appear here.</value></data>
   <data name="Studio.Create.FolderFieldName" xml:space="preserve"><value>Name in the team</value></data>

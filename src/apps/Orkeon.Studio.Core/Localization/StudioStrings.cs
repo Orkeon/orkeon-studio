@@ -2242,6 +2242,15 @@ public static class StudioStringKeys
     /// <summary>"To describe" — the need tab's subtitle before.</summary>
     public const string WizardTabNeedEmpty = "Studio.Create.TabNeedEmpty";
 
+    /// <summary>#22: "Not used" — the decision models tab's subtitle when the team never asks them.</summary>
+    public const string WizardTabDecisionNone = "Studio.Create.TabDecisionNone";
+
+    /// <summary>#22: "When available" — the decision models tab's subtitle for the optional mode.</summary>
+    public const string WizardTabDecisionOptional = "Studio.Create.TabDecisionOptional";
+
+    /// <summary>#22: "Always" — the decision models tab's subtitle for the required mode.</summary>
+    public const string WizardTabDecisionRequired = "Studio.Create.TabDecisionRequired";
+
     /// <summary>"{0} folders to confirm" — the folders tab's subtitle while they wait.</summary>
     public const string WizardTabFoldersPending = "Studio.Create.TabFoldersPending";
 
@@ -3410,13 +3419,13 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunWarnDeliverableDecision] =
             "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
         [StudioStringKeys.RunUseDecisionModels] = "Use the decision models (System One)",
-        [StudioStringKeys.RunUseDecisionModelsHint] = "Unticked, the run goes without the decision models (--no-decision): a decision task gets its relay's answer or its fallback, or lets its « otherwise » task run; the engine withholds the system_one_decide tool; a team that cannot run without them is refused.",
+        [StudioStringKeys.RunUseDecisionModelsHint] = "Off, the run goes without the decision models (--no-decision): a decision task gets its relay's answer or its fallback, or lets its « otherwise » task run; the engine withholds the system_one_decide tool; a team that cannot run without them is refused.",
         [StudioStringKeys.RunBlockedDecisionProvider] = "The engine refuses the settings this run reads, so the CLI will not start: {0} Fix it in {1}.",
         [StudioStringKeys.RunBlockedDecisionSharedName] = "The engine refuses the settings this run reads, so the CLI will not start: {0} A decision profile and a model profile cannot share a name: rename one of the two. The decision profile is under Orkeon:Decision:Profiles in {1}.",
         [StudioStringKeys.RunWarnDecisionProvider] = "The engine refuses the decision settings of this machine: unless the settings file the CLI picks says otherwise, it will not start. {0}",
         [StudioStringKeys.RunBlockedDecisionRequired] = "This team cannot run without the decision models (System One): {0}. {1}",
         [StudioStringKeys.RunWarnDecisionRequiredUnknown] = "This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}",
-        [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: tick « Use the decision models ».",
+        [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: turn on « Use the decision models ».",
         [StudioStringKeys.RunDecisionOffSettings] = "The settings switch the decision models off: turn them on in Settings › Decision models.",
         [StudioStringKeys.RunDecisionOffSettingsInFile] = "The settings file this run reads switches the decision models off: set Orkeon:Decision:Enabled to true in {0}.",
         [StudioStringKeys.RunDecisionOffNoProvider] = "No decision provider is configured: set one up in Settings › Decision models.",
@@ -3830,7 +3839,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchExitCode] = "Exit code {0} — {1}",
         [StudioStringKeys.LaunchExitSuccess] = "run completed successfully",
         [StudioStringKeys.LaunchExitScriptError] = "script or settings error: check the team file and the settings it uses",
-        [StudioStringKeys.LaunchExitDecisionUnavailable] = "run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » ticked",
+        [StudioStringKeys.LaunchExitDecisionUnavailable] = "run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » on",
         [StudioStringKeys.LaunchExitRuntimeError] = "runtime error: the last log lines say why",
         [StudioStringKeys.LaunchExitCancelled] = "run interrupted",
         [StudioStringKeys.LaunchExitUnknown] = "unexpected end: check the output above",
@@ -4301,6 +4310,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardTabNeedInterrupted] = "Described, brief interrupted",
         [StudioStringKeys.WizardTabNeedDoneAnswers] = "Described, {0} {0:plural:question settled|questions settled}",
         [StudioStringKeys.WizardTabNeedEmpty] = "To describe",
+        [StudioStringKeys.WizardTabDecisionNone] = "Not used",
+        [StudioStringKeys.WizardTabDecisionOptional] = "When available",
+        [StudioStringKeys.WizardTabDecisionRequired] = "Always",
         [StudioStringKeys.WizardTabFoldersPending] = "{0} {0:plural:folder to confirm|folders to confirm}",
         [StudioStringKeys.WizardTabFoldersPendingToChoose] = "{0} {0:plural:folder|folders} · {1} to choose",
         [StudioStringKeys.WizardTabFoldersConfirmed] = "{0} {0:plural:folder confirmed|folders confirmed}",
@@ -4425,7 +4437,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task is answered by its relay or from its fallback, and what System One would pick falls back to what the team or the settings state.",
         [StudioStringKeys.TeamsUseDefaultLlm] = "Use the default model ({0})",
         [StudioStringKeys.TeamsUseDefaultLlmNone] = "Use the default model",
-        [StudioStringKeys.TeamsUseDefaultLlmHint] = "Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.",
+        [StudioStringKeys.TeamsUseDefaultLlmHint] = "On, the team runs on the setting elected default when a run starts, and follows it when it changes. Off, it stays on the setting chosen below.",
         [StudioStringKeys.TeamsPinnedLlm] = "Or run on this setting:",
         [StudioStringKeys.TeamsChangeLlm] = "Change the model",
         [StudioStringKeys.TeamsLlmSaved] = "{0} now runs on: {1}.",

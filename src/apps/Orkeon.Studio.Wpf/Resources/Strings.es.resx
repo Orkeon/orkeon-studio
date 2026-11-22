@@ -485,7 +485,7 @@
   </data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>ejecución completada sin errores</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>error de script o de configuración: revise el archivo del equipo y la configuración que usa</value></data>
-  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>ejecución rechazada: este equipo no puede ejecutarse sin los modelos de decisión (System One) y están desactivados. Configúrelos en Ajustes › Modelos de decisión y deje marcado «Usar los modelos de decisión»</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>ejecución rechazada: este equipo no puede ejecutarse sin los modelos de decisión (System One) y están desactivados. Configúrelos en Ajustes › Modelos de decisión y deje activado «Usar los modelos de decisión»</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>error durante la ejecución: las últimas líneas del registro explican por qué</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>ejecución interrumpida</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>final inesperado: revise la salida de arriba</value></data>
@@ -2115,7 +2115,7 @@
     <value>Servidores</value>
   </data>
   <data name="Studio.Settings.MailRightsIntro" xml:space="preserve">
-    <value>Nada marcado, nada permitido: el motor rechaza una cuenta que no concede ningún derecho.</value>
+    <value>Nada activado, nada permitido: el motor rechaza una cuenta que no concede ningún derecho.</value>
   </data>
   <data name="Studio.Settings.MailRightRead" xml:space="preserve">
     <value>Leer — listar las carpetas, buscar, leer mensajes y guardar adjuntos</value>
@@ -2422,7 +2422,7 @@
     <value>Añadir al equipo</value>
   </data>
   <data name="Studio.Teams.TeamMountsSub" xml:space="preserve">
-    <value>Marque lo que este equipo puede ver. Toda carpeta desmarcada le resulta invisible, aunque otros equipos la usen.</value>
+    <value>Active lo que este equipo puede ver. Toda carpeta desactivada le resulta invisible, aunque otros equipos la usen.</value>
   </data>
   <data name="Studio.Teams.AddAnother" xml:space="preserve">
     <value>Autorizar otra carpeta…</value>
@@ -2497,13 +2497,13 @@
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Dé al agente que debe escribirlo una herramienta que lo escriba (la de un servidor MCP, la de un plugin), o entregue en su lugar un formato de texto (.md, .html, .csv).</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>La tarea «{0}» es una tarea de decisión y debe escribir {1}, pero una decisión no escribe ningún archivo: quite el entregable o muévalo a una tarea que ejecute un agente.</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>Usar los modelos de decisión (System One)</value></data>
-  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Sin marcar, la ejecución prescinde de los modelos de decisión (--no-decision): una tarea de decisión recibe la respuesta de su relevo o su respuesta de reserva, o deja ejecutarse su tarea «otherwise»; el motor retiene la herramienta system_one_decide; un equipo que no puede ejecutarse sin ellos es rechazado.</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Desactivada, la ejecución prescinde de los modelos de decisión (--no-decision): una tarea de decisión recibe la respuesta de su relevo o su respuesta de reserva, o deja ejecutarse su tarea «otherwise»; el motor retiene la herramienta system_one_decide; un equipo que no puede ejecutarse sin ellos es rechazado.</value></data>
   <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>El motor rechaza los ajustes que lee esta ejecución, así que la CLI no arrancará: {0} Corríjalos en {1}.</value></data>
   <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>El motor rechaza los ajustes que lee esta ejecución, así que la CLI no arrancará: {0} Un perfil de decisión y un perfil de modelo no pueden compartir nombre: cambie el nombre de uno de los dos. El perfil de decisión está bajo Orkeon:Decision:Profiles en {1}.</value></data>
   <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>El motor rechaza los ajustes de decisión de esta máquina: salvo que el archivo de ajustes que elija la CLI diga otra cosa, no arrancará. {0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>Este equipo no puede ejecutarse sin los modelos de decisión (System One): {0}. {1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>Este equipo no puede ejecutarse sin los modelos de decisión (System One): {0}. La CLI elige el archivo de ajustes por sí misma: compruebe que los proporciona, o fije el archivo. {1}</value></data>
-  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Esta ejecución prescinde de ellos: marque «Usar los modelos de decisión».</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Esta ejecución prescinde de ellos: active «Usar los modelos de decisión».</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>Los ajustes desactivan los modelos de decisión: actívelos en Ajustes › Modelos de decisión.</value></data>
   <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>El archivo de ajustes que lee esta ejecución desactiva los modelos de decisión: ponga Orkeon:Decision:Enabled en true en {0}.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>No hay ningún proveedor de decisión configurado: configure uno en Ajustes › Modelos de decisión.</value></data>
@@ -3854,7 +3854,7 @@
   <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Este equipo se ejecuta con los modelos de decisión (System One) o sin ellos, según el lanzamiento: sin ellos, cada tarea de decisión la responde su relevo o su respuesta de reserva, y lo que System One habría elegido vuelve a lo que indican el equipo o los ajustes.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Usar el modelo predeterminado ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Usar el modelo predeterminado</value></data>
-  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Marcada, el equipo se ejecuta con el ajuste elegido como predeterminado al iniciar, y lo sigue cuando cambia. Desmarcada, se queda en el ajuste elegido abajo.</value></data>
+  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Activada, el equipo se ejecuta con el ajuste elegido como predeterminado al iniciar, y lo sigue cuando cambia. Desactivada, se queda en el ajuste elegido abajo.</value></data>
   <data name="Studio.Teams.PinnedLlm" xml:space="preserve"><value>O ejecutar con este ajuste:</value></data>
   <data name="Studio.Teams.ChangeLlm" xml:space="preserve"><value>Cambiar el modelo</value></data>
   <data name="Studio.Teams.LlmSaved" xml:space="preserve"><value>{0} se ejecuta ahora con: {1}.</value></data>
@@ -4242,7 +4242,7 @@
   <data name="Studio.Run.Stop" xml:space="preserve"><value>Detener</value></data>
   <data name="Studio.Chat.Subtitle" xml:space="preserve"><value>No cambia nada sin su consentimiento</value></data>
   <data name="Studio.Chat.YourQuestion" xml:space="preserve"><value>Su pregunta</value></data>
-  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>El texto token a token solo se muestra con el progreso: marque « Mostrar el progreso en vez de la salida bruta ».</value></data>
+  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>El texto token a token solo se muestra con el progreso: active « Mostrar el progreso en vez de la salida bruta ».</value></data>
   <data name="Studio.History.Today" xml:space="preserve"><value>Hoy</value></data>
   <data name="Studio.History.Yesterday" xml:space="preserve"><value>Ayer</value></data>
   <data name="Studio.History.AllTeams" xml:space="preserve"><value>Todos los equipos</value></data>
@@ -4302,6 +4302,9 @@
     <value>Descrito, {0} {0:plural:pregunta resuelta|preguntas resueltas}</value>
   </data>
   <data name="Studio.Create.TabNeedEmpty" xml:space="preserve"><value>Por describir</value></data>
+  <data name="Studio.Create.TabDecisionNone" xml:space="preserve"><value>No se usan</value></data>
+  <data name="Studio.Create.TabDecisionOptional" xml:space="preserve"><value>Cuando estén disponibles</value></data>
+  <data name="Studio.Create.TabDecisionRequired" xml:space="preserve"><value>Siempre</value></data>
   <data name="Studio.Create.TabFoldersPending" xml:space="preserve"><value>{0} {0:plural:carpeta por confirmar|carpetas por confirmar}</value></data>
   <data name="Studio.Create.TabFoldersPendingToChoose" xml:space="preserve">
     <value>{0} {0:plural:carpeta|carpetas} · {1} por elegir</value>
@@ -4437,6 +4440,7 @@
   <data name="Studio.Create.WaitPlaceholderAdopt" xml:space="preserve"><value>Adopte el equipo para terminar, o haga una pregunta</value></data>
   <data name="Studio.Create.WaitShowCard" xml:space="preserve"><value>Ver la carpeta</value></data>
   <data name="Studio.Create.TabNeed" xml:space="preserve"><value>Necesidad</value></data>
+  <data name="Studio.Create.TabDecision" xml:space="preserve"><value>Modelos de decisión</value></data>
   <data name="Studio.Create.TabFolders" xml:space="preserve"><value>Carpetas del equipo</value></data>
   <data name="Studio.Create.FoldersTabEmptyBody" xml:space="preserve"><value>El asistente propone las carpetas del equipo una vez leída su necesidad, durante la composición. Aparecerán aquí.</value></data>
   <data name="Studio.Create.FolderFieldName" xml:space="preserve"><value>Nombre en el equipo</value></data>

@@ -4,7 +4,7 @@ using Orkeon.Studio.Wpf.ViewModels.Teams;
 namespace Orkeon.Studio.Wpf.Tests;
 
 /// <summary>
-/// Lot 6 of the redesign: the single named wait point (R13) and step 1 in three tabs (R14) —
+/// Lot 6 of the redesign: the single named wait point (R13) and step 1 in tabs (R14, four since #22) —
 /// the folders tab that opens with the amber dot, the fiches' flags, the panes' footers, the
 /// assistant's bubble that runs the card's command, and Enter that no longer sends.
 /// </summary>
@@ -22,7 +22,8 @@ public partial class CreateTeamWizardTests
         Assert.Equal("Proposed after the composition", vm.FoldersTabSubtitle);
         Assert.Equal("Empty", vm.NotesTabState);
         Assert.Equal("No instruction yet.", vm.NotesFooter);
-        Assert.False(vm.Step1BackCommand.CanExecute(null));
+        // #22: the decision models tab comes first, the need opens the step.
+        Assert.True(vm.Step1BackCommand.CanExecute(null));
 
         FillStepOne(vm);
         vm.ComposeNotes.Consigne = "Cite every source.";

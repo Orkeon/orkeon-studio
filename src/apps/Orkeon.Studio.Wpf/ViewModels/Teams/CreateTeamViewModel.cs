@@ -655,6 +655,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         _strings.CultureChanged += (_, _) => OnUseCaseLanguageChanged();
         _strings.CultureChanged += (_, _) => OnPropertiesChanged(
             nameof(CrewDecisionChoices), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice), nameof(SessionCrewDecisionLine),
+            nameof(DecisionTabState), nameof(DecisionTabSubtitle),
             nameof(TrialPassLine), nameof(VerdictPassesLine), nameof(AssistantDecisionLine), nameof(MailActionLines));
         // The activity lines and the checklist hold sentences, and the name of the pass each comes
         // from: built again in the new language, from the session they were read off.
@@ -1380,7 +1381,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     public void RefreshDecisionNotice() =>
         OnPropertiesChanged(
             nameof(CrewDecisionNotice), nameof(DesignWithoutSystemOne),
-            nameof(CanChooseDesignWithoutSystemOne), nameof(DesignWithoutSystemOneLockedLine));
+            nameof(CanChooseDesignWithoutSystemOne), nameof(DesignWithoutSystemOneLockedLine),
+            nameof(DecisionTabState), nameof(DecisionTabSubtitle));
 
     /// <summary>
     /// What the assistant itself asks of the decision models on this run of the engine, as the engine
@@ -1398,7 +1400,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
             if (!IsWithModels(circuit))
             {
                 // Every cause the engine defines has its sentence; the switch has the wizard's own,
-                // which names the box the user ticked. Another word is said as the engine wrote it.
+                // which names the switch the user turned on. Another word is said as the engine wrote it.
                 var why = _model.ForgeCircuitCause switch
                 {
                     Orkeon.Constants.Protocol.DecisionCircuitCauses.Switch => _strings[StudioStringKeys.WizardAssistantDecisionCauseSwitch],
@@ -1483,7 +1485,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                 return;
             _crewDecisionPick = value.Mode;
             OnPropertyChanged();
-            OnPropertiesChanged(nameof(CrewDecisionNotice), nameof(SessionCrewDecisionLine));
+            OnPropertiesChanged(
+                nameof(CrewDecisionNotice), nameof(SessionCrewDecisionLine), nameof(DecisionTabState), nameof(DecisionTabSubtitle));
         }
     }
 
@@ -1501,7 +1504,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     private void RaiseCrewDecisionChanged() =>
         OnPropertiesChanged(
             nameof(CanChooseCrewDecision), nameof(SelectedCrewDecision), nameof(CrewDecisionNotice),
-            nameof(SessionCrewDecisionLine));
+            nameof(SessionCrewDecisionLine), nameof(DecisionTabState), nameof(DecisionTabSubtitle));
 
     /// <summary>
     /// The mode and the assistant's switch go back to the engine's defaults: they belonged to the
@@ -1513,14 +1516,14 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         _designWithoutSystemOne = false;
         OnPropertiesChanged(
             nameof(SelectedCrewDecision), nameof(DesignWithoutSystemOne),
-            nameof(SessionCrewDecisionLine));
+            nameof(SessionCrewDecisionLine), nameof(CrewDecisionNotice), nameof(DecisionTabState), nameof(DecisionTabSubtitle));
     }
 
     /// <summary>
     /// Whether the assistant composes without asking the decision models for its own work
     /// (<c>orkeon forge --no-decision</c>). It is the creation's: it goes with each run of the engine
     /// that composes, tries or resumes it, « Resume » on the session under way included, and is
-    /// unticked when the wizard turns to another session (a resume from My teams, « Modify ») or back
+    /// turned off when the wizard turns to another session (a resume from My teams, « Modify ») or back
     /// to a blank step 1. Not every command carries it: an adoption without a trial asks the decision
     /// models nothing, and the reopen behind « Modify », the rephrasing of the request and the
     /// adoption itself take a fixed command line. With the decision models switched off in the

@@ -220,7 +220,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.True(tab.IsBlockedByDecision);
         Assert.False(tab.HasDecisionWarning);
         Assert.Contains("'writer' use system_one_decide, which the engine withholds", tab.DecisionMessage, StringComparison.Ordinal);
-        Assert.Contains("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains("turn on « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.False(tab.RunCommand.CanExecute(null));
         Assert.Contains("--no-decision", tab.CommandLinePreview, StringComparison.Ordinal);
     }
@@ -237,7 +237,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
 
         Assert.True(tab.IsBlockedByDecision);
         Assert.Contains("the decision task 'pick' has neither a fallback", tab.DecisionMessage, StringComparison.Ordinal);
-        Assert.Contains("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains("turn on « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.DoesNotContain("No decision provider", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.False(tab.RunCommand.CanExecute(null));
         Assert.Equal(tab.DecisionMessage, tab.LaunchBlockedReason);
@@ -260,13 +260,13 @@ public sealed class LaunchDecisionModelsTests : IDisposable
             "'writer' use system_one_decide, which the engine withholds without the decision models; the decision task 'pick' has neither",
             tab.DecisionMessage, StringComparison.Ordinal);
         Assert.Contains("No decision provider is configured", tab.DecisionMessage, StringComparison.Ordinal);
-        Assert.DoesNotContain("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.DoesNotContain("turn on « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
 
         tab.Options.UseDecisionModels = false;
 
         // Each reason, in the order it is best fixed.
         var noProvider = tab.DecisionMessage.IndexOf("No decision provider is configured", StringComparison.Ordinal);
-        var runSwitch = tab.DecisionMessage.IndexOf("tick « Use the decision models »", StringComparison.Ordinal);
+        var runSwitch = tab.DecisionMessage.IndexOf("turn on « Use the decision models »", StringComparison.Ordinal);
         Assert.True(noProvider >= 0 && runSwitch > noProvider, tab.DecisionMessage);
     }
 
@@ -336,7 +336,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         tab.Options.UseDecisionModels = false;
 
         Assert.True(tab.HasDecisionInfo);
-        Assert.Contains("tick « Use the decision models »", tab.DecisionInfo, StringComparison.Ordinal);
+        Assert.Contains("turn on « Use the decision models »", tab.DecisionInfo, StringComparison.Ordinal);
         Assert.False(tab.ShowsDecisionSettingsAction);
     }
 
@@ -689,7 +689,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.False(served.IsBlockedByDecision);
         served.Options.UseDecisionModels = false;
         Assert.True(served.IsBlockedByDecision);
-        Assert.Contains("tick « Use the decision models »", served.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains("turn on « Use the decision models »", served.DecisionMessage, StringComparison.Ordinal);
         Assert.False(served.RunCommand.CanExecute(null));
 
         // On the machine's file the profile is not known to be the run's: a warning.
@@ -758,7 +758,7 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.True(tab.UsesDecisionModels);
         Assert.Contains("--no-decision", tab.CommandLinePreview, StringComparison.Ordinal);
         Assert.True(tab.IsBlockedByDecision);
-        Assert.Contains("tick « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
+        Assert.Contains("turn on « Use the decision models »", tab.DecisionMessage, StringComparison.Ordinal);
         Assert.False(tab.RunCommand.CanExecute(null));
     }
 

@@ -485,7 +485,7 @@
   </data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>运行成功完成</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>脚本或设置错误：请检查团队文件及其使用的设置</value></data>
-  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>运行被拒绝：此团队离不开决策模型（System One），而它们已关闭。请在“设置 › 决策模型”中完成配置，并保持勾选“使用决策模型”</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>运行被拒绝：此团队离不开决策模型（System One），而它们已关闭。请在“设置 › 决策模型”中完成配置，并保持开启“使用决策模型”</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>运行时错误：日志的最后几行说明了原因</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>运行已中断</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>意外结束：请查看上方的输出</value></data>
@@ -2115,7 +2115,7 @@
     <value>服务器</value>
   </data>
   <data name="Studio.Settings.MailRightsIntro" xml:space="preserve">
-    <value>未勾选即不允许：引擎会拒绝未授予任何权限的账户。</value>
+    <value>未开启即不允许：引擎会拒绝未授予任何权限的账户。</value>
   </data>
   <data name="Studio.Settings.MailRightRead" xml:space="preserve">
     <value>读取 — 列出文件夹、搜索、阅读邮件并保存附件</value>
@@ -2422,7 +2422,7 @@
     <value>添加到团队</value>
   </data>
   <data name="Studio.Teams.TeamMountsSub" xml:space="preserve">
-    <value>勾选此团队可见的内容。未勾选的文件夹对它不可见，即使其他团队在用。</value>
+    <value>开启此团队可见的内容。未开启的文件夹对它不可见，即使其他团队在用。</value>
   </data>
   <data name="Studio.Teams.AddAnother" xml:space="preserve">
     <value>授权其他文件夹…</value>
@@ -2497,13 +2497,13 @@
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>请为负责写入该文件的智能体提供能写入它的工具（MCP 服务器或插件提供的工具），或改为交付文本格式（.md、.html、.csv）。</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>任务“{0}”是决策任务，需要写入 {1}，但决策不会写入任何文件：请删除该交付物，或将其移到由智能体运行的任务中。</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>使用决策模型（System One）</value></data>
-  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>取消勾选后，本次运行不使用决策模型（--no-decision）：决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行；引擎会扣留 system_one_decide 工具；离不开决策模型的团队会被拒绝。</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>关闭后，本次运行不使用决策模型（--no-decision）：决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行；引擎会扣留 system_one_decide 工具；离不开决策模型的团队会被拒绝。</value></data>
   <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 请在 {1} 中修正。</value></data>
   <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 决策配置与模型配置不能同名：请重命名其中一个。决策配置位于 {1} 的 Orkeon:Decision:Profiles 下。</value></data>
   <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>引擎拒绝本机的决策设置：除非 CLI 选用的设置文件另有规定，否则它不会启动。{0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。{1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。CLI 会自行选择设置文件：请确认它提供了决策模型，或固定该文件。{1}</value></data>
-  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请勾选“使用决策模型”。</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请开启“使用决策模型”。</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>设置关闭了决策模型：请在“设置 › 决策模型”中开启。</value></data>
   <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>本次运行读取的设置文件关闭了决策模型：请在 {0} 中将 Orkeon:Decision:Enabled 设为 true。</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>未配置决策提供方：请在“设置 › 决策模型”中配置一个。</value></data>
@@ -3854,7 +3854,7 @@
   <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>此团队可使用或不使用决策模型（System One）运行，由启动时决定：不使用时，每个决策任务由其接替智能体或后备答案作答，原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>使用默认模型（{0}）</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>使用默认模型</value></data>
-  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>勾选后，团队在运行开始时使用选定的默认设置，并在其变化时跟随。取消勾选后，团队保持在下方选择的设置上。</value></data>
+  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>开启后，团队在运行开始时使用选定的默认设置，并在其变化时跟随。关闭后，团队保持在下方选择的设置上。</value></data>
   <data name="Studio.Teams.PinnedLlm" xml:space="preserve"><value>或使用此设置运行：</value></data>
   <data name="Studio.Teams.ChangeLlm" xml:space="preserve"><value>更改模型</value></data>
   <data name="Studio.Teams.LlmSaved" xml:space="preserve"><value>{0} 现在运行于：{1}。</value></data>
@@ -4242,7 +4242,7 @@
   <data name="Studio.Run.Stop" xml:space="preserve"><value>停止</value></data>
   <data name="Studio.Chat.Subtitle" xml:space="preserve"><value>未经您同意不做任何更改</value></data>
   <data name="Studio.Chat.YourQuestion" xml:space="preserve"><value>您的问题</value></data>
-  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>逐个令牌的文本仅在显示进度时出现：请勾选「显示进度，而不是原始输出」。</value></data>
+  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>逐个令牌的文本仅在显示进度时出现：请开启「显示进度，而不是原始输出」。</value></data>
   <data name="Studio.History.Today" xml:space="preserve"><value>今天</value></data>
   <data name="Studio.History.Yesterday" xml:space="preserve"><value>昨天</value></data>
   <data name="Studio.History.AllTeams" xml:space="preserve"><value>所有团队</value></data>
@@ -4302,6 +4302,9 @@
     <value>已描述，已解决 {0} 个问题</value>
   </data>
   <data name="Studio.Create.TabNeedEmpty" xml:space="preserve"><value>待描述</value></data>
+  <data name="Studio.Create.TabDecisionNone" xml:space="preserve"><value>不使用</value></data>
+  <data name="Studio.Create.TabDecisionOptional" xml:space="preserve"><value>可用时使用</value></data>
+  <data name="Studio.Create.TabDecisionRequired" xml:space="preserve"><value>始终</value></data>
   <data name="Studio.Create.TabFoldersPending" xml:space="preserve"><value>{0} 个文件夹待确认</value></data>
   <data name="Studio.Create.TabFoldersPendingToChoose" xml:space="preserve">
     <value>{0} 个文件夹 · {1} 个待选择</value>
@@ -4437,6 +4440,7 @@
   <data name="Studio.Create.WaitPlaceholderAdopt" xml:space="preserve"><value>采用团队以完成，或提出问题</value></data>
   <data name="Studio.Create.WaitShowCard" xml:space="preserve"><value>查看文件夹</value></data>
   <data name="Studio.Create.TabNeed" xml:space="preserve"><value>需求</value></data>
+  <data name="Studio.Create.TabDecision" xml:space="preserve"><value>决策模型</value></data>
   <data name="Studio.Create.TabFolders" xml:space="preserve"><value>团队文件夹</value></data>
   <data name="Studio.Create.FoldersTabEmptyBody" xml:space="preserve"><value>助手读取您的需求后，会在组建过程中提出团队的文件夹。它们将显示在这里。</value></data>
   <data name="Studio.Create.FolderFieldName" xml:space="preserve"><value>团队中的名称</value></data>

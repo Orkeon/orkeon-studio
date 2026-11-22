@@ -1203,7 +1203,9 @@
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
   </Style>
 
-  <Style TargetType="CheckBox">
+  <!-- The box: the CheckBox drawn as a box to tick. No view wears it since #22, every CheckBox being
+       a switch (the implicit style below); it holds the text setters the switch is based on. -->
+  <Style x:Key="CheckBoxBox" TargetType="CheckBox">
     <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
@@ -1240,7 +1242,7 @@
 
   <!-- A switch: a CheckBox for a setting that is on or off rather than a box to tick. The track wears
        the field recipe off and the accent on, like the box (T-31); the knob slides to the right. -->
-  <Style x:Key="Switch" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+  <Style x:Key="Switch" TargetType="CheckBox" BasedOn="{StaticResource CheckBoxBox}">
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="CheckBox">
@@ -1270,6 +1272,9 @@
       </Setter.Value>
     </Setter>
   </Style>
+
+  <!-- #22: every CheckBox of Studio is a switch, those to come included; no view sets another style. -->
+  <Style TargetType="CheckBox" BasedOn="{StaticResource Switch}"/>
 
   <Style TargetType="RadioButton">
     <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>

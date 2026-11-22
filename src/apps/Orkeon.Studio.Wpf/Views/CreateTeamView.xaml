@@ -717,8 +717,8 @@
              on screen while the user talks to the assistant. -->
         <StackPanel>
       <!-- ── STEP 1 : DÉCRIRE ── -->
-      <!-- Refonte R14: step 1 in a vertical classeur of three tabs — the need, the team's
-           folders, the composition instruction. Each tab carries its state (check, amber dot,
+      <!-- Refonte R14: step 1 in a vertical classeur of four tabs — the decision models (#22),
+           the need, the team's folders, the composition instruction. Each tab carries its state (check, amber dot,
            empty circle) and its subtitle; each pane its own footer. The folders tab exists from
            the start, empty until the composition proposes them; when the engine waits on them
            it opens with the amber dot (R13). The step's action bar stays under the classeur. -->
@@ -755,26 +755,19 @@
             </Border>
           </controls:StepTabs.SideContent>
 
-          <!-- ── Need ── -->
-          <controls:StepTab Header="{Binding [Studio.Create.TabNeed], Source={x:Static services:I18n.Instance}}"
-                            Subtitle="{Binding NeedTabSubtitle}" State="{Binding NeedTabState}">
+          <!-- ── Decision models (#22) ── -->
+          <!-- System One in a tab of its own, first of the step; the wizard still opens on the need. -->
+          <controls:StepTab Header="{Binding [Studio.Create.TabDecision], Source={x:Static services:I18n.Instance}}"
+                            Subtitle="{Binding DecisionTabSubtitle}" State="{Binding DecisionTabState}">
             <DockPanel>
-              <!-- UX lot 05 (009-014): « See the folders → » only once the folders tab has
-                   something to show — the footer goes with it, never an empty band; the step's
-                   state is said once, by the action bar. -->
-              <Border DockPanel.Dock="Bottom" Style="{StaticResource PaneFooter}"
-                      Visibility="{Binding IsFoldersTabEmpty, Converter={StaticResource InverseBooleanToVisibility}}">
-                <DockPanel LastChildFill="False">
-                  <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" Command="{Binding ShowFoldersTabCommand}"
-                  Content="{Binding [Studio.Create.SeeFolders], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="arrow-right" controls:ButtonIcon.Placement="Trailing"/>
-                </DockPanel>
-              </Border>
               <StackPanel>
-                <!-- System One first (the step's opening choice): whether the assistant itself composes
-                     without asking the decision models, locked on while the settings switch them off,
+                <TextBlock Style="{StaticResource CardTitle}" Margin="0,0,0,12"
+                           Text="{Binding [Studio.Create.TabDecision], Source={x:Static services:I18n.Instance}}"/>
+                <!-- Whether the assistant itself composes without asking the decision models, locked
+                     on while the settings switch them off,
                      then what the team to compose asks of them (a new creation's choice, kept by its
                      session), which stays free: a team can be meant for them before they run here. -->
-                <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding DesignWithoutSystemOne}"
+                <CheckBox IsChecked="{Binding DesignWithoutSystemOne}"
                           IsEnabled="{Binding CanChooseDesignWithoutSystemOne}"
                           Content="{Binding [Studio.Create.DesignWithoutSystemOne], Source={x:Static services:I18n.Instance}}"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
@@ -794,7 +787,26 @@
                 <!-- What the chosen mode meets on this machine, before anything is composed. -->
                 <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
                                 Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>
-                <TextBlock Style="{StaticResource CardTitle}" Margin="0,20,0,0"
+              </StackPanel>
+            </DockPanel>
+          </controls:StepTab>
+
+          <!-- ── Need ── -->
+          <controls:StepTab Header="{Binding [Studio.Create.TabNeed], Source={x:Static services:I18n.Instance}}"
+                            Subtitle="{Binding NeedTabSubtitle}" State="{Binding NeedTabState}">
+            <DockPanel>
+              <!-- UX lot 05 (009-014): « See the folders → » only once the folders tab has
+                   something to show — the footer goes with it, never an empty band; the step's
+                   state is said once, by the action bar. -->
+              <Border DockPanel.Dock="Bottom" Style="{StaticResource PaneFooter}"
+                      Visibility="{Binding IsFoldersTabEmpty, Converter={StaticResource InverseBooleanToVisibility}}">
+                <DockPanel LastChildFill="False">
+                  <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" Command="{Binding ShowFoldersTabCommand}"
+                  Content="{Binding [Studio.Create.SeeFolders], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="arrow-right" controls:ButtonIcon.Placement="Trailing"/>
+                </DockPanel>
+              </Border>
+              <StackPanel>
+                <TextBlock Style="{StaticResource CardTitle}"
                            Text="{Binding [Studio.Create.NeedTitle], Source={x:Static services:I18n.Instance}}"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,12" TextWrapping="Wrap"
                            Text="{Binding [Studio.Create.NeedSub], Source={x:Static services:I18n.Instance}}"/>

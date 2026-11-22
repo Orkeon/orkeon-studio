@@ -55,7 +55,7 @@ public class LaunchOutcomeFormatterTests
     [InlineData(
         OrkeonExitCodes.DecisionUnavailable,
         "Exit code 69 — run refused: this team cannot run without the decision models (System One) and they are off. "
-        + "Set them up in Settings › Decision models, and keep « Use the decision models » ticked")]
+        + "Set them up in Settings › Decision models, and keep « Use the decision models » on")]
     public void The_localized_overload_says_the_outcome_in_the_ports_words_never_the_engines(int exitCode, string expected)
     {
         var result = Exited(exitCode);
