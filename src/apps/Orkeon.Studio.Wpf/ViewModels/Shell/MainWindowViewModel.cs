@@ -33,6 +33,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly string _teamsHome;
     private readonly Func<IReadOnlyList<string>> _declaredMounts;
     private readonly Func<TeamLauncherContext> _launcherContext;
+    private readonly Func<IEnumerable<string>> _environmentNames;
     private AppSettingsDocument? _savedSettings;
     private int _selectedTabIndex;
 
@@ -126,6 +127,7 @@ public sealed class MainWindowViewModel : ObservableObject
         // The store the settings screen reads and writes through: what a run outside Studio reads is
         // the file as this store saved it (STUDIO-52).
         _settingsStore = settingsStore ?? PhysicalAppSettingsStore.Instance;
+        _environmentNames = seams.EnvironmentNames ?? Orkeon.Studio.Core.Launch.LaunchLlmProfiles.ProcessEnvironmentNames;
 
         Launch = new LaunchTabViewModel(new LaunchTabDependencies
         {
@@ -1100,12 +1102,16 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The ids of the host profiles <see cref="TeamEnvironment"/> lays in every run's environment, whatever
-    /// the settings file the run reads: a rung of the decision ladder that names one is served. None
-    /// while the settings screen is not built yet.
+    /// The ids of the LLM profiles every run is offered whatever the settings file it reads: the host
+    /// profiles <see cref="TeamEnvironment"/> lays in its environment, and those the environment the CLI
+    /// inherits lays (<c>Llm__Profiles__x__Model</c>), as the terminal launcher counts them
+    /// (<see cref="Orkeon.Studio.Core.Launch.LaunchLlmProfiles"/>): a rung of the decision ladder that names
+    /// one is served. Only the environment's while the settings screen is not built yet.
     /// </summary>
     private IReadOnlyCollection<string> OfferedLlmProfiles() =>
-        Settings is { } settings ? [.. HostLlmProfiles.Offered(settings.Profiles.Set).Values] : [];
+        Orkeon.Studio.Core.Launch.LaunchLlmProfiles.Offered(
+            Settings is { } settings ? HostLlmProfiles.Offered(settings.Profiles.Set).Values : [],
+            _environmentNames());
 
     /// <summary>
     /// « Remember for this team » (STUDIO-73): the team's companion file takes the model, and its

@@ -6,6 +6,8 @@ using Orkeon.Studio.Core.Process;
 using Orkeon.Studio.Core.Teams;
 using Orkeon.Studio.Wpf.Tests.Doubles;
 using Orkeon.Studio.Wpf.ViewModels.Launch;
+using Orkeon.Studio.Wpf.ViewModels.Services;
+using Orkeon.Studio.Wpf.ViewModels.Shell;
 
 namespace Orkeon.Studio.Wpf.Tests;
 
@@ -733,6 +735,46 @@ public sealed class LaunchDecisionModelsTests : IDisposable
         Assert.True(machineRung.HasDecisionWarning);
         Assert.StartsWith(StandIn, machineRung.DecisionWarning, StringComparison.Ordinal);
         Assert.Contains("the ladder names 'strong'", machineRung.DecisionWarning, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The window counts the profiles the environment Studio runs in lays (<c>ORKEON_Llm__Profiles__x__*</c>),
+    /// which the spawned CLI inherits, as the terminal launcher does: a rung served by one alone does not
+    /// block the launch, and without that variable it does.
+    /// </summary>
+    [Theory]
+    [InlineData("ORKEON_Llm__Profiles__strong__Model", false)]
+    [InlineData("llm__profiles__STRONG__Provider", false)]
+    [InlineData("ORKEON_Llm__Profiles__stronger__Model", true)]
+    public void The_window_serves_a_rung_the_environment_lays_as_the_terminal_does(string variable, bool blocked)
+    {
+        var team = TeamOf("llm: { profile: auto }");
+        var settings = new FakeAppSettingsStore();
+        settings.Files[PinnedSettings] = UnknownRung;
+        var window = new MainWindowViewModel(
+            new StudioServices
+            {
+                SettingsStore = settings,
+                Directories = new FakeDirectoryProbe(team),
+                TargetProbe = new FakeTargetProbe().WithDirectory(team).WithDirectory(Path.Combine(team, "agents")),
+                Picker = new FakePathPicker(),
+                ProcessRunner = new OrkeonProcessRunner(
+                    new FakeProcessLauncher(), new OrkeonBinaryLocator(FakeExecutableProbe.WithOrkeonInstalled())),
+                HistoryStore = new FakeLaunchHistoryStore(),
+                KeyStore = new FakeApiKeyStore(),
+                EnvironmentNames = () => ["HOME", variable],
+            },
+            globalPathOverride: Path.Combine(_root, "global", "appsettings.json"),
+            forgeWorkspace: Path.Combine(_root, "forge"),
+            teamsRoot: Path.Combine(_root, "teams"));
+
+        var tab = window.Launch;
+        tab.Target.Select(team);
+        tab.Options.SettingsPath = PinnedSettings;
+        tab.Options.SettingsMode = SettingsSelectionMode.ExplicitPath;
+
+        Assert.Equal(blocked, tab.IsBlockedByDecision);
+        Assert.Equal(!blocked, tab.RunCommand.CanExecute(null));
     }
 
     /// <summary>

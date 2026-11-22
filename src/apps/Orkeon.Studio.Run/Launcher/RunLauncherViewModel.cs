@@ -60,7 +60,7 @@ internal sealed class RunLauncherViewModel
         _settingsReader = settingsReader ?? PhysicalAppSettingsReader.Instance;
         _targetProbe = targetProbe ?? PhysicalTargetProbe.Instance;
         _directories = new TargetProbeDirectories(_targetProbe);
-        _environmentNames = environmentNames ?? (environment is null ? ProcessEnvironmentNames : () => []);
+        _environmentNames = environmentNames ?? (environment is null ? LaunchLlmProfiles.ProcessEnvironmentNames : () => []);
         _environment = environment ?? Environment.GetEnvironmentVariable;
     }
 
@@ -630,7 +630,7 @@ internal sealed class RunLauncherViewModel
         _settingsLlmProvider = LlmProviderRules.StartRefusals(document);
 
         // The environment is listed once: a profile is looked up among the names it lays.
-        var laid = ProfilesLaidIn(_environmentNames());
+        var laid = LaunchLlmProfiles.LaidIn(_environmentNames());
         _profilesLaidInEnvironment =
         [
             .. _settingsDecision.UnknownRungs.Concat(_settingsDecision.DecisionProfiles)
@@ -644,42 +644,6 @@ internal sealed class RunLauncherViewModel
             ? $"'{path}' declares no mount."
             : null;
     }
-
-    /// <summary>
-    /// The LLM profiles the variables of <paramref name="names"/> lay, as the host of the spawned CLI,
-    /// which inherits them, reads its environment: a variable is a setting with <c>__</c> for <c>:</c>,
-    /// with or without the <c>ORKEON_</c> prefix, in any letter case, and any key under
-    /// <c>Llm:Profiles:&lt;name&gt;</c> (<c>ORKEON_llm__profiles__Strong__BaseUrl</c>) makes the profile
-    /// one the host offers, although the settings file does not define it. Compared in any letter case.
-    /// </summary>
-    internal static HashSet<string> ProfilesLaidIn(IEnumerable<string> names)
-    {
-        ArgumentNullException.ThrowIfNull(names);
-        const string Separator = "__";
-        var profiles = LlmProfilesSection.SectionPath.Replace(":", Separator, StringComparison.Ordinal) + Separator;
-        var laid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var name in names)
-        {
-            // The host reads every variable twice: as it is, and without the prefix when it has it.
-            foreach (var setting in name.StartsWith(DecisionSection.EnvironmentPrefix, StringComparison.OrdinalIgnoreCase)
-                         ? new[] { name, name[DecisionSection.EnvironmentPrefix.Length..] }
-                         : [name])
-            {
-                if (!setting.StartsWith(profiles, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var end = setting.IndexOf(Separator, profiles.Length, StringComparison.Ordinal);
-                var profile = end < 0 ? setting[profiles.Length..] : setting[profiles.Length..end];
-                if (profile.Length > 0)
-                    laid.Add(profile);
-            }
-        }
-
-        return laid;
-    }
-
-    private static IEnumerable<string> ProcessEnvironmentNames() =>
-        Environment.GetEnvironmentVariables().Keys.Cast<string>();
 
     /// <summary>Spawns the run the form describes.</summary>
     /// <param name="dryRun">True for the "Validate" button: <c>--validate</c>, not recorded in the history.</param>

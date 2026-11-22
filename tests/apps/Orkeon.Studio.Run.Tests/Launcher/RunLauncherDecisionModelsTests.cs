@@ -448,16 +448,6 @@ public sealed class RunLauncherDecisionModelsTests : IDisposable
         Assert.Equal(ValidationCodes.DecisionLadder, Only(Pin(fixture, CrewOf(OnAuto), UnknownRung)).Code);
     }
 
-    [Fact]
-    public void The_profiles_an_environment_lays_are_read_from_its_names_alone()
-    {
-        var laid = RunLauncherViewModel.ProfilesLaidIn(
-            ["HOME", "ORKEON_CLI_DIR", "ORKEON_Llm__Profiles__a__Model", "llm__profiles__B__provider", "ORKEON_ORKEON_Llm__Profiles__c__Model", "Llm__Profiles____Model"]);
-
-        Assert.Equal(["B", "a"], laid.Order(StringComparer.Ordinal));
-        Assert.Contains("b", laid);
-    }
-
     /// <summary>
     /// The environment this launcher is started in lays a model profile under the name of a decision
     /// profile of the file: the engine refuses to start (« Two LLM profiles are named 'x'. »), a
