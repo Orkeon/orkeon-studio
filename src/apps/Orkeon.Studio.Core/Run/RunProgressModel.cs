@@ -181,7 +181,15 @@ public sealed record RunErrorInfo(string Code, string Message, bool Recoverable)
 /// <param name="Mode">The crew's mode: <c>unspecified</c>, <c>none</c>, <c>optional</c>, <c>required</c> or <c>unknown</c>.</param>
 /// <param name="On">Whether the run asks the decision models.</param>
 /// <param name="Cause">Why it does not: <c>switch</c>, <c>settings</c>, <c>no-provider</c>, <c>no-key</c> or <c>trial</c>; null when it does.</param>
-public sealed record RunDecisionCircuit(string? Mode, bool On, string? Cause);
+public sealed record RunDecisionCircuit(string? Mode, bool On, string? Cause)
+{
+    /// <summary>
+    /// The off circuit's own sentence, in English as the engine writes it (<c>detail</c>, Orkeon #467): for
+    /// <c>no-key</c>, the environment variable and the setting the key is read from, never the key; null when
+    /// the cause has none, or the engine predates it.
+    /// </summary>
+    public string? Detail { get; init; }
+}
 
 /// <summary>What a <see cref="RunAgentNote"/> tells.</summary>
 public enum RunAgentNoteKind
@@ -775,7 +783,10 @@ public sealed class RunProgressModel
         DecisionCircuit = new RunDecisionCircuit(
             orkeonEvent.GetString("mode"),
             string.Equals(circuit, Orkeon.Constants.Protocol.DecisionCircuitStates.On, StringComparison.Ordinal),
-            orkeonEvent.GetString("cause"));
+            orkeonEvent.GetString("cause"))
+        {
+            Detail = orkeonEvent.GetString("detail"),
+        };
         return true;
     }
 

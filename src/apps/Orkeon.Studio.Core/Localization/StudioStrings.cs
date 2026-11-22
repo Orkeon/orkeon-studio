@@ -1552,6 +1552,12 @@ public static class StudioStringKeys
     /// <summary>Why the decision models are off, inside the circuit line: the pass of a creation's trial that tries the team without them.</summary>
     public const string RunNoteCauseTrial = "Studio.Run.NoteCauseTrial";
 
+    /// <summary>
+    /// A cause of the decision models off with the engine's own sentence (Orkeon #467): {0} Studio's sentence of the
+    /// cause, {1} the engine's, in English as written (for <c>no-key</c>, the variable and the setting the key is read from).
+    /// </summary>
+    public const string RunNoteCauseWithDetail = "Studio.Run.NoteCauseWithDetail";
+
     /// <summary>A profile System One picked: {0} the agent, {1} the profile, {2} how likely, a whole percentage.</summary>
     public const string RunNoteRoutePicked = "Studio.Run.NoteRoutePicked";
 
@@ -4045,6 +4051,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunNoteCauseNoProvider] = "no decision provider is configured",
         [StudioStringKeys.RunNoteCauseNoKey] = "the decision provider has no API key: set its environment variable, or its ApiKey in the settings",
         [StudioStringKeys.RunNoteCauseTrial] = "this pass of the trial runs without them",
+        [StudioStringKeys.RunNoteCauseWithDetail] = "{0}: {1}",
         [StudioStringKeys.RunNoteRoutePicked] = "{0}: System One picked the profile '{1}' ({2} %).",
         [StudioStringKeys.RunNoteRouteDefault] = "{0}: profile '{1}', not picked by System One ({2}).",
         [StudioStringKeys.RunNoteRouteFloor] = "{0}: profile '{1}', the ladder's floor System One's pick is held to.",

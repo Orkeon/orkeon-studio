@@ -540,6 +540,32 @@ public partial class CreateTeamWizardTests
         Assert.DoesNotContain("said elsewhere", vm.StatusMessage ?? "", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A trial refused for the decision models off (<c>FORGE-DECISION-UNAVAILABLE</c>) says the engine's
+    /// own sentence of the circuit (<c>detail</c>, Orkeon #467) after its message, on the status line,
+    /// on the card and in the report: the user reads which variable and which setting to fill.
+    /// </summary>
+    [Fact]
+    public async Task A_decision_unavailable_refusal_says_the_engines_detail()
+    {
+        const string Detail = "no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey";
+        var (vm, processes, _) = Build();
+        processes.OutputToEmit.AddRange(
+        [
+            Out(OptionalSession),
+            Out("""{"v":2,"seq":2,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"The decision models are off.","recoverable":false,"terminal":true,"cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}"""),
+        ]);
+        FillStepOne(vm);
+
+        await Compose(vm);
+
+        var expected = "FORGE-DECISION-UNAVAILABLE: The decision models are off: " + Detail;
+        Assert.Equal(expected, vm.StatusMessage);
+        Assert.Equal(WizardFailureKind.ConfigRefused, vm.Failure!.Kind);
+        Assert.StartsWith(expected, vm.Failure.Detail, StringComparison.Ordinal);
+        Assert.Contains(expected, vm.Failure.BuildReport(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_warning_that_follows_an_error_does_not_take_the_status_line_from_it()
     {
@@ -653,6 +679,11 @@ public partial class CreateTeamWizardTests
         Assert.Equal(
             "The assistant works without the decision models: the decision provider has no API key: set its environment variable, or its ApiKey in the settings.",
             await LineOf(""","forgeCircuit":"off","forgeCircuitCause":"no-key" """));
+        // The engine's own sentence (Orkeon #467) follows the cause's, in English as written.
+        Assert.Equal(
+            "The assistant works without the decision models: the decision provider has no API key: set its environment variable, or its ApiKey in the settings"
+                + ": no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey.",
+            await LineOf(""","forgeCircuit":"off","forgeCircuitCause":"no-key","forgeCircuitDetail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey" """));
         // A cause this build does not know is said as the engine wrote it; none is not invented.
         Assert.Equal(
             "The assistant works without the decision models: maintenance.",

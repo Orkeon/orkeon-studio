@@ -67,6 +67,7 @@ public sealed partial class RunEventFieldDriftTests
         { RunObserver, "RunEventKinds.RunDecision", "mode", RunProgress, "private bool ApplyRunDecision(" },
         { RunObserver, "RunEventKinds.RunDecision", "circuit", RunProgress, "private bool ApplyRunDecision(" },
         { RunObserver, "RunEventKinds.RunDecision", "cause", RunProgress, "private bool ApplyRunDecision(" },
+        { RunObserver, "RunEventKinds.RunDecision", "detail", RunProgress, "private bool ApplyRunDecision(" },
         { RouteObserver, "RunEventKinds.AgentRoute", "taskId", RunProgress, "private bool ApplyAgentRoute(" },
         { RouteObserver, "RunEventKinds.AgentEffort", "taskId", RunProgress, "private bool ApplyAgentEffort(" },
         { RouteObserver, "RunEventKinds.AgentEffort", "agentRole", RunProgress, "private bool ApplyAgentEffort(" },

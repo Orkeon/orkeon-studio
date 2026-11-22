@@ -343,6 +343,7 @@
   <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>aucun fournisseur de décision n'est configuré</value></data>
   <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>le fournisseur de décision n'a pas de clé d'API : définissez sa variable d'environnement, ou son ApiKey dans les réglages</value></data>
   <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>cette passe de l'essai s'en passe</value></data>
+  <data name="Studio.Run.NoteCauseWithDetail" xml:space="preserve"><value>{0} : {1}</value></data>
   <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0} : System One a choisi le profil « {1} » ({2} %).</value></data>
   <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0} : profil « {1} », non choisi par System One ({2}).</value></data>
   <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0} : profil « {1} », le plancher de l'échelle auquel le choix de System One est ramené.</value></data>

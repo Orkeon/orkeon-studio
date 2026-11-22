@@ -1406,6 +1406,9 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                     { Length: > 0 } other => other,
                     _ => null,
                 };
+                // The engine's own sentence (Orkeon #467) follows the cause's, in English as written.
+                if (why is not null && _model.ForgeCircuitDetail is { Length: > 0 } detail)
+                    why = _strings.Format(StudioStringKeys.RunNoteCauseWithDetail, why, detail);
                 return why is null
                     ? _strings[StudioStringKeys.WizardAssistantDecisionOff]
                     : _strings.Format(StudioStringKeys.WizardAssistantDecisionOffBecause, why);
@@ -3671,7 +3674,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         {
             _surfacedError = error;
             _statusHoldsError = true;
-            StatusMessage = error.Message is { Length: > 0 } ? $"{error.Code}: {error.Message}" : error.Code;
+            StatusMessage = error.Headline;
             // STUDIO-13: an unrecoverable one is the end of the run, and the card says so with
             // the code and the message; FinishRun adds the exit code and the whole stderr. One the
             // engine says it carries on after (terminal false, Orkeon #453: a brief asked again, a
@@ -4229,7 +4232,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         if (_model.LastError is not { } error)
             return stderr;
 
-        var head = error.Message is { Length: > 0 } ? $"{error.Code}: {error.Message}" : error.Code;
+        var head = error.Headline;
         return stderr.Length > 0 ? head + Environment.NewLine + Environment.NewLine + stderr : head;
     }
 

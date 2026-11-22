@@ -219,8 +219,10 @@ public sealed partial class I18nResourceParityTests
         // floor, measured, not above it.
         // UX lot 03: es raised by one for « {0} min », the device code's lifetime — Spanish
         // abbreviates minutes as English does, a real cognate (the same floor), measured, not above it.
+        // #24: es raised by one for « {0}: {1} », a cause followed by the engine's sentence of it — a
+        // pure format pattern, no words in it (the same floor), measured, not above it.
         ["Strings.fr.resx"] = 65,
-        ["Strings.es.resx"] = 46,
+        ["Strings.es.resx"] = 47,
         ["Strings.de.resx"] = 52,
         ["Strings.zh-Hans.resx"] = 37,
     };

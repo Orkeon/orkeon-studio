@@ -133,6 +133,22 @@ public sealed class RunDecisionAndNotesTests
     }
 
     /// <summary>
+    /// The engine gives the off circuit's own sentence beside its cause (Orkeon #467): the variable and the
+    /// setting the key is read from. It is kept as written; an engine that writes none leaves it null.
+    /// </summary>
+    [Fact]
+    public void A_circuit_off_keeps_the_engines_detail_when_it_gives_one()
+    {
+        const string Detail = "no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey";
+        var model = Fold("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"off","cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}""");
+
+        Assert.Equal(new RunDecisionCircuit("required", false, "no-key") { Detail = Detail }, model.DecisionCircuit);
+
+        var older = Fold("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"off","cause":"no-key"}""");
+        Assert.Null(older.DecisionCircuit!.Detail);
+    }
+
+    /// <summary>
     /// Where a declarative crew picks a profile or a level before any task, or prunes outside one
     /// (Orkeon #460, #461), the event carries no <c>taskId</c>, only the agent's role: the note is kept
     /// under that role. A route can stop at the ladder's <c>floor</c> or <c>ceiling</c>, and a level set

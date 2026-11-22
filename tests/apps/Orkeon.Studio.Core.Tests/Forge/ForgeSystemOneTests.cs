@@ -81,6 +81,7 @@ public sealed partial class ForgeSystemOneTests
         Assert.Equal(ForgeCrewDecisions.Optional, model.CrewDecision);
         Assert.Equal("off", model.ForgeCircuit);
         Assert.Equal("switch", model.ForgeCircuitCause);
+        Assert.Null(model.ForgeCircuitDetail);
 
         // An engine that predates the modes says none of it.
         var older = new ForgeSessionModel();
@@ -300,6 +301,7 @@ public sealed partial class ForgeSystemOneTests
     [InlineData("ForgeEventWriter.cs", "session.started", "crewDecision", false)]
     [InlineData("ForgeEventWriter.cs", "session.started", "forgeCircuit", false)]
     [InlineData("ForgeEventWriter.cs", "session.started", "forgeCircuitCause", false)]
+    [InlineData("ForgeEventWriter.cs", "session.started", "forgeCircuitDetail", false)]
     [InlineData("ForgeEventWriter.cs", "error", "terminal", false)]
     [InlineData("ForgeCost.cs", "cost.updated", "systemOneTokens", false)]
     [InlineData("ForgeRunStages.cs", "run.started", "passes", false)]
@@ -332,6 +334,21 @@ public sealed partial class ForgeSystemOneTests
 
             Assert.True(member.IsMatch(scope), $"{file} writes \"{kind}\" without '{field}'{(inPasses ? " in its passes" : "")}: make ForgeSessionModel read what the forge now writes.");
         });
+    }
+
+    /// <summary>
+    /// The forge writes three <c>error</c> payloads, and only the one with a cause carries the circuit's
+    /// sentence (Orkeon #467): Studio reads <c>cause</c> and <c>detail</c> off that one.
+    /// </summary>
+    [Fact]
+    public void The_forge_error_with_a_cause_carries_its_detail()
+    {
+        var member = static (string field) =>
+            new Regex(@"[{,]\s*" + Regex.Escape(field) + @"\s*(?:=(?![=>])|,|\})", RegexOptions.CultureInvariant);
+        var withCause = PayloadsOf(ForgeSource("ForgeEventWriter.cs"), "error").Where(payload => member("cause").IsMatch(payload)).ToList();
+
+        Assert.True(withCause.Count > 0, "ForgeEventWriter.cs no longer writes an \"error\" with 'cause': make ForgeSessionModel read what the forge now writes.");
+        Assert.All(withCause, payload => Assert.Matches(member("detail"), payload));
     }
 
     /// <summary>A finding travels as the record is serialized: the pass it comes from is the record's <c>circuit</c>.</summary>
@@ -474,6 +491,43 @@ public sealed partial class ForgeSystemOneTests
         Assert.Equal(DecisionCircuitCauses.NoKey, model.LastError!.Cause);
         Assert.True(model.LastError.GoesNoFurther);
         Assert.Contains("TYPESAFE_API_KEY", model.LastError.Message, StringComparison.Ordinal);
+        Assert.Null(model.LastError.Detail);
+    }
+
+    /// <summary>
+    /// The refusal carries the off circuit's own sentence beside its cause (Orkeon #467): it is kept as
+    /// written, and the headline Studio shows follows the engine's message with it.
+    /// </summary>
+    [Fact]
+    public void A_decision_unavailable_error_keeps_the_engines_detail()
+    {
+        var model = new ForgeSessionModel();
+
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"The crew's decision mode is 'required' and the decision provider has no key: give the decision provider its key before its trial.","recoverable":false,"terminal":true,"cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}"""));
+
+        Assert.Equal("no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey", model.LastError!.Detail);
+        Assert.Equal(
+            "FORGE-DECISION-UNAVAILABLE: The crew's decision mode is 'required' and the decision provider has no key: give the decision provider its key before its trial: no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey",
+            model.LastError.Headline);
+
+        // Without a detail, the headline is the code and the message, as before.
+        var older = new ForgeSessionModel();
+        older.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"error","code":"FORGE-DECISION-UNAVAILABLE","message":"Off.","recoverable":false,"terminal":true,"cause":"settings"}"""));
+        Assert.Equal("FORGE-DECISION-UNAVAILABLE: Off.", older.LastError!.Headline);
+    }
+
+    /// <summary>The session states the off circuit's own sentence beside its cause (<c>forgeCircuitDetail</c>, Orkeon #467).</summary>
+    [Fact]
+    public void The_session_keeps_the_engines_detail_of_the_assistants_circuit()
+    {
+        var model = new ForgeSessionModel();
+
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/s/veille","format":"yaml","forgeCircuit":"off","forgeCircuitCause":"no-key","forgeCircuitDetail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}"""));
+        Assert.Equal("no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey", model.ForgeCircuitDetail);
+
+        // A new run of the engine that gives none forgets the previous one's.
+        model.Feed(Parse("""{"v":2,"seq":1,"ts":"t","kind":"session.started","slug":"veille","dir":"/s/veille","format":"yaml","forgeCircuit":"on"}"""));
+        Assert.Null(model.ForgeCircuitDetail);
     }
 
     /// <summary>

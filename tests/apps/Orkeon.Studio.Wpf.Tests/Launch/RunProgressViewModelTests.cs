@@ -560,6 +560,26 @@ public class RunProgressViewModelTests
         Assert.Equal([$"Decision models off: {said} (team mode: optional)."], panel.AgentNotes);
     }
 
+    /// <summary>
+    /// The engine's own sentence of an off circuit (<c>detail</c>, Orkeon #467) follows Studio's, in
+    /// English as written: it names the variable and the setting the key is read from.
+    /// </summary>
+    [Fact]
+    public void The_engines_detail_of_a_circuit_off_follows_the_causes_sentence()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"off","cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}""");
+
+        Assert.Equal(
+            [
+                "Decision models off: the decision provider has no API key: set its environment variable, or its ApiKey in the settings"
+                    + ": no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey (team mode: required).",
+            ],
+            panel.AgentNotes);
+    }
+
     /// <summary>The causes the theory above walks are the engine's, all of them.</summary>
     [Fact]
     public void The_causes_said_are_all_the_engine_defines()

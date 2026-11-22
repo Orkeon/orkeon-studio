@@ -586,6 +586,10 @@ public sealed class RunProgressViewModel : ObservableObject
         var cause = DecisionCircuitCauseKeys.KeyOf(circuit.Cause) is { } key
             ? _strings[key]
             : circuit.Cause ?? "\u2014";
+        // The engine's own sentence (Orkeon #467) follows Studio's, in English as written: it names the
+        // variable and the setting the key is read from, which Studio's sentence cannot.
+        if (circuit.Detail is { Length: > 0 } detail)
+            cause = _strings.Format(StudioStringKeys.RunNoteCauseWithDetail, cause, detail);
         return _strings.Format(StudioStringKeys.RunNoteDecisionOff, mode, cause);
     }
 

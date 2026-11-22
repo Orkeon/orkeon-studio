@@ -273,6 +273,27 @@ public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverabl
     public string? Cause { get; init; }
 
     /// <summary>
+    /// The off circuit's own sentence beside <see cref="Cause"/>, in English as the engine writes it
+    /// (<c>detail</c>, Orkeon #467); null when the cause has none, or the engine predates it.
+    /// </summary>
+    public string? Detail { get; init; }
+
+    /// <summary>
+    /// The error as Studio shows it, in the engine's words: <c>CODE: message</c>, followed by
+    /// <see cref="Detail"/> when the engine gave one (the message's closing full stop gives way to it).
+    /// </summary>
+    public string Headline
+    {
+        get
+        {
+            var head = Message.Length > 0 ? $"{Code}: {Message}" : Code;
+            return Detail is { Length: > 0 } detail
+                ? $"{head.TrimEnd().TrimEnd('.')}: {detail}"
+                : head;
+        }
+    }
+
+    /// <summary>
     /// Whether the session goes no further in this process: what <see cref="Terminal"/> says, else, from an
     /// engine that does not say it, a fatal error (not <see cref="Recoverable"/>), as before.
     /// </summary>
@@ -335,6 +356,13 @@ public sealed class ForgeSessionModel
     /// another word of the engine's, shown as written); null when it does not, or the engine gives none.
     /// </summary>
     public string? ForgeCircuitCause { get; private set; }
+
+    /// <summary>
+    /// The off circuit's own sentence beside <see cref="ForgeCircuitCause"/>, in English as the engine writes
+    /// it (<c>forgeCircuitDetail</c>, Orkeon #467): for <c>no-key</c>, the environment variable and the setting
+    /// the key is read from, never the key; null when the cause has none, or the engine predates it.
+    /// </summary>
+    public string? ForgeCircuitDetail { get; private set; }
 
     /// <summary>How many calls the assistant made to System One on this run of the engine (<c>systemone.answered</c>).</summary>
     public int SystemOneAnswers { get; private set; }
@@ -648,6 +676,7 @@ public sealed class ForgeSessionModel
                 CrewDecision = ForgeCrewDecisions.Normalize(orkeonEvent.GetString("crewDecision"));
                 ForgeCircuit = orkeonEvent.GetString("forgeCircuit");
                 ForgeCircuitCause = orkeonEvent.GetString("forgeCircuitCause");
+                ForgeCircuitDetail = orkeonEvent.GetString("forgeCircuitDetail");
                 SystemOneAnswers = 0;
                 EngineVersion = orkeonEvent.GetString("engine");
                 FinishedStatus = null;
@@ -820,6 +849,7 @@ public sealed class ForgeSessionModel
                 {
                     Terminal = orkeonEvent.GetBool("terminal"),
                     Cause = orkeonEvent.GetString("cause"),
+                    Detail = orkeonEvent.GetString("detail"),
                 };
                 // An error the process goes no further after (terminal, Orkeon #453) is said last before
                 // session.finished: the trial it interrupts is over, and the bench that failed on the

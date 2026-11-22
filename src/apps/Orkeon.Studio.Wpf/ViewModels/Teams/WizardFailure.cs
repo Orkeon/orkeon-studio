@@ -78,7 +78,7 @@ public sealed record WizardFailure(
         };
 
         if (EngineError is { } error)
-            lines.Add(error.Message.Length > 0 ? $"{error.Code}: {error.Message}" : error.Code);
+            lines.Add(error.Headline);
 
         if (Detail.Length > 0)
         {
