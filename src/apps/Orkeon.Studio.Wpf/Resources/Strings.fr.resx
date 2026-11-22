@@ -2034,6 +2034,54 @@
   <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
     <value>Une équipe écrirait profile: auto, le nom du choix automatique — choisissez un autre nom.</value>
   </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} modèles</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>Modèles</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>Une connexion, plusieurs modèles : chacun est un réglage à part entière, nommé connexion.alias, que les équipes et l'échelle de décision peuvent choisir.</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>Ajouter un modèle</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>Alias</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>Chaque modèle a besoin d'un alias dès que la connexion en a plusieurs.</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>Un autre modèle de cette connexion porte déjà cet alias.</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>Un autre réglage porte déjà ce nom.</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>Utilisé par {0} : retirer ce modèle laisse ces équipes sans leur réglage.</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>Réglages de ce modèle — un champ vide reprend celui de la connexion.</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>Comme la connexion</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>Utilisé par {0} : ces équipes ne trouveront plus leur réglage.</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>Supprimer quand même</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>Garder</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>Sélectionner</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Le modèle « {1} » répond déjà à profile: {0} — choisissez un autre nom.</value>
   </data>

@@ -936,11 +936,109 @@
                            Text="{Binding EndpointReadingLine}"
                            Visibility="{Binding EndpointReadingLine, Converter={StaticResource StringPresentToVisibility}}"/>
               </StackPanel>
-              <StackPanel Grid.Column="2">
-                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>
-                <TextBox Style="{StaticResource InputMono}" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
-              </StackPanel>
             </Grid>
+
+            <!-- One connection, several models: a row per model, its alias naming its setting
+                 (connection.alias) and, in expert mode, what it pins over the connection's
+                 settings. The selected row is the one the test, the found models and the
+                 response-budget hint are about. -->
+            <StackPanel Margin="0,14,0,0"
+                        Visibility="{Binding ShowFields, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ModelsSection], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6" TextWrapping="Wrap"
+                         Text="{Binding [Studio.Settings.ModelsHint], Source={x:Static services:I18n.Instance}}"
+                         Visibility="{Binding HasSeveralModels, Converter={StaticResource BooleanToVisibility}}"/>
+              <ItemsControl ItemsSource="{Binding Models}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,0,0,8" Padding="10,8" CornerRadius="6" BorderThickness="1">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                              <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <StackPanel>
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/><ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/>
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.AliasLabel], Source={x:Static services:I18n.Instance}}"/>
+                            <TextBox Style="{StaticResource InputMono}" Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"/>
+                          </StackPanel>
+                          <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>
+                            <TextBox Style="{StaticResource InputMono}" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
+                          </StackPanel>
+                          <controls:ActionBar Grid.Column="4" ButtonHeight="32" VerticalAlignment="Bottom">
+                            <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding SelectCommand}"
+                                    Content="{Binding [Studio.Settings.SelectModel], Source={x:Static services:I18n.Instance}}"/>
+                            <Button Style="{StaticResource BtnDanger}" controls:ButtonSize.Height="32" Command="{Binding RemoveCommand}"
+                                    controls:ButtonIcon.Kind="trash-2"
+                                    Content="{Binding [Studio.Settings.RemoveModel], Source={x:Static services:I18n.Instance}}"/>
+                          </controls:ActionBar>
+                        </Grid>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding HostIdText}"
+                                   Visibility="{Binding HostIdText, Converter={StaticResource StringPresentToVisibility}}">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHostIdIssue}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource WarningInkBrush}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{DynamicResource WarningInkBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="{Binding UsedByText}"
+                                   Visibility="{Binding UsedByText, Converter={StaticResource StringPresentToVisibility}}"/>
+                        <!-- What this model pins over the connection: an empty field inherits it. -->
+                        <StackPanel Margin="0,8,0,0"
+                                    Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}">
+                          <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                                     Text="{Binding [Studio.Settings.ModelOverrides], Source={x:Static services:I18n.Instance}}"/>
+                          <WrapPanel Margin="0,4,0,0">
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblThinking], Source={x:Static services:I18n.Instance}}"/>
+                              <ComboBox Width="180" HorizontalAlignment="Left"
+                                        ItemsSource="{Binding DataContext.ModelThinkingChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        SelectedItem="{Binding Thinking}"
+                                        DisplayMemberPath="Label"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblThinkingEffort], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="100" Text="{Binding EffortText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblMaxTokens], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="100" Text="{Binding MaxTokensText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.LblTimeout], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="90" Text="{Binding TimeoutText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel>
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblTemperature], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="90" Text="{Binding TemperatureText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                          </WrapPanel>
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" HorizontalAlignment="Left"
+                      Command="{Binding AddModelCommand}" controls:ButtonIcon.Kind="plus"
+                      Content="{Binding [Studio.Settings.AddModel], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
 
             <!-- pinned temperature, response budget & timeout: empty = nothing pinned (no
                  temperature is sent: the model applies its own, GAP-36).

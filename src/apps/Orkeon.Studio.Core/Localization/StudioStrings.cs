@@ -2122,6 +2122,54 @@ public static class StudioStringKeys
     /// <summary>"A crew would write profile: auto, the name of the automatic pick — choose another name."</summary>
     public const string ProfileHostIdAuto = "Studio.Settings.HostIdAuto";
 
+    /// <summary>"{0} models"</summary>
+    public const string ProfileConnectionModelCount = "Studio.Settings.ConnectionModelCount";
+
+    /// <summary>"Models"</summary>
+    public const string ProfileModelsSection = "Studio.Settings.ModelsSection";
+
+    /// <summary>"One connection, several models: each one is a setting of its own, named connection.alias, that teams and the decision ladder can pick."</summary>
+    public const string ProfileModelsHint = "Studio.Settings.ModelsHint";
+
+    /// <summary>"Add a model"</summary>
+    public const string ProfileAddModel = "Studio.Settings.AddModel";
+
+    /// <summary>"Remove"</summary>
+    public const string ProfileRemoveModel = "Studio.Settings.RemoveModel";
+
+    /// <summary>"Alias"</summary>
+    public const string ProfileAliasLabel = "Studio.Settings.AliasLabel";
+
+    /// <summary>"Each model needs an alias once the connection has several."</summary>
+    public const string ProfileAliasRequired = "Studio.Settings.AliasRequired";
+
+    /// <summary>"Another model of this connection already has this alias."</summary>
+    public const string ProfileAliasTaken = "Studio.Settings.AliasTaken";
+
+    /// <summary>"Another setting already bears this name."</summary>
+    public const string ProfilePairNameTaken = "Studio.Settings.PairNameTaken";
+
+    /// <summary>"Used by {0}: removing this model leaves those teams without their setting."</summary>
+    public const string ProfileModelUsedBy = "Studio.Settings.ModelUsedBy";
+
+    /// <summary>"Settings of this model — an empty field takes the connection's."</summary>
+    public const string ProfileModelOverrides = "Studio.Settings.ModelOverrides";
+
+    /// <summary>"As the connection"</summary>
+    public const string ProfileThinkingInherit = "Studio.Settings.ThinkingInherit";
+
+    /// <summary>"Used by {0}: those teams will no longer find their setting."</summary>
+    public const string ProfileDeleteUsedWarning = "Studio.Settings.DeleteUsedWarning";
+
+    /// <summary>"Delete anyway"</summary>
+    public const string ProfileDeleteAnyway = "Studio.Settings.DeleteAnyway";
+
+    /// <summary>"Keep"</summary>
+    public const string ProfileKeep = "Studio.Settings.Keep";
+
+    /// <summary>"Select"</summary>
+    public const string ProfileSelectModel = "Studio.Settings.SelectModel";
+
     /// <summary>"The setting “{1}” already answers to profile: {0} — choose another name."</summary>
     public const string ProfileHostIdTakenBySetting = "Studio.Settings.HostIdTakenBySetting";
 
@@ -4261,6 +4309,22 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ProfileHostIdReserved] =
             "A crew would write profile: default, the name reserved for the default setting — choose another name.",
         [StudioStringKeys.ProfileHostIdAuto] = "A crew would write profile: auto, the name of the automatic pick — choose another name.",
+        [StudioStringKeys.ProfileConnectionModelCount] = "{0} models",
+        [StudioStringKeys.ProfileModelsSection] = "Models",
+        [StudioStringKeys.ProfileModelsHint] = "One connection, several models: each one is a setting of its own, named connection.alias, that teams and the decision ladder can pick.",
+        [StudioStringKeys.ProfileAddModel] = "Add a model",
+        [StudioStringKeys.ProfileRemoveModel] = "Remove",
+        [StudioStringKeys.ProfileAliasLabel] = "Alias",
+        [StudioStringKeys.ProfileAliasRequired] = "Each model needs an alias once the connection has several.",
+        [StudioStringKeys.ProfileAliasTaken] = "Another model of this connection already has this alias.",
+        [StudioStringKeys.ProfilePairNameTaken] = "Another setting already bears this name.",
+        [StudioStringKeys.ProfileModelUsedBy] = "Used by {0}: removing this model leaves those teams without their setting.",
+        [StudioStringKeys.ProfileModelOverrides] = "Settings of this model — an empty field takes the connection's.",
+        [StudioStringKeys.ProfileThinkingInherit] = "As the connection",
+        [StudioStringKeys.ProfileDeleteUsedWarning] = "Used by {0}: those teams will no longer find their setting.",
+        [StudioStringKeys.ProfileDeleteAnyway] = "Delete anyway",
+        [StudioStringKeys.ProfileKeep] = "Keep",
+        [StudioStringKeys.ProfileSelectModel] = "Select",
         [StudioStringKeys.ProfileHostIdTakenBySetting] = "The setting “{1}” already answers to profile: {0} — choose another name.",
         [StudioStringKeys.ProfileHostIdTakenByFile] =
             "The settings file already defines profile: {0} by hand, and Studio never changes it — choose another name.",

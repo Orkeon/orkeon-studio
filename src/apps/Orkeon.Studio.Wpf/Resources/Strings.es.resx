@@ -3665,6 +3665,54 @@
   <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
     <value>Un equipo escribiría profile: auto, el nombre de la elección automática: elija otro nombre.</value>
   </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} modelos</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>Modelos</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>Una conexión, varios modelos: cada uno es un ajuste propio, llamado conexión.alias, que los equipos y la escalera de decisión pueden elegir.</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>Añadir un modelo</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>Quitar</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>Nombre corto</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>Cada modelo necesita un alias en cuanto la conexión tiene varios.</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>Otro modelo de esta conexión ya tiene este alias.</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>Otro ajuste ya lleva este nombre.</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>Usado por {0}: quitar este modelo deja a esos equipos sin su ajuste.</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>Ajustes de este modelo: un campo vacío toma el de la conexión.</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>Como la conexión</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>Usado por {0}: esos equipos ya no encontrarán su ajuste.</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>Eliminar de todos modos</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>Conservar</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>Seleccionar</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>El perfil «{1}» ya responde a profile: {0}: elija otro nombre.</value>
   </data>

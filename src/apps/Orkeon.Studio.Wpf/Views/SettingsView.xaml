@@ -164,7 +164,26 @@
 
               <!-- lot 9: one card per model — its name and badges, four label/value rows, and its
                    action bar (R5): the work actions, a rule, « Delete » in the danger tone. -->
-              <ItemsControl ItemsSource="{Binding Profiles.Profiles}" Margin="0,10,0,0">
+              <!-- One group per connection: a connection of several models heads its cards with its name,
+                   its card and its count, and indents them; a connection of one model is its card alone. -->
+              <ItemsControl ItemsSource="{Binding Profiles.Connections}" Margin="0,10,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel>
+                      <StackPanel Margin="0,4,0,6" Visibility="{Binding HasSeveralModels, Converter={StaticResource BooleanToVisibility}}">
+                        <TextBlock Style="{StaticResource Subhead}" Text="{Binding Name}"/>
+                        <TextBlock Style="{StaticResource Hint}" Text="{Binding HeaderLine}"/>
+                      </StackPanel>
+                      <ItemsControl ItemsSource="{Binding Models}">
+                        <ItemsControl.Style>
+                          <Style TargetType="ItemsControl">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding HasSeveralModels}" Value="True">
+                                <Setter Property="Margin" Value="16,0,0,0"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </ItemsControl.Style>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <!-- audit 07/16: the border stays quiet even for the default — the badge says it. -->
@@ -310,8 +329,23 @@
                                   controls:ButtonIcon.Kind="trash-2"
                                   Content="{Binding [Studio.Settings.Delete], Source={x:Static services:I18n.Instance}}"/>
                         </controls:ActionBar>
+                        <!-- A setting teams name is removed only once the card said which ones lose it. -->
+                        <StackPanel Margin="0,10,0,0" Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BooleanToVisibility}}">
+                          <controls:Alert Tone="Warning" Message="{Binding DeleteWarning}"/>
+                          <controls:ActionBar ButtonHeight="32" Margin="0,8,0,0">
+                            <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding KeepCommand}"
+                                    Content="{Binding [Studio.Settings.Keep], Source={x:Static services:I18n.Instance}}"/>
+                            <Button Style="{StaticResource BtnDanger}" controls:ButtonSize.Height="32" Command="{Binding ConfirmDeleteCommand}"
+                                    controls:ButtonIcon.Kind="trash-2"
+                                    Content="{Binding [Studio.Settings.DeleteAnyway], Source={x:Static services:I18n.Instance}}"/>
+                          </controls:ActionBar>
+                        </StackPanel>
                       </StackPanel>
                     </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+                    </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

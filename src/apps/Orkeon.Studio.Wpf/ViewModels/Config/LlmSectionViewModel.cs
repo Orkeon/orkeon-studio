@@ -86,4 +86,8 @@ public sealed class LlmSectionViewModel : DocumentSectionViewModel
     /// <summary>The standing a name typed in the profile editor would have, against this document's entries.</summary>
     public HostProfileCheck CheckHostProfile(string name, string? previousName, bool describesProvider, ModelProfileSet set) =>
         HostLlmProfiles.Check(name, previousName, describesProvider, set, Document);
+
+    /// <summary>The standing one model of a connection being edited would have, against this document's entries.</summary>
+    public HostProfileCheck CheckHostProfile(string pairName, IReadOnlyCollection<string> replaced, IReadOnlyList<string> above, bool describesProvider, ModelProfileSet set) =>
+        HostLlmProfiles.Check(pairName, replaced, above, describesProvider, set, Document);
 }

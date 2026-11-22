@@ -101,8 +101,43 @@ public sealed class ModelProfileItemViewModel : ObservableObject
         SetDefaultCommand = new RelayCommand(() => owner.SetDefault(profile.Name));
         EditCommand = new RelayCommand(() => owner.BeginEdit(profile));
         DuplicateCommand = new RelayCommand(() => owner.Duplicate(profile));
-        DeleteCommand = new RelayCommand(() => owner.Delete(profile.Name), () => owner.CanDelete);
+        DeleteCommand = new RelayCommand(
+            () =>
+            {
+                // A setting teams name is removed only once the card said which ones lose it.
+                if (UsedByTeams.Count > 0 && !IsConfirmingDelete)
+                    IsConfirmingDelete = true;
+                else
+                    owner.Delete(profile.Name);
+            },
+            () => owner.CanDelete);
+        ConfirmDeleteCommand = new RelayCommand(() => owner.Delete(profile.Name), () => owner.CanDelete);
+        KeepCommand = new RelayCommand(() => IsConfirmingDelete = false);
     }
+
+    private bool _isConfirmingDelete;
+
+    /// <summary>Whether the card asks to confirm the removal of a setting teams name.</summary>
+    public bool IsConfirmingDelete
+    {
+        get => _isConfirmingDelete;
+        private set
+        {
+            if (SetProperty(ref _isConfirmingDelete, value))
+                OnPropertyChanged(nameof(DeleteWarning));
+        }
+    }
+
+    /// <summary>The confirmation's line: the teams that would lose their setting.</summary>
+    public string? DeleteWarning => _isConfirmingDelete
+        ? _strings.Format(StudioStringKeys.ProfileDeleteUsedWarning, string.Join(", ", UsedByTeams))
+        : null;
+
+    /// <summary>Removes the setting the confirmation is about.</summary>
+    public RelayCommand ConfirmDeleteCommand { get; }
+
+    /// <summary>Keeps the setting: the confirmation closes.</summary>
+    public RelayCommand KeepCommand { get; }
 
     /// <summary>The profile being shown.</summary>
     public ModelProfile Profile { get; }
@@ -291,7 +326,8 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     private string _name;
     private string? _baseUrl;
     private string? _workspaceId;
-    private string? _model;
+    private ConnectionModelRowViewModel _selectedRow = null!;
+    private readonly IReadOnlyList<string> _previousPairs;
     private string? _apiKeyEnv;
     private string _apiKeyInput = "";
     private ProbeVerdict? _verdict;
@@ -307,7 +343,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     private bool? _thinkingEnabled;
     private string _callMode;
     private string _thinkingEffortText = "";
-    private readonly string? _originalHostId;
+    private readonly IReadOnlyList<string> _originalHostIds;
 
     /// <summary>The model names the last successful connection test found (UC-01).</summary>
     public ObservableCollection<string> AvailableModels { get; } = [];
@@ -343,7 +379,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         ? _strings[StudioStringKeys.SettingsNoModelList]
         : null;
 
-    /// <summary>Fills the Model field with the name carried as the parameter; saves nothing.</summary>
+    /// <summary>Fills the selected model's identifier with the name carried as the parameter; saves nothing.</summary>
     public RelayCommand PickModelCommand { get; }
 
     internal ModelProfileEditorViewModel(
@@ -352,7 +388,25 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         ModelProfile profile,
         string? previousName,
         ModelProfileEditorSeams seams)
+        : this(owner, providers, ModelConnection.Of(profile), previousName, seams)
     {
+    }
+
+    /// <summary>
+    /// The editor over <paramref name="connection"/>: its shared fields, and a row per model, the one of
+    /// alias <paramref name="selectedAlias"/> selected — else the first.
+    /// </summary>
+    internal ModelProfileEditorViewModel(
+        ModelProfilesViewModel owner,
+        IReadOnlyList<LlmPresetInfo> providers,
+        ModelConnection connection,
+        string? previousName,
+        ModelProfileEditorSeams seams,
+        string? selectedAlias = null)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        // The connection's own settings, read as the setting of its first model without what that model pins.
+        var profile = (connection with { Models = null, Model = connection.DeclaredModels[0].Model }).Flatten()[0];
         ArgumentNullException.ThrowIfNull(seams);
         var strings = seams.Strings;
         _owner = owner;
@@ -366,7 +420,6 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         _name = profile.Name;
         _baseUrl = profile.BaseUrl;
         _workspaceId = profile.WorkspaceId;
-        _model = profile.Model;
         _apiKeyEnv = profile.KeyEnvName;
         _temperatureText = profile.Temperature is { } temperature
             ? temperature.ToString(CultureInfo.InvariantCulture)
@@ -383,20 +436,30 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         _thinkingEnabled = profile.ThinkingEnabled;
         _thinkingEffortText = profile.ThinkingEffort ?? "";
         ThinkingChoices = BuildThinkingChoices(strings);
+        ModelThinkingChoices = BuildModelThinkingChoices(strings);
         CallModeChoices = BuildCallModeChoices(strings);
+        _previousPairs = previousName is null ? [] : connection.PairNames;
+        foreach (var model in connection.DeclaredModels)
+        {
+            var pair = previousName is null ? null : ModelConnection.PairName(connection.Name, model.Alias);
+            Models.Add(new ConnectionModelRowViewModel(this, model, pair, pair is null ? [] : owner.TeamsNaming(pair)));
+        }
+
+        SelectRow(Models.FirstOrDefault(row => string.Equals(row.Alias.Trim(), selectedAlias?.Trim(), StringComparison.Ordinal)) ?? Models[0]);
         _callMode = CallModeChoices.FirstOrDefault(c => string.Equals(c.Value, profile.CallMode, StringComparison.OrdinalIgnoreCase))?.Value ?? "Auto";
         // STUDIO-54: the card by its name — a title changes with the language —, recognised from
         // whatever an older setting holds; a setting always has one.
         var card = LlmPresets.CardOf(profile);
         _selectedProvider = providers.FirstOrDefault(p => string.Equals(p.Name, card, StringComparison.Ordinal));
         _otherProvidersExpanded = IsOtherProvider(_selectedProvider);
-        // The id crews may already write: the one this setting was offered under when it opened.
-        _originalHostId = previousName is null ? null : owner.OfferedHostId(previousName);
+        // The ids crews may already write: the ones the connection's models were offered under when it opened.
+        _originalHostIds = [.. _previousPairs.Select(owner.OfferedHostId).OfType<string>()];
 
         SaveCommand = new RelayCommand(Save, () => CanSave);
         CancelCommand = new RelayCommand(() => _owner.CancelEdit());
         SelectProviderCommand = new RelayCommand(p => SelectedProvider = p as LlmPresetInfo);
-        PickModelCommand = new RelayCommand(name => { if (name is string picked) Model = picked; });
+        PickModelCommand = new RelayCommand(name => { if (name is string picked) PickModel(picked); });
+        AddModelCommand = new RelayCommand(AddModel);
         TestConnectionCommand = new AsyncRelayCommand(
             () => TestConnectionAsync(CancellationToken.None), () => !_isTestingConnection);
         StoreKeyCommand = new AsyncRelayCommand(StoreKeyAsync, () => _apiKeyInput.Trim().Length > 0);
@@ -432,6 +495,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(CanSave));
                 OnPropertyChanged(nameof(NameCollision));
+                RefreshRows();
                 OnHostProfileChanged();
                 SaveCommand.RaiseCanExecuteChanged();
             }
@@ -529,21 +593,143 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         !string.IsNullOrWhiteSpace(_workspaceId)
         || StudioEndpointReading.ProviderOf(_baseUrl) == LlmProviderKeys.Anthropic;
 
-    /// <summary>Model identifier (expert field).</summary>
+    /// <summary>The selected model's identifier (expert field): the model of the row the test is about.</summary>
     public string? Model
     {
-        get => _model;
+        get => _selectedRow.Model;
+        set => _selectedRow.Model = value;
+    }
+
+    /// <summary>The connection's models, in order: at least one.</summary>
+    public ObservableCollection<ConnectionModelRowViewModel> Models { get; } = [];
+
+    /// <summary>
+    /// The model the connection test, the list of found models and the response-budget hint are about;
+    /// picking a found model fills its identifier.
+    /// </summary>
+    public ConnectionModelRowViewModel SelectedModelRow
+    {
+        get => _selectedRow;
         set
         {
-            if (!SetProperty(ref _model, value))
+            if (value is null || ReferenceEquals(value, _selectedRow) || !Models.Contains(value))
                 return;
 
-            OnHostProfileChanged();
-            OnPropertyChanged(nameof(MaxTokensHint));   // the hint follows the model, not the provider
-            SaveCommand.RaiseCanExecuteChanged();
-            ClearConnectionTestResult();   // the test completion ran on the previous model
+            SelectRow(value);
+            OnPropertiesChanged(nameof(SelectedModelRow), nameof(Model), nameof(MaxTokensHint));
+            ClearConnectionTestResult();   // the verdict was about the previous model
         }
     }
+
+    /// <summary>Whether the connection declares several models: each then needs an alias, and shows its own id.</summary>
+    public bool HasSeveralModels => Models.Count > 1;
+
+    /// <summary>Adds an empty model to the connection and selects it, for the next pick or the typed identifier.</summary>
+    public RelayCommand AddModelCommand { get; }
+
+    /// <summary>The thinking choices of a model: the connection's, on, off.</summary>
+    public IReadOnlyList<ThinkingChoice> ModelThinkingChoices { get; private set; }
+
+    internal IStudioStrings Strings => _strings;
+
+    private void SelectRow(ConnectionModelRowViewModel row)
+    {
+        if (_selectedRow is not null)
+            _selectedRow.IsSelected = false;
+        _selectedRow = row;
+        row.IsSelected = true;
+    }
+
+    private void AddModel()
+    {
+        // The first model takes an alias as the second arrives: two models of one connection need two names.
+        if (Models.Count == 1 && Models[0].Alias.Trim().Length == 0)
+            Models[0].Alias = AliasFor(Models[0].Model) ?? "1";
+
+        var row = new ConnectionModelRowViewModel(this, new ConnectionModel(), previousPairName: null, usedBy: []);
+        Models.Add(row);
+        SelectedModelRow = row;
+        OnModelRowsChanged();
+    }
+
+    internal void RemoveModel(ConnectionModelRowViewModel row)
+    {
+        if (Models.Count <= 1 || !Models.Remove(row))
+            return;
+
+        if (ReferenceEquals(row, _selectedRow))
+            SelectedModelRow = Models[0];
+        OnModelRowsChanged();
+    }
+
+    private void PickModel(string picked)
+    {
+        _selectedRow.Model = picked;
+        if (Models.Count > 1 && _selectedRow.Alias.Trim().Length == 0)
+            _selectedRow.Alias = AliasFor(picked) ?? "";
+    }
+
+    /// <summary>The alias a picked identifier suggests: its last segment, « deepseek-v4-flash » for « deepseek/deepseek-v4-flash ».</summary>
+    private static string? AliasFor(string? model)
+    {
+        var name = model?.Trim();
+        if (string.IsNullOrEmpty(name))
+            return null;
+
+        var slash = name.LastIndexOf('/');
+        return slash >= 0 && slash < name.Length - 1 ? name[(slash + 1)..] : name;
+    }
+
+    /// <summary>A row's alias, budget or settings changed: every row and the save say it again.</summary>
+    internal void OnModelRowsChanged()
+    {
+        RefreshRows();
+        OnPropertiesChanged(nameof(HasSeveralModels), nameof(NameCollision), nameof(CanSave));
+        OnHostProfileChanged();
+        SaveCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>A row's model or thinking switch changed: what the test and the hints read follows when it is the selected one.</summary>
+    internal void OnModelRowChanged(ConnectionModelRowViewModel row)
+    {
+        OnModelRowsChanged();
+        if (!ReferenceEquals(row, _selectedRow))
+            return;
+
+        OnPropertiesChanged(nameof(Model), nameof(MaxTokensHint));   // the hint follows the model, not the provider
+        ClearConnectionTestResult();   // the test completion ran on the previous model
+    }
+
+    private void RefreshRows()
+    {
+        foreach (var row in Models)
+        {
+            row.Refresh();
+            row.RaiseCanRemove();
+        }
+    }
+
+    /// <summary>Whether a setting of another connection bears <paramref name="pairName"/>, or another connection the connection's name.</summary>
+    internal bool IsPairNameTaken(string pairName) => _owner.IsPairNameTaken(pairName, PreviousName);
+
+    /// <summary>What <paramref name="row"/>'s pair would be as a host profile, against the settings, the file and the rows above it.</summary>
+    internal HostProfileCheck CheckPair(ConnectionModelRowViewModel row)
+    {
+        var above = Models.TakeWhile(other => !ReferenceEquals(other, row)).Select(other => other.PairName).Where(name => name.Length > 0).ToList();
+        return _owner.CheckHostProfile(
+            row.PairName.Length > 0 ? row.PairName : _name,
+            _previousPairs,
+            above,
+            !string.IsNullOrWhiteSpace(row.Model) || !string.IsNullOrWhiteSpace(_baseUrl));
+    }
+
+    internal static int? PositiveInt(string text) =>
+        int.TryParse(text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value > 0 ? value : null;
+
+    internal static double? FiniteDouble(string text) =>
+        double.TryParse(text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value)
+            ? value
+            : null;
 
     /// <summary>True when the picked provider authenticates requests.</summary>
     public bool RequiresApiKey => _selectedProvider?.RequiresApiKey == true;
@@ -721,8 +907,9 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         // STUDIO-48: « default » is the Llm section's own name, and an id another setting or a
         // hand-written entry holds would make two profiles one.
         && !HostProfile.BlocksSave
+        && Models.All(row => row.IsValid)
         && !(UrlAlwaysVisible
-             && (string.IsNullOrWhiteSpace(_baseUrl) || string.IsNullOrWhiteSpace(_model)))
+             && (string.IsNullOrWhiteSpace(_baseUrl) || Models.Any(row => string.IsNullOrWhiteSpace(row.Model))))
         // STUDIO-55: an address the settings screen would then refuse — not an absolute http(s) URL.
         && (string.IsNullOrWhiteSpace(_baseUrl) || LlmSection.IsAbsoluteHttpUrl(_baseUrl.Trim()))
         // A typed tuning value that does not parse must block the save, not vanish silently.
@@ -731,8 +918,13 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         && (_streamIdleText.Trim().Length == 0 || ParsedStreamIdleSeconds is not null)
         && (_maxTokensText.Trim().Length == 0 || ParsedMaxTokens is not null);
 
-    /// <summary>True while the typed name already belongs to another profile.</summary>
-    public bool NameCollision => _owner.IsNameTaken(_name.Trim(), PreviousName);
+    /// <summary>
+    /// True while the typed name already belongs to another connection, or — for a connection of one
+    /// model — to another setting; with several models, each row says its own pair's collision.
+    /// </summary>
+    public bool NameCollision =>
+        _owner.IsConnectionNameTaken(_name.Trim(), PreviousName)
+        || (!HasSeveralModels && Models[0].NameCollision);
 
     /// <summary>
     /// What the typed name would make of the setting as a host profile (STUDIO-48): the id a crew
@@ -740,25 +932,25 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     /// settings file holds by hand.
     /// </summary>
     public HostProfileCheck HostProfile =>
-        _owner.CheckHostProfile(_name, PreviousName, !string.IsNullOrWhiteSpace(_model) || !string.IsNullOrWhiteSpace(_baseUrl));
+        Models.Select(CheckPair).FirstOrDefault(check => check.BlocksSave) ?? CheckPair(Models[0]);
 
     /// <summary>
     /// The line under the name: <c>profile: &lt;id&gt;</c> as typed, or why it cannot be; null for a
     /// setting without a model, and while the name itself is taken (that line says it).
     /// </summary>
-    public string? HostIdText => NameCollision ? null : HostProfileText.Describe(HostProfile, _strings);
+    /// With several models each row says its own id, and this line is silent.
+    public string? HostIdText => NameCollision || HasSeveralModels ? null : HostProfileText.Describe(HostProfile, _strings);
 
     /// <summary>Whether that line is a problem rather than the name to write.</summary>
-    public bool IsHostIdIssue => !NameCollision && HostProfileText.IsIssue(HostProfile);
+    public bool IsHostIdIssue => !NameCollision && !HasSeveralModels && HostProfileText.IsIssue(HostProfile);
 
     /// <summary>
     /// Said when a setting crews could name is renamed under another id: the crews that write the
     /// old one stop loading. Null otherwise.
     /// </summary>
     public string? HostIdRenamedText =>
-        _originalHostId is { } previous
-        && !string.Equals(HostProfile.Id, previous, StringComparison.OrdinalIgnoreCase)
-            ? _strings.Format(StudioStringKeys.ProfileHostIdRenamed, previous)
+        _originalHostIds.FirstOrDefault(previous => !Models.Any(row => string.Equals(CheckPair(row).Id, previous, StringComparison.OrdinalIgnoreCase))) is { } gone
+            ? _strings.Format(StudioStringKeys.ProfileHostIdRenamed, gone)
             : null;
 
     /// <summary>
@@ -977,6 +1169,13 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         new CallModeChoice("Stream", strings[StudioStringKeys.SettingsCallModeStream]),
     ];
 
+    private static ThinkingChoice[] BuildModelThinkingChoices(IStudioStrings strings) =>
+    [
+        new ThinkingChoice(null, strings[StudioStringKeys.ProfileThinkingInherit]),
+        new ThinkingChoice(true, strings[StudioStringKeys.ProfileThinkingOn]),
+        new ThinkingChoice(false, strings[StudioStringKeys.ProfileThinkingOff]),
+    ];
+
     private static ThinkingChoice[] BuildThinkingChoices(IStudioStrings strings) =>
     [
         new ThinkingChoice(null, strings[StudioStringKeys.ProfileThinkingProviderDefault]),
@@ -1073,7 +1272,19 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             if (string.Equals(providerKey, LlmProviderKeys.Ollama, StringComparison.OrdinalIgnoreCase))
                 return _strings[StudioStringKeys.ProfileMaxTokensHintLocal];
 
-            return LlmModelOutputLimits.MaxOutputTokens(_model, providerKey) switch
+            return MaxTokensHintFor(_selectedRow.Model);
+        }
+    }
+
+    /// <summary>What an empty response-budget field means for <paramref name="model"/> on this connection's card.</summary>
+    internal string MaxTokensHintFor(string? model)
+    {
+        {
+            var providerKey = _selectedProvider?.Name;
+            if (string.Equals(providerKey, LlmProviderKeys.Ollama, StringComparison.OrdinalIgnoreCase))
+                return _strings[StudioStringKeys.ProfileMaxTokensHintLocal];
+
+            return LlmModelOutputLimits.MaxOutputTokens(model, providerKey) switch
             {
                 null => _strings[StudioStringKeys.ProfileMaxTokensHintUnknown],
                 LlmModelOutputLimits.Unbounded => _strings[StudioStringKeys.ProfileMaxTokensHintUnbounded],
@@ -1112,11 +1323,12 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             // so a failure to keep it for the next sessions is said on the profile list.
             _ = StoreKeyCoreAsync(editorClosing: true);
 
-        _owner.CommitEdit(new ModelProfile
+        var models = Models.Select(row => row.ToModel()).ToList();
+        _owner.CommitEdit(new ModelConnection
         {
             Name = _name.Trim(),
             Provider = _selectedProvider?.Name,
-            Model = _model,
+            Models = models,
             BaseUrl = _baseUrl,
             WorkspaceId = string.IsNullOrWhiteSpace(_workspaceId) ? null : _workspaceId.Trim(),
             Temperature = ParsedTemperature,
@@ -1127,7 +1339,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             ThinkingEnabled = _thinkingEnabled,
             ThinkingEffort = string.IsNullOrWhiteSpace(_thinkingEffortText) ? null : _thinkingEffortText.Trim(),
             KeyEnvName = RequiresApiKey ? ApiKeyEnvName : null,
-        }, PreviousName);
+        }, PreviousName, PreviousName is null ? null : [.. Models.Select(row => row.PreviousPairName)]);
     }
 
     /// <summary>
@@ -1164,10 +1376,10 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
             BaseUrl = BaseUrl,
             ApiKey = apiKey,
             WorkspaceId = string.IsNullOrWhiteSpace(_workspaceId) ? null : _workspaceId.Trim(),
-            Model = _model,
-            ThinkingEnabled = _thinkingEnabled,
+            Model = _selectedRow.Model,
+            ThinkingEnabled = _selectedRow.Thinking.Value ?? _thinkingEnabled,
             CheckCompletion = true,
-            Timeout = LlmProbeRequest.TimeoutFor(ParsedTimeoutSeconds),
+            Timeout = LlmProbeRequest.TimeoutFor(PositiveInt(_selectedRow.TimeoutText) ?? ParsedTimeoutSeconds),
             ModelThinkingOverrides = _owner.ModelThinkingOverrides,
         };
 
@@ -1262,7 +1474,10 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
         if (_selectedProvider is { } selected)
             _selectedProvider = providers.FirstOrDefault(p => string.Equals(p.Name, selected.Name, StringComparison.Ordinal)) ?? selected;
         ThinkingChoices = BuildThinkingChoices(_strings);
+        ModelThinkingChoices = BuildModelThinkingChoices(_strings);
         CallModeChoices = BuildCallModeChoices(_strings);
+        OnPropertyChanged(nameof(ModelThinkingChoices));
+        RefreshRows();
 
         OnPropertiesChanged(
             nameof(Providers), nameof(LocalProviders), nameof(CloudProviders), nameof(OtherProviders),
@@ -1364,6 +1579,9 @@ public sealed class ModelProfilesViewModel : ObservableObject
 
     /// <summary>The profile cards, rebuilt after every mutation.</summary>
     public ObservableCollection<ModelProfileItemViewModel> Profiles { get; } = [];
+
+    /// <summary>The cards grouped by connection, in the order of the set: what the tab shows.</summary>
+    public ObservableCollection<ModelConnectionItemViewModel> Connections { get; } = [];
 
     /// <summary>
     /// Raised after a change of the settings moved the host profile of some setting names — one
@@ -1576,18 +1794,30 @@ public sealed class ModelProfilesViewModel : ObservableObject
         ApplyDefaultToSettings();
     }
 
-    internal void BeginEdit(ModelProfile profile) =>
-        Editor = new ModelProfileEditorViewModel(this, ProviderCatalog(), profile, profile.Name, EditorSeams());
+    /// <summary>Opens the editor over the connection of <paramref name="profile"/>, its model selected.</summary>
+    internal void BeginEdit(ModelProfile profile)
+    {
+        var connection = ConnectionOf(profile);
+        Editor = new ModelProfileEditorViewModel(this, ProviderCatalog(), connection, connection.Name, EditorSeams(), profile.Alias);
+    }
 
+    /// <summary>Adds a copy of the connection of <paramref name="profile"/>, every model with it.</summary>
     internal void Duplicate(ModelProfile profile)
     {
-        // A copy is a host profile of its own: its name must not give an id already answered to.
+        var connection = ConnectionOf(profile);
+        // A copy is a host profile of its own per model: none of its pairs may give an id already answered to.
         var name = _set.CopyNameFor(
-            profile.Name,
+            connection.Name,
             _strings[StudioStringKeys.ProfileCopySuffix],
-            candidate => CheckHostProfile(candidate, previousName: null, profile.DescribesProvider).BlocksSave);
-        Mutate(_set.Upsert(profile with { Name = name }));
+            candidate => _set.FindConnection(candidate) is not null
+                || (connection with { Name = candidate }).Flatten().Any(pair =>
+                    _set.Find(pair.Name) is not null || CheckHostProfile(pair.Name, previousName: null, pair.DescribesProvider).BlocksSave));
+        Mutate(_set.UpsertConnection(connection with { Name = name }).Set);
     }
+
+    /// <summary>The connection <paramref name="profile"/> is a model of; a setting built on its own is its own connection.</summary>
+    private ModelConnection ConnectionOf(ModelProfile profile) =>
+        _set.FindConnection(profile.Connection) ?? ModelConnection.Of(profile);
 
     internal void Delete(string name)
     {
@@ -1600,21 +1830,32 @@ public sealed class ModelProfilesViewModel : ObservableObject
             ApplyDefaultToSettings();
     }
 
-    internal void CommitEdit(ModelProfile profile, string? previousName)
-    {
-        var wasDefault = previousName is not null
-            && string.Equals(_set.DefaultProfile, previousName, StringComparison.Ordinal);
+    /// <summary>Saves a setting as a connection of one model (<see cref="ModelConnection.Of"/>).</summary>
+    internal void CommitEdit(ModelProfile profile, string? previousName) =>
+        CommitEdit(ModelConnection.Of(profile), previousName, previousPairNames: null);
 
-        // A rename (STUDIO-52): the teams naming the setting follow it first — compared as every
+    /// <summary>
+    /// Saves <paramref name="connection"/>, which replaces the one named <paramref name="previousName"/>;
+    /// each model's previous pair is <paramref name="previousPairNames"/> at its index
+    /// (<see cref="ModelProfileSet.UpsertConnection"/>).
+    /// </summary>
+    internal void CommitEdit(ModelConnection connection, string? previousName, IReadOnlyList<string?>? previousPairNames)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        var oldPairs = previousName is null ? [] : _set.FindConnection(previousName)?.PairNames ?? [];
+        var wasDefault = _set.DefaultProfile is { } elected && oldPairs.Contains(elected, StringComparer.Ordinal);
+        var upsert = _set.UpsertConnection(connection, previousName, previousPairNames);
+
+        // A rename (STUDIO-52): the teams naming each renamed pair follow it first — compared as every
         // launch finds a setting, ordinal —, then the change rebuilds « Used by », mirrors the
         // settings file and writes the launchers of the teams it moved.
-        if (previousName is not null && !string.Equals(previousName, profile.Name, StringComparison.Ordinal))
-            _followRename?.Invoke(previousName, profile.Name);
+        foreach (var (from, to) in upsert.Renames)
+            _followRename?.Invoke(from, to);
 
-        Mutate(_set.Upsert(profile, previousName), previousName is null ? null : [(previousName, profile.Name)]);
+        Mutate(upsert.Set, upsert.Renames);
         Editor = null;
 
-        if (wasDefault || string.Equals(_set.DefaultProfile, profile.Name, StringComparison.Ordinal))
+        if (wasDefault || (_set.DefaultProfile is { } now && connection.Normalized().PairNames.Contains(now, StringComparer.Ordinal)))
             ApplyDefaultToSettings();
     }
 
@@ -1638,6 +1879,27 @@ public sealed class ModelProfilesViewModel : ObservableObject
         _set.Profiles.Any(p =>
             string.Equals(p.Name, name, StringComparison.Ordinal)
             && !string.Equals(p.Name, previousName, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Whether <paramref name="pairName"/> already names a setting of a connection other than
+    /// <paramref name="connection"/>, the one being edited.
+    /// </summary>
+    internal bool IsPairNameTaken(string pairName, string? connection) =>
+        _set.Profiles.Any(p =>
+            string.Equals(p.Name, pairName, StringComparison.Ordinal)
+            && !string.Equals(p.Connection, connection, StringComparison.Ordinal));
+
+    /// <summary>Whether another connection than <paramref name="previousName"/> is named <paramref name="name"/>.</summary>
+    internal bool IsConnectionNameTaken(string name, string? previousName) =>
+        !string.Equals(name, previousName, StringComparison.Ordinal) && _set.FindConnection(name) is not null;
+
+    /// <summary>The teams whose setting is <paramref name="pairName"/>.</summary>
+    internal IReadOnlyList<string> TeamsNaming(string pairName) =>
+        TeamsByProfile().Usage.TryGetValue(pairName, out var teams) ? teams : [];
+
+    /// <summary>The standing one model of the connection being edited would have as a host profile.</summary>
+    internal HostProfileCheck CheckHostProfile(string pairName, IReadOnlyCollection<string> replaced, IReadOnlyList<string> above, bool describesProvider) =>
+        _llm.CheckHostProfile(pairName, replaced, above, describesProvider, _set);
 
     /// <summary>The standing <paramref name="name"/> would have as a host profile (STUDIO-48).</summary>
     internal HostProfileCheck CheckHostProfile(string name, string? previousName, bool describesProvider) =>
@@ -1754,6 +2016,13 @@ public sealed class ModelProfilesViewModel : ObservableObject
                 Host: standing.GetValueOrDefault(profile.Name),
                 FollowingTeams: string.Equals(profile.Name, _set.DefaultProfile, StringComparison.Ordinal) ? following : 0);
             Profiles.Add(new ModelProfileItemViewModel(profile, profileStanding, this, _balances, _strings));
+        }
+
+        Connections.Clear();
+        foreach (var connection in _set.Connections.Where(connection => !string.IsNullOrWhiteSpace(connection.Name)))
+        {
+            var cards = Profiles.Where(card => string.Equals(card.Profile.Connection, connection.Name, StringComparison.Ordinal)).ToList();
+            Connections.Add(new ModelConnectionItemViewModel(connection, cards, _strings));
         }
 
         RebuildProfileNames();

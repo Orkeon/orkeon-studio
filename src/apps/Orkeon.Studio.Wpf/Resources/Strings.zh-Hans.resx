@@ -3665,6 +3665,54 @@
   <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
     <value>团队将写成 profile: auto，这是自动选择的名称——请换一个名称。</value>
   </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} 个模型</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>一个连接，多个模型：每个模型都是独立的设置，命名为 连接.别名，团队和决策阶梯都可以选用。</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>添加模型</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>别名</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>连接包含多个模型时，每个模型都需要别名。</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>此连接中的另一个模型已使用该别名。</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>已有其他设置使用此名称。</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>由 {0} 使用：移除此模型后，这些团队将失去其设置。</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>此模型的设置——留空则沿用连接的设置。</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>与连接相同</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>由 {0} 使用：这些团队将找不到其设置。</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>仍然删除</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>选择</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>配置“{1}”已对应 profile: {0}——请换一个名称。</value>
   </data>

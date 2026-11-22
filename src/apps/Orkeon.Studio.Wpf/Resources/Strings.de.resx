@@ -3665,6 +3665,54 @@
   <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
     <value>Ein Team würde profile: auto schreiben, den Namen der automatischen Auswahl – wählen Sie einen anderen Namen.</value>
   </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} Modelle</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>Modelle</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>Eine Verbindung, mehrere Modelle: Jedes ist eine eigene Einstellung namens verbindung.alias, die Teams und die Entscheidungsleiter wählen können.</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>Modell hinzufügen</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>Kurzname</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>Jedes Modell braucht einen Alias, sobald die Verbindung mehrere hat.</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>Ein anderes Modell dieser Verbindung hat diesen Alias bereits.</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>Eine andere Einstellung trägt diesen Namen bereits.</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>Verwendet von {0}: Wird dieses Modell entfernt, fehlt diesen Teams ihre Einstellung.</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>Einstellungen dieses Modells – ein leeres Feld übernimmt den Wert der Verbindung.</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>Wie die Verbindung</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>Verwendet von {0}: Diese Teams finden ihre Einstellung nicht mehr.</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>Trotzdem löschen</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>Behalten</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>Auswählen</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Das Profil „{1}“ hört bereits auf profile: {0} – wählen Sie einen anderen Namen.</value>
   </data>
