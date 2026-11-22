@@ -625,8 +625,14 @@ public sealed partial class LaunchTabViewModel
             // expert's. A file the engine found not written (Orkeon #392) is a fact, the cap a
             // suspicion: the card takes the first's tone, and its words say both when both hold,
             // on one task or two, so the novice still learns that work was cut short.
+            // The lane is named by the rows' title, translated for the engine's own decision role
+            // («Decision» for "decision"): the completions are matched on the raw identity of the
+            // lane's rows, never on that title.
+            var identities = ownTasks
+                .Select(t => t.Task.AgentRole ?? t.Task.TaskId ?? "—")
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var own = Progress.Model.LastCompletions()
-                .Where(t => t.Success && !t.Skipped && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
+                .Where(t => t.Success && !t.Skipped && identities.Contains(t.AgentRole ?? t.TaskId ?? "—"))
                 .ToList();
             if (own.Exists(t => t.DeliverableMissing))
             {

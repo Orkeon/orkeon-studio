@@ -21,7 +21,7 @@ public sealed class RunPanePresentationTests : IDisposable
             Directory.Delete(_root, recursive: true);
     }
 
-    private static (LaunchTabViewModel Tab, FakeProcessLauncher Launcher) Build(FakeTargetProbe probe)
+    private static (LaunchTabViewModel Tab, FakeProcessLauncher Launcher) Build(FakeTargetProbe probe, IStudioStrings? strings = null)
     {
         var launcher = new FakeProcessLauncher();
         var tab = new LaunchTabViewModel(new LaunchTabDependencies
@@ -32,6 +32,7 @@ public sealed class RunPanePresentationTests : IDisposable
             Directories = new FakeDirectoryProbe(),
             HistoryStore = new FakeLaunchHistoryStore(),
             SettingsStore = new FakeAppSettingsStore(),
+            Strings = strings,
         });
         return (tab, launcher);
     }
@@ -192,6 +193,26 @@ public sealed class RunPanePresentationTests : IDisposable
 
         Assert.Equal("capped", Assert.Single(tab.AgentCards).State);
         Assert.Equal("Succeeded · 1 task cut short", tab.RunBadgeText);
+    }
+
+    /// <summary>
+    /// The engine's own decision task has the lane «Decision», translated, while its completions carry the
+    /// raw role "decision": the lane reads them all the same, in a language whose word is not the role's.
+    /// </summary>
+    [Fact]
+    public async Task The_decision_lane_reads_its_tasks_by_their_raw_role_not_by_its_translated_name()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew), new FakeResxStudioStrings("fr", "fr"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"pick","agentRole":"decision","success":true,"durationMs":900,"endedOnIterationCap":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var lane = Assert.Single(tab.AgentLanes, lane => lane.Name == "Décision");
+        Assert.Equal("capped", lane.State);
     }
 
     private static ProcessOutputLine Skipped(string taskId, string role) => ProcessOutputLine.Now(
