@@ -432,6 +432,9 @@ public sealed class DecisionSection
     /// (<c>Orkeon:Decision:Profiles</c>), which the engine registers as profiles too. A run launched from
     /// Studio is offered more: Studio lays its own model profiles in the run's environment.
     /// </summary>
+    public IReadOnlyList<string> ProfileNames() => ProfilesOf(ToConfiguration(_document.Root));
+
+    /// <inheritdoc cref="ProfileNames"/>
     internal static IReadOnlyList<string> ProfilesOf(IConfiguration configuration) =>
     [
         .. configuration.GetSection(LlmProfilesSection.SectionPath).GetChildren()

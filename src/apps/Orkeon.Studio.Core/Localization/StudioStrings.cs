@@ -2170,6 +2170,27 @@ public static class StudioStringKeys
     /// <summary>"Select"</summary>
     public const string ProfileSelectModel = "Studio.Settings.SelectModel";
 
+    /// <summary>"Move up (cheaper)"</summary>
+    public const string DecisionRungUp = "Studio.Settings.DecisionRungUp";
+
+    /// <summary>"Move down (dearer)"</summary>
+    public const string DecisionRungDown = "Studio.Settings.DecisionRungDown";
+
+    /// <summary>"Remove from the ladder"</summary>
+    public const string DecisionRungRemove = "Studio.Settings.DecisionRungRemove";
+
+    /// <summary>"Add to the ladder"</summary>
+    public const string DecisionRungAdd = "Studio.Settings.DecisionRungAdd";
+
+    /// <summary>"No rung yet: an agent on « profile: auto » fails to load until the ladder names one."</summary>
+    public const string DecisionLadderEmpty = "Studio.Settings.DecisionLadderEmpty";
+
+    /// <summary>"unknown"</summary>
+    public const string DecisionRungUnknown = "Studio.Settings.DecisionRungUnknown";
+
+    /// <summary>"The agent's own"</summary>
+    public const string CompactionProfileNone = "Studio.Settings.CompactionProfileNone";
+
     /// <summary>"The setting “{1}” already answers to profile: {0} — choose another name."</summary>
     public const string ProfileHostIdTakenBySetting = "Studio.Settings.HostIdTakenBySetting";
 
@@ -4325,6 +4346,13 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ProfileDeleteAnyway] = "Delete anyway",
         [StudioStringKeys.ProfileKeep] = "Keep",
         [StudioStringKeys.ProfileSelectModel] = "Select",
+        [StudioStringKeys.DecisionRungUp] = "Move up (cheaper)",
+        [StudioStringKeys.DecisionRungDown] = "Move down (dearer)",
+        [StudioStringKeys.DecisionRungRemove] = "Remove from the ladder",
+        [StudioStringKeys.DecisionRungAdd] = "Add to the ladder",
+        [StudioStringKeys.DecisionLadderEmpty] = "No rung yet: an agent on « profile: auto » fails to load until the ladder names one.",
+        [StudioStringKeys.DecisionRungUnknown] = "unknown",
+        [StudioStringKeys.CompactionProfileNone] = "The agent's own",
         [StudioStringKeys.ProfileHostIdTakenBySetting] = "The setting “{1}” already answers to profile: {0} — choose another name.",
         [StudioStringKeys.ProfileHostIdTakenByFile] =
             "The settings file already defines profile: {0} by hand, and Studio never changes it — choose another name.",

@@ -2082,6 +2082,27 @@
   <data name="Studio.Settings.SelectModel" xml:space="preserve">
     <value>Select</value>
   </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>Move up (cheaper)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>Move down (dearer)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>Remove from the ladder</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>Add to the ladder</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>No rung yet: an agent on « profile: auto » fails to load until the ladder names one.</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>The agent's own</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>The setting “{1}” already answers to profile: {0} — choose another name.</value>
   </data>

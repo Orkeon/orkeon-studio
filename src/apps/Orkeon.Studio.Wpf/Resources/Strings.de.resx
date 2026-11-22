@@ -3713,6 +3713,27 @@
   <data name="Studio.Settings.SelectModel" xml:space="preserve">
     <value>Auswählen</value>
   </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>Nach oben (günstiger)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>Nach unten (teurer)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>Aus der Leiter entfernen</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>Zur Leiter hinzufügen</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>Noch keine Stufe: Ein Agent mit « profile: auto » lädt erst, wenn die Leiter eine nennt.</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>unbekannt</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>Der des Agenten</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Das Profil „{1}“ hört bereits auf profile: {0} – wählen Sie einen anderen Namen.</value>
   </data>

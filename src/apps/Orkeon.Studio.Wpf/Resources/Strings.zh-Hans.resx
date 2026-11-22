@@ -3713,6 +3713,27 @@
   <data name="Studio.Settings.SelectModel" xml:space="preserve">
     <value>选择</value>
   </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>上移（更便宜）</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>下移（更贵）</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>从阶梯中移除</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>添加到阶梯</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>尚无层级：在阶梯指定层级之前，使用 « profile: auto » 的智能体无法加载。</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>智能体自身的</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>配置“{1}”已对应 profile: {0}——请换一个名称。</value>
   </data>

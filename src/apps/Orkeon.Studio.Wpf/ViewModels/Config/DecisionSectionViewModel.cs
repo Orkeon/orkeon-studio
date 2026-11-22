@@ -4,6 +4,7 @@ using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Llm;
 using Orkeon.Studio.Core.Localization;
+using Orkeon.Studio.Core.Profiles;
 using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Config;
@@ -38,8 +39,99 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
         Providers = DecisionSection.Providers
             .Select(descriptor => new DecisionProviderCardViewModel(this, descriptor, _keyStore, _strings))
             .ToList();
+        AddRungCommand = new RelayCommand(AddRung, () => _rungToAdd is not null);
         _strings.CultureChanged += (_, _) => RefreshTexts();
     }
+
+    private ProfileChoiceItem? _rungToAdd;
+
+    /// <summary>
+    /// The model settings the lists name, read at each use; set by the settings screen, which holds
+    /// them. Left null, the lists offer the names the file defines alone.
+    /// </summary>
+    internal Func<ModelProfileSet>? ProfileSet { get; set; }
+
+    /// <summary>The ladder, a row per rung, cheapest first: what <see cref="RouteLadderText"/> spells.</summary>
+    public IReadOnlyList<LadderRungViewModel> Rungs
+    {
+        get
+        {
+            var ladder = Section.RouteLadder;
+            var choices = AllProfileChoices();
+            var unknown = Status.UnknownRungs;
+            return
+            [
+                .. ladder.Select((rung, index) => new LadderRungViewModel(
+                    this, index, rung, ProfileChoices.LabelOf(choices, rung),
+                    unknown.Contains(rung, StringComparer.OrdinalIgnoreCase), index > 0, index < ladder.Count - 1)),
+            ];
+        }
+    }
+
+    /// <summary>Whether the ladder has no rung.</summary>
+    public bool HasNoRung => Section.RouteLadder.Count == 0;
+
+    /// <summary>The profiles a rung may name that the ladder does not name yet.</summary>
+    public IReadOnlyList<ProfileChoiceItem> RungChoices
+    {
+        get
+        {
+            var ladder = Section.RouteLadder;
+            return [.. AllProfileChoices().Where(choice => !ladder.Contains(choice.Id, StringComparer.OrdinalIgnoreCase))];
+        }
+    }
+
+    /// <summary>The profile <see cref="AddRungCommand"/> appends.</summary>
+    public ProfileChoiceItem? RungToAdd
+    {
+        get => _rungToAdd;
+        set
+        {
+            if (SetProperty(ref _rungToAdd, value))
+                AddRungCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>Appends <see cref="RungToAdd"/> to the ladder, as its most expensive rung.</summary>
+    public RelayCommand AddRungCommand { get; }
+
+    private IReadOnlyList<ProfileChoiceItem> AllProfileChoices() =>
+        ProfileChoices.Of(Document, ProfileSet?.Invoke(), withDefault: true);
+
+    private void AddRung()
+    {
+        if (_rungToAdd is not { } choice)
+            return;
+
+        WriteLadder([.. Section.RouteLadder, choice.Id]);
+        RungToAdd = null;
+    }
+
+    internal void MoveRung(int index, int offset)
+    {
+        var ladder = Section.RouteLadder.ToList();
+        var target = index + offset;
+        if (index < 0 || index >= ladder.Count || target < 0 || target >= ladder.Count)
+            return;
+
+        (ladder[index], ladder[target]) = (ladder[target], ladder[index]);
+        WriteLadder(ladder);
+    }
+
+    internal void RemoveRung(int index)
+    {
+        var ladder = Section.RouteLadder.ToList();
+        if (index < 0 || index >= ladder.Count)
+            return;
+
+        ladder.RemoveAt(index);
+        WriteLadder(ladder);
+    }
+
+    private void WriteLadder(IReadOnlyList<string> ladder) => RouteLadderText = string.Join(", ", ladder);
+
+    /// <summary>The model settings changed: the lists that name them say them again.</summary>
+    internal void RefreshProfileChoices() => OnPropertiesChanged(nameof(Rungs), nameof(RungChoices));
 
     private DecisionSection Section => Document.Decision;
 
@@ -218,6 +310,7 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
 
         _status = resolved;
         OnStatusChanged();
+        RefreshProfileChoices();
     }
 
     /// <inheritdoc />
@@ -233,8 +326,9 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
     /// <inheritdoc />
     protected override void OnSectionChanged()
     {
-        OnPropertiesChanged(nameof(Exists), nameof(RouteLadderText), nameof(EffortLevelsText));
+        OnPropertiesChanged(nameof(Exists), nameof(RouteLadderText), nameof(EffortLevelsText), nameof(HasNoRung));
         RefreshVerdict();
+        RefreshProfileChoices();
     }
 
     // Everything the status decides, the status itself first: the shell judges the launchers again on it.
@@ -450,4 +544,43 @@ public sealed class DecisionProviderCardViewModel : ObservableObject
 
         _owner.OnCardChanged(documentChanged: true);
     }
+}
+
+/// <summary>One rung of the decision ladder: the profile it names, and the gestures that move or remove it.</summary>
+public sealed class LadderRungViewModel
+{
+    internal LadderRungViewModel(DecisionSectionViewModel owner, int index, string id, string label, bool isUnknown, bool canMoveUp, bool canMoveDown)
+    {
+        Id = id;
+        Label = label;
+        IsUnknown = isUnknown;
+        Position = index + 1;
+        MoveUpCommand = new RelayCommand(() => owner.MoveRung(index, -1), () => canMoveUp);
+        MoveDownCommand = new RelayCommand(() => owner.MoveRung(index, +1), () => canMoveDown);
+        RemoveCommand = new RelayCommand(() => owner.RemoveRung(index));
+    }
+
+    /// <summary>The name the file writes.</summary>
+    public string Id { get; }
+
+    /// <summary>The setting's name when one offers the id (« mydeepseek.flash »), else the id.</summary>
+    public string Label { get; }
+
+    /// <summary>Whether <see cref="Label"/> differs from <see cref="Id"/>: the id is then shown beside it.</summary>
+    public bool ShowsId => !string.Equals(Id, Label, StringComparison.Ordinal);
+
+    /// <summary>Whether the rung names no profile of these settings: the engine refuses it (<see cref="DecisionSectionViewModel.RouteLadderNote"/>).</summary>
+    public bool IsUnknown { get; }
+
+    /// <summary>The rung's place, 1 for the cheapest.</summary>
+    public int Position { get; }
+
+    /// <summary>Swaps the rung with the cheaper one above it.</summary>
+    public RelayCommand MoveUpCommand { get; }
+
+    /// <summary>Swaps the rung with the dearer one under it.</summary>
+    public RelayCommand MoveDownCommand { get; }
+
+    /// <summary>Takes the rung out of the ladder.</summary>
+    public RelayCommand RemoveCommand { get; }
 }

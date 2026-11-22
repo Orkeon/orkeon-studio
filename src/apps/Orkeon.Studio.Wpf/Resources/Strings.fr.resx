@@ -2082,6 +2082,27 @@
   <data name="Studio.Settings.SelectModel" xml:space="preserve">
     <value>Sélectionner</value>
   </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>Monter (moins cher)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>Descendre (plus cher)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>Retirer de l'échelle</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>Ajouter à l'échelle</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>Aucun niveau pour l'instant : un agent en « profile: auto » ne se charge pas tant que l'échelle n'en nomme aucun.</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>inconnu</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>Celui de l'agent</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Le modèle « {1} » répond déjà à profile: {0} — choisissez un autre nom.</value>
   </data>

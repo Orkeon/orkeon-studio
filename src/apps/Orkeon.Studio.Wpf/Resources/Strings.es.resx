@@ -3713,6 +3713,27 @@
   <data name="Studio.Settings.SelectModel" xml:space="preserve">
     <value>Seleccionar</value>
   </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>Subir (más barato)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>Bajar (más caro)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>Quitar de la escalera</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>Añadir a la escalera</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>Aún no hay ningún nivel: un agente con « profile: auto » no se carga hasta que la escalera nombre uno.</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>desconocido</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>El del agente</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>El perfil «{1}» ya responde a profile: {0}: elija otro nombre.</value>
   </data>

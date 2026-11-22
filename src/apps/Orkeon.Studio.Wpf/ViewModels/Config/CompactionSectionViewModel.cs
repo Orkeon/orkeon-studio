@@ -20,6 +20,27 @@ public sealed class CompactionSectionViewModel : DocumentSectionViewModel
 
     private CompactionSection Section => Document.Compaction;
 
+    /// <summary>The model settings the list names, read at each use; set by the settings screen, which holds them.</summary>
+    internal Func<Orkeon.Studio.Core.Profiles.ModelProfileSet>? ProfileSet { get; set; }
+
+    /// <summary>
+    /// The profiles the summary may run on: none (the agent's own), then the default and every profile
+    /// of these settings, and the name the file writes when it is none of them, shown as itself.
+    /// </summary>
+    public IReadOnlyList<string> ProfileChoices
+    {
+        get
+        {
+            List<string> choices = ["", .. Config.ProfileChoices.Of(Document, ProfileSet?.Invoke(), withDefault: true).Select(choice => choice.Id)];
+            if (Profile.Length > 0 && !choices.Contains(Profile, StringComparer.OrdinalIgnoreCase))
+                choices.Add(Profile);
+            return choices;
+        }
+    }
+
+    /// <summary>The model settings changed: the list says them again.</summary>
+    internal void RefreshProfileChoices() => OnPropertyChanged(nameof(ProfileChoices));
+
     /// <inheritdoc />
     public override bool Exists => Section.Exists;
 

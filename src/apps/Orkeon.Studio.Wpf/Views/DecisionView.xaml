@@ -64,7 +64,49 @@
                    Text="{Binding [Studio.Settings.DecisionPicksIntro], Source={x:Static services:I18n.Instance}}"/>
         <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5" ToolTip="Orkeon:Decision:Route:Ladder"
                    Text="{Binding [Studio.Settings.DecisionLadder], Source={x:Static services:I18n.Instance}}"/>
-        <TextBox Style="{StaticResource InputMono}" Text="{Binding RouteLadderText, UpdateSourceTrigger=LostFocus}"/>
+        <!-- The ladder as a list, cheapest first: each rung names a profile by its setting's
+             name, moves or leaves; the list below adds the profiles it does not name yet. -->
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.DecisionLadderEmpty], Source={x:Static services:I18n.Instance}}"
+                   Visibility="{Binding HasNoRung, Converter={StaticResource BooleanToVisibility}}"/>
+        <ItemsControl ItemsSource="{Binding Rungs}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <DockPanel Margin="0,0,0,4" LastChildFill="True">
+                <TextBlock DockPanel.Dock="Left" Width="24" VerticalAlignment="Center" Style="{StaticResource Hint}" Text="{Binding Position}"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                  <Button Style="{StaticResource IconBtnGhost}" controls:ButtonIcon.Kind="arrow-up" Command="{Binding MoveUpCommand}"
+                          ToolTip="{Binding [Studio.Settings.DecisionRungUp], Source={x:Static services:I18n.Instance}}"
+                          AutomationProperties.Name="{Binding [Studio.Settings.DecisionRungUp], Source={x:Static services:I18n.Instance}}"/>
+                  <Button Style="{StaticResource IconBtnGhost}" controls:ButtonIcon.Kind="arrow-down" Command="{Binding MoveDownCommand}"
+                          ToolTip="{Binding [Studio.Settings.DecisionRungDown], Source={x:Static services:I18n.Instance}}"
+                          AutomationProperties.Name="{Binding [Studio.Settings.DecisionRungDown], Source={x:Static services:I18n.Instance}}"/>
+                  <Button Style="{StaticResource IconBtnGhost}" controls:ButtonIcon.Kind="x" Command="{Binding RemoveCommand}"
+                          ToolTip="{Binding [Studio.Settings.DecisionRungRemove], Source={x:Static services:I18n.Instance}}"
+                          AutomationProperties.Name="{Binding [Studio.Settings.DecisionRungRemove], Source={x:Static services:I18n.Instance}}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <TextBlock FontFamily="{DynamicResource MonoFont}" Text="{Binding Label}"/>
+                  <TextBlock Style="{StaticResource Hint}" Margin="8,0,0,0" Text="{Binding Id}"
+                             Visibility="{Binding ShowsId, Converter={StaticResource BooleanToVisibility}}"/>
+                  <TextBlock Margin="8,0,0,0" Foreground="{DynamicResource WarningInkBrush}"
+                             Text="{Binding [Studio.Settings.DecisionRungUnknown], Source={x:Static services:I18n.Instance}}"
+                             Visibility="{Binding IsUnknown, Converter={StaticResource BooleanToVisibility}}"/>
+                </StackPanel>
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+          <ComboBox Style="{StaticResource ComboL}" Width="280" ItemsSource="{Binding RungChoices}" SelectedItem="{Binding RungToAdd}"
+                    DisplayMemberPath="Label"/>
+          <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Margin="8,0,0,0" controls:ButtonIcon.Kind="plus"
+                  Command="{Binding AddRungCommand}"
+                  Content="{Binding [Studio.Settings.DecisionRungAdd], Source={x:Static services:I18n.Instance}}"/>
+        </StackPanel>
+        <!-- The expert reads and types the ladder as the file spells it. -->
+        <TextBox Style="{StaticResource InputMono}" Margin="0,8,0,0" Text="{Binding RouteLadderText, UpdateSourceTrigger=LostFocus}"
+                 Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
         <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
                    Text="{Binding [Studio.Settings.DecisionLadderHint], Source={x:Static services:I18n.Instance}}"/>
         <controls:Alert Margin="0,8,0,0" Tone="Warning" Message="{Binding RouteLadderNote}"
