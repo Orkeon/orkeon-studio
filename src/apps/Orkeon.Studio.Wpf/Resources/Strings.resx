@@ -663,7 +663,7 @@
   <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Address of the bridge</value></data>
   <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>For example https://host:7410/. It ends with « / », and uses https unless the host is this machine or host.docker.internal.</value></data>
   <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Tools to bridge</value></data>
-  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Names separated by commas, or * alone for every tool the bridge serves.</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Names separated by commas or semicolons, or * alone for every tool the bridge serves.</value></data>
   <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Tools never bridged</value></data>
   <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Environment variable that holds the token</value></data>
   <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host header, when it differs from the address's</value></data>
@@ -672,7 +672,7 @@
   <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>« orkeon bridge serve » runs the tools allowed here for a caller on another machine, which holds the same token. Nothing is served while no tool is allowed. Studio does not start the bridge: run the command in a terminal.</value></data>
   <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Address it listens on</value></data>
   <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Tools served</value></data>
-  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Names separated by commas, or * alone for every bridgeable Orkeon tool.</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Names separated by commas or semicolons, or * alone for every bridgeable Orkeon tool.</value></data>
   <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Tools never served</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Finished without errors.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Failed (code {0}).</value></data>
@@ -2206,10 +2206,10 @@
   <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>What System One picks</value></data>
   <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>A team may let System One pick, for each task, a model profile (llm.profile: auto) and a thinking level (thinking: { effort: auto }). These two lists say what it picks among.</value></data>
   <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Profiles to pick among</value></data>
-  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Two model profiles or more, cheapest first, separated by commas: « default » or a profile of Settings › AI model. Left empty, a team that asks for the pick is refused when it loads.</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Two model profiles or more, cheapest first, separated by commas or semicolons: « default » or a profile of Settings › AI model. Left empty, a team that asks for the pick is refused when it loads.</value></data>
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Thinking levels to pick among</value></data>
-  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Among {0}, cheapest first, separated by commas, in lower case. Left empty: {1}.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Among {0}, cheapest first, separated by commas or semicolons, in lower case. Left empty: {1}.</value></data>
   <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>the tool bridge</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} answers the decision tasks.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} answers the decision tasks, deduced from its section or its key.</value></data>

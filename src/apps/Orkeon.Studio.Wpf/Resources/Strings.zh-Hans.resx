@@ -1684,7 +1684,7 @@
   <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>工具桥地址</value></data>
   <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>例如 https://host:7410/。地址以“/”结尾，并使用 https，除非主机是本机或 host.docker.internal。</value></data>
   <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>要桥接的工具</value></data>
-  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>用逗号分隔的名称，或单独一个 * 表示工具桥提供的所有工具。</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>用逗号或分号分隔的名称，或单独一个 * 表示工具桥提供的所有工具。</value></data>
   <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>从不桥接的工具</value></data>
   <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>保存令牌的环境变量</value></data>
   <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host 标头（与地址不同时）</value></data>
@@ -1693,7 +1693,7 @@
   <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>“orkeon bridge serve”为另一台机器上持有相同令牌的调用方运行此处允许的工具。未允许任何工具时不提供任何服务。Studio 不会启动工具桥：请在终端中运行该命令。</value></data>
   <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>监听地址</value></data>
   <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>提供的工具</value></data>
-  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>用逗号分隔的名称，或单独一个 * 表示所有可桥接的 Orkeon 工具。</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>用逗号或分号分隔的名称，或单独一个 * 表示所有可桥接的 Orkeon 工具。</value></data>
   <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>从不提供的工具</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>顺利完成，没有错误。</value>
@@ -3919,10 +3919,10 @@
   <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>System One 选择的内容</value></data>
   <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>团队可以让 System One 为每个任务选择模型配置（llm.profile: auto）和思考级别（thinking: { effort: auto }）。这两个列表规定了可选范围。</value></data>
   <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>可选的模型配置</value></data>
-  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>两个或更多模型配置，成本由低到高，用逗号分隔：“default”或“设置 › AI 模型”中的模型配置。留空时，要求此选择的团队在加载时会被拒绝。</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>两个或更多模型配置，成本由低到高，用逗号或分号分隔：“default”或“设置 › AI 模型”中的模型配置。留空时，要求此选择的团队在加载时会被拒绝。</value></data>
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}：这些设置中没有以此命名的模型配置，因此要求此选择的团队在加载时会被拒绝。</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>可选的思考级别</value></data>
-  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>从 {0} 中选取，成本由低到高，用逗号分隔，小写。留空时：{1}。</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>从 {0} 中选取，成本由低到高，用逗号或分号分隔，小写。留空时：{1}。</value></data>
   <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>工具桥</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} 回答决策任务。</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} 回答决策任务（由其配置段或密钥推断）。</value></data>

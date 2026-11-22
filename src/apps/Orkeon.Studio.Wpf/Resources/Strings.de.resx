@@ -1684,7 +1684,7 @@
   <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Adresse der Brücke</value></data>
   <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Zum Beispiel https://host:7410/. Sie endet mit „/“ und verwendet https, außer der Host ist dieser Rechner oder host.docker.internal.</value></data>
   <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Zu überbrückende Werkzeuge</value></data>
-  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Durch Kommas getrennte Namen oder * allein für jedes Werkzeug, das die Brücke bereitstellt.</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Durch Kommas oder Semikolons getrennte Namen oder * allein für jedes Werkzeug, das die Brücke bereitstellt.</value></data>
   <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Werkzeuge, die nie überbrückt werden</value></data>
   <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Umgebungsvariable, die das Token enthält</value></data>
   <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host-Header, wenn er von dem der Adresse abweicht</value></data>
@@ -1693,7 +1693,7 @@
   <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>„orkeon bridge serve“ führt die hier erlaubten Werkzeuge für einen Aufrufer auf einem anderen Rechner aus, der dasselbe Token besitzt. Nichts wird bereitgestellt, solange kein Werkzeug erlaubt ist. Studio startet die Brücke nicht: Führen Sie den Befehl in einem Terminal aus.</value></data>
   <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Adresse, auf der sie lauscht</value></data>
   <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Bereitgestellte Werkzeuge</value></data>
-  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Durch Kommas getrennte Namen oder * allein für jedes überbrückbare Orkeon-Werkzeug.</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Durch Kommas oder Semikolons getrennte Namen oder * allein für jedes überbrückbare Orkeon-Werkzeug.</value></data>
   <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Werkzeuge, die nie bereitgestellt werden</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>Ohne Fehler beendet.</value>
@@ -3919,10 +3919,10 @@
   <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>Was System One wählt</value></data>
   <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>Ein Team kann System One für jede Aufgabe ein Modellprofil (llm.profile: auto) und eine Denkstufe (thinking: { effort: auto }) wählen lassen. Diese beiden Listen legen fest, woraus es wählt.</value></data>
   <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Profile zur Auswahl</value></data>
-  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Zwei oder mehr Modellprofile, das günstigste zuerst, durch Kommas getrennt: „default“ oder ein Profil aus Einstellungen › KI-Modell. Bleibt die Liste leer, wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Zwei oder mehr Modellprofile, das günstigste zuerst, durch Kommas oder Semikolons getrennt: „default“ oder ein Profil aus Einstellungen › KI-Modell. Bleibt die Liste leer, wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: Kein Modellprofil dieser Einstellungen trägt diesen Namen, daher wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Denkstufen zur Auswahl</value></data>
-  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Aus {0}, die günstigste zuerst, durch Kommas getrennt, in Kleinbuchstaben. Bleibt die Liste leer: {1}.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Aus {0}, die günstigste zuerst, durch Kommas oder Semikolons getrennt, in Kleinbuchstaben. Bleibt die Liste leer: {1}.</value></data>
   <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>die Werkzeugbrücke</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben, abgeleitet aus seinem Abschnitt oder seinem Schlüssel.</value></data>

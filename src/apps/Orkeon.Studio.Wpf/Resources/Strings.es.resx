@@ -1684,7 +1684,7 @@
   <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Dirección del puente</value></data>
   <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Por ejemplo https://host:7410/. Termina con «/» y usa https, salvo que el host sea esta máquina o host.docker.internal.</value></data>
   <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Herramientas que se puentean</value></data>
-  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Nombres separados por comas, o * solo para todas las herramientas que sirve el puente.</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Nombres separados por comas o punto y coma, o * solo para todas las herramientas que sirve el puente.</value></data>
   <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Herramientas que nunca se puentean</value></data>
   <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Variable de entorno que contiene el token</value></data>
   <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Encabezado Host, cuando difiere del de la dirección</value></data>
@@ -1693,7 +1693,7 @@
   <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>«orkeon bridge serve» ejecuta las herramientas permitidas aquí para un llamador en otra máquina, que tiene el mismo token. No se sirve nada mientras no se permita ninguna herramienta. Studio no inicia el puente: ejecute el comando en un terminal.</value></data>
   <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Dirección en la que escucha</value></data>
   <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Herramientas servidas</value></data>
-  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Nombres separados por comas, o * solo para todas las herramientas de Orkeon que se pueden puentear.</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Nombres separados por comas o punto y coma, o * solo para todas las herramientas de Orkeon que se pueden puentear.</value></data>
   <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Herramientas que nunca se sirven</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>Terminada sin errores.</value>
@@ -3919,10 +3919,10 @@
   <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>Lo que elige System One</value></data>
   <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>Un equipo puede dejar que System One elija, para cada tarea, un perfil de modelo (llm.profile: auto) y un nivel de razonamiento (thinking: { effort: auto }). Estas dos listas indican entre qué elige.</value></data>
   <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Perfiles entre los que elegir</value></data>
-  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Dos perfiles de modelo o más, el más barato primero, separados por comas: «default» o un perfil de Ajustes › Modelo de IA. Si se deja vacía, un equipo que pida esta elección se rechaza al cargarlo.</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Dos perfiles de modelo o más, el más barato primero, separados por comas o punto y coma: «default» o un perfil de Ajustes › Modelo de IA. Si se deja vacía, un equipo que pida esta elección se rechaza al cargarlo.</value></data>
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: ningún perfil de modelo de estos ajustes lleva ese nombre, así que un equipo que pida esta elección se rechaza al cargarlo.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Niveles de razonamiento entre los que elegir</value></data>
-  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Entre {0}, el más barato primero, separados por comas, en minúsculas. Si se deja vacía: {1}.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Entre {0}, el más barato primero, separados por comas o punto y coma, en minúsculas. Si se deja vacía: {1}.</value></data>
   <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>el puente de herramientas</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} responde a las tareas de decisión.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} responde a las tareas de decisión, deducido de su sección o de su clave.</value></data>

@@ -663,7 +663,7 @@
   <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Adresse du pont</value></data>
   <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Par exemple https://host:7410/. Elle se termine par « / » et utilise https, sauf si l'hôte est cette machine ou host.docker.internal.</value></data>
   <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Outils à ponter</value></data>
-  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules, ou * seul pour tous les outils que le pont sert.</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules ou des points-virgules, ou * seul pour tous les outils que le pont sert.</value></data>
   <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Outils jamais pontés</value></data>
   <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Variable d'environnement qui contient le jeton</value></data>
   <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>En-tête Host, quand il diffère de celui de l'adresse</value></data>
@@ -672,7 +672,7 @@
   <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>« orkeon bridge serve » exécute les outils autorisés ici pour un appelant sur une autre machine, qui détient le même jeton. Rien n'est servi tant qu'aucun outil n'est autorisé. Studio ne démarre pas le pont : lancez la commande dans un terminal.</value></data>
   <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Adresse d'écoute</value></data>
   <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Outils servis</value></data>
-  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules, ou * seul pour tous les outils Orkeon pontables.</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Des noms séparés par des virgules ou des points-virgules, ou * seul pour tous les outils Orkeon pontables.</value></data>
   <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Outils jamais servis</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve"><value>Terminée sans erreur.</value></data>
   <data name="Studio.History.OutcomeFailed" xml:space="preserve"><value>Échouée (code {0}).</value></data>
@@ -2206,10 +2206,10 @@
   <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>Ce que System One choisit</value></data>
   <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>Une équipe peut laisser System One choisir, pour chaque tâche, un profil de modèle (llm.profile: auto) et un niveau de réflexion (thinking: { effort: auto }). Ces deux listes disent parmi quoi il choisit.</value></data>
   <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Profils parmi lesquels choisir</value></data>
-  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Au moins deux profils de modèle, du moins coûteux au plus coûteux, séparés par des virgules : « default » ou un profil de Réglages › Modèle d'IA. Laissée vide, une équipe qui demande ce choix est refusée au chargement.</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Au moins deux profils de modèle, du moins coûteux au plus coûteux, séparés par des virgules ou des points-virgules : « default » ou un profil de Réglages › Modèle d'IA. Laissée vide, une équipe qui demande ce choix est refusée au chargement.</value></data>
   <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0} : aucun profil de modèle de ces réglages ne porte ce nom, une équipe qui demande ce choix est donc refusée au chargement.</value></data>
   <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Niveaux de réflexion parmi lesquels choisir</value></data>
-  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Parmi {0}, du moins coûteux au plus coûteux, séparés par des virgules, en minuscules. Laissée vide : {1}.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Parmi {0}, du moins coûteux au plus coûteux, séparés par des virgules ou des points-virgules, en minuscules. Laissée vide : {1}.</value></data>
   <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>le pont d'outils</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} répond aux tâches de décision.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} répond aux tâches de décision, déduit de sa section ou de sa clé.</value></data>
