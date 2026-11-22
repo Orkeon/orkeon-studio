@@ -1079,7 +1079,7 @@
                           <TextBlock Margin="33,2,0,0" Text="{Binding DecisionDetails}" TextWrapping="Wrap"
                                      ToolTip="{Binding Task.DecisionAnswers}" Style="{StaticResource Hint}"
                                      Visibility="{Binding HasDecisionDetails, Converter={StaticResource BooleanToVisibility}}"/>
-                          <TextBlock Margin="33,2,0,0" Text="{Binding SkipReason}" TextWrapping="Wrap">
+                          <TextBlock Margin="33,2,0,0" Text="{Binding SkipReason}" TextWrapping="Wrap" ToolTip="{Binding SkipReasonRaw}">
                             <TextBlock.Style>
                               <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
                                 <Style.Triggers>

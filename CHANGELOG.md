@@ -74,6 +74,10 @@ Built against the Orkeon main that follows `1.3.0` (System One modes, the decisi
 - **The form screens of the terminal editor scroll.** A screen with more rows than the terminal scrolls, follows the focus and takes the mouse wheel, so every field is reached.
 - **The tool catalogue's `system_one_decide` line sends to the Decision models tab.**
 
+### Fixed
+
+- On the Launch screen, a task a decision skipped no longer shows its agent as failed: the agent's card reads the task that ran, with its tool calls, tokens and duration, and an agent all of whose tasks were skipped reads « Not run ». A skipped task says why in the interface's language (« Skipped: decision controle-couverture answered couverture = complet », a decision not taken, a dependency that did not succeed), the engine's own sentence kept in its tooltip; a decision task the engine answers itself is named « Decision » instead of its bare role.
+
 ## [1.3.0] - 2026-11-18
 
 This release takes the number of the Orkeon release it is built on. On Orkeon `1.3.0`: `OrkeonVersion` moves from `1.2.0` to `1.3.0` (issues #396, #400, #402, #404–#406 and #413–#418), and CI clones the tag `v1.3.0` for the drift tests, which pass on it unchanged. One change in Studio's code follows the forge's new `examples` flag (see Changed); nothing breaks since its 1.2.0.

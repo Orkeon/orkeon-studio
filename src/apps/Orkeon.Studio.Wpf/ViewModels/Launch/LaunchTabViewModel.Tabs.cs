@@ -603,7 +603,14 @@ public sealed partial class LaunchTabViewModel
         if (Progress.RunningTasks.Any(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)))
             return new(name, "running", _strings[StudioStringKeys.RunLaneRunning], string.Empty);
 
-        if (Progress.Tasks.LastOrDefault(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)) is { } last)
+        // A task a condition or a failed dependency skipped never ran: it is no failure of the
+        // agent, and its zero figures say nothing of the work the agent did. The card reads the
+        // agent's tasks that ran; an agent every task of which was skipped did not run.
+        var ownTasks = Progress.Tasks.Where(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (ownTasks.Count > 0 && ownTasks.TrueForAll(t => t.Task.Skipped))
+            return new(name, "notrun", _strings[StudioStringKeys.RunLaneWaiting], string.Empty);
+
+        if (ownTasks.LastOrDefault(t => !t.Task.Skipped) is { } last)
         {
             var detail = string.Join(" · ", new[] { last.ToolCalls, last.Tokens, last.Duration }.Where(part => part.Length > 0));
             if (!last.Success)
@@ -617,7 +624,7 @@ public sealed partial class LaunchTabViewModel
             // suspicion: the card takes the first's tone, and its words say both when both hold,
             // on one task or two, so the novice still learns that work was cut short.
             var own = Progress.Model.LastCompletions()
-                .Where(t => t.Success && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
+                .Where(t => t.Success && !t.Skipped && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
                 .ToList();
             if (own.Exists(t => t.DeliverableMissing))
             {

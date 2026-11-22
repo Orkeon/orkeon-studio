@@ -820,6 +820,10 @@
     <value>Bisher nichts gemeldet.</value>
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Übersprungen: {0}</value></data>
+  <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>Übersprungen: Entscheidung {0} hat {1} geantwortet</value></data>
+  <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>Übersprungen: Entscheidung {0} wurde nicht getroffen</value></data>
+  <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>Übersprungen: eine Aufgabe, von der sie abhängt, war nicht erfolgreich</value></data>
+  <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Aufgabe vorzeitig beendet: Der Agent hat seine Iterationen aufgebraucht, bevor er fertig war. Seine Arbeit ist möglicherweise unvollständig: Prüfen Sie die Dateien, die er schreiben sollte.</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Datei nicht geschrieben: Die Aufgabe war erfolgreich, hat aber die in ihrem Ergebnis genannte Datei nicht geschrieben (oder aktualisiert). Prüfen Sie, ob ihr Agent ein Werkzeug hat, das diese Datei schreibt, und ob die Aufgabe diese Datei verlangt (wurde die Aufgabe auch vorzeitig beendet, geben Sie dem Agenten mehr Iterationen), und starten Sie das Team dann erneut.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Vorzeitig beendet: Dateien prüfen</value></data>

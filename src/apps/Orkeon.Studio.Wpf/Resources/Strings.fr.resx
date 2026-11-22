@@ -321,6 +321,10 @@
   <data name="Studio.Run.Running" xml:space="preserve"><value>En cours…</value></data>
   <data name="Studio.Run.NothingYet" xml:space="preserve"><value>Rien de rapporté pour l'instant.</value></data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Ignorée : {0}</value></data>
+  <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>Ignorée : la décision {0} a répondu {1}</value></data>
+  <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>Ignorée : la décision {0} n'a pas été prise</value></data>
+  <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>Ignorée : une tâche dont elle dépend n'a pas réussi</value></data>
+  <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>Décision</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Tâche écourtée : l'agent a épuisé ses itérations avant de finir. Son travail est peut-être incomplet : vérifiez les fichiers qu'il devait écrire.</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Fichier non écrit : la tâche a réussi, mais n'a pas écrit (ni mis à jour) le fichier que nomme son livrable. Vérifiez que son agent a un outil qui l'écrit et que la tâche demande bien ce fichier (si la tâche a aussi été écourtée, donnez plus d'itérations à l'agent), puis relancez l'équipe.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Écourté : vérifiez ses fichiers</value></data>

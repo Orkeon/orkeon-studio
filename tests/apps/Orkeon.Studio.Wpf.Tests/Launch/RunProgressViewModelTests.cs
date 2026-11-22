@@ -373,6 +373,53 @@ public class RunProgressViewModelTests
         Assert.Equal("decision", panel.Tasks[1].DecisionLabel);
     }
 
+    [Fact]
+    public void The_engines_own_decision_reads_Decision_and_says_no_plain_label_twice()
+    {
+        var panel = Watching();
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.started","taskId":"pick","agentRole":"decision"}""");
+        Assert.Equal("Decision", Assert.Single(panel.RunningTasks).Title);
+
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"pick","agentRole":"decision","success":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}""");
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"late","agentRole":"decision","success":true,"isDecision":true,"defaulted":true}""");
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"relayed","agentRole":"judge","success":true,"isDecision":true,"defaulted":false,"decisionSource":"relay"}""");
+
+        Assert.Equal(["Decision", "Decision", "judge"], panel.Tasks.Select(task => task.Title));
+        Assert.Equal(["", "decision (defaulted)", "decision (relay)"], panel.Tasks.Select(task => task.DecisionLabel));
+    }
+
+    [Theory]
+    [InlineData(
+        """condition of task 01M82GYVEZ2D5B4TB5BBXTJ3Q3 did not hold on decision task controle-couverture: {\"couverture\":{\"chosen\":\"complet\",\"probabilities\":{\"complet\":0.92,\"partiel\":0.08},\"confidence\":0.84}}""",
+        "Skipped: decision controle-couverture answered couverture = complet")]
+    [InlineData("decision controle-couverture did not run", "Skipped: decision controle-couverture was not taken")]
+    [InlineData(
+        "Task 01M8A (writer) skipped: it depends on task 01M8B, which did not succeed",
+        "Skipped: a task it depends on did not succeed")]
+    [InlineData("something a newer engine says", "Skipped: something a newer engine says")]
+    public void A_skipped_task_says_why_in_words_and_keeps_the_engines_sentence_for_its_tooltip(string reason, string said)
+    {
+        var panel = Watching();
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t","agentRole":"writer","success":false,"skipped":true,"skipReason":"{{reason}}"}""");
+
+        var task = Assert.Single(panel.Tasks);
+        Assert.Equal(said, task.SkipReason);
+        Assert.Equal(reason.Replace("\\\"", "\"", StringComparison.Ordinal), task.SkipReasonRaw);
+    }
+
+    [Fact]
+    public void A_task_that_ran_has_no_skip_reason_nor_raw_sentence()
+    {
+        var panel = Watching();
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t","agentRole":"writer","success":true,"skipReason":"stale"}""");
+
+        Assert.Equal(string.Empty, Assert.Single(panel.Tasks).SkipReason);
+        Assert.Equal(string.Empty, panel.Tasks[0].SkipReasonRaw);
+    }
+
     /// <summary>
     /// Every run states its circuit, a crew that asks nothing of System One included: the line is held
     /// until the run does something it explains, so such a crew's panel stays closed.
