@@ -15,8 +15,8 @@
        and the release pipeline clone the Orkeon tag v$(OrkeonVersion) for the drift tests:
        moving it moves both. -->
   <PropertyGroup>
-    <!-- TEMPORARY: packed from Orkeon fix/issues-448-461 (af992aaed), served by dev-feed/ (see nuget.config). -->
-    <OrkeonVersion>1.3.1-local.202611221410</OrkeonVersion>
+    <!-- TEMPORARY: packed from Orkeon main (e7b9bdfa8), served by dev-feed/ (see nuget.config). -->
+    <OrkeonVersion>1.3.1-local.202611221811</OrkeonVersion>
   </PropertyGroup>
   <ItemGroup Label="Orkeon">
     <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />
@@ -27,6 +27,8 @@
     <!-- Ships Orkeon.Hosting.dll too: the parity and drift tests of Studio.Core.Tests need it. -->
     <PackageVersion Include="Orkeon.Scripting" Version="$(OrkeonVersion)" />
     <PackageVersion Include="Orkeon.Compliance.Vfs" Version="$(OrkeonVersion)" />
+    <!-- Orkeon.Studio.Core.Tests only: the drift tests of the agent-cli provider module (ADR-020). -->
+    <PackageVersion Include="Orkeon.Interop.AgentCli" Version="$(OrkeonVersion)" />
   </ItemGroup>
   <ItemGroup Label="Testing">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
