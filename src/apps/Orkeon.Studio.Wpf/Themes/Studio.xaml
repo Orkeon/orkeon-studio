@@ -1238,6 +1238,39 @@
     </Setter>
   </Style>
 
+  <!-- A switch: a CheckBox for a setting that is on or off rather than a box to tick. The track wears
+       the field recipe off and the accent on, like the box (T-31); the knob slides to the right. -->
+  <Style x:Key="Switch" TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border x:Name="track" Width="34" Height="18" CornerRadius="9" VerticalAlignment="Center"
+                    Background="{DynamicResource FieldBrush}"
+                    BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1">
+              <Ellipse x:Name="knob" Width="12" Height="12" Margin="2,0,0,0"
+                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                       Fill="{DynamicResource FieldBorderBrush}"/>
+            </Border>
+            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="knob" Property="Fill" Value="{DynamicResource AccentFgBrush}"/>
+              <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right"/>
+              <Setter TargetName="knob" Property="Margin" Value="0,0,2,0"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.45"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <Style TargetType="RadioButton">
     <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
     <Setter Property="FontSize" Value="13"/>

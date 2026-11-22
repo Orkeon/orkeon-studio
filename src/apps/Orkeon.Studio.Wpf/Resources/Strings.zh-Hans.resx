@@ -2372,7 +2372,8 @@
   <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>团队是否使用决策模型（System One）？</value></data>
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>它们以概率回答问题：走哪条路径、某项工作是否就绪。此选择在组建团队时确定并随团队保留；选择“可用时使用”时，试运行会执行两次，先使用它们，再不使用。</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>组建时不询问决策模型</value></data>
-  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>助手在组建团队时自身也可能询问它们。未配置决策模型或想要对比时，请勾选此项。</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>助手在组建团队时自身也可能询问它们。未配置决策模型或想要对比时，请开启此项。</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>决策模型已在设置中关闭：助手将在不使用它们的情况下组建团队。团队仍可设计为使用它们。</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>助手仍在处理「{0}」——请先停止它，或等它完成，再打开一个团队。</value>
   </data>

@@ -923,7 +923,8 @@
   <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Should the team use the decision models (System One)?</value></data>
   <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>They answer a question with a probability: which path to take, whether a piece of work is ready. The choice is made when the team is composed and stays with it; with « When available », the trial runs twice, with them then without.</value></data>
   <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Compose without asking the decision models</value></data>
-  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>The assistant itself may ask them while it composes the team. Tick this when they are not set up, or to compare.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>The assistant itself may ask them while it composes the team. Turn this on when they are not set up, or to compare.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>The decision models are switched off in the settings: the assistant composes without them. The team can still be meant to use them.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve"><value>The assistant is still busy with « {0} » — stop it, or let it finish, before opening a team.</value></data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve"><value>Copy</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve"><value>Temperature (optional)</value></data>
