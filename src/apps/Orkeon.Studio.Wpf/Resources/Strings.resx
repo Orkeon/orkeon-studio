@@ -2938,4 +2938,6 @@
   <!-- hrm:L14 begin -->
   <!-- hrm:L14 end -->
 
+  <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>More tools…</value></data>
+  <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>Fewer tools</value></data>
 </root>

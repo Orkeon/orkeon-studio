@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Orkeon.Domain.FileSystem;
+using Orkeon.Studio.Core.Forge;
 using Orkeon.Studio.Core.FileSystem;
 using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Wpf.ViewModels.Mounts;
@@ -71,6 +72,7 @@ public sealed class AgentEditorViewModel : ObservableObject
     public AgentEditorViewModel(IStudioStrings? strings = null)
     {
         _strings = strings ?? EnglishStudioStrings.Instance;
+        Tools = new ToolPaletteViewModel(_strings);
         SaveCommand = new RelayCommand(Save, () => CanSave);
         RemoveCommand = new RelayCommand(Remove, () => !IsNew);
         CancelCommand = new RelayCommand(Close);
@@ -112,21 +114,14 @@ public sealed class AgentEditorViewModel : ObservableObject
         _name = current.Role ?? "";
         _whatItDoes = current.Goal ?? "";
 
-        // The chip set: every tool any agent of this blueprint uses — the palette the
-        // assistant judged relevant for this team. The engine's catalogue re-checks names.
-        var palette = agents.SelectMany(a => a.Tools).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
-        var selected = current.Tools ?? [];
-        Chips.Clear();
-        // The chip reads what the tool does on the team's folders, as on the creation screen:
-        // the first read-only mount for a reading tool, the first writable one for a writing tool.
-        var readScope = FirstScope(teamMounts, readWrite: false);
-        var writeScope = FirstScope(teamMounts, readWrite: true);
-        foreach (var tool in palette)
-            Chips.Add(new AgentToolChipViewModel(
-                tool,
-                WizardToolChips.For(tool, _strings, readScope, writeScope),
-                selected.Contains(tool, StringComparer.Ordinal),
-                OnChipsChanged));
+        // The chip set: the tools the team holds (its agents' and its tasks'), then the rest of
+        // the catalogue a forged crew may draw from. The engine's catalogue re-checks names.
+        Tools.Load(
+            blueprintJson,
+            current.Tools ?? [],
+            FirstScope(teamMounts, readWrite: false),
+            FirstScope(teamMounts, readWrite: true),
+            OnChipsChanged);
 
         IsOpen = true;
         OnPropertiesChanged(nameof(Name), nameof(WhatItDoes), nameof(ScopeInfo), nameof(Title), nameof(IsNew), nameof(KeyLine), nameof(SaveLabel));
@@ -164,8 +159,11 @@ public sealed class AgentEditorViewModel : ObservableObject
         set => SetProperty(ref _whatItDoes, value);
     }
 
-    /// <summary>The capability chips.</summary>
-    public ObservableCollection<AgentToolChipViewModel> Chips { get; } = [];
+    /// <summary>The capability chips: the team's, then the rest of the catalogue.</summary>
+    public ToolPaletteViewModel Tools { get; }
+
+    /// <summary>The team's capability chips (<see cref="ToolPaletteViewModel.Chips"/>).</summary>
+    public ObservableCollection<AgentToolChipViewModel> Chips => Tools.Chips;
 
     /// <summary>The team's folders, informative — rights are per mount, never per agent.</summary>
     public string ScopeInfo => _scopeInfo;
@@ -196,7 +194,7 @@ public sealed class AgentEditorViewModel : ObservableObject
 
     /// <summary>The expert mono line: <c>id: key · tools: […]</c>.</summary>
     public string KeyLine =>
-        $"id: {_agentKey ?? NewKey()} · tools: [{string.Join(", ", Chips.Where(c => c.IsSelected).Select(c => c.Tool))}]";
+        $"id: {_agentKey ?? NewKey()} · tools: [{string.Join(", ", Tools.Selected)}]";
 
     /// <summary>A name is the one thing an agent cannot exist without.</summary>
     public bool CanSave => _name.Trim().Length > 0;
@@ -277,7 +275,7 @@ public sealed class AgentEditorViewModel : ObservableObject
             return blueprint.ToJsonString();
         }
 
-        var tools = new JsonArray([.. Chips.Where(c => c.IsSelected).Select(c => (JsonNode)c.Tool)]);
+        var tools = new JsonArray([.. Tools.Selected.Select(tool => (JsonNode)tool)]);
         var target = _agentKey is { } key
             ? agents.OfType<JsonObject>().FirstOrDefault(o => string.Equals((string?)o["key"], key, StringComparison.Ordinal))
             : null;
@@ -299,17 +297,8 @@ public sealed class AgentEditorViewModel : ObservableObject
     }
 
     /// <summary>A slug key for a new agent, unique among the blueprint's keys.</summary>
-    private string NewKey()
-    {
-        // A blank name previews the placeholder key; a name that keeps no usable character
-        // takes the team fallback, like a team folder would.
-        var basis = string.IsNullOrWhiteSpace(_name) ? "agent" : FolderSlug.From(_name) ?? FolderSlug.TeamFallback;
-        var keys = ReadAgents(_blueprintJson).Select(a => a.Key).ToHashSet(StringComparer.Ordinal);
-        var key = basis;
-        for (var i = 2; keys.Contains(key); i++)
-            key = $"{basis}-{i}";
-        return key;
-    }
+    private string NewKey() =>
+        BlueprintJson.UniqueKey(_name, "agent", ReadAgents(_blueprintJson).Select(a => a.Key));
 
     private static List<(string Key, string? Role, string? Goal, IReadOnlyList<string> Tools)> ReadAgents(string blueprintJson)
     {

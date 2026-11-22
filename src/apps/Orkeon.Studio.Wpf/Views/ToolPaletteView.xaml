@@ -1,0 +1,64 @@
+<!-- The tool chips of an editor of a forged blueprint (the agent editor, the task editor): the
+     team's tools, then « Plus d'outils… » unfolding the rest of the catalogue by family.
+     DataContext: ToolPaletteViewModel. -->
+<UserControl x:Class="Orkeon.Studio.Wpf.Views.ToolPaletteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Orkeon.Studio.Wpf.Controls">
+  <UserControl.Resources>
+    <!-- toggleable chip: the ONE chip recipe (mono 11.5, pill), plus the on/off and hover states
+         a plain ToolChip border cannot carry. UX lot 02: the chip says what the tool does
+         (« lire /docs »), its identifier in the tooltip, and under the words for the expert. -->
+    <DataTemplate x:Key="ToggleToolChip">
+      <Button Command="{Binding ToggleCommand}" Cursor="Hand" Margin="0,0,6,6" ToolTip="{Binding Tool}">
+        <Button.Template>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Chip" Style="{StaticResource ToolChip}"
+                    Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource LineBrush}">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="Label" FontSize="13"
+                           Foreground="{DynamicResource InkMutedBrush}" Text="{Binding Label}"/>
+                <TextBlock FontSize="11.5" FontFamily="{StaticResource MonoFont}"
+                           Foreground="{DynamicResource InkFaintBrush}" Text="{Binding Tool}"
+                           Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+              </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource LineStrongBrush}"/>
+              </Trigger>
+              <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              </DataTrigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Button.Template>
+      </Button>
+    </DataTemplate>
+    <ItemsPanelTemplate x:Key="ChipWrap"><WrapPanel/></ItemsPanelTemplate>
+  </UserControl.Resources>
+  <StackPanel>
+    <ItemsControl ItemsSource="{Binding Chips}" ItemsPanel="{StaticResource ChipWrap}"
+                  ItemTemplate="{StaticResource ToggleToolChip}"/>
+    <Button Style="{StaticResource BtnGhost}" HorizontalAlignment="Left" Margin="0,2,0,0"
+            Command="{Binding ToggleMoreCommand}" controls:ButtonIcon.Kind="plus" Content="{Binding ToggleMoreLabel}"
+            Visibility="{Binding HasMore, Converter={StaticResource BooleanToVisibility}}"/>
+    <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"
+                  Visibility="{Binding ShowMore, Converter={StaticResource BooleanToVisibility}}">
+      <ItemsControl ItemsSource="{Binding MoreFamilies}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Margin="0,0,0,6">
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,5" Text="{Binding Label}"/>
+              <ItemsControl ItemsSource="{Binding Chips}" ItemsPanel="{StaticResource ChipWrap}"
+                            ItemTemplate="{StaticResource ToggleToolChip}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </StackPanel>
+</UserControl>

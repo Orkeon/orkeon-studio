@@ -984,6 +984,12 @@ public static class StudioStringKeys
     /// <summary>"Add to the team" — the agent editor's save label in add mode.</summary>
     public const string AgentEditorAdd = "Studio.Create.Add";
 
+    /// <summary>"More tools…": unfolds the rest of the catalogue under a blueprint editor's chips.</summary>
+    public const string ToolPaletteMore = "Studio.Create.PaletteMore";
+
+    /// <summary>"Fewer tools": folds the rest of the catalogue back.</summary>
+    public const string ToolPaletteLess = "Studio.Create.PaletteLess";
+
     /// <summary>"Save" — the shared action verb.</summary>
     public const string ActSave = "Studio.Common.Save";
 
@@ -3655,6 +3661,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.AgentEditorTitleAdd] = "Add an agent",
         [StudioStringKeys.AgentEditorTitleEdit] = "Edit the agent",
         [StudioStringKeys.AgentEditorAdd] = "Add to the team",
+        [StudioStringKeys.ToolPaletteMore] = "More tools…",
+        [StudioStringKeys.ToolPaletteLess] = "Fewer tools",
         [StudioStringKeys.ActSave] = "Save",
         [StudioStringKeys.DialogExportDestination] = "Choose where to export the team",
         [StudioStringKeys.TeamsMountRo] = "{0} · read",

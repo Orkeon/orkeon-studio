@@ -1443,46 +1443,7 @@
                      Text="{Binding WhatItDoes, UpdateSourceTrigger=PropertyChanged}"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,7"
                        Text="{Binding [Studio.Create.Can], Source={x:Static services:I18n.Instance}}"/>
-            <ItemsControl ItemsSource="{Binding Chips}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <!-- toggleable chip — the ONE chip recipe (mono 11.5, pill), plus the
-                       on/off and hover states a plain ToolChip border cannot carry -->
-                  <!-- UX lot 02: the chip says what the tool does (« lire /docs »), its identifier
-                       in the tooltip, and under the words for the expert. -->
-                  <Button Command="{Binding ToggleCommand}" Cursor="Hand" Margin="0,0,6,6" ToolTip="{Binding Tool}">
-                    <Button.Template>
-                      <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chip" Style="{StaticResource ToolChip}"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource LineBrush}">
-                          <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="Label" FontSize="13"
-                                       Foreground="{DynamicResource InkMutedBrush}" Text="{Binding Label}"/>
-                            <TextBlock FontSize="11.5" FontFamily="{StaticResource MonoFont}"
-                                       Foreground="{DynamicResource InkFaintBrush}" Text="{Binding Tool}"
-                                       Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
-                          </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                          <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource LineStrongBrush}"/>
-                          </Trigger>
-                          <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                            <Setter TargetName="Chip" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
-                            <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                          </DataTrigger>
-                        </ControlTemplate.Triggers>
-                      </ControlTemplate>
-                    </Button.Template>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <views:ToolPaletteView DataContext="{Binding Tools}"/>
             <DockPanel Margin="0,10,0,0">
               <TextBlock DockPanel.Dock="Left" FontSize="13" Foreground="{DynamicResource InkMutedBrush}"
                          MinWidth="132" VerticalAlignment="Center"

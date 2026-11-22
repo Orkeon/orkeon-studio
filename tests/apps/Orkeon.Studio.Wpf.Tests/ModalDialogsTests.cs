@@ -129,6 +129,40 @@ public sealed class ModalDialogsTests
     }
 
     [Fact]
+    public void A_tool_the_team_does_not_hold_yet_is_given_from_the_rest_of_the_catalogue()
+    {
+        var editor = new AgentEditorViewModel();
+        string? sent = null;
+        editor.Open(Blueprint, "redacteur", ["/a:/docs:ro"], json => sent = json);
+
+        Assert.True(editor.Tools.HasMore);
+        Assert.False(editor.Tools.ShowMore);
+        Assert.DoesNotContain(editor.Tools.MoreFamilies.SelectMany(f => f.Chips), c => c.Tool is "file_read" or "shell_command");
+        editor.Tools.ToggleMoreCommand.Execute(null);
+        Assert.True(editor.Tools.ShowMore);
+
+        editor.Tools.MoreFamilies.SelectMany(f => f.Chips).Single(c => c.Tool == "pdf_reader").ToggleCommand.Execute(null);
+        Assert.Contains("pdf_reader", editor.KeyLine, StringComparison.Ordinal);
+        editor.SaveCommand.Execute(null);
+
+        using var document = JsonDocument.Parse(sent!);
+        var agent = document.RootElement.GetProperty("agents").EnumerateArray()
+            .Single(a => a.GetProperty("key").GetString() == "redacteur");
+        Assert.Equal(["file_write", "pdf_reader"], agent.GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
+    }
+
+    [Fact]
+    public void A_tool_a_task_grants_is_among_the_team_chips()
+    {
+        var editor = new AgentEditorViewModel();
+        editor.Open(
+            """{"agents":[{"key":"a","role":"A","goal":"g","tools":["file_read"]}],"tasks":[{"key":"t","description":"d","agent":"a","tools":["grep"]}]}""",
+            "a", [], _ => { });
+
+        Assert.Equal(["file_read", "grep"], editor.Chips.Select(c => c.Tool));
+    }
+
+    [Fact]
     public void A_capability_chip_says_what_the_tool_does_on_the_team_folders_and_keeps_its_id()
     {
         // UX lot 02: « read /docs », never « file_read »; the identifier stays the tooltip and
