@@ -2031,6 +2031,9 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>A crew would write profile: default, the name reserved for the default setting — choose another name.</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>A crew would write profile: auto, the name of the automatic pick — choose another name.</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>The setting “{1}” already answers to profile: {0} — choose another name.</value>
   </data>

@@ -3662,6 +3662,9 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>Ein Team würde profile: default schreiben, den für das Standardprofil reservierten Namen – wählen Sie einen anderen Namen.</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>Ein Team würde profile: auto schreiben, den Namen der automatischen Auswahl – wählen Sie einen anderen Namen.</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Das Profil „{1}“ hört bereits auf profile: {0} – wählen Sie einen anderen Namen.</value>
   </data>

@@ -603,6 +603,64 @@ public sealed class HostLlmProfilesRunnerHostTests : IDisposable
             message => message.Code == ValidationCodes.LlmProfileReservedName && message.Path == "Llm:Profiles:default");
     }
 
+    [Fact]
+    public async Task A_connection_of_two_models_starts_the_host_and_each_of_its_profiles_gets_the_connections_key()
+    {
+        var variable = UniqueVariable();
+        var connection = new ModelConnection
+        {
+            Name = "mydeepseek",
+            Provider = "deepseek",
+            BaseUrl = "https://api.deepseek.com",
+            KeyEnvName = variable,
+            TimeoutSeconds = 600,
+            Models =
+            [
+                new ConnectionModel { Alias = "flash", Model = "deepseek-v4-flash" },
+                new ConnectionModel { Alias = "pro", Model = "deepseek-v4-pro", TimeoutSeconds = 900 },
+            ],
+        };
+        var document = AppSettingsDocument.Parse("""{ "RaggableTree": { "Enabled": false } }""");
+        var set = ModelProfileSet.Empty.UpsertConnection(connection).Set;
+        HostLlmProfiles.Mirror(document, ModelProfileSet.Empty, set);
+        HostLlmProfiles.ElectDefault(document, set.Default!);
+        Assert.DoesNotContain(new AppSettingsValidator(new FakeDirectoryProbe()).Validate(document), message => message.Severity == ValidationSeverity.Error);
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+        var keys = new FakeApiKeyStore();
+        keys.Stage(variable, "sk-ds");
+
+        using var host = Build(settingsPath, HostLlmProfiles.LaunchEnvironment(set, keys.Peek));
+
+        var profiles = host.Services.GetRequiredService<ILlmProfileRegistry>();
+        Assert.Equal(["mydeepseek-flash", "mydeepseek-pro"], profiles.Names);
+        var flash = profiles.Resolve("mydeepseek-flash").Provider.BaseConfig!;
+        var pro = profiles.Resolve("mydeepseek-pro").Provider.BaseConfig!;
+        Assert.Equal(("sk-ds", "deepseek-v4-flash", 600), (flash.ApiKey, flash.Model, flash.TimeoutSeconds));
+        Assert.Equal(("sk-ds", "deepseek-v4-pro", 900), (pro.ApiKey, pro.Model, pro.TimeoutSeconds));
+    }
+
+    [Fact]
+    public async Task An_entry_named_auto_refuses_the_host_and_studio_offers_no_setting_under_it()
+    {
+        var document = AppSettingsDocument.Parse("""
+            {
+              "Llm": {
+                "BaseUrl": "http://localhost:11434", "Model": "qwen3",
+                "Profiles": { "auto": { "BaseUrl": "http://localhost:11500", "Model": "qwen3:32b" } }
+              },
+              "RaggableTree": { "Enabled": false }
+            }
+            """);
+        var settingsPath = Path.Combine(_root, AppSettingsDocument.FileName);
+        await AppSettingsFile.SaveAsync(document, settingsPath, TestContext.Current.CancellationToken);
+
+        Assert.Throws<RunnerSettingsException>(() => Build(settingsPath, new Dictionary<string, string>(StringComparer.Ordinal)));
+        var set = ModelProfileSet.Empty.Upsert(Ollama with { Name = "Auto" });
+        Assert.Equal(HostProfileStatus.AutoName, HostLlmProfiles.Classify(set)["Auto"].Status);
+        Assert.Empty(HostLlmProfiles.Offered(set));
+    }
+
     /// <summary>One row per entry of the list, the two API keys included, the daemon's paths too.</summary>
     public static TheoryData<string> PlaceholderPaths()
     {

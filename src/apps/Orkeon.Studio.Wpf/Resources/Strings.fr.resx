@@ -2031,6 +2031,9 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>Une équipe écrirait profile: default, le nom réservé au modèle par défaut — choisissez un autre nom.</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>Une équipe écrirait profile: auto, le nom du choix automatique — choisissez un autre nom.</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Le modèle « {1} » répond déjà à profile: {0} — choisissez un autre nom.</value>
   </data>

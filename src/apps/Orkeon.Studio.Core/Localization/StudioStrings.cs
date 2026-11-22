@@ -2119,6 +2119,9 @@ public static class StudioStringKeys
     /// <summary>"A crew would write profile: default, the name reserved for the default setting — choose another name."</summary>
     public const string ProfileHostIdReserved = "Studio.Settings.HostIdReserved";
 
+    /// <summary>"A crew would write profile: auto, the name of the automatic pick — choose another name."</summary>
+    public const string ProfileHostIdAuto = "Studio.Settings.HostIdAuto";
+
     /// <summary>"The setting “{1}” already answers to profile: {0} — choose another name."</summary>
     public const string ProfileHostIdTakenBySetting = "Studio.Settings.HostIdTakenBySetting";
 
@@ -4257,6 +4260,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ProfileHostId] = "In a crew file: profile: {0}",
         [StudioStringKeys.ProfileHostIdReserved] =
             "A crew would write profile: default, the name reserved for the default setting — choose another name.",
+        [StudioStringKeys.ProfileHostIdAuto] = "A crew would write profile: auto, the name of the automatic pick — choose another name.",
         [StudioStringKeys.ProfileHostIdTakenBySetting] = "The setting “{1}” already answers to profile: {0} — choose another name.",
         [StudioStringKeys.ProfileHostIdTakenByFile] =
             "The settings file already defines profile: {0} by hand, and Studio never changes it — choose another name.",

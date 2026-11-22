@@ -18,6 +18,9 @@ public enum HostProfileStatus
     /// <summary>The id is <c>default</c>, the reserved name of the <c>Llm</c> section itself.</summary>
     DefaultName,
 
+    /// <summary>The id is <c>auto</c>, the reserved name of the automatic pick (<c>llm: { profile: auto }</c>).</summary>
+    AutoName,
+
     /// <summary>Another setting answers to the same id (<see cref="HostProfileCheck.TakenBy"/>).</summary>
     TakenBySetting,
 
@@ -39,7 +42,7 @@ public sealed record HostProfileCheck(HostProfileStatus Status, string? Id, stri
     /// setting with no provider or no id is legitimate — it serves a team or the assistant — and
     /// is simply offered to no crew.
     /// </summary>
-    public bool BlocksSave => Status is HostProfileStatus.DefaultName or HostProfileStatus.TakenBySetting or HostProfileStatus.TakenByFile;
+    public bool BlocksSave => Status is HostProfileStatus.DefaultName or HostProfileStatus.AutoName or HostProfileStatus.TakenBySetting or HostProfileStatus.TakenByFile;
 }
 
 /// <summary>
@@ -85,8 +88,8 @@ public static class HostLlmProfiles
     private static HostProfileCheck Check(ModelProfile profile, Dictionary<string, string> owners)
     {
         var id = profile.HostProfileId;
-        if (id is not null && LlmProfilesSection.IsDefault(id))
-            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        if (Reserved(id) is { } reserved)
+            return reserved;
 
         if (id is not null && owners.TryGetValue(id, out var owner))
             return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, owner);
@@ -165,18 +168,47 @@ public static class HostLlmProfiles
         string? previousName,
         bool describesProvider,
         ModelProfileSet set,
+        AppSettingsDocument document) =>
+        Check(name, previousName is null ? [] : [previousName], [], describesProvider, set, document);
+
+    /// <summary>
+    /// The standing one model of a connection being edited would have, its pair named
+    /// <paramref name="name"/>: the settings the edit replaces — the connection's pairs as they were —
+    /// own no id, and a model above it in the editor that answers to the same id takes it first, as a
+    /// setting earlier in the set does (<see cref="Classify"/>).
+    /// </summary>
+    /// <param name="name">The pair's name as typed (<see cref="ModelConnection.PairName"/>).</param>
+    /// <param name="replaced">The names of the settings the edit replaces.</param>
+    /// <param name="above">The pair names of the models above it in the editor.</param>
+    /// <param name="describesProvider">Whether the draft names an endpoint or a model.</param>
+    /// <param name="set">The settings as they are.</param>
+    /// <param name="document">The settings file being edited, for the entries written by hand.</param>
+    public static HostProfileCheck Check(
+        string name,
+        IReadOnlyCollection<string> replaced,
+        IReadOnlyList<string> above,
+        bool describesProvider,
+        ModelProfileSet set,
         AppSettingsDocument document)
     {
+        ArgumentNullException.ThrowIfNull(replaced);
+        ArgumentNullException.ThrowIfNull(above);
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(document);
 
         var id = ModelProfile.HostProfileIdOf(name?.Trim());
-        if (id is not null && LlmProfilesSection.IsDefault(id))
-            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        if (Reserved(id) is { } reserved)
+            return reserved;
+
+        if (id is not null
+            && above.FirstOrDefault(other => string.Equals(ModelProfile.HostProfileIdOf(other.Trim()), id, StringComparison.OrdinalIgnoreCase)) is { } sibling)
+        {
+            return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, sibling.Trim());
+        }
 
         if (id is not null
             && set.Profiles.FirstOrDefault(p =>
-                    !string.Equals(p.Name, previousName, StringComparison.Ordinal)
+                    !replaced.Contains(p.Name, StringComparer.Ordinal)
                     && string.Equals(p.HostProfileId, id, StringComparison.OrdinalIgnoreCase)) is { } other)
         {
             return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, other.Name);
@@ -190,6 +222,19 @@ public static class HostLlmProfiles
         return HandWritten(document, set).Any(entry => string.Equals(entry.Id, id, StringComparison.OrdinalIgnoreCase))
             ? new HostProfileCheck(HostProfileStatus.TakenByFile, id)
             : new HostProfileCheck(HostProfileStatus.Offered, id);
+    }
+
+    /// <summary>
+    /// The standing of an id the engine reserves: <c>default</c>, the <c>Llm</c> section itself, and
+    /// <c>auto</c>, the automatic pick — a profile under either refuses the run's start. Null otherwise.
+    /// </summary>
+    private static HostProfileCheck? Reserved(string? id)
+    {
+        if (id is null)
+            return null;
+        if (LlmProfilesSection.IsDefault(id))
+            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        return Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id) ? new HostProfileCheck(HostProfileStatus.AutoName, id) : null;
     }
 
     /// <summary>
@@ -217,24 +262,55 @@ public static class HostLlmProfiles
         ModelProfileSet before,
         ModelProfileSet after,
         string? renamedFrom = null,
-        string? renamedTo = null)
+        string? renamedTo = null) =>
+        Mirror(document, before, after, renamedFrom is not null && renamedTo is not null ? [(renamedFrom, renamedTo)] : []);
+
+    /// <summary>
+    /// <see cref="Mirror(AppSettingsDocument, ModelProfileSet, ModelProfileSet, string?, string?)"/> for
+    /// a change that renamed several settings at once — a renamed connection renames each of its pairs
+    /// (<see cref="ConnectionUpsert.Renames"/>): each entry moves, with what names it.
+    /// </summary>
+    /// <param name="document">The settings file being edited.</param>
+    /// <param name="before">The settings before the change.</param>
+    /// <param name="after">The settings after it.</param>
+    /// <param name="renames">Each renamed setting, its name before and after.</param>
+    /// <returns>True when the document changed.</returns>
+    public static bool Mirror(
+        AppSettingsDocument document,
+        ModelProfileSet before,
+        ModelProfileSet after,
+        IReadOnlyList<(string From, string To)> renames)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(before);
         ArgumentNullException.ThrowIfNull(after);
+        ArgumentNullException.ThrowIfNull(renames);
 
         var was = Offered(before);
         var now = Offered(after);
         var section = document.Llm.Profiles;
         var changed = false;
 
-        if (renamedFrom is not null && renamedTo is not null
-            && was.TryGetValue(renamedFrom, out var oldId)
-            && now.TryGetValue(renamedTo, out var newId)
-            && !string.Equals(oldId, newId, StringComparison.OrdinalIgnoreCase))
+        // Moved in two passes through ids no profile bears, so that two settings swapping their names
+        // never write one entry over the other.
+        var moves = renames
+            .Select(rename => (Old: was.GetValueOrDefault(rename.From), New: now.GetValueOrDefault(rename.To)))
+            .Where(move => move.Old is not null && move.New is not null && !string.Equals(move.Old, move.New, StringComparison.OrdinalIgnoreCase))
+            .Select(move => (Old: move.Old!, New: move.New!))
+            .ToList();
+        var staged = new List<(string Staging, string New)>();
+        foreach (var (oldId, newId) in moves)
         {
-            changed |= section.Rename(oldId, newId);
-            changed |= MoveProfileReferences(document, oldId, newId);
+            var staging = moves.Count == 1 ? newId : $"{oldId}-moving-{staged.Count}";
+            changed |= section.Rename(oldId, staging);
+            changed |= MoveProfileReferences(document, oldId, staging);
+            staged.Add((staging, newId));
+        }
+
+        foreach (var (staging, newId) in staged.Where(move => !string.Equals(move.Staging, move.New, StringComparison.Ordinal)))
+        {
+            changed |= section.Rename(staging, newId);
+            changed |= MoveProfileReferences(document, staging, newId);
         }
 
         var offeredNow = new HashSet<string>(now.Values, StringComparer.OrdinalIgnoreCase);

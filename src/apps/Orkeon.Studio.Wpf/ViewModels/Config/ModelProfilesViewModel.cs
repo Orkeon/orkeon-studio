@@ -1611,7 +1611,7 @@ public sealed class ModelProfilesViewModel : ObservableObject
         if (previousName is not null && !string.Equals(previousName, profile.Name, StringComparison.Ordinal))
             _followRename?.Invoke(previousName, profile.Name);
 
-        Mutate(_set.Upsert(profile, previousName), renamedFrom: previousName, renamedTo: profile.Name);
+        Mutate(_set.Upsert(profile, previousName), previousName is null ? null : [(previousName, profile.Name)]);
         Editor = null;
 
         if (wasDefault || string.Equals(_set.DefaultProfile, profile.Name, StringComparison.Ordinal))
@@ -1672,20 +1672,25 @@ public sealed class ModelProfilesViewModel : ObservableObject
 
     private Task _persist = Task.CompletedTask;
 
-    private void Mutate(ModelProfileSet set, string? renamedFrom = null, string? renamedTo = null)
+    private void Mutate(ModelProfileSet set, IReadOnlyList<(string From, string To)>? renames = null)
     {
+        renames ??= [];
         var before = _set;
         _set = set;
         // STUDIO-48: the settings are the host's profiles — the settings file follows every change
         // (a rename moves the entry, a removal takes it out, the key never goes in).
-        _llm.MirrorModelProfiles(before, set, renamedFrom, renamedTo);
+        _llm.MirrorModelProfiles(before, set, renames);
         Rebuild();
         // STUDIO-50: the launchers of the teams naming a moved setting say it again. A renamed
         // setting's teams already name its new name (STUDIO-52): they move with its former one — a
         // setting renamed to a name no crew can write takes the profile out of their launchers.
         var moved = new HashSet<string>(HostLlmProfiles.MovedNames(before, set), StringComparer.Ordinal);
-        if (renamedFrom is not null && renamedTo is not null && moved.Contains(renamedFrom))
-            moved.Add(renamedTo);
+        foreach (var (from, to) in renames)
+        {
+            if (moved.Contains(from))
+                moved.Add(to);
+        }
+
         if (moved.Count > 0)
             HostProfilesChanged?.Invoke(this, new HostProfilesChangedEventArgs(moved));
         // Writes are chained so two rapid mutations can never interleave on the file. Each write

@@ -3662,6 +3662,9 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>团队将写成 profile: default，这是默认配置的保留名称——请换一个名称。</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>团队将写成 profile: auto，这是自动选择的名称——请换一个名称。</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>配置“{1}”已对应 profile: {0}——请换一个名称。</value>
   </data>
