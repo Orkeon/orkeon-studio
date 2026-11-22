@@ -135,6 +135,12 @@ public static class OrkeonEventParser
         if (string.IsNullOrWhiteSpace(line))
             return false;
 
+        // An event is a JSON object: a log line in plain text ("22:00:01 ...", "Task ...") is
+        // refused before parsing, so that it does not throw and catch a JsonException per line,
+        // which floods a debugger's output with first-chance exceptions on every run.
+        if (line.AsSpan().TrimStart()[0] != '{')
+            return false;
+
         try
         {
             using var document = JsonDocument.Parse(line);
