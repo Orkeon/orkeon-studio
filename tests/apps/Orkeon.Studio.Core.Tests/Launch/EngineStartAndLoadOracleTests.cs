@@ -615,6 +615,15 @@ public sealed class EngineStartAndLoadOracleTests : IDisposable
                 "decision: { mode: optional }\n")
         },
         {
+            // Orkeon #476: the validator and the forge ask a decision task for no expected output; the
+            // factory used to build it with one and crashed on the blank (exit 2). Studio never blocks it.
+            "a decision task that declares no expected output", Provider, "",
+            Crew(
+                "agents:\n  analyst: { role: Analyst, goal: read }\n  judge: { role: Judge, goal: judge }",
+                OneTask + RelayedPick.Replace("\n    expected_output: an answer", "", StringComparison.Ordinal),
+                "decision: { mode: optional }\n")
+        },
+        {
             "a decision profile named by a crew that states none", Provider + ", " + DecisionProfile, "",
             Crew("agents:\n  analyst: { role: Analyst, goal: read, llm: { profile: guarded } }", OneTask, "decision: { mode: none }\n")
         },
