@@ -31,7 +31,7 @@ The test runner is **Microsoft.Testing.Platform, not VSTest** (`global.json`). A
 
 Studio consumes Orkeon as NuGet packages, at the version `OrkeonVersion` sets in `Directory.Packages.props`. The drift tests of `Orkeon.Studio.Core.Tests` read files of an Orkeon checkout: set `ORKEON_SOURCE_ROOT`, or clone Orkeon as `../orkeon`.
 
-The packages come from nuget.org. To build against a newer Orkeon, move `OrkeonVersion` to a published version: CI clones the Orkeon tag `v<OrkeonVersion>` for the drift tests, so the two move together, and a local `../orkeon` should be checked out at that tag too. Never download packages again that the `packages/` cache already holds.
+The packages come from nuget.org. To build against an untagged Orkeon, a branch may add a tracked `dev-feed/` of packages packed from that commit as a source of `nuget.config`, and set `OrkeonSourceRef` in `Directory.Packages.props` to the commit, which CI then clones instead of the tag and the release pipeline refuses; the commit that moves to the Orkeon tag removes both. To build against a newer Orkeon, move `OrkeonVersion` to a published version: CI clones the Orkeon tag `v<OrkeonVersion>` for the drift tests, so the two move together, and a local `../orkeon` should be checked out at that tag too. Never download packages again that the `packages/` cache already holds.
 
 ## Project structure
 

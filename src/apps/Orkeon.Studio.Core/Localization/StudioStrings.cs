@@ -146,11 +146,17 @@ public static class StudioStringKeys
     /// <summary>"script or settings error: check the team file and the settings it uses" — exit code 1.</summary>
     public const string LaunchExitScriptError = "Studio.Run.ExitScriptError";
 
+    /// <summary>What exit code 69 means, after « Exit code 69 — »: the engine refused a team that states decision.mode: required because the decision circuit is off, and what to do about it.</summary>
+    public const string LaunchExitDecisionUnavailable = "Studio.Run.ExitDecisionUnavailable";
+
     /// <summary>"runtime error: the last log lines say why" — exit code 2.</summary>
     public const string LaunchExitRuntimeError = "Studio.Run.ExitRuntimeError";
 
     /// <summary>"run interrupted" — a run cancelled, or exit code 130.</summary>
     public const string LaunchExitCancelled = "Studio.Run.ExitCancelled";
+
+    /// <summary>"run waiting for input..." — exit code 75: the run stopped on a question and waits for its answer.</summary>
+    public const string LaunchExitWaitingForInput = "Studio.Run.ExitWaitingForInput";
 
     /// <summary>"unexpected end: check the output above" — any other exit code.</summary>
     public const string LaunchExitUnknown = "Studio.Run.ExitUnknown";
@@ -176,6 +182,66 @@ public static class StudioStringKeys
 
     /// <summary>"The assistant is not running any more — …"</summary>
     public const string WizardAssistantNotRunning = "Studio.Create.AssistantNotRunning";
+
+    /// <summary>The choice of a team that asks nothing of the decision models: the engine's default.</summary>
+    public const string WizardCrewDecisionNone = "Studio.Create.CrewDecisionNone";
+
+    /// <summary>The choice of a team that runs with the decision models or without them.</summary>
+    public const string WizardCrewDecisionOptional = "Studio.Create.CrewDecisionOptional";
+
+    /// <summary>The choice of a team that cannot run without the decision models.</summary>
+    public const string WizardCrewDecisionRequired = "Studio.Create.CrewDecisionRequired";
+
+    /// <summary>A warning under the mode list: « Always » is chosen and the decision models are off on this machine; {0} is why.</summary>
+    public const string WizardCrewDecisionRequiredOff = "Studio.Create.CrewDecisionRequiredOff";
+
+    /// <summary>A warning under the mode list: « When available » is chosen and the decision models are off on this machine; {0} is why.</summary>
+    public const string WizardCrewDecisionOptionalOff = "Studio.Create.CrewDecisionOptionalOff";
+
+    /// <summary>A meta line under the list of modes, when the list is the user's to change while a session holds the screen and that session's own mode is another: {0} is the session's mode, worded as the list words it.</summary>
+    public const string WizardCrewDecisionSession = "Studio.Create.CrewDecisionSession";
+
+    /// <summary>A meta line under the assistant's switch, locked on because the decision models are switched off in the settings.</summary>
+    public const string WizardDesignWithoutSystemOneLocked = "Studio.Create.DesignWithoutSystemOneLocked";
+
+    /// <summary>The pass of a two-pass trial under way, with the decision models: {0} the pass, {1} how many.</summary>
+    public const string WizardTrialPassWith = "Studio.Create.TrialPassWith";
+
+    /// <summary>The pass of a two-pass trial under way, without the decision models: {0} the pass, {1} how many.</summary>
+    public const string WizardTrialPassWithout = "Studio.Create.TrialPassWithout";
+
+    /// <summary>The pass a line of the trial's activity belongs to, when the trial runs twice: with the decision models.</summary>
+    public const string WizardPassWith = "Studio.Create.PassWith";
+
+    /// <summary>The pass a line of the trial's activity belongs to, when the trial runs twice: without the decision models.</summary>
+    public const string WizardPassWithout = "Studio.Create.PassWithout";
+
+    /// <summary>The verdict of the pass run with the decision models, when it passes.</summary>
+    public const string WizardVerdictWithMet = "Studio.Create.VerdictWithMet";
+
+    /// <summary>The verdict of the pass run with the decision models, when it does not pass.</summary>
+    public const string WizardVerdictWithNotMet = "Studio.Create.VerdictWithNotMet";
+
+    /// <summary>The verdict of the pass run without the decision models, when it passes.</summary>
+    public const string WizardVerdictWithoutMet = "Studio.Create.VerdictWithoutMet";
+
+    /// <summary>The verdict of the pass run without the decision models, when it does not pass.</summary>
+    public const string WizardVerdictWithoutNotMet = "Studio.Create.VerdictWithoutNotMet";
+
+    /// <summary>A meta line under the assistant's name: the assistant itself asks the decision models on this run of the engine; {0} is how many calls it made so far.</summary>
+    public const string WizardAssistantDecisionOn = "Studio.Create.AssistantDecisionOn";
+
+    /// <summary>Follows the line above: {0} is the tokens the assistant's own calls to the decision models spent over the whole session, already counted in the session's total.</summary>
+    public const string WizardAssistantDecisionTokens = "Studio.Create.AssistantDecisionTokens";
+
+    /// <summary>A meta line under the assistant's name: the assistant goes without the decision models on this run, and the engine gave no reason.</summary>
+    public const string WizardAssistantDecisionOff = "Studio.Create.AssistantDecisionOff";
+
+    /// <summary>The same line with its reason; {0} is why, a clause that starts in lower case.</summary>
+    public const string WizardAssistantDecisionOffBecause = "Studio.Create.AssistantDecisionOffBecause";
+
+    /// <summary>Why the assistant goes without the decision models when the user ticked « Compose without asking the decision models ».</summary>
+    public const string WizardAssistantDecisionCauseSwitch = "Studio.Create.AssistantDecisionCauseSwitch";
 
     /// <summary>"Rewriting your request…" — the status line while <c>forge rephrase</c> runs (STUDIO-57).</summary>
     public const string WizardRephrasing = "Studio.Create.Rephrasing";
@@ -504,6 +570,9 @@ public static class StudioStringKeys
     /// <summary>"Interrupted before the end."</summary>
     public const string HistOutcomeCancelled = "Studio.History.OutcomeCancelled";
 
+    /// <summary>"Stopped on a question: waiting for its answer."</summary>
+    public const string HistOutcomeWaiting = "Studio.History.OutcomeWaiting";
+
     /// <summary>"Never started."</summary>
     public const string HistOutcomeNotStarted = "Studio.History.OutcomeNotStarted";
 
@@ -530,6 +599,9 @@ public static class StudioStringKeys
 
     /// <summary>"Cancelled".</summary>
     public const string HistStatusCancelled = "Studio.Run.OutcomeCancelled";
+
+    /// <summary>"Waiting for input": the run stopped on a question (exit code 75).</summary>
+    public const string HistStatusWaiting = "Studio.Run.OutcomeWaiting";
 
     /// <summary>"Not started".</summary>
     public const string HistStatusNotStarted = "Studio.History.OutcomeBadgeNotStarted";
@@ -652,13 +724,16 @@ public static class StudioStringKeys
     /// <summary>The tooltip of <see cref="RunUseDecisionModels"/>: what an unticked box does to the run.</summary>
     public const string RunUseDecisionModelsHint = "Studio.Run.UseDecisionModelsHint";
 
-    /// <summary>"The settings name a decision provider the engine refuses …" — a launch and a check refused on the provider of the file the run reads; {0} is the engine's reason.</summary>
+    /// <summary>"The engine refuses the settings this run reads …" — a launch and a check refused on the settings of the pinned or team file the run reads (the decision settings, the decision profiles, the guardian); {0} is the engine's reason, {1} the file to fix.</summary>
     public const string RunBlockedDecisionProvider = "Studio.Run.BlockedDecisionProvider";
+
+    /// <summary>"… A decision profile and a model profile cannot share a name: rename one of the two …" — a launch and a check refused because a decision profile of the file the run reads bears the name of a model profile, of that file or laid by Studio; {0} is the engine's reason, {1} the file that holds the decision profile.</summary>
+    public const string RunBlockedDecisionSharedName = "Studio.Run.BlockedDecisionSharedName";
 
     /// <summary>"This machine's settings name a decision provider the engine refuses …" — the same, while the CLI picks the settings file itself; {0} is the engine's reason.</summary>
     public const string RunWarnDecisionProvider = "Studio.Run.WarnDecisionProvider";
 
-    /// <summary>"This team cannot run without the decision models …" — a launch refused: the crew needs System One and the run goes without it; {0} lists who holds <c>system_one_decide</c>, {1} is why the run goes without it (<see cref="RunDecisionOffRunSwitch"/>, <see cref="RunDecisionOffSettings"/> or <see cref="RunDecisionOffNoProvider"/>).</summary>
+    /// <summary>"This team cannot run without the decision models …" — a launch refused: the crew needs System One and the run goes without it; {0} lists who holds <c>system_one_decide</c>, {1} is why the run goes without it (<see cref="RunDecisionOffRunSwitch"/>, <see cref="RunDecisionOffSettings"/>, <see cref="RunDecisionOffNoProvider"/> or <see cref="RunDecisionOffNoKey"/>).</summary>
     public const string RunBlockedDecisionRequired = "Studio.Run.BlockedDecisionRequired";
 
     /// <summary>"This team cannot run without the decision models … the CLI picks the settings file itself …" — the warning of a crew that needs System One while the settings the run reads are not known; {0} lists who holds <c>system_one_decide</c>, {1} what this machine's file says, possibly empty.</summary>
@@ -670,25 +745,64 @@ public static class StudioStringKeys
     /// <summary>Why a run goes without the decision models: the settings switch them off.</summary>
     public const string RunDecisionOffSettings = "Studio.Run.DecisionOffSettings";
 
+    /// <summary><see cref="RunDecisionOffSettings"/> when the settings judged are those of a pinned or team file, which Settings does not edit; {0} is the file.</summary>
+    public const string RunDecisionOffSettingsInFile = "Studio.Run.DecisionOffSettingsInFile";
+
     /// <summary>Why a run goes without the decision models: no provider is configured.</summary>
     public const string RunDecisionOffNoProvider = "Studio.Run.DecisionOffNoProvider";
 
-    /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool.</summary>
+    /// <summary>Why a run goes without the decision models: the provider needs a key and none is in place, so the engine turns the circuit off (<c>no-key</c>); {0} the provider, {1} the provider's own variable, left empty.</summary>
+    public const string RunDecisionOffNoKey = "Studio.Run.DecisionOffNoKey";
+
+    /// <summary><see cref="RunDecisionOffNoKey"/> when <c>ApiKeyEnvVar</c> names another variable than the provider's own, which is never repeated; {0} the provider, {1} the setting that names it (<c>Orkeon:Liquid:ApiKeyEnvVar</c>).</summary>
+    public const string RunDecisionOffNoKeyNamedBySetting = "Studio.Run.DecisionOffNoKeyNamedBySetting";
+
+    /// <summary>Why a team needs the decision models: {0} the agents and tasks holding the tool, which the engine withholds once the circuit is off.</summary>
     public const string RunDecisionNeedTool = "Studio.Run.DecisionNeedTool";
 
     /// <summary>Why a team needs the decision models: {0} the decision tasks with no answer once the circuit is off.</summary>
     public const string RunDecisionNeedAnswer = "Studio.Run.DecisionNeedAnswer";
 
+    /// <summary>Why a team needs the decision models: it states decision.mode: required.</summary>
+    public const string RunDecisionNeedMode = "Studio.Run.DecisionNeedMode";
+
+    /// <summary>"… let System One pick their profile (llm.profile: auto), and …" — a launch and a check refused for want of a ladder that serves the pick; {0} is the agents and tasks, {1} what is wrong with the ladder, {2} where to set it (<see cref="RunDecisionLadderFixSettings"/> or <see cref="RunDecisionLadderFixFile"/>).</summary>
+    public const string RunBlockedDecisionLadder = "Studio.Run.BlockedDecisionLadder";
+
+    /// <summary>Where the ladder is set when the settings judged are the machine's: the Decision models section of Settings.</summary>
+    public const string RunDecisionLadderFixSettings = "Studio.Run.DecisionLadderFixSettings";
+
+    /// <summary>Where the ladder is set when the settings judged are those of a pinned or team file, which Settings does not edit; {0} is the file.</summary>
+    public const string RunDecisionLadderFixFile = "Studio.Run.DecisionLadderFixFile";
+
+    /// <summary>A launch refused: {0} the agents and tasks that name a decision profile, in a team that states decision.mode: none.</summary>
+    public const string RunBlockedDecisionModeProfile = "Studio.Run.BlockedDecisionModeProfile";
+
+    /// <summary>A launch refused: {0} the agents and tasks on llm.profile: auto, in a team that states decision.mode: none.</summary>
+    public const string RunBlockedDecisionModeAuto = "Studio.Run.BlockedDecisionModeAuto";
+
+    /// <summary>A launch refused: {0} the agents and tasks on a fail-closed decision profile with a guard stage, on a run that goes without the decision models; {1} is why it goes without them.</summary>
+    public const string RunBlockedDecisionProfileClosed = "Studio.Run.BlockedDecisionProfileClosed";
+
+    /// <summary>What comes before a finding read on the machine's settings while the CLI picks the settings file itself: {0} is the finding.</summary>
+    public const string RunJudgedOnMachineSettings = "Studio.Run.JudgedOnMachineSettings";
+
+    /// <summary>What is wrong with the ladder: there is none of two profiles or more.</summary>
+    public const string RunDecisionLadderMissing = "Studio.Run.DecisionLadderMissing";
+
+    /// <summary>What is wrong with the ladder: {0} the rungs that name a profile neither the settings define nor the launch lays in the run's environment.</summary>
+    public const string RunDecisionLadderUnknownRungs = "Studio.Run.DecisionLadderUnknownRungs";
+
     /// <summary>A warning: {0} the provider, {1} the empty key variable.</summary>
     public const string RunWarnDecisionKeyMissing = "Studio.Run.WarnDecisionKeyMissing";
 
-    /// <summary>A warning: {0} the holders of the tool, {1} the provider.</summary>
-    public const string RunWarnDecisionToolIgnoresSwitch = "Studio.Run.WarnDecisionToolIgnoresSwitch";
+    /// <summary><see cref="RunWarnDecisionKeyMissing"/> when <c>ApiKeyEnvVar</c> names another variable than the provider's own, which is never repeated (a key may have been pasted there); {0} the provider, {1} the setting that names it (<c>Orkeon:Liquid:ApiKeyEnvVar</c>).</summary>
+    public const string RunWarnDecisionKeyMissingNamedBySetting = "Studio.Run.WarnDecisionKeyMissingNamedBySetting";
 
-    /// <summary>A warning: {0} the holders of system_one_decide, dropped by a lenient runner (Orkeon:CrewFactory:StrictTools false) as no provider is configured.</summary>
+    /// <summary>A warning: {0} the holders of system_one_decide, withheld by a lenient runner (Orkeon:CrewFactory:StrictTools false) as the run goes without the decision models; {1} is why it does.</summary>
     public const string RunWarnDecisionToolDropped = "Studio.Run.WarnDecisionToolDropped";
 
-    /// <summary>"This run goes without the decision models …" — the heading of a crew that runs either way, one line per decision task follows; {0} is why the run goes without them.</summary>
+    /// <summary>"This run goes without the decision models …" — the heading of a crew that runs either way, one line per decision task and per thing System One would pick follows; {0} is why the run goes without them.</summary>
     public const string RunInfoDecisionFallback = "Studio.Run.InfoDecisionFallback";
 
     /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/>: {0} is the task, {1} its fallback answers (<c>question = answer</c>, comma-separated).</summary>
@@ -696,6 +810,24 @@ public static class StudioStringKeys
 
     /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/> without a fallback: {0} is the task, {1} the task its <c>otherwise</c> branch runs.</summary>
     public const string RunInfoDecisionOtherwiseItem = "Studio.Run.InfoDecisionOtherwiseItem";
+
+    /// <summary>One decision task of <see cref="RunInfoDecisionFallback"/> answered by its relay: {0} is the task, {1} the agent that answers.</summary>
+    public const string RunInfoDecisionRelayItem = "Studio.Run.InfoDecisionRelayItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task on llm.profile: auto, runs on the default profile.</summary>
+    public const string RunInfoDecisionRouteItem = "Studio.Run.InfoDecisionRouteItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task whose thinking is on auto, keeps its profile's thinking.</summary>
+    public const string RunInfoDecisionEffortItem = "Studio.Run.InfoDecisionEffortItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent on skills: { auto: true }, carries its fallback skills.</summary>
+    public const string RunInfoDecisionSkillsItem = "Studio.Run.InfoDecisionSkillsItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent on compaction: { prune: true }, prunes nothing.</summary>
+    public const string RunInfoDecisionPruneItem = "Studio.Run.InfoDecisionPruneItem";
+
+    /// <summary>One line of <see cref="RunInfoDecisionFallback"/>: {0}, an agent or a task on a decision profile, whose decision stages are skipped.</summary>
+    public const string RunInfoDecisionProfileItem = "Studio.Run.InfoDecisionProfileItem";
 
     /// <summary>The action of the decision alerts of the launch: opens Settings › Decision models.</summary>
     public const string RunOpenDecisionSettings = "Studio.Run.OpenDecisionSettings";
@@ -789,6 +921,24 @@ public static class StudioStringKeys
     public const string RunBlockedFolders = "Studio.Run.BlockedFolders";
     public const string RunBlockedScope = "Studio.Run.BlockedScope";
 
+    /// <summary>A launch refused by the tool bridge of the settings the run reads: {0} is the reason, the engine's sentence or <see cref="RunBridgeTokenRefused"/>.</summary>
+    public const string RunBlockedBridge = "Studio.Run.BlockedBridge";
+
+    /// <summary>A launch and a check refused on a <c>Provider</c> of the <c>Llm</c> section or of a model profile, in the pinned or team file the run reads: {0} is the engine's sentence (one per refused provider), {1} the file to fix.</summary>
+    public const string RunBlockedLlmProvider = "Studio.Run.BlockedLlmProvider";
+
+    /// <summary>The reason of <see cref="RunBlockedBridge"/> when the token is missing or too short: {0} is the engine's sentence, which names the variable.</summary>
+    public const string RunBridgeTokenRefused = "Studio.Run.BridgeTokenRefused";
+
+    /// <summary>The reason of <see cref="RunBlockedBridge"/> when the token is missing or too short and the file the run reads names another variable than the machine's settings: {0} is the engine's sentence, {1} the variable of the file, {2} the one the card of Settings keeps the token under.</summary>
+    public const string RunBridgeTokenRefusedOtherVariable = "Studio.Run.BridgeTokenRefusedOtherVariable";
+
+    /// <summary>Information: the settings name a bridge's address, {0}, and allow no tool on it.</summary>
+    public const string RunInfoBridgeIdle = "Studio.Run.InfoBridgeIdle";
+
+    /// <summary>A warning while the CLI picks the settings file itself: the tool bridge of this machine's settings would stop the run; {0} is the reason.</summary>
+    public const string RunWarnBridge = "Studio.Run.WarnBridge";
+
     /// <summary>"Not allowed" (UX lot 08).</summary>
     public const string RunFolderNotAllowed = "Studio.Run.FolderNotAllowed";
 
@@ -843,6 +993,75 @@ public static class StudioStringKeys
     /// <summary>"Add to the team" — the agent editor's save label in add mode.</summary>
     public const string AgentEditorAdd = "Studio.Create.Add";
 
+    /// <summary>The task editor's title in add mode.</summary>
+    public const string TaskEditorTitleAdd = "Studio.Create.TaskTitleAdd";
+
+    /// <summary>The task editor's title over an existing task.</summary>
+    public const string TaskEditorTitleEdit = "Studio.Create.TaskTitleEdit";
+
+    /// <summary>The task editor's save label in add mode.</summary>
+    public const string TaskEditorAdd = "Studio.Create.TaskAdd";
+
+    /// <summary>The task editor's subtitle.</summary>
+    public const string TaskEditorSub = "Studio.Create.TaskEditorSub";
+
+    /// <summary>The task editor's description field label.</summary>
+    public const string TaskFieldDoes = "Studio.Create.TaskDoes";
+
+    /// <summary>The task editor's expected-output field label.</summary>
+    public const string TaskFieldExpected = "Studio.Create.TaskExpected";
+
+    /// <summary>The task editor's agent field label.</summary>
+    public const string TaskFieldWho = "Studio.Create.TaskWho";
+
+    /// <summary>The task editor's deliverable field label.</summary>
+    public const string TaskFieldDeliverable = "Studio.Create.TaskDeliverable";
+
+    /// <summary>The task editor's dependencies label.</summary>
+    public const string TaskFieldAfter = "Studio.Create.TaskAfterField";
+
+    /// <summary>The task editor's tools label.</summary>
+    public const string TaskFieldTools = "Studio.Create.TaskTools";
+
+    /// <summary>A task row's dependencies line; {0} lists them.</summary>
+    public const string TaskAfter = "Studio.Create.TaskAfter";
+
+    /// <summary>A task row's condition line; {0} lists its terms.</summary>
+    public const string TaskWhen = "Studio.Create.TaskWhen";
+
+    /// <summary>Why a task cannot be removed; {0} names the tasks whose condition reads it.</summary>
+    public const string TaskRemoveBlocked = "Studio.Create.TaskRemoveBlocked";
+
+    /// <summary>Why a task cannot be removed; {0} names the decision tasks that decide on its output.</summary>
+    public const string TaskRemoveState = "Studio.Create.TaskRemoveState";
+
+    /// <summary>Why the team's only task cannot be removed.</summary>
+    public const string TaskRemoveOnly = "Studio.Create.TaskRemoveOnly";
+
+    /// <summary>The tooltip of a decision task's row: it is not edited here.</summary>
+    public const string TaskDecisionTip = "Studio.Create.TaskDecisionTip";
+
+    /// <summary>The Composer step's task list title.</summary>
+    public const string TasksTitle = "Studio.Create.TasksTitle";
+
+    /// <summary>The add-a-task button of the Composer step.</summary>
+    public const string AddTask = "Studio.Create.AddTask";
+
+    /// <summary>A task row's move-up button.</summary>
+    public const string TaskMoveUp = "Studio.Create.TaskMoveUp";
+
+    /// <summary>A task row's move-down button.</summary>
+    public const string TaskMoveDown = "Studio.Create.TaskMoveDown";
+
+    /// <summary>The remove-the-task button.</summary>
+    public const string TaskRemove = "Studio.Create.TaskRemove";
+
+    /// <summary>"More tools…": unfolds the rest of the catalogue under a blueprint editor's chips.</summary>
+    public const string ToolPaletteMore = "Studio.Create.PaletteMore";
+
+    /// <summary>"Fewer tools": folds the rest of the catalogue back.</summary>
+    public const string ToolPaletteLess = "Studio.Create.PaletteLess";
+
     /// <summary>"Save" — the shared action verb.</summary>
     public const string ActSave = "Studio.Common.Save";
 
@@ -877,6 +1096,9 @@ public static class StudioStringKeys
 
     /// <summary>"failed" — the last run did not.</summary>
     public const string TeamsRunFail = "Studio.Teams.RunFail";
+
+    /// <summary>"waiting for input" — the last run stopped on a question.</summary>
+    public const string TeamsRunWaiting = "Studio.Teams.RunWaiting";
 
     /// <summary>"Never ran" — no history entry names this team.</summary>
     public const string TeamsNeverRan = "Studio.Teams.NeverRan";
@@ -1384,6 +1606,21 @@ public static class StudioStringKeys
     /// <summary>"Skipped: {0}"</summary>
     public const string RunProgressSkipReason = "Studio.Run.SkipReason";
 
+    /// <summary>"Skipped: decision {0} answered {1}"</summary>
+    public const string RunProgressSkipCondition = "Studio.Run.SkipCondition";
+
+    /// <summary>"Skipped: decision {0} was not taken"</summary>
+    public const string RunProgressSkipDecisionNotRun = "Studio.Run.SkipDecisionNotRun";
+
+    /// <summary>"Skipped: a task it depends on did not succeed"</summary>
+    public const string RunProgressSkipDependency = "Studio.Run.SkipDependency";
+
+    /// <summary>"Skipped: every task it depends on was skipped by a decision"</summary>
+    public const string RunProgressSkipDependenciesConditionSkipped = "Studio.Run.SkipDependenciesConditionSkipped";
+
+    /// <summary>"Decision": the engine's own decision task, on its card and its row.</summary>
+    public const string RunLaneDecision = "Studio.Run.LaneDecision";
+
     /// <summary>"Task cut short: the agent used up its iterations ..." — under a task that ended on its cap.</summary>
     public const string RunProgressCapNote = "Studio.Run.CapNote";
 
@@ -1395,6 +1632,105 @@ public static class StudioStringKeys
 
     /// <summary>"decision (defaulted)"</summary>
     public const string RunProgressDecisionDefaulted = "Studio.Run.DecisionDefaulted";
+
+    /// <summary>"decision (relay)" — a decision task answered by its <c>without:</c> agent, the decision models off.</summary>
+    public const string RunProgressDecisionRelay = "Studio.Run.DecisionRelay";
+
+    /// <summary>The heading of the run's lines on the decision models and on what was done around the agents' model calls.</summary>
+    public const string RunNotesTitle = "Studio.Run.NotesTitle";
+
+    /// <summary>The run asks the decision models; {0} is the team's mode, in the engine's word.</summary>
+    public const string RunNoteDecisionOn = "Studio.Run.NoteDecisionOn";
+
+    /// <summary>The run goes without the decision models; {0} is the team's mode, {1} why.</summary>
+    public const string RunNoteDecisionOff = "Studio.Run.NoteDecisionOff";
+
+    /// <summary>Why the decision models are off: the run's own switch.</summary>
+    public const string RunNoteCauseSwitch = "Studio.Run.NoteCauseSwitch";
+
+    /// <summary>Why the decision models are off: the settings' switch.</summary>
+    public const string RunNoteCauseSettings = "Studio.Run.NoteCauseSettings";
+
+    /// <summary>Why the decision models are off: no provider.</summary>
+    public const string RunNoteCauseNoProvider = "Studio.Run.NoteCauseNoProvider";
+
+    /// <summary>Why the decision models are off: the provider in use needs an API key and none is in place (Orkeon #451).</summary>
+    public const string RunNoteCauseNoKey = "Studio.Run.NoteCauseNoKey";
+
+    /// <summary>Why the decision models are off, inside the circuit line: the pass of a creation's trial that tries the team without them.</summary>
+    public const string RunNoteCauseTrial = "Studio.Run.NoteCauseTrial";
+
+    /// <summary>
+    /// A cause of the decision models off with the engine's own sentence (Orkeon #467): {0} Studio's sentence of the
+    /// cause, {1} the engine's, in English as written (for <c>no-key</c>, the variable and the setting the key is read from).
+    /// </summary>
+    public const string RunNoteCauseWithDetail = "Studio.Run.NoteCauseWithDetail";
+
+    /// <summary>A profile System One picked: {0} the agent, {1} the profile, {2} how likely, a whole percentage.</summary>
+    public const string RunNoteRoutePicked = "Studio.Run.NoteRoutePicked";
+
+    /// <summary>A profile System One did not pick: {0} the agent, {1} the profile, {2} the engine's reason.</summary>
+    public const string RunNoteRouteDefault = "Studio.Run.NoteRouteDefault";
+
+    /// <summary>A note: the profile is the floor of the ladder, the model's pick held to it (Orkeon #460).</summary>
+    public const string RunNoteRouteFloor = "Studio.Run.NoteRouteFloor";
+
+    /// <summary>A note: the profile is the ceiling of the ladder, the model's pick held to it (Orkeon #460).</summary>
+    public const string RunNoteRouteCeiling = "Studio.Run.NoteRouteCeiling";
+
+    /// <summary>A thinking level System One picked: {0} the agent, {1} the level, {2} how likely, a whole percentage.</summary>
+    public const string RunNoteEffortPicked = "Studio.Run.NoteEffortPicked";
+
+    /// <summary>A thinking level raised after a failed attempt: {0} the agent, {1} the level before, {2} the level now.</summary>
+    public const string RunNoteEffortRaised = "Studio.Run.NoteEffortRaised";
+
+    /// <summary>A thinking level System One did not pick: {0} the agent, {1} the level, {2} the engine's reason.</summary>
+    public const string RunNoteEffortDefault = "Studio.Run.NoteEffortDefault";
+
+    /// <summary>Why the model's pick was not taken, the engine's <c>model</c>: "its own pick".</summary>
+    public const string RunNoteReasonModel = "Studio.Run.NoteReasonModel";
+
+    /// <summary>The engine's <c>low-confidence</c>: "its pick was not sure enough".</summary>
+    public const string RunNoteReasonLowConfidence = "Studio.Run.NoteReasonLowConfidence";
+
+    /// <summary>The engine's <c>no-answer</c>: "it gave no usable answer".</summary>
+    public const string RunNoteReasonNoAnswer = "Studio.Run.NoteReasonNoAnswer";
+
+    /// <summary>The engine's <c>circuit-off</c>: "the decision models are off".</summary>
+    public const string RunNoteReasonCircuitOff = "Studio.Run.NoteReasonCircuitOff";
+
+    /// <summary>The engine's <c>no-ladder</c>: "no ladder to pick on".</summary>
+    public const string RunNoteReasonNoLadder = "Studio.Run.NoteReasonNoLadder";
+
+    /// <summary>The engine's <c>decision-none</c>: "the team asks it nothing".</summary>
+    public const string RunNoteReasonDecisionNone = "Studio.Run.NoteReasonDecisionNone";
+
+    /// <summary>The engine's <c>single-level</c>: "a single level is allowed".</summary>
+    public const string RunNoteReasonSingleLevel = "Studio.Run.NoteReasonSingleLevel";
+
+    /// <summary>The engine's <c>raised</c>: "raised after a failed attempt".</summary>
+    public const string RunNoteReasonRaised = "Studio.Run.NoteReasonRaised";
+
+    /// <summary>The engine's <c>floor</c>: "held to the floor of the ladder".</summary>
+    public const string RunNoteReasonFloor = "Studio.Run.NoteReasonFloor";
+
+    /// <summary>The engine's <c>ceiling</c>: "held to the ceiling of the ladder".</summary>
+    public const string RunNoteReasonCeiling = "Studio.Run.NoteReasonCeiling";
+
+    /// <summary>The skills an agent carries: {0} the agent, {1} the skills, comma-separated, {2} how they were chosen (the engine's word).</summary>
+    public const string RunNoteSkills = "Studio.Run.NoteSkills";
+
+    /// <summary>An agent that carries no skill: {0} the agent, {1} how that was reached (the engine's word).</summary>
+    public const string RunNoteSkillsNone = "Studio.Run.NoteSkillsNone";
+
+    /// <summary>A context compacted: {0} the agent, {1} its tokens before, {2} after.</summary>
+    public const string RunNoteCompacted = "Studio.Run.NoteCompacted";
+
+    /// <summary>A context the run could not compact: {0} the agent, {1} the engine's outcome.</summary>
+    public const string RunNoteCompactionFailed = "Studio.Run.NoteCompactionFailed";
+
+    /// <summary>Tool results pruned from a context: {0} the agent, {1} how many, {2} the tokens freed.</summary>
+    public const string RunNotePruned = "Studio.Run.NotePruned";
 
     /// <summary>The value of a yes/no answer that chose nothing: its yes probability follows in <see cref="RunProgressDecisionLikelihood"/>.</summary>
     public const string RunProgressDecisionYes = "Studio.Run.DecisionYes";
@@ -1909,6 +2245,78 @@ public static class StudioStringKeys
     /// <summary>"A crew would write profile: default, the name reserved for the default setting — choose another name."</summary>
     public const string ProfileHostIdReserved = "Studio.Settings.HostIdReserved";
 
+    /// <summary>"A crew would write profile: auto, the name of the automatic pick — choose another name."</summary>
+    public const string ProfileHostIdAuto = "Studio.Settings.HostIdAuto";
+
+    /// <summary>"{0} models"</summary>
+    public const string ProfileConnectionModelCount = "Studio.Settings.ConnectionModelCount";
+
+    /// <summary>"Models"</summary>
+    public const string ProfileModelsSection = "Studio.Settings.ModelsSection";
+
+    /// <summary>"One connection, several models: each one is a setting of its own, named connection.alias, that teams and the decision ladder can pick."</summary>
+    public const string ProfileModelsHint = "Studio.Settings.ModelsHint";
+
+    /// <summary>"Add a model"</summary>
+    public const string ProfileAddModel = "Studio.Settings.AddModel";
+
+    /// <summary>"Remove"</summary>
+    public const string ProfileRemoveModel = "Studio.Settings.RemoveModel";
+
+    /// <summary>"Alias"</summary>
+    public const string ProfileAliasLabel = "Studio.Settings.AliasLabel";
+
+    /// <summary>"Each model needs an alias once the connection has several."</summary>
+    public const string ProfileAliasRequired = "Studio.Settings.AliasRequired";
+
+    /// <summary>"Another model of this connection already has this alias."</summary>
+    public const string ProfileAliasTaken = "Studio.Settings.AliasTaken";
+
+    /// <summary>"Another setting already bears this name."</summary>
+    public const string ProfilePairNameTaken = "Studio.Settings.PairNameTaken";
+
+    /// <summary>"Used by {0}: removing this model leaves those teams without their setting."</summary>
+    public const string ProfileModelUsedBy = "Studio.Settings.ModelUsedBy";
+
+    /// <summary>"Settings of this model — an empty field takes the connection's."</summary>
+    public const string ProfileModelOverrides = "Studio.Settings.ModelOverrides";
+
+    /// <summary>"As the connection"</summary>
+    public const string ProfileThinkingInherit = "Studio.Settings.ThinkingInherit";
+
+    /// <summary>"Used by {0}: those teams will no longer find their setting."</summary>
+    public const string ProfileDeleteUsedWarning = "Studio.Settings.DeleteUsedWarning";
+
+    /// <summary>"Delete anyway"</summary>
+    public const string ProfileDeleteAnyway = "Studio.Settings.DeleteAnyway";
+
+    /// <summary>"Keep"</summary>
+    public const string ProfileKeep = "Studio.Settings.Keep";
+
+    /// <summary>"Select"</summary>
+    public const string ProfileSelectModel = "Studio.Settings.SelectModel";
+
+    /// <summary>"Move up (cheaper)"</summary>
+    public const string DecisionRungUp = "Studio.Settings.DecisionRungUp";
+
+    /// <summary>"Move down (dearer)"</summary>
+    public const string DecisionRungDown = "Studio.Settings.DecisionRungDown";
+
+    /// <summary>"Remove from the ladder"</summary>
+    public const string DecisionRungRemove = "Studio.Settings.DecisionRungRemove";
+
+    /// <summary>"Add to the ladder"</summary>
+    public const string DecisionRungAdd = "Studio.Settings.DecisionRungAdd";
+
+    /// <summary>"No rung yet: an agent on « profile: auto » fails to load until the ladder names one."</summary>
+    public const string DecisionLadderEmpty = "Studio.Settings.DecisionLadderEmpty";
+
+    /// <summary>"unknown"</summary>
+    public const string DecisionRungUnknown = "Studio.Settings.DecisionRungUnknown";
+
+    /// <summary>"The agent's own"</summary>
+    public const string CompactionProfileNone = "Studio.Settings.CompactionProfileNone";
+
     /// <summary>"The setting “{1}” already answers to profile: {0} — choose another name."</summary>
     public const string ProfileHostIdTakenBySetting = "Studio.Settings.HostIdTakenBySetting";
 
@@ -2043,6 +2451,15 @@ public static class StudioStringKeys
 
     /// <summary>"To describe" — the need tab's subtitle before.</summary>
     public const string WizardTabNeedEmpty = "Studio.Create.TabNeedEmpty";
+
+    /// <summary>#22: "Not used" — the decision models tab's subtitle when the team never asks them.</summary>
+    public const string WizardTabDecisionNone = "Studio.Create.TabDecisionNone";
+
+    /// <summary>#22: "When available" — the decision models tab's subtitle for the optional mode.</summary>
+    public const string WizardTabDecisionOptional = "Studio.Create.TabDecisionOptional";
+
+    /// <summary>#22: "Always" — the decision models tab's subtitle for the required mode.</summary>
+    public const string WizardTabDecisionRequired = "Studio.Create.TabDecisionRequired";
 
     /// <summary>"{0} folders to confirm" — the folders tab's subtitle while they wait.</summary>
     public const string WizardTabFoldersPending = "Studio.Create.TabFoldersPending";
@@ -2480,6 +2897,30 @@ public static class StudioStringKeys
 
     /// <summary>How the automatic choice deduces the provider.</summary>
     public const string SettingsDecisionProviderHint = "Studio.Settings.DecisionProviderHint";
+
+    /// <summary>The title of the card of what System One picks among: the ladder of profiles and the thinking levels.</summary>
+    public const string SettingsDecisionPicksTitle = "Studio.Settings.DecisionPicksTitle";
+
+    /// <summary>What the two lists of the card are for.</summary>
+    public const string SettingsDecisionPicksIntro = "Studio.Settings.DecisionPicksIntro";
+
+    /// <summary>The label of the ladder of profiles (Orkeon:Decision:Route:Ladder).</summary>
+    public const string SettingsDecisionLadder = "Studio.Settings.DecisionLadder";
+
+    /// <summary>How the ladder is written, and what an empty one does.</summary>
+    public const string SettingsDecisionLadderHint = "Studio.Settings.DecisionLadderHint";
+
+    /// <summary>A warning under the ladder: {0} the rungs that name no profile of the settings.</summary>
+    public const string SettingsDecisionLadderUnknown = "Studio.Settings.DecisionLadderUnknown";
+
+    /// <summary>The label of the thinking levels (Orkeon:Decision:Effort:Levels).</summary>
+    public const string SettingsDecisionEffortLevels = "Studio.Settings.DecisionEffortLevels";
+
+    /// <summary>How the levels are written: {0} every level the engine knows, {1} the ones it picks among when the list is empty.</summary>
+    public const string SettingsDecisionEffortLevelsHint = "Studio.Settings.DecisionEffortLevelsHint";
+
+    /// <summary>Who reads the token the key row stores: the tool bridge.</summary>
+    public const string SettingsBridgeTokenUsedBy = "Studio.Settings.BridgeTokenUsedBy";
 
     /// <summary>The status line of a named provider; {0} is its name.</summary>
     public const string SettingsDecisionStatusNamed = "Studio.Settings.DecisionStatusNamed";
@@ -3188,22 +3629,42 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunWarnDeliverableDecision] =
             "Task '{0}' is a decision task and must write {1}, but a decision writes no file: drop the deliverable, or move it to a task an agent runs.",
         [StudioStringKeys.RunUseDecisionModels] = "Use the decision models (System One)",
-        [StudioStringKeys.RunUseDecisionModelsHint] = "Unticked, the decision tasks go without them (--no-decision): each answers from its fallback, or lets its « otherwise » task run, and a run refuses one that has neither. The system_one_decide tool still asks the provider.",
-        [StudioStringKeys.RunBlockedDecisionProvider] = "The settings name a decision provider the engine refuses, so the CLI will not start: {0} Fix it in Settings › Decision models.",
-        [StudioStringKeys.RunWarnDecisionProvider] = "This machine's settings name a decision provider the engine refuses: unless the settings file the CLI picks says otherwise, it will not start. {0}",
+        [StudioStringKeys.RunUseDecisionModelsHint] = "Off, the run goes without the decision models (--no-decision): a decision task gets its relay's answer or its fallback, or lets its « otherwise » task run; the engine withholds the system_one_decide tool; a team that cannot run without them is refused.",
+        [StudioStringKeys.RunBlockedDecisionProvider] = "The engine refuses the settings this run reads, so the CLI will not start: {0} Fix it in {1}.",
+        [StudioStringKeys.RunBlockedDecisionSharedName] = "The engine refuses the settings this run reads, so the CLI will not start: {0} A decision profile and a model profile cannot share a name: rename one of the two. The decision profile is under Orkeon:Decision:Profiles in {1}.",
+        [StudioStringKeys.RunWarnDecisionProvider] = "The engine refuses the decision settings of this machine: unless the settings file the CLI picks says otherwise, it will not start. {0}",
         [StudioStringKeys.RunBlockedDecisionRequired] = "This team cannot run without the decision models (System One): {0}. {1}",
         [StudioStringKeys.RunWarnDecisionRequiredUnknown] = "This team cannot run without the decision models (System One): {0}. The CLI picks the settings file itself: check that it gives them, or pin the file. {1}",
-        [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: tick « Use the decision models ».",
+        [StudioStringKeys.RunDecisionOffRunSwitch] = "This run goes without them: turn on « Use the decision models ».",
         [StudioStringKeys.RunDecisionOffSettings] = "The settings switch the decision models off: turn them on in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionOffSettingsInFile] = "The settings file this run reads switches the decision models off: set Orkeon:Decision:Enabled to true in {0}.",
         [StudioStringKeys.RunDecisionOffNoProvider] = "No decision provider is configured: set one up in Settings › Decision models.",
-        [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which needs a provider",
+        [StudioStringKeys.RunDecisionOffNoKey] = "{0} has no key (the variable {1} is empty and the settings file holds none), so the engine turns the decision models off: store the key in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionOffNoKeyNamedBySetting] = "{0} has no key (the variable named by {1} is empty and the settings file holds none), so the engine turns the decision models off: store the key in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionNeedTool] = "{0} use system_one_decide, which the engine withholds without the decision models",
         [StudioStringKeys.RunDecisionNeedAnswer] = "the decision task {0} has neither a fallback nor an « otherwise » task, so it needs the decision models on",
-        [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so every request it gets fails, and with it each decision task that asks it. Store the key in Settings › Decision models.",
-        [StudioStringKeys.RunWarnDecisionToolIgnoresSwitch] = "{0} use system_one_decide: on this run the tool still asks {1}, as the switch only sends the decision tasks to their fallbacks.",
-        [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
-        [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): each decision task answers from its fallback. {0}",
+        [StudioStringKeys.RunDecisionNeedMode] = "it states decision.mode: required, so the engine refuses the run before its first task",
+        [StudioStringKeys.RunBlockedDecisionLadder] = "{0} let System One pick their profile (llm.profile: auto), and {1}: the engine refuses the team when it loads it. {2}",
+        [StudioStringKeys.RunDecisionLadderFixSettings] = "Set the ladder in Settings › Decision models.",
+        [StudioStringKeys.RunDecisionLadderFixFile] = "Set the ladder (Orkeon:Decision:Route:Ladder) in {0}.",
+        [StudioStringKeys.RunBlockedDecisionModeProfile] = "{0} name a decision profile, and the team states decision.mode: none, which refuses any use of System One: the engine refuses the team when it loads it.",
+        [StudioStringKeys.RunBlockedDecisionModeAuto] = "{0} let System One pick their profile (llm.profile: auto), and the team states decision.mode: none, which refuses any use of System One: the engine refuses the team when it loads it.",
+        [StudioStringKeys.RunBlockedDecisionProfileClosed] = "{0} run on a decision profile whose guard stage blocks when it cannot judge (FailClosed), and this run goes without the decision models (System One): the engine blocks every call made through that profile. {1}",
+        [StudioStringKeys.RunJudgedOnMachineSettings] = "Judged on this machine's settings; the settings file the CLI picks may say otherwise. {0}",
+        [StudioStringKeys.RunDecisionLadderMissing] = "the settings give no ladder of two profiles or more to pick on",
+        [StudioStringKeys.RunDecisionLadderUnknownRungs] = "the ladder names {0}, defined by no model profile of the settings and not given to the run by Studio",
+        [StudioStringKeys.RunWarnDecisionKeyMissing] = "{0} has no key: the variable {1} is empty and the settings file holds none, so the engine turns the decision models off and sends it no request: the team runs without them, each decision task taking its relay's answer or its fallback, or letting its « otherwise » task run. Store the key in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting] = "{0} has no key: the variable named by {1} is empty and the settings file holds none, so the engine turns the decision models off and sends it no request: the team runs without them, each decision task taking its relay's answer or its fallback, or letting its « otherwise » task run. Store the key in Settings › Decision models.",
+        [StudioStringKeys.RunWarnDecisionToolDropped] = "{0} use system_one_decide, and this run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it. {1}",
+        [StudioStringKeys.RunInfoDecisionFallback] = "This run goes without the decision models (System One): the team answers without them. {0}",
         [StudioStringKeys.RunInfoDecisionFallbackItem] = "Task '{0}': {1}",
         [StudioStringKeys.RunInfoDecisionOtherwiseItem] = "Task '{0}': no answer, task '{1}' runs instead.",
+        [StudioStringKeys.RunInfoDecisionRelayItem] = "Task '{0}': the agent '{1}' answers in place of the model.",
+        [StudioStringKeys.RunInfoDecisionRouteItem] = "'{0}': no profile is picked, it runs on the default profile.",
+        [StudioStringKeys.RunInfoDecisionEffortItem] = "'{0}': no thinking level is picked, it keeps the one of its profile.",
+        [StudioStringKeys.RunInfoDecisionSkillsItem] = "'{0}': no skill is picked, it carries its fallback skills, if any.",
+        [StudioStringKeys.RunInfoDecisionPruneItem] = "'{0}': no tool result is pruned.",
+        [StudioStringKeys.RunInfoDecisionProfileItem] = "'{0}': the decision stages of its profile are skipped.",
         [StudioStringKeys.RunOpenDecisionSettings] = "Decision models settings",
         [StudioStringKeys.RunOpenResult] = "Open the result",
         [StudioStringKeys.RunOpenLogs] = "Open logs folder",
@@ -3280,6 +3741,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.RunBlockedNoTeam] = "Choose a team first.",
         [StudioStringKeys.RunBlockedFolders] = "A folder of the team is not allowed on this machine.",
         [StudioStringKeys.RunBlockedScope] = "An agent's file-system scope does not fit the folders of this run.",
+        [StudioStringKeys.RunBlockedBridge] = "The tool bridge of these settings stops the run at start: {0}",
+        [StudioStringKeys.RunBlockedLlmProvider] = "The model settings this run reads stop it at start: {0} Fix it in {1}.",
+        [StudioStringKeys.RunBridgeTokenRefused] = "{0} Store the token in Settings › Limits & index (Expert mode), on the tool bridge's card.",
+        [StudioStringKeys.RunBridgeTokenRefusedOtherVariable] = "{0} This settings file reads the token from the variable {1}, while the tool bridge's card in Settings › Limits & index (Expert mode) keeps it under {2}: set {1} in the environment, or name {2} in the file.",
+        [StudioStringKeys.RunInfoBridgeIdle] = "These settings name a tool bridge ({0}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
+        [StudioStringKeys.RunWarnBridge] = "On this machine's settings, the tool bridge would stop the run at start: {0} Unless the settings file the CLI picks says otherwise, the run will not start.",
         [StudioStringKeys.RunFolderNotAllowed] = "Not allowed",
         [StudioStringKeys.RunAllowThisFolder] = "Allow this folder",
         [StudioStringKeys.RunBlockedArchived] = "This team is archived: restore it to launch it.",
@@ -3302,6 +3769,29 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.AgentEditorTitleAdd] = "Add an agent",
         [StudioStringKeys.AgentEditorTitleEdit] = "Edit the agent",
         [StudioStringKeys.AgentEditorAdd] = "Add to the team",
+        [StudioStringKeys.TaskEditorTitleAdd] = "Add a task",
+        [StudioStringKeys.TaskEditorTitleEdit] = "Edit the task",
+        [StudioStringKeys.TaskEditorAdd] = "Add to the team",
+        [StudioStringKeys.TaskEditorSub] = "What a step of the team does, who does it and what it waits for. The assistant checks everything once you save.",
+        [StudioStringKeys.TaskFieldDoes] = "What to do",
+        [StudioStringKeys.TaskFieldExpected] = "What is expected",
+        [StudioStringKeys.TaskFieldWho] = "Who does it",
+        [StudioStringKeys.TaskFieldDeliverable] = "File it writes (optional)",
+        [StudioStringKeys.TaskFieldAfter] = "After",
+        [StudioStringKeys.TaskFieldTools] = "Tools of this task",
+        [StudioStringKeys.TaskAfter] = "after: {0}",
+        [StudioStringKeys.TaskWhen] = "if: {0}",
+        [StudioStringKeys.TaskRemoveBlocked] = "Cannot be removed: the condition of {0} reads its answer",
+        [StudioStringKeys.TaskRemoveState] = "Cannot be removed: the decision {0} decides on its output",
+        [StudioStringKeys.TaskRemoveOnly] = "Cannot be removed: a team keeps at least one task",
+        [StudioStringKeys.TaskDecisionTip] = "A decision is changed by talking to the assistant",
+        [StudioStringKeys.TasksTitle] = "Tasks",
+        [StudioStringKeys.AddTask] = "Add a task",
+        [StudioStringKeys.TaskMoveUp] = "Move up",
+        [StudioStringKeys.TaskMoveDown] = "Move down",
+        [StudioStringKeys.TaskRemove] = "Remove the task",
+        [StudioStringKeys.ToolPaletteMore] = "More tools…",
+        [StudioStringKeys.ToolPaletteLess] = "Fewer tools",
         [StudioStringKeys.ActSave] = "Save",
         [StudioStringKeys.DialogExportDestination] = "Choose where to export the team",
         [StudioStringKeys.TeamsMountRo] = "{0} · read",
@@ -3313,6 +3803,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsLastRun] = "Last run: {0}, {1}",
         [StudioStringKeys.TeamsRunOk] = "succeeded",
         [StudioStringKeys.TeamsRunFail] = "failed",
+        [StudioStringKeys.TeamsRunWaiting] = "waiting for input",
         [StudioStringKeys.TeamsNeverRan] = "Never ran",
         [StudioStringKeys.ConfigNotSavedWriteFailed] = "Not saved — the file could not be written: {0}",
         [StudioStringKeys.TeamsExportedTo] = "Team exported to {0}",
@@ -3332,9 +3823,11 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.HistStatusSucceeded] = "Succeeded",
         [StudioStringKeys.HistStatusFailed] = "Failed",
         [StudioStringKeys.HistStatusCancelled] = "Cancelled",
+        [StudioStringKeys.HistStatusWaiting] = "Waiting for input",
         [StudioStringKeys.HistStatusNotStarted] = "Not started",
         [StudioStringKeys.HistOutcomeFailed] = "Failed (code {0}).",
         [StudioStringKeys.HistOutcomeCancelled] = "Interrupted before the end.",
+        [StudioStringKeys.HistOutcomeWaiting] = "Stopped on a question: waiting for its answer.",
         [StudioStringKeys.HistOutcomeNotStarted] = "Never started.",
         [StudioStringKeys.DiagAllGood] = "Everything is in place.",
         [StudioStringKeys.DiagFixNeeded] = "{0} {0:plural:point|points} to fix before launching a team.",
@@ -3352,6 +3845,26 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DiagSettingsFileOk] = "The settings file is valid.",
         [StudioStringKeys.DiagSettingsFileInvalid] = "The settings file has errors: Studio cannot save it.",
         [StudioStringKeys.WizardAssistantNotRunning] = "The assistant is not running — start the composition (step 1, Composer) or resume the session; your question was kept.",
+        [StudioStringKeys.WizardCrewDecisionNone] = "No: the team never asks them",
+        [StudioStringKeys.WizardCrewDecisionOptional] = "When available: the team runs with or without them",
+        [StudioStringKeys.WizardCrewDecisionRequired] = "Always: the team cannot run without them",
+        [StudioStringKeys.WizardCrewDecisionRequiredOff] = "The decision models are off on this machine ({0}): the team can be composed, but its trial will be refused until they are set up in Settings › Decision models.",
+        [StudioStringKeys.WizardCrewDecisionOptionalOff] = "The decision models are off on this machine ({0}): the trial will run without them only.",
+        [StudioStringKeys.WizardDesignWithoutSystemOneLocked] = "The decision models are switched off in the settings: the assistant composes without them. The team can still be meant to use them.",
+        [StudioStringKeys.WizardCrewDecisionSession] = "The team on screen was composed with « {0} » and keeps it: the choice above is for the next « Compose the team ».",
+        [StudioStringKeys.WizardTrialPassWith] = "Pass {0} of {1}: with the decision models",
+        [StudioStringKeys.WizardTrialPassWithout] = "Pass {0} of {1}: without the decision models",
+        [StudioStringKeys.WizardPassWith] = "with the decision models",
+        [StudioStringKeys.WizardPassWithout] = "without the decision models",
+        [StudioStringKeys.WizardVerdictWithMet] = "With the decision models: criteria met",
+        [StudioStringKeys.WizardVerdictWithNotMet] = "With the decision models: criteria not met",
+        [StudioStringKeys.WizardVerdictWithoutMet] = "Without the decision models: criteria met",
+        [StudioStringKeys.WizardVerdictWithoutNotMet] = "Without the decision models: criteria not met",
+        [StudioStringKeys.WizardAssistantDecisionOn] = "The assistant works with the decision models (calls on this run: {0}).",
+        [StudioStringKeys.WizardAssistantDecisionTokens] = "Those calls have spent {0} tokens over the session.",
+        [StudioStringKeys.WizardAssistantDecisionOff] = "The assistant works without the decision models.",
+        [StudioStringKeys.WizardAssistantDecisionOffBecause] = "The assistant works without the decision models: {0}.",
+        [StudioStringKeys.WizardAssistantDecisionCauseSwitch] = "you asked it to compose without asking them",
         [StudioStringKeys.WizardRephrasing] = "Rewriting your request…",
         [StudioStringKeys.WizardRephrased] = "Request rewritten — « Back to my words » restores what you typed.",
         [StudioStringKeys.WizardRephraseFailed] = "The request could not be rewritten: {0}",
@@ -3465,7 +3978,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Problem.dotnet-runtime"] = "The .NET runtime the engine needs is not found.",
         ["Studio.Diagnostics.Problem.esbuild"] = "The script compiler is missing on this machine.",
         ["Studio.Diagnostics.Problem.install-channel"] = "Studio does not recognise how the engine was installed; updates will not be offered.",
-        ["Studio.Diagnostics.Problem.llm-config"] = "No model is set up for the teams.",
+        ["Studio.Diagnostics.Problem.llm-config"] = "No model is set up for the teams, or its settings need attention.",
         ["Studio.Diagnostics.Problem.llm-profile-key"] = "A model has no key, or its key is not found.",
         ["Studio.Diagnostics.Problem.llm-profiles"] = "A model is incomplete in the settings.",
         ["Studio.Diagnostics.Problem.llm-reachability"] = "The model does not answer: check its address and its key.",
@@ -3533,17 +4046,24 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-LLM-APIKEY-PLACEHOLDER"] = "The API key is written ${NAME}, which the engine never replaces: name its variable in ApiKeyEnvVar.",
         ["Studio.Diagnostics.Code.STUDIO-SETTING-PLACEHOLDER"] = "A setting holds a variable reference (${NAME} or %NAME%), which the engine never replaces: it would use the text as written. Write the value, or the name alone, as the message says.",
         ["Studio.Diagnostics.Code.STUDIO-LLM-ENDPOINT"] = "A model address is refused or left silent: an address under another vendor's /anthropic path is refused, and one with no path is read as an OpenAI-compatible server at its root.",
-        ["Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME"] = "A model profile is named 'default', the Llm section's own name: the engine refuses to start. Rename it.",
+        ["Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME"] = "A model profile bears a reserved name ('default', the Llm section's own, or 'auto', System One's pick): the engine refuses to start. Rename it.",
+        ["Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER"] = "The Provider of Llm or of a profile is refused: it takes 'mock' with its Responses file, or the key of a provider module. Leave it out and the provider follows from the address, the model's name and the key.",
+        ["Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE"] = "A WorkspaceId is set for a provider that is not Anthropic: the run does not send it. Only Anthropic scopes a key to a workspace; remove it for this provider.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-ID"] = "Two folders carry the same identifier: an identifier names one folder.",
         ["Studio.Diagnostics.Code.STUDIO-MOUNT-SHARED"] = "Several entries share one internal name: a team picks one per run, and the same folder twice is one too many.",
         ["Studio.Diagnostics.Code.STUDIO-FS-SCOPE"] = "An agent's filesystem: declaration is malformed, or its scope or working root asks for a folder the run's mounts do not grant: the engine refuses the crew as it loads, or refuses that agent when the run starts it.",
         ["Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER"] = "A task must write a file no agent that may run it has a tool for, or a decision task declares a deliverable: the run starts, the file may never be written and the task still counts as done. An Orkeon 1.2 CLI also warns of it at load.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): an agent or a task uses system_one_decide, which a run has only once a decision provider is configured, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The settings name a decision provider the engine refuses (an unknown name, or two providers it could deduce): the CLI stops before it loads the team.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task answers from its fallback, or lets its « otherwise » task run.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: every request it gets fails.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL"] = "The decision models are off for this run, yet an agent or a task uses system_one_decide: the tool still asks the provider, as the switch governs the decision tasks only.",
-        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and no decision provider is configured: with Orkeon:CrewFactory:StrictTools false, the engine drops the tool and runs the team without it.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED"] = "This team cannot run without the decision models (System One): it states decision.mode: required, an agent or a task uses system_one_decide, which the engine withholds once the models are off, or a decision task has neither a fallback nor an « otherwise » task, which a run refuses once the models are off.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER"] = "The engine refuses the decision models settings (the provider, a switch, the ladder of profiles, the thinking levels, a decision profile, or the judge that depends on them): the CLI stops before it loads the team. The message says what it refuses.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK"] = "This run goes without the decision models (System One): each decision task is answered by its relay, answers from its fallback, or lets its « otherwise » task run, and what System One would pick falls back to what the team or the settings state.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-KEY"] = "The decision provider the run uses needs a key and none is in place, neither in its variable nor in the settings file: the engine turns the decision models off and sends it no request. A team that cannot run without them is refused; any other runs without them.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-LADDER"] = "An agent or a task lets System One pick its profile (llm.profile: auto) and the settings do not serve it: they give no ladder of two model profiles or more to pick on, or the ladder names a model profile that neither the settings define nor the launch gives the run. The engine refuses the team when it loads it.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-MODE"] = "The team states decision.mode: none and an agent or a task lets System One pick its profile (llm.profile: auto) or names a decision profile of the settings: the mode refuses any use of System One, so the engine refuses the team when it loads it.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED"] = "An agent or a task runs on a decision profile of the settings whose guard stage blocks when it cannot judge (FailClosed), and the run goes without the decision models (System One): the engine blocks every call made through that profile. A check loads the team all the same.",
+        ["Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED"] = "A section the engine checks at start (compaction, pruning, skills, tool bridge, guardian, decision models and their profiles, the agent-cli provider's Llm:AgentCli) holds a value its rules refuse or a key that is no setting of it: as an error, no run would start with it. As a warning, it names a model profile this file does not define, which a run started outside Studio would be refused for.",
+        ["Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN"] = "The run bridges tools to another machine and the bridge's token is not in its environment variable, or is shorter than 16 characters: the run refuses to start.",
+        ["Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE"] = "The settings name a tool bridge's address and allow no tool on it: nothing is bridged, every tool runs on this machine.",
+        ["Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED"] = "An agent or a task uses system_one_decide and the run goes without the decision models: with Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the team without it.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH"] = "An added folder line starts with '-': the engine would read it as an option.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-ID"] = "A folder identifier is not valid: it is the 26 characters before '|' in a declared folder.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-DIRECTORY"] = "The team is a folder: the engine runs it as a whole.",
@@ -3559,8 +4079,10 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchExitCode] = "Exit code {0} — {1}",
         [StudioStringKeys.LaunchExitSuccess] = "run completed successfully",
         [StudioStringKeys.LaunchExitScriptError] = "script or settings error: check the team file and the settings it uses",
+        [StudioStringKeys.LaunchExitDecisionUnavailable] = "run refused: this team cannot run without the decision models (System One) and they are off. Set them up in Settings › Decision models, and keep « Use the decision models » on",
         [StudioStringKeys.LaunchExitRuntimeError] = "runtime error: the last log lines say why",
         [StudioStringKeys.LaunchExitCancelled] = "run interrupted",
+        [StudioStringKeys.LaunchExitWaitingForInput] = "run waiting for input: it stopped on a question and goes on once it is answered",
         [StudioStringKeys.LaunchExitUnknown] = "unexpected end: check the output above",
         [StudioStringKeys.LaunchExitNotStarted] = "the engine did not start",
         [StudioStringKeys.UsageTokens] = "{0} tokens",
@@ -3766,10 +4288,47 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.LaunchRunning] = "Running…",
         [StudioStringKeys.RunProgressNothingYet] = "Nothing reported yet.",
         [StudioStringKeys.RunProgressSkipReason] = "Skipped: {0}",
+        [StudioStringKeys.RunProgressSkipCondition] = "Skipped: decision {0} answered {1}",
+        [StudioStringKeys.RunProgressSkipDecisionNotRun] = "Skipped: decision {0} was not taken",
+        [StudioStringKeys.RunProgressSkipDependency] = "Skipped: a task it depends on did not succeed",
+        [StudioStringKeys.RunProgressSkipDependenciesConditionSkipped] = "Skipped: every task it depends on was skipped by a decision",
+        [StudioStringKeys.RunLaneDecision] = "Decision",
         [StudioStringKeys.RunProgressCapNote] = "Task cut short: the agent used up its iterations before finishing. Its work may be incomplete: check the files it had to write.",
         [StudioStringKeys.RunProgressDeliverableNote] = "File not written: the task succeeded, but did not write (or update) the file its deliverable names. Check that its agent has a tool that writes it and that the task asks for that file (if the task was also cut short, give the agent more iterations), then run the team again.",
         [StudioStringKeys.RunProgressDecision] = "decision",
         [StudioStringKeys.RunProgressDecisionDefaulted] = "decision (defaulted)",
+        [StudioStringKeys.RunProgressDecisionRelay] = "decision (relay)",
+        [StudioStringKeys.RunNotesTitle] = "System One and context",
+        [StudioStringKeys.RunNoteDecisionOn] = "Decision models on (team mode: {0}).",
+        [StudioStringKeys.RunNoteDecisionOff] = "Decision models off: {1} (team mode: {0}).",
+        [StudioStringKeys.RunNoteCauseSwitch] = "this run goes without them",
+        [StudioStringKeys.RunNoteCauseSettings] = "the settings switch them off",
+        [StudioStringKeys.RunNoteCauseNoProvider] = "no decision provider is configured",
+        [StudioStringKeys.RunNoteCauseNoKey] = "the decision provider has no API key: set its environment variable, or its ApiKey in the settings",
+        [StudioStringKeys.RunNoteCauseTrial] = "this pass of the trial runs without them",
+        [StudioStringKeys.RunNoteCauseWithDetail] = "{0}: {1}",
+        [StudioStringKeys.RunNoteRoutePicked] = "{0}: System One picked the profile '{1}' ({2} %).",
+        [StudioStringKeys.RunNoteRouteDefault] = "{0}: profile '{1}', not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteRouteFloor] = "{0}: profile '{1}', the ladder's floor System One's pick is held to.",
+        [StudioStringKeys.RunNoteRouteCeiling] = "{0}: profile '{1}', the ladder's ceiling System One's pick is held to.",
+        [StudioStringKeys.RunNoteEffortPicked] = "{0}: System One picked the thinking level {1} ({2} %).",
+        [StudioStringKeys.RunNoteEffortRaised] = "{0}: thinking level raised from {1} to {2} after a failed attempt.",
+        [StudioStringKeys.RunNoteEffortDefault] = "{0}: thinking level {1}, not picked by System One ({2}).",
+        [StudioStringKeys.RunNoteReasonModel] = "its own pick",
+        [StudioStringKeys.RunNoteReasonLowConfidence] = "its pick was not sure enough",
+        [StudioStringKeys.RunNoteReasonNoAnswer] = "it gave no usable answer",
+        [StudioStringKeys.RunNoteReasonCircuitOff] = "the decision models are off",
+        [StudioStringKeys.RunNoteReasonNoLadder] = "no ladder to pick on",
+        [StudioStringKeys.RunNoteReasonDecisionNone] = "the team asks it nothing",
+        [StudioStringKeys.RunNoteReasonSingleLevel] = "a single level is allowed",
+        [StudioStringKeys.RunNoteReasonRaised] = "raised after a failed attempt",
+        [StudioStringKeys.RunNoteReasonFloor] = "held to the floor of the ladder",
+        [StudioStringKeys.RunNoteReasonCeiling] = "held to the ceiling of the ladder",
+        [StudioStringKeys.RunNoteSkills] = "{0}: skills {1} ({2}).",
+        [StudioStringKeys.RunNoteSkillsNone] = "{0}: no skill ({1}).",
+        [StudioStringKeys.RunNoteCompacted] = "{0}: context compacted, from {1} to {2} tokens.",
+        [StudioStringKeys.RunNoteCompactionFailed] = "{0}: the context could not be compacted ({1}).",
+        [StudioStringKeys.RunNotePruned] = "{0}: {1} tool results pruned, about {2} tokens freed.",
         [StudioStringKeys.RunProgressDecisionYes] = "yes",
         [StudioStringKeys.RunProgressDecisionScore] = "score {0}",
         [StudioStringKeys.RunProgressDecisionLikelihood] = "probability {0}%",
@@ -3860,7 +4419,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
         [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
         [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
-        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; TypeSafe and Liquid refuse every call without their key",
+        [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; without the key of TypeSafe or Liquid, the engine turns the decision models off and withholds the tool",
         [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
         [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
@@ -3938,6 +4497,30 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ProfileHostId] = "In a crew file: profile: {0}",
         [StudioStringKeys.ProfileHostIdReserved] =
             "A crew would write profile: default, the name reserved for the default setting — choose another name.",
+        [StudioStringKeys.ProfileHostIdAuto] = "A crew would write profile: auto, the name of the automatic pick — choose another name.",
+        [StudioStringKeys.ProfileConnectionModelCount] = "{0} models",
+        [StudioStringKeys.ProfileModelsSection] = "Models",
+        [StudioStringKeys.ProfileModelsHint] = "One connection, several models: each one is a setting of its own, named connection.alias, that teams and the decision ladder can pick.",
+        [StudioStringKeys.ProfileAddModel] = "Add a model",
+        [StudioStringKeys.ProfileRemoveModel] = "Remove",
+        [StudioStringKeys.ProfileAliasLabel] = "Alias",
+        [StudioStringKeys.ProfileAliasRequired] = "Each model needs an alias once the connection has several.",
+        [StudioStringKeys.ProfileAliasTaken] = "Another model of this connection already has this alias.",
+        [StudioStringKeys.ProfilePairNameTaken] = "Another setting already bears this name.",
+        [StudioStringKeys.ProfileModelUsedBy] = "Used by {0}: removing this model leaves those teams without their setting.",
+        [StudioStringKeys.ProfileModelOverrides] = "Settings of this model — an empty field takes the connection's.",
+        [StudioStringKeys.ProfileThinkingInherit] = "As the connection",
+        [StudioStringKeys.ProfileDeleteUsedWarning] = "Used by {0}: those teams will no longer find their setting.",
+        [StudioStringKeys.ProfileDeleteAnyway] = "Delete anyway",
+        [StudioStringKeys.ProfileKeep] = "Keep",
+        [StudioStringKeys.ProfileSelectModel] = "Select",
+        [StudioStringKeys.DecisionRungUp] = "Move up (cheaper)",
+        [StudioStringKeys.DecisionRungDown] = "Move down (dearer)",
+        [StudioStringKeys.DecisionRungRemove] = "Remove from the ladder",
+        [StudioStringKeys.DecisionRungAdd] = "Add to the ladder",
+        [StudioStringKeys.DecisionLadderEmpty] = "No rung yet: an agent on « profile: auto » fails to load until the ladder names one.",
+        [StudioStringKeys.DecisionRungUnknown] = "unknown",
+        [StudioStringKeys.CompactionProfileNone] = "The agent's own",
         [StudioStringKeys.ProfileHostIdTakenBySetting] = "The setting “{1}” already answers to profile: {0} — choose another name.",
         [StudioStringKeys.ProfileHostIdTakenByFile] =
             "The settings file already defines profile: {0} by hand, and Studio never changes it — choose another name.",
@@ -4007,6 +4590,9 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.WizardTabNeedInterrupted] = "Described, brief interrupted",
         [StudioStringKeys.WizardTabNeedDoneAnswers] = "Described, {0} {0:plural:question settled|questions settled}",
         [StudioStringKeys.WizardTabNeedEmpty] = "To describe",
+        [StudioStringKeys.WizardTabDecisionNone] = "Not used",
+        [StudioStringKeys.WizardTabDecisionOptional] = "When available",
+        [StudioStringKeys.WizardTabDecisionRequired] = "Always",
         [StudioStringKeys.WizardTabFoldersPending] = "{0} {0:plural:folder to confirm|folders to confirm}",
         [StudioStringKeys.WizardTabFoldersPendingToChoose] = "{0} {0:plural:folder|folders} · {1} to choose",
         [StudioStringKeys.WizardTabFoldersConfirmed] = "{0} {0:plural:folder confirmed|folders confirmed}",
@@ -4126,12 +4712,12 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.TeamsScheduledRunNoDefault] = "The scheduled run will answer as an echo: the saved settings file has no default model. Save the settings.",
         [StudioStringKeys.TeamsCrewOverridesLlm] = "{0} agent(s) or task(s) of this team name their own model: the choice applies to the others only.",
         [StudioStringKeys.TeamsDecisionRequired] = "System One required",
-        [StudioStringKeys.TeamsDecisionRequiredTip] = "This team cannot run without the decision models (System One): an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.",
+        [StudioStringKeys.TeamsDecisionRequiredTip] = "This team cannot run without the decision models (System One): it states decision.mode: required, an agent uses system_one_decide, or a decision task has neither a fallback nor an « otherwise » task. Set a provider up in Settings › Decision models.",
         [StudioStringKeys.TeamsDecisionOptional] = "System One optional",
-        [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task answers from its fallback.",
+        [StudioStringKeys.TeamsDecisionOptionalTip] = "This team runs with the decision models (System One) or without them, as the launch chooses: without them, each decision task is answered by its relay or from its fallback, and what System One would pick falls back to what the team or the settings state.",
         [StudioStringKeys.TeamsUseDefaultLlm] = "Use the default model ({0})",
         [StudioStringKeys.TeamsUseDefaultLlmNone] = "Use the default model",
-        [StudioStringKeys.TeamsUseDefaultLlmHint] = "Checked, the team runs on the setting elected default when a run starts, and follows it when it changes. Unchecked, it stays on the setting chosen below.",
+        [StudioStringKeys.TeamsUseDefaultLlmHint] = "On, the team runs on the setting elected default when a run starts, and follows it when it changes. Off, it stays on the setting chosen below.",
         [StudioStringKeys.TeamsPinnedLlm] = "Or run on this setting:",
         [StudioStringKeys.TeamsChangeLlm] = "Change the model",
         [StudioStringKeys.TeamsLlmSaved] = "{0} now runs on: {1}.",
@@ -4169,6 +4755,14 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsDecisionProvider] = "Provider",
         [StudioStringKeys.SettingsDecisionProviderAuto] = "Automatic",
         [StudioStringKeys.SettingsDecisionProviderHint] = "Automatic: the engine takes the only provider set up below, or whose key is in place. With two, it refuses to start: name one.",
+        [StudioStringKeys.SettingsDecisionPicksTitle] = "What System One picks",
+        [StudioStringKeys.SettingsDecisionPicksIntro] = "A team may let System One pick, for each task, a model profile (llm.profile: auto) and a thinking level (thinking: { effort: auto }). These two lists say what it picks among.",
+        [StudioStringKeys.SettingsDecisionLadder] = "Profiles to pick among",
+        [StudioStringKeys.SettingsDecisionLadderHint] = "Two model profiles or more, cheapest first, separated by commas or semicolons: « default » or a profile of Settings › AI model. Left empty, a team that asks for the pick is refused when it loads.",
+        [StudioStringKeys.SettingsDecisionLadderUnknown] = "{0}: no model profile of these settings bears that name, so a team that asks for the pick is refused when it loads.",
+        [StudioStringKeys.SettingsDecisionEffortLevels] = "Thinking levels to pick among",
+        [StudioStringKeys.SettingsDecisionEffortLevelsHint] = "Among {0}, cheapest first, separated by commas or semicolons, in lower case. Left empty: {1}.",
+        [StudioStringKeys.SettingsBridgeTokenUsedBy] = "the tool bridge",
         [StudioStringKeys.SettingsDecisionStatusNamed] = "{0} answers the decision tasks.",
         [StudioStringKeys.SettingsDecisionStatusDeduced] = "{0} answers the decision tasks, deduced from its section or its key.",
         [StudioStringKeys.SettingsDecisionStatusNone] = "No provider is set up: the runs go without the decision models.",

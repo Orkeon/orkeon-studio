@@ -36,7 +36,16 @@ internal static class EngineCrewReader
     [SuppressVfsCompliance(
         "EXCEPTION-BOOTSTRAP: Studio is a host application; the crew's folder is user-owned storage on the " +
         "physical disk, mounted for the engine's loader as orkeon run mounts it.")]
-    public static T Read<T>(RunTarget? target, Func<CrewConfiguration, T> judge, T none)
+    public static T Read<T>(RunTarget? target, Func<CrewConfiguration, T> judge, T none) => Read(target, judge, none, none);
+
+    /// <summary>
+    /// The same, telling apart a crew the engine refuses at load (<paramref name="refused"/>) from a
+    /// target that is no YAML crew (<paramref name="none"/>): nothing is known of the first.
+    /// </summary>
+    [SuppressVfsCompliance(
+        "EXCEPTION-BOOTSTRAP: Studio is a host application; the crew's folder is user-owned storage on the " +
+        "physical disk, mounted for the engine's loader as orkeon run mounts it.")]
+    public static T Read<T>(RunTarget? target, Func<CrewConfiguration, T> judge, T none, T refused)
     {
         if (target is null || target.Dialect != RunTargetDialect.Yaml || string.IsNullOrWhiteSpace(target.RunPath))
             return none;
@@ -52,7 +61,7 @@ internal static class EngineCrewReader
         lock (CacheLock)
         {
             if (files is not null && s_lastRead is { } last && last.Key == key && string.Equals(last.Files, files, StringComparison.Ordinal))
-                return last.Crew is { } kept ? judge(kept) : none;
+                return last.Crew is { } kept ? judge(kept) : refused;
         }
 
         // The engine's file system is async; nothing here awaits the caller's context.
@@ -81,7 +90,7 @@ internal static class EngineCrewReader
                 s_lastRead = (key, files, crew);
         }
 
-        return crew is not null ? judge(crew) : none;
+        return crew is not null ? judge(crew) : refused;
     }
 
     /// <summary>

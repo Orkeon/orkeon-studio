@@ -4,6 +4,7 @@ using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Llm;
 using Orkeon.Studio.Core.Localization;
+using Orkeon.Studio.Core.Profiles;
 using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Config;
@@ -16,7 +17,9 @@ public sealed record DecisionProviderChoiceItem(string? Key, string Label);
 /// <summary>
 /// The decision models (System One) form: the circuit's switch (<c>Orkeon:Decision:Enabled</c>), the
 /// provider's name (<c>Orkeon:Decision:Provider</c>, automatic when absent), one card per provider the
-/// engine knows, and the status line a run of the file gets, resolved as the engine resolves it
+/// engine knows, the ladder of profiles and the thinking levels System One picks among
+/// (<c>Orkeon:Decision:Route:Ladder</c>, <c>Orkeon:Decision:Effort:Levels</c>), and the status line a run
+/// of the file gets, resolved as the engine resolves it
 /// (<see cref="DecisionSection.Resolve"/>) over the keys in place. The keys go to the user environment
 /// through <see cref="IApiKeyStore"/>, never to the file. Every field is read and written where the file
 /// spells its key, in whatever letter case, as the configuration reads it.
@@ -36,8 +39,99 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
         Providers = DecisionSection.Providers
             .Select(descriptor => new DecisionProviderCardViewModel(this, descriptor, _keyStore, _strings))
             .ToList();
+        AddRungCommand = new RelayCommand(AddRung, () => _rungToAdd is not null);
         _strings.CultureChanged += (_, _) => RefreshTexts();
     }
+
+    private ProfileChoiceItem? _rungToAdd;
+
+    /// <summary>
+    /// The model settings the lists name, read at each use; set by the settings screen, which holds
+    /// them. Left null, the lists offer the names the file defines alone.
+    /// </summary>
+    internal Func<ModelProfileSet>? ProfileSet { get; set; }
+
+    /// <summary>The ladder, a row per rung, cheapest first: what <see cref="RouteLadderText"/> spells.</summary>
+    public IReadOnlyList<LadderRungViewModel> Rungs
+    {
+        get
+        {
+            var ladder = Section.RouteLadder;
+            var choices = AllProfileChoices();
+            var unknown = Status.UnknownRungs;
+            return
+            [
+                .. ladder.Select((rung, index) => new LadderRungViewModel(
+                    this, index, rung, ProfileChoices.LabelOf(choices, rung),
+                    unknown.Contains(rung, StringComparer.OrdinalIgnoreCase), index > 0, index < ladder.Count - 1)),
+            ];
+        }
+    }
+
+    /// <summary>Whether the ladder has no rung.</summary>
+    public bool HasNoRung => Section.RouteLadder.Count == 0;
+
+    /// <summary>The profiles a rung may name that the ladder does not name yet.</summary>
+    public IReadOnlyList<ProfileChoiceItem> RungChoices
+    {
+        get
+        {
+            var ladder = Section.RouteLadder;
+            return [.. AllProfileChoices().Where(choice => !ladder.Contains(choice.Id, StringComparer.OrdinalIgnoreCase))];
+        }
+    }
+
+    /// <summary>The profile <see cref="AddRungCommand"/> appends.</summary>
+    public ProfileChoiceItem? RungToAdd
+    {
+        get => _rungToAdd;
+        set
+        {
+            if (SetProperty(ref _rungToAdd, value))
+                AddRungCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>Appends <see cref="RungToAdd"/> to the ladder, as its most expensive rung.</summary>
+    public RelayCommand AddRungCommand { get; }
+
+    private IReadOnlyList<ProfileChoiceItem> AllProfileChoices() =>
+        ProfileChoices.Of(Document, ProfileSet?.Invoke(), withDefault: true);
+
+    private void AddRung()
+    {
+        if (_rungToAdd is not { } choice)
+            return;
+
+        WriteLadder([.. Section.RouteLadder, choice.Id]);
+        RungToAdd = null;
+    }
+
+    internal void MoveRung(int index, int offset)
+    {
+        var ladder = Section.RouteLadder.ToList();
+        var target = index + offset;
+        if (index < 0 || index >= ladder.Count || target < 0 || target >= ladder.Count)
+            return;
+
+        (ladder[index], ladder[target]) = (ladder[target], ladder[index]);
+        WriteLadder(ladder);
+    }
+
+    internal void RemoveRung(int index)
+    {
+        var ladder = Section.RouteLadder.ToList();
+        if (index < 0 || index >= ladder.Count)
+            return;
+
+        ladder.RemoveAt(index);
+        WriteLadder(ladder);
+    }
+
+    private void WriteLadder(IReadOnlyList<string> ladder) => RouteLadderText = string.Join(", ", ladder);
+
+    /// <summary>The model settings changed: the lists that name them say them again.</summary>
+    internal void RefreshProfileChoices() => OnPropertiesChanged(nameof(Rungs), nameof(RungChoices));
 
     private DecisionSection Section => Document.Decision;
 
@@ -109,11 +203,55 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
         }
     }
 
+    /// <summary>
+    /// The ladder System One picks a profile on, comma-separated, cheapest first; emptied, the key is
+    /// removed. What the engine refuses in it is said by the status line.
+    /// </summary>
+    public string RouteLadderText
+    {
+        get => string.Join(", ", Section.RouteLadder);
+        set => SetValue(RouteLadderText, Joined(value), v => Section.RouteLadder = DecisionSection.SplitList(v));
+    }
+
+    /// <summary>The rungs that name no profile of these settings, as a warning; empty when each names one.</summary>
+    public string RouteLadderNote =>
+        Status is { Refusal: null, UnknownRungs: { Count: > 0 } unknown }
+            ? _strings.Format(StudioStringKeys.SettingsDecisionLadderUnknown, string.Join(", ", unknown))
+            : string.Empty;
+
+    /// <summary>
+    /// The thinking levels System One picks among, comma-separated, cheapest first; emptied, the key is
+    /// removed and the engine's own three stand.
+    /// </summary>
+    public string EffortLevelsText
+    {
+        get => string.Join(", ", Section.EffortLevels);
+        set => SetValue(EffortLevelsText, Joined(value), v => Section.EffortLevels = DecisionSection.SplitList(v));
+    }
+
+    /// <summary>The levels the engine picks among when the list is empty: the field's watermark.</summary>
+    public static string EffortLevelsDefault => string.Join(", ", DecisionSection.DefaultEffortLevels);
+
+    /// <summary>How the levels are written, naming every level the engine knows.</summary>
+    public string EffortLevelsHint => _strings.Format(
+        StudioStringKeys.SettingsDecisionEffortLevelsHint,
+        string.Join(", ", DecisionSection.KnownEffortLevels),
+        EffortLevelsDefault);
+
+    private static string Joined(string? text) => string.Join(", ", DecisionSection.SplitList(text));
+
     /// <summary>One card per provider, in the engine's order.</summary>
     public IReadOnlyList<DecisionProviderCardViewModel> Providers { get; }
 
-    /// <summary>The circuit a run of this file gets, over the keys in place.</summary>
-    public DecisionStatus Status => Section.Resolve(_keyStore.Peek);
+    // The status as last resolved: a resolution reads the whole document and probes the environment
+    // for each provider, so it is done once per change and never per bound property.
+    private DecisionStatus? _status;
+
+    /// <summary>
+    /// The circuit a run of this file gets, over the keys in place: resolved when the section, the
+    /// document or a key changes (<see cref="RefreshVerdict"/>), and kept until then.
+    /// </summary>
+    public DecisionStatus Status => _status ??= Section.Resolve(_keyStore.Peek);
 
     /// <summary>Whether a run of this file asks the decision model.</summary>
     public bool IsOn => Status.CircuitOn;
@@ -159,23 +297,69 @@ public sealed class DecisionSectionViewModel : DocumentSectionViewModel
             OnSectionChanged();
     }
 
+    /// <summary>
+    /// Resolves the status again after a change made outside this form: an edit elsewhere in the
+    /// document (a profile added, renamed or removed changes what a ladder rung names), or a key stored
+    /// on another screen. What follows from the status is announced only when it changed.
+    /// </summary>
+    public void RefreshVerdict()
+    {
+        var resolved = Section.Resolve(_keyStore.Peek);
+        if (_status is { } known && Same(known, resolved))
+            return;
+
+        _status = resolved;
+        OnStatusChanged();
+        RefreshProfileChoices();
+    }
+
     /// <inheritdoc />
     public override void Refresh()
     {
+        // The document was replaced or rewritten: nothing kept of the one before, and every binding reads again.
+        _status = null;
         base.Refresh();
         foreach (var card in Providers)
             card.Refresh();
     }
 
     /// <inheritdoc />
-    protected override void OnSectionChanged() => OnPropertiesChanged(
-        nameof(Exists), nameof(Status), nameof(IsOn), nameof(IsRefused), nameof(StatusText),
-        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState));
+    protected override void OnSectionChanged()
+    {
+        OnPropertiesChanged(nameof(Exists), nameof(RouteLadderText), nameof(EffortLevelsText), nameof(HasNoRung));
+        RefreshVerdict();
+        RefreshProfileChoices();
+    }
+
+    // Everything the status decides, the status itself first: the shell judges the launchers again on it.
+    private void OnStatusChanged() => OnPropertiesChanged(
+        nameof(Status), nameof(IsOn), nameof(IsRefused), nameof(StatusText),
+        nameof(IgnoredText), nameof(HasIgnored), nameof(TabSubtitle), nameof(TabState), nameof(RouteLadderNote));
+
+    /// <summary>
+    /// Whether two resolutions say the same thing. A record compares its lists by reference, and each
+    /// resolution builds its own: they are compared item by item, then everything else as the record does.
+    /// </summary>
+    private static bool Same(DecisionStatus known, DecisionStatus resolved) =>
+        known.IgnoredSections.SequenceEqual(resolved.IgnoredSections)
+        && known.RouteLadder.SequenceEqual(resolved.RouteLadder)
+        && known.UnknownRungs.SequenceEqual(resolved.UnknownRungs)
+        && known.DecisionProfiles.SequenceEqual(resolved.DecisionProfiles)
+        && known.BlockingProfiles.SequenceEqual(resolved.BlockingProfiles)
+        && known == resolved with
+        {
+            IgnoredSections = known.IgnoredSections,
+            RouteLadder = known.RouteLadder,
+            UnknownRungs = known.UnknownRungs,
+            DecisionProfiles = known.DecisionProfiles,
+            BlockingProfiles = known.BlockingProfiles,
+        };
 
     private void RefreshTexts()
     {
-        OnPropertiesChanged(nameof(ProviderChoices), nameof(SelectedProvider));
-        OnSectionChanged();
+        OnPropertiesChanged(nameof(ProviderChoices), nameof(SelectedProvider), nameof(EffortLevelsHint));
+        // The status is the same, its words are not.
+        OnStatusChanged();
         foreach (var card in Providers)
             card.RefreshTexts();
     }
@@ -360,4 +544,43 @@ public sealed class DecisionProviderCardViewModel : ObservableObject
 
         _owner.OnCardChanged(documentChanged: true);
     }
+}
+
+/// <summary>One rung of the decision ladder: the profile it names, and the gestures that move or remove it.</summary>
+public sealed class LadderRungViewModel
+{
+    internal LadderRungViewModel(DecisionSectionViewModel owner, int index, string id, string label, bool isUnknown, bool canMoveUp, bool canMoveDown)
+    {
+        Id = id;
+        Label = label;
+        IsUnknown = isUnknown;
+        Position = index + 1;
+        MoveUpCommand = new RelayCommand(() => owner.MoveRung(index, -1), () => canMoveUp);
+        MoveDownCommand = new RelayCommand(() => owner.MoveRung(index, +1), () => canMoveDown);
+        RemoveCommand = new RelayCommand(() => owner.RemoveRung(index));
+    }
+
+    /// <summary>The name the file writes.</summary>
+    public string Id { get; }
+
+    /// <summary>The setting's name when one offers the id (« mydeepseek.flash »), else the id.</summary>
+    public string Label { get; }
+
+    /// <summary>Whether <see cref="Label"/> differs from <see cref="Id"/>: the id is then shown beside it.</summary>
+    public bool ShowsId => !string.Equals(Id, Label, StringComparison.Ordinal);
+
+    /// <summary>Whether the rung names no profile of these settings: the engine refuses it (<see cref="DecisionSectionViewModel.RouteLadderNote"/>).</summary>
+    public bool IsUnknown { get; }
+
+    /// <summary>The rung's place, 1 for the cheapest.</summary>
+    public int Position { get; }
+
+    /// <summary>Swaps the rung with the cheaper one above it.</summary>
+    public RelayCommand MoveUpCommand { get; }
+
+    /// <summary>Swaps the rung with the dearer one under it.</summary>
+    public RelayCommand MoveDownCommand { get; }
+
+    /// <summary>Takes the rung out of the ladder.</summary>
+    public RelayCommand RemoveCommand { get; }
 }

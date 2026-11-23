@@ -302,6 +302,386 @@ public class RunProgressViewModelTests
 
         Assert.Equal(TimeSpan.FromSeconds(30), panel.Model.Elapsed);
     }
+
+    [Fact]
+    public void The_decision_models_and_what_was_done_around_the_agents_are_listed_one_line_each()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        Assert.False(panel.HasAgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"agent.route","taskId":"read","agentRole":"Analyst","profile":"strong","reason":"model","picked":"strong","probability":0.82}""");
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.route","taskId":"write","agentRole":"Writer","profile":"default","reason":"circuit-off"}""");
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"agent.effort","taskId":"read","agentRole":"Analyst","level":"medium","previous":"low","reason":"raised"}""");
+        panel.TryApply("""{"v":2,"seq":5,"ts":"t","kind":"agent.skills","taskId":"read","agentRole":"Analyst","mode":"fallback","skills":[],"reason":"circuit-off"}""");
+        panel.TryApply("""{"v":2,"seq":6,"ts":"t","kind":"agent.compacted","taskId":"read","agentRole":"Analyst","outcome":"failed","tokensBefore":152000,"tokensAfter":152000}""");
+
+        Assert.True(panel.HasAgentNotes);
+        Assert.Equal(
+            [
+                "Decision models off: this run goes without them (team mode: optional).",
+                "Analyst: System One picked the profile 'strong' (82 %).",
+                "Writer: profile 'default', not picked by System One (the decision models are off).",
+                "Analyst: thinking level raised from low to medium after a failed attempt.",
+                "Analyst: no skill (circuit-off).",
+                "Analyst: the context could not be compacted (failed).",
+            ],
+            panel.AgentNotes);
+
+        // A new run starts from an empty panel.
+        panel.Reset((_, _) => true);
+        Assert.False(panel.HasAgentNotes);
+    }
+
+    /// <summary>Why a thinking level was not the model's pick is said in words, never as the engine's token.</summary>
+    [Theory]
+    [InlineData("single-level", "Writer: thinking level high, not picked by System One (a single level is allowed).")]
+    [InlineData("low-confidence", "Writer: thinking level high, not picked by System One (its pick was not sure enough).")]
+    [InlineData("no-answer", "Writer: thinking level high, not picked by System One (it gave no usable answer).")]
+    [InlineData("decision-none", "Writer: thinking level high, not picked by System One (the team asks it nothing).")]
+    [InlineData("something-newer", "Writer: thinking level high, not picked by System One (something-newer).")]
+    public void An_effort_reason_is_said_in_words(string reason, string said)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"agent.effort","taskId":"write","agentRole":"Writer","level":"high","reason":"{{reason}}"}""");
+
+        Assert.Equal([said], panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// Every reason the engine gives a route or a thinking level (its <c>AgentRouteReasons</c>,
+    /// <c>AgentEffortReasons</c> and <c>SystemOnePickReasons</c>, read off the packaged assembly) has its
+    /// words: a reason added there fails here rather than reach the panel raw.
+    /// </summary>
+    [Fact]
+    public void Every_reason_of_the_engine_has_its_words()
+    {
+        var engine = new[]
+            {
+                typeof(Orkeon.Application.Interfaces.Ports.AgentRouteReasons),
+                typeof(Orkeon.Application.Interfaces.Ports.AgentEffortReasons),
+                typeof(Orkeon.Application.Crew.Routing.SystemOnePickReasons),
+            }
+            .SelectMany(type => type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.NotEmpty(engine);
+        Assert.Equal(engine, RunProgressViewModel.PickReasonKeys.Keys.Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// A pick made outside any task (Orkeon #460) and a pruning of a script's own loop (#461) come
+    /// without a <c>taskId</c>: each line names the agent's role. A route held to a bound of the ladder
+    /// says so, and a level set for the first time is no raise.
+    /// </summary>
+    [Fact]
+    public void Notes_without_a_task_name_the_agent_and_a_clamped_route_says_its_bound()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        Assert.True(panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.route","agentRole":"Analyst","profile":"fast","reason":"floor","picked":"tiny","probability":0.9}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"agent.route","agentRole":"Writer","profile":"strong","reason":"ceiling"}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.effort","agentRole":"Analyst","level":"low","reason":"model","picked":"low","probability":0.7}"""));
+        Assert.True(panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"agent.pruned","agentRole":"Analyst","cut":2,"dropped":0,"freedTokens":5000}"""));
+
+        Assert.Equal(
+            [
+                "Analyst: profile 'fast', the ladder's floor System One's pick is held to.",
+                "Writer: profile 'strong', the ladder's ceiling System One's pick is held to.",
+                "Analyst: System One picked the thinking level low (70 %).",
+                "Analyst: 2 tool results pruned, about " + 5000.ToString("N0", System.Globalization.CultureInfo.CurrentCulture) + " tokens freed.",
+            ],
+            panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_decision_task_its_relay_answered_says_so()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"pick","success":true,"isDecision":true,"defaulted":false,"decisionSource":"relay"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"again","success":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}""");
+
+        Assert.Equal("decision (relay)", panel.Tasks[0].DecisionLabel);
+        Assert.Equal("decision", panel.Tasks[1].DecisionLabel);
+    }
+
+    [Fact]
+    public void The_engines_own_decision_reads_Decision_and_says_no_plain_label_twice()
+    {
+        var panel = Watching();
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.started","taskId":"pick","agentRole":"decision"}""");
+        Assert.Equal("Decision", Assert.Single(panel.RunningTasks).Title);
+
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"pick","agentRole":"decision","success":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}""");
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"late","agentRole":"decision","success":true,"isDecision":true,"defaulted":true}""");
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"relayed","agentRole":"judge","success":true,"isDecision":true,"defaulted":false,"decisionSource":"relay"}""");
+
+        Assert.Equal(["Decision", "Decision", "judge"], panel.Tasks.Select(task => task.Title));
+        Assert.Equal(["", "decision (defaulted)", "decision (relay)"], panel.Tasks.Select(task => task.DecisionLabel));
+    }
+
+    [Theory]
+    [InlineData(
+        """condition of task 01M82GYVEZ2D5B4TB5BBXTJ3Q3 did not hold on decision task controle-couverture: {\"couverture\":{\"chosen\":\"complet\",\"probabilities\":{\"complet\":0.92,\"partiel\":0.08},\"confidence\":0.84}}""",
+        "Skipped: decision controle-couverture answered couverture = complet")]
+    [InlineData("decision controle-couverture did not run", "Skipped: decision controle-couverture was not taken")]
+    [InlineData("every dependency was condition skipped", "Skipped: every task it depends on was skipped by a decision")]
+    [InlineData(
+        "Task 01M8A (writer) skipped: it depends on task 01M8B, which did not succeed",
+        "Skipped: a task it depends on did not succeed")]
+    [InlineData("something a newer engine says", "Skipped: something a newer engine says")]
+    public void A_skipped_task_says_why_in_words_and_keeps_the_engines_sentence_for_its_tooltip(string reason, string said)
+    {
+        var panel = Watching();
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t","agentRole":"writer","success":false,"skipped":true,"skipReason":"{{reason}}"}""");
+
+        var task = Assert.Single(panel.Tasks);
+        Assert.Equal(said, task.SkipReason);
+        Assert.Equal(reason.Replace("\\\"", "\"", StringComparison.Ordinal), task.SkipReasonRaw);
+    }
+
+    [Fact]
+    public void A_task_that_ran_has_no_skip_reason_nor_raw_sentence()
+    {
+        var panel = Watching();
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t","agentRole":"writer","success":true,"skipReason":"stale"}""");
+
+        Assert.Equal(string.Empty, Assert.Single(panel.Tasks).SkipReason);
+        Assert.Equal(string.Empty, panel.Tasks[0].SkipReasonRaw);
+    }
+
+    /// <summary>
+    /// Every run states its circuit, a crew that asks nothing of System One included: the line is held
+    /// until the run does something it explains, so such a crew's panel stays closed.
+    /// </summary>
+    [Fact]
+    public void The_circuit_of_a_crew_that_states_no_mode_is_said_only_once_the_run_explains_something_with_it()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"no-provider"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","success":true}""");
+        Assert.False(panel.HasAgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"agent.pruned","taskId":"write","agentRole":"Writer","cut":1,"dropped":2,"freedTokens":900}""");
+
+        Assert.Equal(
+            [
+                "Decision models off: no decision provider is configured (team mode: unspecified).",
+                "Writer: 3 tool results pruned, about 900 tokens freed.",
+            ],
+            panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_long_run_keeps_the_latest_notes_only()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", System.Globalization.CultureInfo.CurrentCulture), panel.AgentNotes[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>A crew that states it runs with the models has its circuit said at once, before any note explains anything with it.</summary>
+    [Theory]
+    [InlineData("optional")]
+    [InlineData("required")]
+    public void The_circuit_of_a_crew_that_asks_for_the_models_is_said_at_once(string mode)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"{{mode}}","circuit":"off","cause":"settings"}""");
+
+        Assert.True(panel.HasAgentNotes);
+        Assert.Equal([$"Decision models off: the settings switch them off (team mode: {mode})."], panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_run_with_the_decision_models_says_so()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"on"}""");
+
+        Assert.Equal(["Decision models on (team mode: required)."], panel.AgentNotes);
+    }
+
+    /// <summary>A decision task is something the circuit explains: the line held for a crew that states no mode is said with it.</summary>
+    [Fact]
+    public void A_decision_task_releases_the_circuit_line_held_for_a_crew_that_states_no_mode()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"switch"}""");
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"read","success":true}""");
+        Assert.Empty(panel.AgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":3,"ts":"t","kind":"task.completed","taskId":"pick","success":true,"isDecision":true,"defaulted":true}""");
+
+        Assert.Equal(["Decision models off: this run goes without them (team mode: unspecified)."], panel.AgentNotes);
+
+        // Said once: a second decision task adds nothing.
+        panel.TryApply("""{"v":2,"seq":4,"ts":"t","kind":"task.completed","taskId":"again","success":true,"isDecision":true,"defaulted":true}""");
+        Assert.Single(panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_new_run_drops_the_circuit_line_the_previous_one_still_held()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"unspecified","circuit":"off","cause":"no-provider"}""");
+        Assert.Empty(panel.AgentNotes);
+
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"write","agentRole":"Writer","cut":1,"dropped":0,"freedTokens":900}""");
+
+        // The note of the new run stands alone: the held line was the previous run's.
+        Assert.Equal(["Writer: 1 tool results pruned, about 900 tokens freed."], panel.AgentNotes);
+    }
+
+    [Fact]
+    public void A_compaction_that_succeeded_says_what_it_freed_in_the_cultures_figures()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.compacted","taskId":"read","agentRole":"Analyst","outcome":"compacted","tokensBefore":152000,"tokensAfter":41000}""");
+
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Assert.Equal(
+            [$"Analyst: context compacted, from {152000.ToString("N0", culture)} to {41000.ToString("N0", culture)} tokens."],
+            panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// The circuit line explains every « circuit-off » or « relay » note below it: the cap that keeps
+    /// the latest notes never evicts it.
+    /// </summary>
+    [Fact]
+    public void A_long_run_keeps_its_circuit_line_above_the_latest_notes()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn + 1}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        // The oldest notes went, from under it: the second line is the 27th pruning.
+        Assert.StartsWith("A: " + 27.ToString("N0", culture), panel.AgentNotes[1], StringComparison.Ordinal);
+        Assert.StartsWith("A: " + (RunProgressViewModel.MaxAgentNotes + 25).ToString("N0", culture), panel.AgentNotes[^1], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The circuit line is the first of the list wherever the run was when it stated its circuit: a
+    /// statement that follows notes goes above them, the cap never evicts it, and a second statement
+    /// takes the place of the first.
+    /// </summary>
+    [Fact]
+    public void A_circuit_stated_after_notes_is_put_first_and_stays_there()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"Early","cut":1,"dropped":0,"freedTokens":1}""");
+        Assert.Single(panel.AgentNotes);
+
+        panel.TryApply("""{"v":2,"seq":2,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"switch"}""");
+
+        Assert.Equal(2, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        Assert.StartsWith("Early: ", panel.AgentNotes[1], StringComparison.Ordinal);
+
+        for (var turn = 1; turn <= RunProgressViewModel.MaxAgentNotes + 25; turn++)
+            panel.TryApply($$"""{"v":2,"seq":{{turn + 2}},"ts":"t","kind":"agent.pruned","taskId":"t","agentRole":"A","cut":{{turn}},"dropped":0,"freedTokens":1}""");
+
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes[0]);
+        Assert.StartsWith("A: ", panel.AgentNotes[1], StringComparison.Ordinal);
+
+        panel.TryApply("""{"v":2,"seq":900,"ts":"t","kind":"run.decision","mode":"optional","circuit":"on"}""");
+        Assert.Equal(RunProgressViewModel.MaxAgentNotes, panel.AgentNotes.Count);
+        Assert.Equal("Decision models on (team mode: optional).", panel.AgentNotes[0]);
+        Assert.DoesNotContain("Decision models off: this run goes without them (team mode: optional).", panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// Every cause the engine defines for a circuit that is off is said in a sentence, the trial's
+    /// included; a word it does not define is shown as written.
+    /// </summary>
+    [Theory]
+    [InlineData("switch", "this run goes without them")]
+    [InlineData("settings", "the settings switch them off")]
+    [InlineData("no-provider", "no decision provider is configured")]
+    [InlineData("no-key", "the decision provider has no API key: set its environment variable, or its ApiKey in the settings")]
+    [InlineData("trial", "this pass of the trial runs without them")]
+    [InlineData("maintenance", "maintenance")]
+    public void The_cause_of_a_circuit_off_is_said_in_a_sentence(string cause, string said)
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply($$"""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"optional","circuit":"off","cause":"{{cause}}"}""");
+
+        Assert.Equal([$"Decision models off: {said} (team mode: optional)."], panel.AgentNotes);
+    }
+
+    /// <summary>
+    /// The engine's own sentence of an off circuit (<c>detail</c>, Orkeon #467) follows Studio's, in
+    /// English as written: it names the variable and the setting the key is read from.
+    /// </summary>
+    [Fact]
+    public void The_engines_detail_of_a_circuit_off_follows_the_causes_sentence()
+    {
+        var panel = new RunProgressViewModel();
+        panel.Reset((_, _) => true);
+
+        panel.TryApply("""{"v":2,"seq":1,"ts":"t","kind":"run.decision","mode":"required","circuit":"off","cause":"no-key","detail":"no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey"}""");
+
+        Assert.Equal(
+            [
+                "Decision models off: the decision provider has no API key: set its environment variable, or its ApiKey in the settings"
+                    + ": no Liquid API key: set the environment variable LIQUID_API_KEY, or Orkeon:Liquid:ApiKey (team mode: required).",
+            ],
+            panel.AgentNotes);
+    }
+
+    /// <summary>The causes the theory above walks are the engine's, all of them.</summary>
+    [Fact]
+    public void The_causes_said_are_all_the_engine_defines()
+    {
+        var engine = typeof(Orkeon.Constants.Protocol.DecisionCircuitCauses)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(field => field.IsLiteral)
+            .Select(field => (string)field.GetRawConstantValue()!)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(["no-key", "no-provider", "settings", "switch", "trial"], engine);
+    }
 }
 
 /// <summary>

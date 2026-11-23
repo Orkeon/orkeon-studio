@@ -18,6 +18,9 @@ public enum HostProfileStatus
     /// <summary>The id is <c>default</c>, the reserved name of the <c>Llm</c> section itself.</summary>
     DefaultName,
 
+    /// <summary>The id is <c>auto</c>, the reserved name of the automatic pick (<c>llm: { profile: auto }</c>).</summary>
+    AutoName,
+
     /// <summary>Another setting answers to the same id (<see cref="HostProfileCheck.TakenBy"/>).</summary>
     TakenBySetting,
 
@@ -39,7 +42,7 @@ public sealed record HostProfileCheck(HostProfileStatus Status, string? Id, stri
     /// setting with no provider or no id is legitimate — it serves a team or the assistant — and
     /// is simply offered to no crew.
     /// </summary>
-    public bool BlocksSave => Status is HostProfileStatus.DefaultName or HostProfileStatus.TakenBySetting or HostProfileStatus.TakenByFile;
+    public bool BlocksSave => Status is HostProfileStatus.DefaultName or HostProfileStatus.AutoName or HostProfileStatus.TakenBySetting or HostProfileStatus.TakenByFile;
 }
 
 /// <summary>
@@ -85,8 +88,8 @@ public static class HostLlmProfiles
     private static HostProfileCheck Check(ModelProfile profile, Dictionary<string, string> owners)
     {
         var id = profile.HostProfileId;
-        if (id is not null && LlmProfilesSection.IsDefault(id))
-            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        if (Reserved(id) is { } reserved)
+            return reserved;
 
         if (id is not null && owners.TryGetValue(id, out var owner))
             return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, owner);
@@ -165,18 +168,47 @@ public static class HostLlmProfiles
         string? previousName,
         bool describesProvider,
         ModelProfileSet set,
+        AppSettingsDocument document) =>
+        Check(name, previousName is null ? [] : [previousName], [], describesProvider, set, document);
+
+    /// <summary>
+    /// The standing one model of a connection being edited would have, its pair named
+    /// <paramref name="name"/>: the settings the edit replaces — the connection's pairs as they were —
+    /// own no id, and a model above it in the editor that answers to the same id takes it first, as a
+    /// setting earlier in the set does (<see cref="Classify"/>).
+    /// </summary>
+    /// <param name="name">The pair's name as typed (<see cref="ModelConnection.PairName"/>).</param>
+    /// <param name="replaced">The names of the settings the edit replaces.</param>
+    /// <param name="above">The pair names of the models above it in the editor.</param>
+    /// <param name="describesProvider">Whether the draft names an endpoint or a model.</param>
+    /// <param name="set">The settings as they are.</param>
+    /// <param name="document">The settings file being edited, for the entries written by hand.</param>
+    public static HostProfileCheck Check(
+        string name,
+        IReadOnlyCollection<string> replaced,
+        IReadOnlyList<string> above,
+        bool describesProvider,
+        ModelProfileSet set,
         AppSettingsDocument document)
     {
+        ArgumentNullException.ThrowIfNull(replaced);
+        ArgumentNullException.ThrowIfNull(above);
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(document);
 
         var id = ModelProfile.HostProfileIdOf(name?.Trim());
-        if (id is not null && LlmProfilesSection.IsDefault(id))
-            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        if (Reserved(id) is { } reserved)
+            return reserved;
+
+        if (id is not null
+            && above.FirstOrDefault(other => string.Equals(ModelProfile.HostProfileIdOf(other.Trim()), id, StringComparison.OrdinalIgnoreCase)) is { } sibling)
+        {
+            return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, sibling.Trim());
+        }
 
         if (id is not null
             && set.Profiles.FirstOrDefault(p =>
-                    !string.Equals(p.Name, previousName, StringComparison.Ordinal)
+                    !replaced.Contains(p.Name, StringComparer.Ordinal)
                     && string.Equals(p.HostProfileId, id, StringComparison.OrdinalIgnoreCase)) is { } other)
         {
             return new HostProfileCheck(HostProfileStatus.TakenBySetting, id, other.Name);
@@ -193,15 +225,35 @@ public static class HostLlmProfiles
     }
 
     /// <summary>
+    /// The standing of an id the engine reserves: <c>default</c>, the <c>Llm</c> section itself, and
+    /// <c>auto</c>, the automatic pick — a profile under either refuses the run's start. Null otherwise.
+    /// </summary>
+    private static HostProfileCheck? Reserved(string? id)
+    {
+        if (id is null)
+            return null;
+        if (LlmProfilesSection.IsDefault(id))
+            return new HostProfileCheck(HostProfileStatus.DefaultName, id);
+        return Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id) ? new HostProfileCheck(HostProfileStatus.AutoName, id) : null;
+    }
+
+    /// <summary>
     /// Brings <paramref name="document"/>'s <c>Llm:Profiles</c> in line with a change of the
     /// settings from <paramref name="before"/> to <paramref name="after"/>: a renamed setting's
     /// entry moves, every key it carries with it; the entry of a setting no longer offered —
     /// removed, switched to « no model » — goes; and every offered setting the change touched, or
     /// whose entry the file lacks, carries without the reference to its key's variable (STUDIO-49)
     /// or with a key its card disagrees with (<see cref="LlmProfilesSection.KeyAgrees(LlmProfileEntry)"/>,
-    /// STUDIO-54), is written, without its key. <c>Orkeon:Rag:LlmProfile</c> follows a rename and
-    /// falls back to the default when its profile goes: the host refuses to start on a profile it
-    /// does not define. Entries written by hand are never touched.
+    /// STUDIO-54), is written, without its key. What names a profile follows a rename:
+    /// <c>Orkeon:Rag:LlmProfile</c>, <c>Orkeon:Compaction:Profile</c> and the rungs of
+    /// <c>Orkeon:Decision:Route:Ladder</c>. When its profile goes, the first falls back to the default
+    /// and the second to the agent's own model (the host refuses to start on a profile it does not
+    /// define); a rung stays, a ladder being refused under two rungs — unless a setting renamed in the
+    /// same change takes the id, the removals coming before the moves. Renames apply at once, each
+    /// resolved from the names before the change: a swap swaps, a chain moves each entry once. An
+    /// entry an older Studio wrote under an id the engine reserves since (<c>auto</c>) follows its
+    /// setting to a free name, or goes (<see cref="LegacyReserved"/>). Entries written by hand are
+    /// never touched.
     /// </summary>
     /// <param name="document">The settings file being edited.</param>
     /// <param name="before">The settings before the change.</param>
@@ -214,31 +266,102 @@ public static class HostLlmProfiles
         ModelProfileSet before,
         ModelProfileSet after,
         string? renamedFrom = null,
-        string? renamedTo = null)
+        string? renamedTo = null) =>
+        Mirror(document, before, after, renamedFrom is not null && renamedTo is not null ? [(renamedFrom, renamedTo)] : []);
+
+    /// <summary>
+    /// <see cref="Mirror(AppSettingsDocument, ModelProfileSet, ModelProfileSet, string?, string?)"/> for
+    /// a change that renamed several settings at once — a renamed connection renames each of its pairs
+    /// (<see cref="ConnectionUpsert.Renames"/>): each entry moves, with what names it.
+    /// </summary>
+    /// <param name="document">The settings file being edited.</param>
+    /// <param name="before">The settings before the change.</param>
+    /// <param name="after">The settings after it.</param>
+    /// <param name="renames">Each renamed setting, its name before and after.</param>
+    /// <returns>True when the document changed.</returns>
+    public static bool Mirror(
+        AppSettingsDocument document,
+        ModelProfileSet before,
+        ModelProfileSet after,
+        IReadOnlyList<(string From, string To)> renames)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(before);
         ArgumentNullException.ThrowIfNull(after);
+        ArgumentNullException.ThrowIfNull(renames);
 
         var was = Offered(before);
         var now = Offered(after);
         var section = document.Llm.Profiles;
         var changed = false;
 
-        if (renamedFrom is not null && renamedTo is not null
-            && was.TryGetValue(renamedFrom, out var oldId)
-            && now.TryGetValue(renamedTo, out var newId)
-            && !string.Equals(oldId, newId, StringComparison.OrdinalIgnoreCase))
+        // Each setting's successor: its new name when renamed — resolved from the names before the
+        // change, so a swap or a chain moves each entry once —, its own name otherwise.
+        var renamedTo = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (from, to) in renames)
+            renamedTo.TryAdd(from, to);
+
+        // What the change does to each entry a setting owned: kept in place, moved under its
+        // successor's id, or removed. The entries an older Studio wrote under a now-reserved id
+        // (LegacyReserved) are moved or removed alone: nothing that names them is followed.
+        var moves = new List<(string Old, string New, bool Legacy)>();
+        var removals = new List<(string Id, bool Legacy)>();
+        var owned = was.Select(pair => (Name: pair.Key, Id: pair.Value, Legacy: false))
+            .Concat(LegacyReserved(document, before).Select(pair => (Name: pair.Key, Id: pair.Value, Legacy: true)));
+        // A name another setting is renamed onto, and that is not renamed itself, lost its setting:
+        // removed, or absorbed by the rename. Its successor is none, whoever bears the name now.
+        var targetNames = new HashSet<string>(renamedTo.Values, StringComparer.Ordinal);
+        string? Successor(string name) =>
+            renamedTo.TryGetValue(name, out var to) ? to : targetNames.Contains(name) ? null : name;
+
+        foreach (var (name, id, legacy) in owned)
         {
-            changed |= section.Rename(oldId, newId);
-            changed |= MoveRagProfile(document, oldId, newId);
+            if (Successor(name) is not { } successor || !now.TryGetValue(successor, out var newId))
+                removals.Add((id, legacy));
+            else if (!string.Equals(id, newId, StringComparison.OrdinalIgnoreCase))
+                moves.Add((id, newId, legacy));
         }
 
+        // Removed first, so that a move onto the id of a setting removed in the same change finds the
+        // place free. What named the removed setting is let go before the move points it at the
+        // setting that now answers to the id: the RAG and the compaction fall back, and a rung is
+        // dropped from the ladder, where it would name another setting — twice, which the engine
+        // refuses. A rung whose id nobody takes stays, a ladder being refused under two rungs.
+        var targets = new HashSet<string>(moves.Select(move => move.New), StringComparer.OrdinalIgnoreCase);
         var offeredNow = new HashSet<string>(now.Values, StringComparer.OrdinalIgnoreCase);
-        foreach (var id in was.Values.Where(id => !offeredNow.Contains(id)))
+        foreach (var (id, legacy) in removals)
         {
+            var taken = targets.Contains(id);
+            // An id another setting still answers to in place keeps its entry, rewritten below.
+            if (!taken && offeredNow.Contains(id))
+                continue;
+
             changed |= section.Remove(id);
-            changed |= MoveRagProfile(document, id, null);
+            if (legacy)
+                continue;
+
+            changed |= MoveProfileReferences(document, id, null);
+            if (taken)
+                changed |= DropRungs(document, id);
+        }
+
+        // Moved in two passes through ids no profile bears, so that two settings swapping their names
+        // never write one entry over the other.
+        var staged = new List<(string Staging, string New, bool Legacy)>();
+        foreach (var (oldId, newId, legacy) in moves)
+        {
+            var staging = moves.Count == 1 ? newId : $"{oldId}-moving-{staged.Count}";
+            changed |= section.Rename(oldId, staging);
+            if (!legacy)
+                changed |= MoveProfileReferences(document, oldId, staging);
+            staged.Add((staging, newId, legacy));
+        }
+
+        foreach (var (staging, newId, legacy) in staged.Where(move => !string.Equals(move.Staging, move.New, StringComparison.Ordinal)))
+        {
+            changed |= section.Rename(staging, newId);
+            if (!legacy)
+                changed |= MoveProfileReferences(document, staging, newId);
         }
 
         foreach (var (name, id) in now)
@@ -333,13 +456,78 @@ public static class HostLlmProfiles
         return environment;
     }
 
-    /// <summary>Points <c>Orkeon:Rag:LlmProfile</c> from <paramref name="from"/> to <paramref name="to"/> (null: the default) when it names <paramref name="from"/>.</summary>
-    private static bool MoveRagProfile(AppSettingsDocument document, string from, string? to)
+    /// <summary>
+    /// The entries an older Studio wrote under an id the engine reserves since — a setting named
+    /// « Auto » became <c>Llm:Profiles:auto</c> before <c>auto</c> named the automatic pick —, by the
+    /// name of the setting that wrote them: each setting of <paramref name="set"/> that names a
+    /// provider and answers to such an id, when the file holds an entry under it. The engine refuses
+    /// to start on that entry, and no setting is offered under the id any more, so the entry would
+    /// otherwise stay for good. It is Studio's — its setting is still in the set —: the next change
+    /// of the settings moves it with a rename of its setting to a free name, and removes it
+    /// otherwise. An entry under the id that no setting answers to was written by hand, and stays.
+    /// </summary>
+    private static Dictionary<string, string> LegacyReserved(AppSettingsDocument document, ModelProfileSet set)
     {
-        if (!string.Equals(document.Rag.LlmProfile?.Trim(), from, StringComparison.OrdinalIgnoreCase))
+        var legacy = new Dictionary<string, string>(StringComparer.Ordinal);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, check) in Classify(set))
+        {
+            if (check.Status == HostProfileStatus.AutoName
+                && set.Find(name) is { DescribesProvider: true }
+                && document.Llm.Profiles.Find(check.Id!) is not null
+                && ids.Add(check.Id!))
+            {
+                legacy[name] = check.Id!;
+            }
+        }
+
+        return legacy;
+    }
+
+    /// <summary>
+    /// Drops from <c>Orkeon:Decision:Route:Ladder</c> each rung naming <paramref name="id"/>: the
+    /// profile it named is gone, and another setting answers to the id now.
+    /// </summary>
+    private static bool DropRungs(AppSettingsDocument document, string id)
+    {
+        var ladder = document.Decision.RouteLadder;
+        bool Names(string? rung) => string.Equals(rung?.Trim(), id, StringComparison.OrdinalIgnoreCase);
+        if (!ladder.Any(Names))
             return false;
 
-        document.Rag.LlmProfile = to;
+        document.Decision.RouteLadder = [.. ladder.Where(rung => !Names(rung))];
         return true;
+    }
+
+    /// <summary>
+    /// Points what names the profile <paramref name="from"/> to <paramref name="to"/>:
+    /// <c>Orkeon:Rag:LlmProfile</c> (null: the default), <c>Orkeon:Compaction:Profile</c> (null: the
+    /// agent's own model), and, for a rename only, the rungs of <c>Orkeon:Decision:Route:Ladder</c>.
+    /// </summary>
+    private static bool MoveProfileReferences(AppSettingsDocument document, string from, string? to)
+    {
+        bool Names(string? written) => string.Equals(written?.Trim(), from, StringComparison.OrdinalIgnoreCase);
+
+        var changed = false;
+        if (Names(document.Rag.LlmProfile))
+        {
+            document.Rag.LlmProfile = to;
+            changed = true;
+        }
+
+        if (Names(document.Compaction.Profile))
+        {
+            document.Compaction.Profile = to;
+            changed = true;
+        }
+
+        var ladder = document.Decision.RouteLadder;
+        if (to is not null && ladder.Any(Names))
+        {
+            document.Decision.RouteLadder = [.. ladder.Select(rung => Names(rung) ? to : rung)];
+            changed = true;
+        }
+
+        return changed;
     }
 }

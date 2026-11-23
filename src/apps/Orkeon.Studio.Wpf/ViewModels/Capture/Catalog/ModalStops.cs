@@ -14,7 +14,7 @@ internal static class ModalStops
             Name = "modale-dossiers-equipe",
             Category = CaptureCategory.Modal,
             Screen = CaptureScreen.Teams,
-            Because = "«Les dossiers de cette équipe»: the checkbox rows and their rights badges, "
+            Because = "«Les dossiers de cette équipe»: the switch rows and their rights badges, "
                     + "over the team list it was opened from.",
             Covers = ["TeamMounts.IsOpen"],
             Arrange = CaptureAction.Sync(static c => c.Shell.Teams.Teams[0].ChangeMountsCommand.Execute(null)),
@@ -83,7 +83,7 @@ internal static class ModalStops
             Category = CaptureCategory.Modal,
             Screen = CaptureScreen.Create,
             Because = "«2 cas proches» clicked under the need: the gallery opens on the cases close to it, "
-                    + "best first, their filter ticked — the way from a suggestion to the card that fills "
+                    + "best first, their filter on — the way from a suggestion to the card that fills "
                     + "the need.",
             Covers = ["CreateTeam.Gallery.IsOpen", "CreateTeam.Gallery.SuggestedOnly", "CreateTeam.HasCloseUseCases"],
             Arrange = static async c =>
@@ -135,6 +135,19 @@ internal static class ModalStops
                 c.Shell.CreateTeam.Agents[0].EditCommand.Execute(null);
             },
             Teardown = CaptureAction.Sync(static c => c.Shell.CreateTeam.AgentEditor.CancelCommand.Execute(null)),
+        },
+
+        new()
+        {
+            Name = "modale-editeur-tache",
+            Category = CaptureCategory.Modal,
+            Screen = CaptureScreen.Create,
+            Because = "The task editor over the Composer: what the task does, what is expected, who "
+                    + "does it, the file it writes, the tasks it waits for and its own tools.",
+            Covers = ["CreateTeam.TaskEditor.IsOpen"],
+            // The agent editor's stop left the proposal on screen.
+            Arrange = CaptureAction.Sync(static c => c.Shell.CreateTeam.Tasks.First(task => !task.IsDecision).EditCommand.Execute(null)),
+            Teardown = CaptureAction.Sync(static c => c.Shell.CreateTeam.TaskEditor.CancelCommand.Execute(null)),
         },
     ];
 }

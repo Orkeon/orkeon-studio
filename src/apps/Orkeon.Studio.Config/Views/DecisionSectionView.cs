@@ -1,38 +1,55 @@
 using Orkeon.Studio.Config.Presentation;
+using Orkeon.Studio.Core.Configuration;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Orkeon.Studio.Config.Views;
 
 /// <summary>
 /// The decision models (System One) screen: the provider from a closed list, the circuit's switch, and
-/// for each provider its section, model and address, then what a run of the file gets. A provider name
-/// the engine does not know is a row of its own, so applying the screen keeps it.
+/// for each provider its section, model and address, the profiles and the thinking levels System One
+/// picks among, then what a run of the file gets. A provider name
+/// the engine does not know is a row of its own, so applying the screen keeps it. Every line of text
+/// above the status takes one row, cut rather than wrapped, so none runs into the field under it.
 /// </summary>
 internal sealed class DecisionSectionView : SectionView
 {
-    private const string EnabledCaption = "Use the decision models (Orkeon:Decision:Enabled)";
+    private const string EnabledCaption = "Use the decision models";
 
     private readonly DecisionForm _form;
     private readonly ListView _provider;
     private readonly CheckBox _enabled;
     private readonly List<(DecisionForm.ProviderFields Fields, CheckBox SetUp, TextField Model, TextField Address)> _providers = [];
+    private readonly TextField _routeLadder;
+    private readonly TextField _effortLevels;
     private readonly Label _status;
+    private IReadOnlyList<string> _shownChoices;
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public DecisionSectionView(DecisionForm form)
-        : base("Decision models")
+        : base("Decision models", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
+        FormLayout.AddLine(this, 0, "Provider (" + DecisionSection.ProviderPath + ")");
         // One row more than the standard choices: a name the engine does not know shows there as written.
+        // The list takes the whole width, under its caption: beside it, its longest row would be cut.
         var rows = DecisionForm.StandardChoices.Count + 1;
-        _provider = FormLayout.AddChoiceList(this, 0, rows, "Provider", _form.ProviderChoices, _form.ProviderChoiceIndex);
-        var y = rows + 1;
+        _provider = new ListView { X = FormLayout.Margin, Y = 1, Width = Dim.Fill(FormLayout.Margin), Height = rows };
+        Add(_provider);
+        FormLayout.SetItems(_provider, _form.ProviderChoices, _form.ProviderChoiceIndex);
+        _shownChoices = [.. _form.ProviderChoices];
+        var y = rows + 2;
+        // Two rows: the caption of a switch the file writes as no boolean says so, and is longer.
         _enabled = FormLayout.AddOptionalSwitch(this, y, EnabledCaption, _form.Enabled);
+        _enabled.Height = 2;
         FormLayout.TrackUnreadable(_enabled, EnabledCaption, () => _form.EnabledAsWritten, () => _form.EnabledAsWritten = null);
+        y += 2;
+        FormLayout.AddLine(this, y, DecisionForm.SectionsNotice);
+        FormLayout.AddLine(this, y + 1, DecisionForm.JsonNotice);
         y += 2;
         foreach (var fields in _form.Providers)
         {
-            var setUp = new CheckBox { X = 1, Y = y, Text = fields.Descriptor.Section + " section (unticked: removed whole)" };
+            var setUp = new CheckBox { X = FormLayout.Margin, Y = y, Height = 1, Text = fields.Descriptor.Section + " section" };
             Add(setUp);
             var model = FormLayout.AddField(this, y + 1, "  Model", fields.Model);
             var address = FormLayout.AddField(this, y + 2, "  API address", fields.BaseAddress);
@@ -40,32 +57,63 @@ internal sealed class DecisionSectionView : SectionView
             y += 3;
         }
 
-        FormLayout.AddNote(this, y, DecisionForm.KeysNotice);
-        FormLayout.AddNote(this, y + 1, DecisionForm.SectionsNotice);
-        _status = FormLayout.AddText(this, y + 3, _form.Status);
+        y++;
+        _routeLadder = FormLayout.AddField(this, y, "Profiles to pick among", _form.RouteLadder);
+        _effortLevels = FormLayout.AddField(this, y + 1, "Thinking levels", _form.EffortLevels);
+        y += 2;
+        foreach (var line in (string[])[DecisionForm.PicksNotice, DecisionForm.ListsNotice, DecisionForm.LevelsNotice, DecisionForm.DefaultLevelsNotice])
+            FormLayout.AddLine(this, y++, line);
+
+        y++;
+        foreach (var line in DecisionForm.KeyLines)
+            FormLayout.AddLine(this, y++, line);
+
+        // Last, with nothing under it: the one text of the screen that may take several rows.
+        _status = FormLayout.AddText(this, y + 1, _form.Status);
     }
 
     /// <inheritdoc />
-    public override void Load()
+    public override void Load() => Refresh();
+
+    /// <summary>
+    /// The screen follows the form, which follows the document it was just applied to: the row of a
+    /// provider name the engine does not know leaves the list once another choice is applied, a list of
+    /// names shows as it was stored, and the status says what a run now gets. What already shows what
+    /// the form holds is left alone, the cursor and the selection with it.
+    /// </summary>
+    public override void Refresh()
     {
-        FormLayout.SetItems(_provider, _form.ProviderChoices, _form.ProviderChoiceIndex);
-        // The state first: setting it raises a change, which must not clear the text just loaded.
+        var choices = _form.ProviderChoices;
+        if (!choices.SequenceEqual(_shownChoices, StringComparer.Ordinal) || FormLayout.SelectedIndex(_provider) != _form.ProviderChoiceIndex)
+        {
+            FormLayout.SetItems(_provider, choices, _form.ProviderChoiceIndex);
+            _shownChoices = [.. choices];
+        }
+
+        // The state first: setting it raises a change, which must not clear the text the form holds.
         var enabled = _form.EnabledAsWritten;
-        _enabled.Value = FormLayout.ToCheckState(_form.Enabled);
+        if (_enabled.Value != FormLayout.ToCheckState(_form.Enabled))
+            _enabled.Value = FormLayout.ToCheckState(_form.Enabled);
         _form.EnabledAsWritten = enabled;
         _enabled.Text = FormLayout.SwitchCaption(EnabledCaption, enabled);
         foreach (var (fields, setUp, model, address) in _providers)
         {
-            setUp.Value = FormLayout.ToCheckState(fields.SetUp);
-            model.Text = fields.Model;
-            address.Text = fields.BaseAddress;
+            if (setUp.Value != FormLayout.ToCheckState(fields.SetUp))
+                setUp.Value = FormLayout.ToCheckState(fields.SetUp);
+            Show(model, fields.Model);
+            Show(address, fields.BaseAddress);
         }
 
+        Show(_routeLadder, _form.RouteLadder);
+        Show(_effortLevels, _form.EffortLevels);
         _status.Text = _form.Status;
     }
 
-    /// <summary>The status follows the document the form was just applied to.</summary>
-    public override void Refresh() => _status.Text = _form.Status;
+    private static void Show(TextField field, string text)
+    {
+        if (!string.Equals(field.Text, text, StringComparison.Ordinal))
+            field.Text = text;
+    }
 
     /// <inheritdoc />
     public override void Apply()
@@ -78,6 +126,9 @@ internal sealed class DecisionSectionView : SectionView
             fields.Model = model.Text ?? "";
             fields.BaseAddress = address.Text ?? "";
         }
+
+        _form.RouteLadder = _routeLadder.Text ?? "";
+        _form.EffortLevels = _effortLevels.Text ?? "";
     }
 
     /// <summary>Test-only: the status line, what a run of the file gets.</summary>
@@ -100,6 +151,8 @@ internal sealed class DecisionSectionView : SectionView
                 address.Dispose();
             }
 
+            _routeLadder.Dispose();
+            _effortLevels.Dispose();
             _status.Dispose();
         }
 

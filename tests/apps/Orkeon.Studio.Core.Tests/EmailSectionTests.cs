@@ -379,9 +379,8 @@ public sealed class EmailSectionTests
     [Theory]
     [InlineData("Read, Organize, Draft", StudioEmailRights.Read | StudioEmailRights.Organize | StudioEmailRights.Draft)]
     [InlineData("read,SEND", StudioEmailRights.Read | StudioEmailRights.Send)]
-    [InlineData("3", StudioEmailRights.Read | StudioEmailRights.Organize)]
     [InlineData("Purge", StudioEmailRights.Purge)]
-    public void Rights_are_read_without_regard_to_case_and_in_their_numeric_form(string written, StudioEmailRights expected)
+    public void Rights_are_read_by_name_without_regard_to_case(string written, StudioEmailRights expected)
     {
         var document = AppSettingsDocument.Parse(
             $$"""{ "Orkeon": { "Tools": { "Email": { "Accounts": { "a": { "Rights": "{{written}}" } } } } } }""");
@@ -396,6 +395,8 @@ public sealed class EmailSectionTests
     [InlineData("Reed")]
     [InlineData("Read, Bogus")]
     [InlineData("64")]
+    [InlineData("3")]
+    [InlineData("Read, 2")]
     [InlineData("None")]
     public void A_text_the_engine_cannot_read_as_rights_is_kept_as_written_until_a_right_is_chosen(string written)
     {

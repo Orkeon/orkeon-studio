@@ -40,6 +40,12 @@ internal sealed class LlmForm : ISettingsForm
     /// </summary>
     public string ApiKeyEnvVar { get; set; } = "";
 
+    /// <summary>
+    /// The Anthropic workspace the key acts in (<c>Llm:WorkspaceId</c>, Orkeon #468): an identity-linked
+    /// key refuses every call without it. Not a secret; blank for every other key.
+    /// </summary>
+    public string WorkspaceId { get; set; } = "";
+
     /// <summary>Sampling temperature.</summary>
     public string Temperature { get; set; } = "";
 
@@ -60,7 +66,31 @@ internal sealed class LlmForm : ISettingsForm
 
     /// <summary>The "Read as: ..." line naming the provider a run reads the address as; never written to the file.</summary>
     public string ReadAsLine =>
-        string.Create(CultureInfo.InvariantCulture, $"Read as: {StudioEndpointReading.ProviderOf(BaseUrl)}  (read-only — the same reading a run makes of the base URL)");
+        string.Create(CultureInfo.InvariantCulture, $"Read as: {StudioEndpointReading.ProviderOf(BaseUrl)} (read-only)");
+
+    /// <summary>The caption of <see cref="WorkspaceId"/>'s field: only Anthropic sends it.</summary>
+    public const string WorkspaceCaption = "Anthropic workspace";
+
+    /// <summary>Shown under <see cref="ReadAsLine"/> while the reading has no notice: where the reading comes from.</summary>
+    public const string ReadingNotice = "A run reads the base URL the same way.";
+
+    /// <summary>Shown under <see cref="ReadAsLine"/> when the reading has a notice: the status, at the end of the screen, holds it whole.</summary>
+    public const string NoticeBelow = "Base URL: see the note at the end.";
+
+    /// <summary>What the screen says under the key when a real one would be written in clear text on save.</summary>
+    public const string ClearTextWarning = "WARNING: saved in clear text in the file.";
+
+    /// <summary>What a blank thinking field stands for.</summary>
+    public const string ThinkingNotice = "Blank thinking: the provider's default.";
+
+    /// <summary>What the list of named profiles is, and who writes it. One row of the screen each.</summary>
+    public static IReadOnlyList<string> ProfilesNotice { get; } =
+    [
+        "Named profiles (Llm:Profiles), read-only:",
+        "Studio's model settings write them. A crew",
+        "picks one with llm: { profile: <name> };",
+        "each names its key's variable (key: …).",
+    ];
 
     /// <summary>The reading's notice (a silent address, a refused one), or null when it has none.</summary>
     public string? NoticeLine => StudioEndpointReading.Of(BaseUrl) is { } reading
@@ -91,8 +121,8 @@ internal sealed class LlmForm : ISettingsForm
 
     /// <summary>The line saying which profile the document search calls.</summary>
     public string RagLlmProfileLine => LlmProfilesSection.IsDefault(RagLlmProfile)
-        ? "Document search (RAG) answers on the default profile (the section above)"
-        : string.Create(CultureInfo.InvariantCulture, $"Document search (RAG) answers on profile: {RagLlmProfile}");
+        ? "Document search (RAG): default profile"
+        : string.Create(CultureInfo.InvariantCulture, $"Document search (RAG) profile: {RagLlmProfile}");
 
     /// <summary>
     /// The connectivity probe for what the fields currently hold (SPEC §4.2). The key is the one a
@@ -156,6 +186,7 @@ internal sealed class LlmForm : ISettingsForm
         {
             BaseUrl = FieldText.ToStringOrNull(BaseUrl),
             ApiKey = apiKey,
+            WorkspaceId = FieldText.ToStringOrNull(WorkspaceId),
             Model = FieldText.ToStringOrNull(Model),
             ThinkingEnabled = thinking,
             CheckCompletion = true,
@@ -167,12 +198,17 @@ internal sealed class LlmForm : ISettingsForm
         };
     }
 
-    /// <summary>The label shown under the API key fields.</summary>
-    public static string ApiKeyRecommendation { get; } = string.Create(
-        CultureInfo.InvariantCulture,
-        $"Prefer naming the variable that holds the key (Llm:ApiKeyEnvVar) — every run reads it, " +
-        $"and the key stays out of the JSON — or set {LlmPresets.DefaultApiKeyEnv}, which the runtime " +
-        $"reads with precedence over this file.");
+    /// <summary>The recommendation shown under the API key fields, one row of the screen each.</summary>
+    public static IReadOnlyList<string> ApiKeyRecommendationLines { get; } =
+    [
+        "Prefer the variable (Llm:ApiKeyEnvVar):",
+        "every run reads it, and the key stays out",
+        string.Create(CultureInfo.InvariantCulture, $"of the JSON. Or set {LlmPresets.DefaultApiKeyEnv}:"),
+        "the runtime reads it before this file.",
+    ];
+
+    /// <summary>The recommendation of <see cref="ApiKeyRecommendationLines"/>, as one text.</summary>
+    public static string ApiKeyRecommendation { get; } = string.Join(' ', ApiKeyRecommendationLines);
 
     /// <summary>True when a real key would be written in clear text on save.</summary>
     public bool StoresApiKeyInClearText =>
@@ -188,6 +224,7 @@ internal sealed class LlmForm : ISettingsForm
         BaseUrl = FieldText.FromString(section.BaseUrl);
         ApiKey = FieldText.FromString(section.ApiKey);
         ApiKeyEnvVar = FieldText.FromString(section.ApiKeyEnvVar);
+        WorkspaceId = FieldText.FromString(section.WorkspaceId);
         // STUDIO-55: as the file writes them — a value the field cannot read is shown, and refused
         // when applied, never loaded empty and erased.
         Temperature = document.GetWritten($"{LlmSection.SectionPath}:Temperature");
@@ -240,6 +277,7 @@ internal sealed class LlmForm : ISettingsForm
         section.BaseUrl = FieldText.ToStringOrNull(BaseUrl);
         section.ApiKey = FieldText.ToStringOrNull(ApiKey);
         section.ApiKeyEnvVar = FieldText.ToStringOrNull(ApiKeyEnvVar);
+        section.WorkspaceId = FieldText.ToStringOrNull(WorkspaceId);
         section.Temperature = temperature;
         section.MaxTokens = maxTokens;
         section.TimeoutSeconds = timeout;

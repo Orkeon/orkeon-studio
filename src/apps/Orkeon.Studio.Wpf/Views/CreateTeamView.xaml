@@ -388,6 +388,10 @@
       <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource InkMutedBrush}" Margin="4,0,0,0"
                  VerticalAlignment="Center" Text="{Binding Profiles.StudioProfileName}"/>
     </StackPanel>
+    <!-- What the assistant itself asks of the decision models on this run, as the engine states it:
+         its calls and what they spent, or that it works without them and why. -->
+    <TextBlock Style="{StaticResource MetaText}" Margin="0,2,0,0" TextWrapping="Wrap" Text="{Binding AssistantDecisionLine}"
+               Visibility="{Binding AssistantDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
     <!-- §F.5: «Votre solution est prête.» and friends as a faint line, not raw mono. C03: while
          the failure banner is up it says the failure itself — the line would only repeat it. -->
     <TextBlock Margin="0,6,0,0" Text="{Binding StatusMessage}">
@@ -713,8 +717,8 @@
              on screen while the user talks to the assistant. -->
         <StackPanel>
       <!-- ── STEP 1 : DÉCRIRE ── -->
-      <!-- Refonte R14: step 1 in a vertical classeur of three tabs — the need, the team's
-           folders, the composition instruction. Each tab carries its state (check, amber dot,
+      <!-- Refonte R14: step 1 in a vertical classeur of four tabs — the decision models (#22),
+           the need, the team's folders, the composition instruction. Each tab carries its state (check, amber dot,
            empty circle) and its subtitle; each pane its own footer. The folders tab exists from
            the start, empty until the composition proposes them; when the engine waits on them
            it opens with the amber dot (R13). The step's action bar stays under the classeur. -->
@@ -750,6 +754,42 @@
               </StackPanel>
             </Border>
           </controls:StepTabs.SideContent>
+
+          <!-- ── Decision models (#22) ── -->
+          <!-- System One in a tab of its own, first of the step; the wizard still opens on the need. -->
+          <controls:StepTab Header="{Binding [Studio.Create.TabDecision], Source={x:Static services:I18n.Instance}}"
+                            Subtitle="{Binding DecisionTabSubtitle}" State="{Binding DecisionTabState}">
+            <DockPanel>
+              <StackPanel>
+                <TextBlock Style="{StaticResource CardTitle}" Margin="0,0,0,12"
+                           Text="{Binding [Studio.Create.TabDecision], Source={x:Static services:I18n.Instance}}"/>
+                <!-- Whether the assistant itself composes without asking the decision models, locked
+                     on while the settings switch them off,
+                     then what the team to compose asks of them (a new creation's choice, kept by its
+                     session), which stays free: a team can be meant for them before they run here. -->
+                <CheckBox IsChecked="{Binding DesignWithoutSystemOne}"
+                          IsEnabled="{Binding CanChooseDesignWithoutSystemOne}"
+                          Content="{Binding [Studio.Create.DesignWithoutSystemOne], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                           Text="{Binding [Studio.Create.DesignWithoutSystemOneHint], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding DesignWithoutSystemOneLockedLine}"
+                           Visibility="{Binding DesignWithoutSystemOneLockedLine, Converter={StaticResource StringPresentToVisibility}}"/>
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Create.CrewDecisionLabel], Source={x:Static services:I18n.Instance}}"/>
+                <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="320"
+                          ItemsSource="{Binding CrewDecisionChoices}" SelectedItem="{Binding SelectedCrewDecision}"
+                          IsEnabled="{Binding CanChooseCrewDecision}" DisplayMemberPath="Label"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                           Text="{Binding [Studio.Create.CrewDecisionHint], Source={x:Static services:I18n.Instance}}"/>
+                <!-- The mode of the session on screen, when the list shows the pick of the next composition instead. -->
+                <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding SessionCrewDecisionLine}"
+                           Visibility="{Binding SessionCrewDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
+                <!-- What the chosen mode meets on this machine, before anything is composed. -->
+                <controls:Alert Tone="Warning" Margin="0,8,0,0" Message="{Binding CrewDecisionNotice}"
+                                Visibility="{Binding CrewDecisionNotice, Converter={StaticResource StringPresentToVisibility}}"/>
+              </StackPanel>
+            </DockPanel>
+          </controls:StepTab>
 
           <!-- ── Need ── -->
           <controls:StepTab Header="{Binding [Studio.Create.TabNeed], Source={x:Static services:I18n.Instance}}"
@@ -1348,6 +1388,106 @@
                               ToolTipService.ShowOnDisabled="True"
                               Content="{Binding [Studio.Create.AddAgent], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="plus"/>
                     </WrapPanel>
+
+                    <!-- The tasks: what each step does, who does it, the file it writes, what it waits
+                         for and under which condition. Edit, move and remove follow the agents' « Edit »
+                         rule (Expert, or « Adjust the team… » in Novice) and travel the same `edit`;
+                         a decision task is shown, its questions are the assistant's to change. -->
+                    <StackPanel Margin="0,16,0,0" Visibility="{Binding HasTasks, Converter={StaticResource BooleanToVisibility}}">
+                      <TextBlock Style="{StaticResource ObjectTitle}" FontSize="13.5"
+                                 Text="{Binding [Studio.Create.TasksTitle], Source={x:Static services:I18n.Instance}}"/>
+                      <ItemsControl ItemsSource="{Binding Tasks}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border BorderBrush="{DynamicResource LineFaintBrush}" BorderThickness="0,1,0,0" Padding="0,10" Background="Transparent">
+                              <Border.Style>
+                                <Style TargetType="Border">
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDecision}" Value="True">
+                                      <Setter Property="ToolTip" Value="{Binding [Studio.Create.TaskDecisionTip], Source={x:Static services:I18n.Instance}}"/>
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Border.Style>
+                              <DockPanel>
+                                <Border DockPanel.Dock="Left" Width="26" Height="26" CornerRadius="13" VerticalAlignment="Top"
+                                        Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Margin="0,0,12,0">
+                                  <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="12" Foreground="{DynamicResource InkMutedBrush}"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Number}"/>
+                                </Border>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                                  <StackPanel.Visibility>
+                                    <MultiBinding Converter="{StaticResource AnyTrueToVisibility}">
+                                      <Binding Path="DataContext.Mode.IsExpert" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                      <Binding Path="DataContext.IsAdjustingTeam" RelativeSource="{RelativeSource AncestorType=views:CreateTeamView}"/>
+                                    </MultiBinding>
+                                  </StackPanel.Visibility>
+                                  <Button Style="{StaticResource IconBtnGhost}" Command="{Binding MoveUpCommand}" controls:ButtonIcon.Kind="arrow-up"
+                                          ToolTip="{Binding [Studio.Create.TaskMoveUp], Source={x:Static services:I18n.Instance}}"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskMoveUp], Source={x:Static services:I18n.Instance}}"/>
+                                  <Button Style="{StaticResource IconBtnGhost}" Command="{Binding MoveDownCommand}" controls:ButtonIcon.Kind="arrow-down"
+                                          ToolTip="{Binding [Studio.Create.TaskMoveDown], Source={x:Static services:I18n.Instance}}"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskMoveDown], Source={x:Static services:I18n.Instance}}"/>
+                                  <Button Command="{Binding RemoveCommand}" controls:ButtonIcon.Kind="trash-2"
+                                          ToolTipService.ShowOnDisabled="True"
+                                          AutomationProperties.Name="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}">
+                                    <Button.Style>
+                                      <Style TargetType="Button" BasedOn="{StaticResource IconBtnGhost}">
+                                        <Setter Property="ToolTip" Value="{Binding RemoveTooltip}"/>
+                                        <Style.Triggers>
+                                          <DataTrigger Binding="{Binding RemoveTooltip.Length}" Value="0">
+                                            <Setter Property="ToolTip" Value="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}"/>
+                                          </DataTrigger>
+                                        </Style.Triggers>
+                                      </Style>
+                                    </Button.Style>
+                                  </Button>
+                                  <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Margin="6,0,0,0"
+                                          Command="{Binding EditCommand}"
+                                          Visibility="{Binding IsDecision, Converter={StaticResource InverseBooleanToVisibility}}"
+                                          Content="{Binding [Studio.Create.Modify], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="pencil"/>
+                                </StackPanel>
+                                <StackPanel>
+                                  <TextBlock FontSize="13.5" Foreground="{DynamicResource InkBrush}" TextWrapping="Wrap" MaxHeight="40"
+                                             TextTrimming="CharacterEllipsis" Text="{Binding Description}">
+                                    <TextBlock.ToolTip>
+                                      <ToolTip>
+                                        <TextBlock MaxWidth="420" TextWrapping="Wrap" Text="{Binding Description}"/>
+                                      </ToolTip>
+                                    </TextBlock.ToolTip>
+                                  </TextBlock>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" Margin="0,3,0,0" TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding Who, Mode=OneWay}" FontWeight="SemiBold"/>
+                                    <InlineUIContainer BaselineAlignment="Center">
+                                      <TextBlock Style="{StaticResource MonoText}" FontSize="12.5" Margin="8,0,0,0" Text="{Binding Deliverable}"
+                                                 Visibility="{Binding HasDeliverable, Converter={StaticResource BooleanToVisibility}}"/>
+                                    </InlineUIContainer>
+                                    <InlineUIContainer BaselineAlignment="Center">
+                                      <TextBlock Style="{StaticResource MonoText}" FontSize="12.5" Margin="8,0,0,0" Foreground="{DynamicResource InkFaintBrush}"
+                                                 Text="{Binding Key}"
+                                                 Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+                                    </InlineUIContainer>
+                                  </TextBlock>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                             Text="{Binding AfterLine}" ToolTip="{Binding AfterLine}"
+                                             Visibility="{Binding HasAfter, Converter={StaticResource BooleanToVisibility}}"/>
+                                  <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                                             Text="{Binding WhenLine}" ToolTip="{Binding WhenLine}"
+                                             Visibility="{Binding HasWhen, Converter={StaticResource BooleanToVisibility}}"/>
+                                </StackPanel>
+                              </DockPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <WrapPanel Margin="0,8,0,0">
+                        <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32"
+                                Command="{Binding AddTaskCommand}"
+                                ToolTip="{Binding [Studio.Create.Wait], Source={x:Static services:I18n.Instance}}"
+                                ToolTipService.ShowOnDisabled="True"
+                                Content="{Binding [Studio.Create.AddTask], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="plus"/>
+                      </WrapPanel>
+                    </StackPanel>
                   </StackPanel>
 
                   <!-- Expert, the YAML side: what the render wrote, where the session lives. -->
@@ -1622,6 +1762,9 @@
             <controls:Alert Tone="Warning" Margin="0,10,0,0"
                             Message="{Binding [Studio.Create.TrialInsideTeam], Source={x:Static services:I18n.Instance}}"
                             Visibility="{Binding TrialReadsInsideTeam, Converter={StaticResource BooleanToVisibility}}"/>
+            <!-- A team that runs with the decision models or without them is tried twice: which pass is under way. -->
+            <TextBlock Style="{StaticResource MetaText}" Margin="0,12,0,0" Text="{Binding TrialPassLine}"
+                       Visibility="{Binding TrialPassLine, Converter={StaticResource StringPresentToVisibility}}"/>
             <ItemsControl ItemsSource="{Binding Activity}" Margin="0,12,0,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
@@ -1687,6 +1830,9 @@
             <TextBlock Style="{StaticResource MetaText}" Margin="0,2,0,8"
                        TextWrapping="Wrap" Text="{Binding VerdictSummary}"
                        Visibility="{Binding HasVerdictSummary, Converter={StaticResource BooleanToVisibility}}"/>
+            <!-- The verdict of each pass of a two-pass trial; the score and the checklist are the trial's as a whole. -->
+            <TextBlock Style="{StaticResource MetaText}" Margin="0,0,0,8" TextWrapping="Wrap" Text="{Binding VerdictPassesLine}"
+                       Visibility="{Binding VerdictPassesLine, Converter={StaticResource StringPresentToVisibility}}"/>
             <StackPanel Orientation="Horizontal">
               <TextBlock Style="{StaticResource Subhead}" VerticalAlignment="Center"
                          Text="{Binding [Studio.Create.VerdictTitle], Source={x:Static services:I18n.Instance}}"/>

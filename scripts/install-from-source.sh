@@ -19,8 +19,9 @@
 #      is ever cleared. Two commits of the same minute share a version, and NuGet keeps
 #      the first copy it extracted: the script refuses to pack a checkout with uncommitted
 #      changes, or to reuse a feed packed from another commit. The repository's
-#      nuget.config reads nuget.org alone: the build reads a nuget.config the script
-#      writes next to it, which resolves Orkeon.* from orkeon-feed/ instead;
+#      nuget.config reads nuget.org (plus, at times, a temporary dev-feed/): the build
+#      reads a nuget.config the script writes next to it, which resolves Orkeon.* from
+#      orkeon-feed/ instead;
 #   4. publishes the Studio apps of this machine -- orkeon-studio-config and
 #      orkeon-studio-run -- into <prefix>/lib/orkeon/libexec, next to the CLI, where
 #      Studio looks for it first, and links their launchers into <prefix>/bin.
@@ -100,7 +101,7 @@ APPS=(
 
 # The Orkeon packages the apps restore (Directory.Packages.props, src/Directory.Build.props
 # for the analyzer) and the project each is packed from; their Orkeon.* dependencies are
-# among them. Orkeon.Tools and Orkeon.Scripting serve the tests alone. The same projects
+# among them. Orkeon.Tools, Orkeon.Scripting and Orkeon.Interop.AgentCli serve the tests alone. The same projects
 # Orkeon's publish.yml packs: Orkeon.Cli.TerminalGui through its wrapper, which depends
 # on the Orkeon package instead of shipping its assemblies a second time.
 PACKAGES=(
@@ -251,7 +252,8 @@ fi
 ORKEON_INSTALL=(bash "$ORKEON_SRC/scripts/install-from-source.sh" --prefix "$PREFIX")
 [[ "$MODIFY_PATH" -eq 1 ]] && ORKEON_INSTALL+=(--modify-path)
 STAGE="$REPO_ROOT/artifacts/install-from-source/$RID"
-# The restore reads this nuget.config instead of the repository's (nuget.org alone): it maps
+# The restore reads this nuget.config instead of the repository's (nuget.org, plus at times
+# a temporary dev-feed): it maps
 # Orkeon.* to orkeon-feed/, where the packages of the checkout are, and the rest to nuget.org.
 RESTORE_CONFIG="$STAGE/nuget.config"
 # NU1603 is the restore settling for a higher version than the one asked when that one is

@@ -51,7 +51,7 @@ dotnet build Orkeon.Studio.sln --no-restore
 dotnet test Orkeon.Studio.sln --no-build --filter "Category!=Integration&Category!=Slow"
 ```
 
-Studio consomme Orkeon par des paquets NuGet (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui` ; les tests ajoutent `Orkeon.Tools` et `Orkeon.Scripting`). Leur version est la propriété `OrkeonVersion` de `Directory.Packages.props`. Ils viennent de nuget.org, comme tous les autres paquets (`nuget.config`).
+Studio consomme Orkeon par des paquets NuGet (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui` ; les tests ajoutent `Orkeon.Tools`, `Orkeon.Scripting` et `Orkeon.Interop.AgentCli`). Leur version est la propriété `OrkeonVersion` de `Directory.Packages.props`. Ils viennent de nuget.org, comme tous les autres paquets (`nuget.config`) ; tant que Studio se construit contre un Orkeon non tagué, un `dev-feed/` temporaire qu'ajoute `nuget.config` les sert à la place.
 
 Les tests de dérive d'`Orkeon.Studio.Core.Tests` comparent Studio à des fichiers qu'Orkeon livre sans les empaqueter (équipages d'exemple, réglages d'exemple de l'installeur, inventaire des outils, sources de la CLI). Ils les lisent dans un checkout d'Orkeon : renseignez `ORKEON_SOURCE_ROOT`, ou clonez Orkeon à côté de ce dépôt sous `../orkeon`.
 
@@ -78,7 +78,7 @@ dotnet run --project src/apps/Orkeon.Studio.Wpf      # Windows seulement
 pwsh -File .\scripts\install-from-source.ps1 -WithOrkeon  # Windows : la CLI, puis Studio
 ```
 
-Le script empaquette Orkeon dans `orkeon-feed/` à une version datée par le dernier commit du checkout d'Orkeon, ou à la version du tag quand ce commit est tagué (voir `scripts/resolve-version.sh`) et construit Studio contre ces paquets : un nouveau commit d'Orkeon donne une nouvelle version, jamais une copie périmée du cache NuGet. Il refuse d'empaqueter un checkout d'Orkeon qui a des modifications non commitées, ou de réutiliser des paquets de même version empaquetés depuis un autre commit. Cette construction lit un `nuget.config` qu'écrit le script, qui résout `Orkeon.*` depuis `orkeon-feed/` ; celui du dépôt ne lit que nuget.org. Studio s'installe dans l'installation de la CLI (`lib/orkeon/libexec`, ou `libexec\` de `%LOCALAPPDATA%\Programs\Orkeon`), où il trouve la CLI en premier. L'installeur de la CLI remplace ce dossier en entier : après avoir réinstallé la CLI, relancez le script.
+Le script empaquette Orkeon dans `orkeon-feed/` à une version datée par le dernier commit du checkout d'Orkeon, ou à la version du tag quand ce commit est tagué (voir `scripts/resolve-version.sh`) et construit Studio contre ces paquets : un nouveau commit d'Orkeon donne une nouvelle version, jamais une copie périmée du cache NuGet. Il refuse d'empaqueter un checkout d'Orkeon qui a des modifications non commitées, ou de réutiliser des paquets de même version empaquetés depuis un autre commit. Cette construction lit un `nuget.config` qu'écrit le script, qui résout `Orkeon.*` depuis `orkeon-feed/` ; celui du dépôt lit nuget.org (plus, par moments, son `dev-feed/` temporaire). Studio s'installe dans l'installation de la CLI (`lib/orkeon/libexec`, ou `libexec\` de `%LOCALAPPDATA%\Programs\Orkeon`), où il trouve la CLI en premier. L'installeur de la CLI remplace ce dossier en entier : après avoir réinstallé la CLI, relancez le script.
 
 ## Contribuer
 

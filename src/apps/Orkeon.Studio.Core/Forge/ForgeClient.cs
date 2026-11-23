@@ -91,6 +91,71 @@ public sealed record ForgeStartRequest
     /// <see cref="ResumeSlug"/>.
     /// </summary>
     public bool Adopt { get; init; }
+
+    /// <summary>
+    /// The decision mode of the crew a new session designs (<c>--crew-decision</c>): one of
+    /// <see cref="ForgeCrewDecisions.All"/>. Only <see cref="ForgeCrewDecisions.Optional"/> and
+    /// <see cref="ForgeCrewDecisions.Required"/> are passed: null, <see cref="ForgeCrewDecisions.None"/>
+    /// and a text that is no mode pass nothing, the engine then designing a crew that asks nothing of
+    /// System One, so <c>--crew-decision none</c> is never on a command line. A new session's only: a
+    /// resumed one keeps the mode it was created with, which the engine refuses to change, and a
+    /// reopen takes none.
+    /// </summary>
+    public string? CrewDecision { get; init; }
+
+    /// <summary>
+    /// The assistant asks System One nothing for its own work on this run (<c>--no-decision</c>). The
+    /// engine never stores it: each run decides for itself. Passed on the two commands
+    /// <see cref="ForgeArgumentsBuilder.Build"/> shapes a cycle with, a new session
+    /// (<c>forge &lt;need&gt;</c>) and a resume (<c>forge resume</c>), except with <see cref="Adopt"/>,
+    /// which asks System One nothing and refuses the switch. Never passed on a reopen
+    /// (<c>forge reopen</c>), whose command line is fixed; <c>forge rephrase</c>, <c>forge promote</c>
+    /// and the schedule verbs are built from other requests and never carry it either.
+    /// </summary>
+    public bool NoDecision { get; init; }
+}
+/// <summary>
+/// The decision modes a session may design its crew for (<c>orkeon forge --crew-decision</c>), in the
+/// engine's own words: what the crew asks of System One.
+/// </summary>
+public static class ForgeCrewDecisions
+{
+    /// <summary>The crew asks nothing of System One: the engine's choice when the option is not passed.</summary>
+    public const string None = Orkeon.Constants.Protocol.RunDecisionModes.None;
+
+    /// <summary>The crew runs with System One or without it: each decision task names an agent that answers in its place.</summary>
+    public const string Optional = Orkeon.Constants.Protocol.RunDecisionModes.Optional;
+
+    /// <summary>The crew cannot run without System One.</summary>
+    public const string Required = Orkeon.Constants.Protocol.RunDecisionModes.Required;
+
+    /// <summary>Every mode, in the order a screen offers them.</summary>
+    public static IReadOnlyList<string> All { get; } = [None, Optional, Required];
+
+    /// <summary>The mode as the engine spells it, whatever the letter case; null for a text that is none of them.</summary>
+    public static string? Normalize(string? mode) =>
+        All.FirstOrDefault(known => string.Equals(known, mode?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The mode of a session written before <c>--crew-decision</c>, as the engine derives it from the
+    /// session's plan (<c>ForgeCrewDecision.Derive</c>, read by <c>ForgeSession.CrewDecisionOrDerived</c>):
+    /// <see cref="Required"/> when a task declares a <c>decision</c> or an agent or a task holds
+    /// <c>system_one_decide</c>, else <see cref="None"/>, a missing plan included.
+    /// </summary>
+    public static string Derive(System.Text.Json.Nodes.JsonObject? blueprint)
+    {
+        if (blueprint is null)
+            return None;
+
+        var tasks = (blueprint["tasks"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>();
+        var agents = (blueprint["agents"] as System.Text.Json.Nodes.JsonArray ?? []).OfType<System.Text.Json.Nodes.JsonObject>();
+        var decides = tasks.Any(task => task["decision"] is not null || HoldsDecideTool(task))
+            || agents.Any(HoldsDecideTool);
+        return decides ? Required : None;
+    }
+
+    private static bool HoldsDecideTool(System.Text.Json.Nodes.JsonObject entry) =>
+        BlueprintJson.Strings(entry["tools"]).Contains(Teams.CrewDecisionUsage.DecideTool, StringComparer.Ordinal);
 }
 
 /// <summary>
@@ -253,6 +318,23 @@ public static class ForgeArgumentsBuilder
 
         if (request.Adopt)
             arguments.Add("--adopt");
+
+        // The mode of the crew, a new session's only, like the need: a resume keeps the mode it was
+        // created with, and the engine refuses another. A value it does not know is not passed, nor
+        // is "none", the engine's own default: the command line stays the one an engine that predates
+        // the option reads.
+        if (string.IsNullOrWhiteSpace(request.ResumeSlug)
+            && ForgeCrewDecisions.Normalize(request.CrewDecision) is { } crewDecision
+            && crewDecision != ForgeCrewDecisions.None)
+        {
+            arguments.Add("--crew-decision");
+            arguments.Add(crewDecision);
+        }
+
+        // The assistant's own circuit, this run's, on a new session and on a resume: an adoption asks
+        // System One nothing, and refuses the switch. A reopen returned above with its fixed argv.
+        if (request.NoDecision && !request.Adopt)
+            arguments.Add("--no-decision");
 
         // The need last, after `--`: a bulleted need or one equal to a verb is never read as an option.
         if (string.IsNullOrWhiteSpace(request.ResumeSlug) && !string.IsNullOrWhiteSpace(request.Need))

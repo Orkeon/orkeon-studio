@@ -61,7 +61,7 @@ public class LlmFormTests
                 "profile: local-gpu — http://localhost:11500",
             ],
             form.Profiles);
-        Assert.Equal("Document search (RAG) answers on profile: claude", form.RagLlmProfileLine);
+        Assert.Equal("Document search (RAG) profile: claude", form.RagLlmProfileLine);
 
         form.Model = "qwen3:32b";
         Assert.Empty(form.ApplyTo(document));
@@ -115,7 +115,7 @@ public class LlmFormTests
         form.LoadFrom(AppSettingsDocument.Parse("""{ "Llm": { "Model": "qwen3" } }"""));
 
         Assert.Empty(form.Profiles);
-        Assert.Equal("Document search (RAG) answers on the default profile (the section above)", form.RagLlmProfileLine);
+        Assert.Equal("Document search (RAG): default profile", form.RagLlmProfileLine);
     }
 
     [Fact]

@@ -485,8 +485,10 @@
   </data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>运行成功完成</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>脚本或设置错误：请检查团队文件及其使用的设置</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>运行被拒绝：此团队离不开决策模型（System One），而它们已关闭。请在“设置 › 决策模型”中完成配置，并保持开启“使用决策模型”</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>运行时错误：日志的最后几行说明了原因</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>运行已中断</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>运行正在等待输入：它在一个问题处停下，回答后继续</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>意外结束：请查看上方的输出</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>引擎未启动</value></data>
   <data name="Studio.Settings.OllamaTitle" xml:space="preserve">
@@ -819,6 +821,11 @@
     <value>目前还没有任何报告。</value>
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>已跳过：{0}</value></data>
+  <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>已跳过：决策 {0} 的回答为 {1}</value></data>
+  <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>已跳过：决策 {0} 未作出</value></data>
+  <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>已跳过：其依赖的任务未成功</value></data>
+  <data name="Studio.Run.SkipDependenciesConditionSkipped" xml:space="preserve"><value>已跳过：其依赖的所有任务均因决策而被跳过</value></data>
+  <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>任务提前结束：智能体在完成前用尽了迭代次数。其工作可能不完整：请检查它应写入的文件。</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>文件未写入：任务已成功，但未写入（或更新）其交付物指定的文件。请检查其智能体是否有能写入该文件的工具，以及任务是否要求写入该文件（如果任务也提前结束，请给智能体更多迭代次数），然后重新运行团队。</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>提前结束：请检查其文件</value></data>
@@ -832,6 +839,38 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — 已完成，但未写入其文件；且提前结束：迭代次数已用尽</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>决策</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>决策（默认）</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>决策（接替）</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One 与上下文</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>决策模型已开启（团队模式：{0}）。</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>决策模型已关闭：{1}（团队模式：{0}）。</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>本次运行不使用它们</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>设置中已将其关闭</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>未配置决策提供方</value></data>
+  <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>决策提供方没有 API 密钥：请设置其环境变量，或在设置中填写其 ApiKey</value></data>
+  <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>试运行的这一轮不使用它们</value></data>
+  <data name="Studio.Run.NoteCauseWithDetail" xml:space="preserve"><value>{0}：{1}</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}：System One 选择了模型配置“{1}”（{2}%）。</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}：模型配置“{1}”，非 System One 选择（{2}）。</value></data>
+  <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0}：模型配置“{1}”，System One 的选择被限制在阶梯下限。</value></data>
+  <data name="Studio.Run.NoteRouteCeiling" xml:space="preserve"><value>{0}：模型配置“{1}”，System One 的选择被限制在阶梯上限。</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}：System One 选择了思考级别 {1}（{2}%）。</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}：一次尝试失败后，思考级别由 {1} 提高到 {2}。</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}：思考级别 {1}，非 System One 选择（{2}）。</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>它自己的选择</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>其选择不够确定</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>它未给出可用的回答</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>决策模型已关闭</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>没有可供选择的阶梯</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>团队未向其提出任何请求</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>只允许一个级别</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>在一次失败的尝试后提高</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>限定在阶梯的最低级</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>限定在阶梯的最高级</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}：技能 {1}（{2}）。</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}：无技能（{1}）。</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}：上下文已压缩，从 {1} 个令牌降至 {2} 个。</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0}：无法压缩上下文（{1}）。</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0}：已裁剪 {1} 个工具结果，释放约 {2} 个令牌。</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>是</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>得分 {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>概率 {0}%</value></data>
@@ -1567,9 +1606,9 @@
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-ENDPOINT" xml:space="preserve">
     <value>模型地址被拒绝或保持沉默：位于其他供应商 /anthropic 路径下的地址会被拒绝，没有路径的地址会被当作根路径上的 OpenAI 兼容服务器。</value>
   </data>
-  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve">
-    <value>有一个模型配置名为“default”，这是 Llm 节自身的名称：引擎拒绝启动。请重命名它。</value>
-  </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>有一个模型配置使用了保留名称（“default”是 Llm 节自身的名称，“auto”表示由 System One 选择）：引擎拒绝启动。请重命名它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Llm 或某个配置的 Provider 被拒绝：它只接受带 Responses 文件的“mock”，或某个提供方模块的键。省略它时，提供方由地址、模型名称和密钥推断。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE" xml:space="preserve"><value>为非 Anthropic 的提供方设置了 WorkspaceId：运行不会发送它。只有 Anthropic 会把密钥限定在某个工作区；请为此提供方删除它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve">
     <value>两个文件夹带有相同的标识：一个标识只对应一个文件夹。</value>
   </data>
@@ -1578,12 +1617,17 @@
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>某个智能体的 filesystem: 声明格式错误，或其范围或工作根目录要求的文件夹未被此次运行的挂载授予：引擎会在加载时拒绝该团队，或在运行启动该智能体时拒绝它。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>某个任务需要写入一个文件，但可能运行它的智能体都没有能写入它的工具，或某个决策任务声明了交付物：运行会启动，文件可能永远不会被写入，而任务仍会计为完成。Orkeon 1.2 CLI 在加载时也会发出此警告。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>此团队离不开决策模型（System One）：某个智能体或任务使用 system_one_decide，而只有在配置了决策提供方后运行才会提供该工具；或者某个决策任务既无后备答案也无“otherwise”任务，模型关闭时运行会拒绝它。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>设置指定了引擎拒绝的决策提供方（未知名称，或可推断出两个提供方）：CLI 会在加载团队前停止。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务使用其后备答案，或让其“otherwise”任务运行。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：它收到的每个请求都会失败。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>本次运行已关闭决策模型，但某个智能体或任务使用 system_one_decide：该工具仍会询问提供方，因为该开关只控制决策任务。</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，且未配置决策提供方：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会移除该工具，并在没有它的情况下运行团队。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>此团队离不开决策模型（System One）：它声明了 decision.mode: required，或有智能体或任务使用 system_one_decide（模型关闭后引擎会扣留该工具），或有决策任务既无后备答案也无“otherwise”任务（模型关闭后运行会被拒绝）。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>引擎拒绝决策模型的设置（提供方、开关、模型配置阶梯、思考级别、决策配置，或依赖它们的评判器）：CLI 会在加载团队前停止。消息会说明被拒绝的内容。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务由其接替智能体回答、使用其后备答案，或让其“otherwise”任务运行；原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>本次运行使用的决策提供方需要密钥，但其变量和设置文件中都没有：引擎会关闭决策模型，不会向它发送任何请求。离不开决策模型的团队会被拒绝；其他团队则在没有决策模型的情况下运行。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），而设置无法满足：设置中没有包含两个或更多模型配置的阶梯，或阶梯中的某个模型配置既未在设置中定义，也未在启动时提供给本次运行。引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>团队声明了 decision.mode: none，而某个智能体或任务让 System One 选择其模型配置（llm.profile: auto），或指定了设置中的决策配置：该模式拒绝任何对 System One 的使用，因此引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED" xml:space="preserve"><value>某个智能体或任务使用设置中的决策配置，其防护阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。检查仍会加载团队。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>引擎在启动时检查的某个配置节（压缩、裁剪、技能、工具桥、守卫、决策模型及其决策配置、agent-cli 提供方的 Llm:AgentCli）包含其规则拒绝的值，或包含不属于该节设置的键：作为错误时，任何运行都无法启动。作为警告时，它指定了本文件未定义的模型配置，在 Studio 之外启动的运行会因此被拒绝。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>运行会把工具桥接到另一台机器，而工具桥的令牌不在其环境变量中，或短于 16 个字符：运行拒绝启动。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>设置中指定了工具桥的地址，但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>某个智能体或任务使用 system_one_decide，而运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>添加的文件夹行以“-”开头：引擎会把它当作选项读取。</value>
   </data>
@@ -1638,6 +1682,41 @@
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve">
     <value>LLM 日志</value>
   </data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>上下文压缩</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>当智能体的上下文接近其模型的窗口时，较早的轮次会被摘要替换，使长任务得以继续。默认开启，除非您将其关闭。</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>压缩接近窗口上限的上下文</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>达到窗口的此比例时开始（大于 0，至多 1）</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>保持原样的最近轮次数</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>撰写摘要的模型配置</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>留空：由各智能体自己的模型撰写。</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>先让 System One 裁剪较早的工具结果</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>默认关闭，除非您将其开启。它会询问决策模型：没有决策模型时不裁剪任何内容。</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>达到窗口的此比例时开始裁剪（大于 0，至多 1）</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>从不评判的最近消息数</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>被裁剪结果保留的字符数</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>技能</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>技能是智能体在其提示词中携带的 Markdown 文件。团队可列出每个智能体的技能，或让 System One 为每个任务选择。</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>技能文件夹（虚拟路径）</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>单个技能保留的字符数</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>一个提示词中全部技能的字符数</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>默认模型的上下文窗口（令牌数）</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>留空：使用引擎为该模型记录的窗口。上下文压缩以此为基准。其他模型配置的窗口是其配置节中的 ContextWindowTokens 键，可在“文件”选项卡中设置。</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>工具桥：在另一台机器上运行的工具</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>运行中的某些工具（例如浏览器）可以在另一台机器上执行，由那里的“orkeon bridge serve”运行。地址为空或未允许任何工具时，不会桥接任何内容。</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>工具桥地址</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>例如 https://host:7410/。地址以“/”结尾，并使用 https，除非主机是本机或 host.docker.internal。</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>要桥接的工具</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>用逗号或分号分隔的名称，或单独一个 * 表示工具桥提供的所有工具。</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>从不桥接的工具</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>保存令牌的环境变量</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host 标头（与地址不同时）</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>超时、大小和限制沿用引擎的默认值；可在“文件”选项卡中修改。</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>工具桥：本机为另一台机器运行的工具</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>“orkeon bridge serve”为另一台机器上持有相同令牌的调用方运行此处允许的工具。未允许任何工具时不提供任何服务。Studio 不会启动工具桥：请在终端中运行该命令。</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>监听地址</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>提供的工具</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>用逗号或分号分隔的名称，或单独一个 * 表示所有可桥接的 Orkeon 工具。</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>从不提供的工具</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>顺利完成，没有错误。</value>
   </data>
@@ -1647,6 +1726,7 @@
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve">
     <value>在结束前被中断。</value>
   </data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>在一个问题处停下：等待回答。</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve">
     <value>从未启动。</value>
   </data>
@@ -1926,7 +2006,7 @@
     <value>仅当设置文件中手动写入 {0} 时才会出现，且只有设置了 memory: true 的团队才持有它</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
-    <value>仅在“决策模型”选项卡中配置了决策提供方后才会出现：密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或设置文件中的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有密钥时，TypeSafe 和 Liquid 会拒绝所有调用</value>
+    <value>仅在“决策模型”选项卡中配置了决策提供方后才会出现：密钥 TYPESAFE_API_KEY 或 LIQUID_API_KEY，或设置文件中的 Orkeon:Decision:Provider、Orkeon:TypeSafe 节或 Orkeon:Liquid 节；没有 TypeSafe 或 Liquid 的密钥时，引擎会关闭决策模型并扣留该工具</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
     <value>需要一个标准数据集，即已授权文件夹中的一个 YAML 文件；它会自行用该数据集的语料填充集合</value>
@@ -2052,7 +2132,7 @@
     <value>服务器</value>
   </data>
   <data name="Studio.Settings.MailRightsIntro" xml:space="preserve">
-    <value>未勾选即不允许：引擎会拒绝未授予任何权限的账户。</value>
+    <value>未开启即不允许：引擎会拒绝未授予任何权限的账户。</value>
   </data>
   <data name="Studio.Settings.MailRightRead" xml:space="preserve">
     <value>读取 — 列出文件夹、搜索、阅读邮件并保存附件</value>
@@ -2290,12 +2370,38 @@
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve">
     <value>助手当前未在运行——请启动组建（第 1 步「组建」）或恢复会话；您的问题已保留。</value>
   </data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>否：团队从不询问它们</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>可用时使用：团队无论有无它们都能运行</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>始终：团队离不开它们</value></data>
+  <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：团队可以组建，但在“设置 › 决策模型”中完成配置之前，其试运行会被拒绝。</value></data>
+  <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>本机的决策模型已关闭（{0}）：试运行将只在不使用它们的情况下执行。</value></data>
+  <data name="Studio.Create.CrewDecisionSession" xml:space="preserve"><value>屏幕上的团队是按“{0}”组建的，并保持不变：上方的选择用于下一次“组建团队”。</value></data>
+  <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：使用决策模型</value></data>
+  <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>第 {0} 轮（共 {1} 轮）：不使用决策模型</value></data>
+  <data name="Studio.Create.PassWith" xml:space="preserve"><value>使用决策模型</value></data>
+  <data name="Studio.Create.PassWithout" xml:space="preserve"><value>不使用决策模型</value></data>
+  <data name="Studio.Create.VerdictWithMet" xml:space="preserve"><value>使用决策模型：满足标准</value></data>
+  <data name="Studio.Create.VerdictWithNotMet" xml:space="preserve"><value>使用决策模型：未满足标准</value></data>
+  <data name="Studio.Create.VerdictWithoutMet" xml:space="preserve"><value>不使用决策模型：满足标准</value></data>
+  <data name="Studio.Create.VerdictWithoutNotMet" xml:space="preserve"><value>不使用决策模型：未满足标准</value></data>
+  <data name="Studio.Create.AssistantDecisionOn" xml:space="preserve"><value>助手使用决策模型工作（本次运行的调用次数：{0}）。</value></data>
+  <data name="Studio.Create.AssistantDecisionTokens" xml:space="preserve"><value>这些调用在本会话中已消耗 {0} 个令牌。</value></data>
+  <data name="Studio.Create.AssistantDecisionOff" xml:space="preserve"><value>助手在不使用决策模型的情况下工作。</value></data>
+  <data name="Studio.Create.AssistantDecisionOffBecause" xml:space="preserve"><value>助手在不使用决策模型的情况下工作：{0}。</value></data>
+  <data name="Studio.Create.AssistantDecisionCauseSwitch" xml:space="preserve"><value>您已要求它在组建时不询问决策模型</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>团队是否使用决策模型（System One）？</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>它们以概率回答问题：走哪条路径、某项工作是否就绪。此选择在组建团队时确定并随团队保留；选择“可用时使用”时，试运行会执行两次，先使用它们，再不使用。</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>组建时不询问决策模型</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>助手在组建团队时自身也可能询问它们。未配置决策模型或想要对比时，请开启此项。</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>决策模型已在设置中关闭：助手将在不使用它们的情况下组建团队。团队仍可设计为使用它们。</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>助手仍在处理「{0}」——请先停止它，或等它完成，再打开一个团队。</value>
   </data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve">
     <value>复制</value>
   </data>
+  <data name="Studio.Settings.ProfileLblWorkspace" xml:space="preserve"><value>Anthropic 工作区（可选）</value></data>
+  <data name="Studio.Settings.ProfileWorkspaceHint" xml:space="preserve"><value>与身份关联的 Anthropic 密钥在没有其工作区时会拒绝所有调用：请在此粘贴其 ID。传统密钥不需要。这不是机密。</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve">
     <value>温度（可选）</value>
   </data>
@@ -2333,7 +2439,7 @@
     <value>添加到团队</value>
   </data>
   <data name="Studio.Teams.TeamMountsSub" xml:space="preserve">
-    <value>勾选此团队可见的内容。未勾选的文件夹对它不可见，即使其他团队在用。</value>
+    <value>开启此团队可见的内容。未开启的文件夹对它不可见，即使其他团队在用。</value>
   </data>
   <data name="Studio.Teams.AddAnother" xml:space="preserve">
     <value>授权其他文件夹…</value>
@@ -2408,23 +2514,44 @@
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>请为负责写入该文件的智能体提供能写入它的工具（MCP 服务器或插件提供的工具），或改为交付文本格式（.md、.html、.csv）。</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>任务“{0}”是决策任务，需要写入 {1}，但决策不会写入任何文件：请删除该交付物，或将其移到由智能体运行的任务中。</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>使用决策模型（System One）</value></data>
-  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>取消勾选后，决策任务不使用它们（--no-decision）：每个任务以其后备答案作答，或让其“otherwise”任务运行；两者都没有的任务会被运行拒绝。system_one_decide 工具仍会询问提供方。</value></data>
-  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>设置指定了引擎拒绝的决策提供方，因此 CLI 不会启动：{0} 请在“设置 › 决策模型”中修正。</value></data>
-  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>本机设置指定了引擎拒绝的决策提供方：除非 CLI 选用的设置文件另有说明，否则它不会启动。{0}</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>关闭后，本次运行不使用决策模型（--no-decision）：决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行；引擎会扣留 system_one_decide 工具；离不开决策模型的团队会被拒绝。</value></data>
+  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 请在 {1} 中修正。</value></data>
+  <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>引擎拒绝本次运行读取的设置，因此 CLI 不会启动：{0} 决策配置与模型配置不能同名：请重命名其中一个。决策配置位于 {1} 的 Orkeon:Decision:Profiles 下。</value></data>
+  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>引擎拒绝本机的决策设置：除非 CLI 选用的设置文件另有规定，否则它不会启动。{0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。{1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>此团队离不开决策模型（System One）：{0}。CLI 会自行选择设置文件：请确认它提供了决策模型，或固定该文件。{1}</value></data>
-  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请勾选“使用决策模型”。</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>本次运行不使用它们：请开启“使用决策模型”。</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>设置关闭了决策模型：请在“设置 › 决策模型”中开启。</value></data>
+  <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>本次运行读取的设置文件关闭了决策模型：请在 {0} 中将 Orkeon:Decision:Enabled 设为 true。</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>未配置决策提供方：请在“设置 › 决策模型”中配置一个。</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，它需要提供方</value></data>
+  <data name="Studio.Run.DecisionOffNoKey" xml:space="preserve"><value>{0} 没有密钥（变量 {1} 为空，设置文件中也没有），因此引擎会关闭决策模型：请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.DecisionOffNoKeyNamedBySetting" xml:space="preserve"><value>{0} 没有密钥（{1} 所指定的变量为空，设置文件中也没有），因此引擎会关闭决策模型：请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} 使用 system_one_decide，没有决策模型时引擎会扣留该工具</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>决策任务 {0} 既无后备答案也无“otherwise”任务，因此需要开启决策模型</value></data>
-  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此它收到的每个请求都会失败，询问它的每个决策任务也随之失败。请在“设置 › 决策模型”中保存密钥。</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} 使用 system_one_decide：本次运行中该工具仍会询问 {1}，因为该开关只会让决策任务使用其后备答案。</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，但未配置决策提供方：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会移除该工具，并在没有它的情况下运行团队。</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：每个决策任务使用其后备答案。{0}</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>它声明了 decision.mode: required，因此引擎会在第一个任务之前拒绝运行</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} 让 System One 选择其模型配置（llm.profile: auto），而{1}：引擎在加载团队时会拒绝它。{2}</value></data>
+  <data name="Studio.Run.DecisionLadderFixSettings" xml:space="preserve"><value>请在“设置 › 决策模型”中设置阶梯。</value></data>
+  <data name="Studio.Run.DecisionLadderFixFile" xml:space="preserve"><value>请在 {0} 中设置阶梯（Orkeon:Decision:Route:Ladder）。</value></data>
+  <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} 指定了决策配置，而团队声明了 decision.mode: none，它拒绝任何对 System One 的使用：引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Run.BlockedDecisionModeAuto" xml:space="preserve"><value>{0} 让 System One 选择其模型配置（llm.profile: auto），而团队声明了 decision.mode: none，它拒绝任何对 System One 的使用：引擎在加载团队时会拒绝它。</value></data>
+  <data name="Studio.Run.BlockedDecisionProfileClosed" xml:space="preserve"><value>{0} 使用的决策配置带有防护阶段，该阶段在无法判定时会拦截（FailClosed），而本次运行不使用决策模型（System One）：引擎会拦截经由该决策配置发出的每一次调用。{1}</value></data>
+  <data name="Studio.Run.JudgedOnMachineSettings" xml:space="preserve"><value>以下按本机设置判断；CLI 选用的设置文件可能另有规定。{0}</value></data>
+  <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>设置中没有可供选择的、包含两个或更多模型配置的阶梯</value></data>
+  <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>阶梯中包含 {0}，设置中未定义对应的模型配置，Studio 也未提供给本次运行</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} 没有密钥：变量 {1} 为空，设置文件中也没有，因此引擎会关闭决策模型，不会向它发送任何请求：团队在没有决策模型的情况下运行，每个决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行。请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissingNamedBySetting" xml:space="preserve"><value>{0} 没有密钥：{1} 所指定的变量为空，设置文件中也没有，因此引擎会关闭决策模型，不会向它发送任何请求：团队在没有决策模型的情况下运行，每个决策任务由其接替智能体作答或采用其后备答案，或让其“otherwise”任务运行。请在“设置 › 决策模型”中保存密钥。</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} 使用 system_one_decide，而本次运行不使用决策模型：由于 Orkeon:CrewFactory:StrictTools 为 false，引擎会扣留该工具，并在没有它的情况下运行团队。{1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>本次运行不使用决策模型（System One）：团队在没有它们的情况下作答。{0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>任务“{0}”：{1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>任务“{0}”：无答案，改为运行任务“{1}”。</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>任务“{0}”：由智能体“{1}”代替模型作答。</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>“{0}”：不选择模型配置，使用默认模型配置运行。</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>“{0}”：不选择思考级别，沿用其模型配置的级别。</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>“{0}”：不选择技能，智能体携带其后备技能（如有）。</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>“{0}”：不裁剪任何工具结果。</value></data>
+  <data name="Studio.Run.InfoDecisionProfileItem" xml:space="preserve"><value>“{0}”：跳过其决策配置中的决策阶段。</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>决策模型设置</value></data>
+  <data name="Studio.Run.OpenBridgeSettings" xml:space="preserve"><value>工具桥设置</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0}（在 {1} 个条目中按标识选中）</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0}（本次运行未挂载）</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0}（{1} 个条目之一 — 没有任何选择）</value></data>
@@ -2515,6 +2642,7 @@
   <data name="Studio.Teams.RunFail" xml:space="preserve">
     <value>失败</value>
   </data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>等待输入</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve">
     <value>从未执行</value>
   </data>
@@ -3552,6 +3680,78 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>团队将写成 profile: default，这是默认配置的保留名称——请换一个名称。</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>团队将写成 profile: auto，这是自动选择的名称——请换一个名称。</value>
+  </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} 个模型</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>模型</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>一个连接，多个模型：每个模型都是独立的设置，命名为 连接.别名，团队和决策阶梯都可以选用。</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>添加模型</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>别名</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>连接包含多个模型时，每个模型都需要别名。</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>此连接中的另一个模型已使用该别名。</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>已有其他设置使用此名称。</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>由 {0} 使用：移除此模型后，这些团队将失去其设置。</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>此模型的设置——留空则沿用连接的设置。</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>与连接相同</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>由 {0} 使用：这些团队将找不到其设置。</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>仍然删除</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>保留</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>选择</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>上移（更便宜）</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>下移（更贵）</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>从阶梯中移除</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>添加到阶梯</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>尚无层级：在阶梯指定层级之前，使用 « profile: auto » 的智能体无法加载。</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>智能体自身的</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>配置“{1}”已对应 profile: {0}——请换一个名称。</value>
   </data>
@@ -3606,6 +3806,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>成功</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>失败</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>等待输入</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>退出代码</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>智能体</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>工具调用</value></data>
@@ -3742,12 +3943,12 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>计划运行将以回显方式应答：已保存的设置文件没有默认模型。请保存设置。</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>此团队有 {0} 个智能体或任务指定了自己的模型：该选择仅适用于其余部分。</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>需要 System One</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>此团队离不开决策模型（System One）：有智能体使用 system_one_decide，或有决策任务既无后备答案也无“otherwise”任务。请在“设置 › 决策模型”中配置提供方。</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>此团队离不开决策模型（System One）：它声明了 decision.mode: required，或有智能体使用 system_one_decide，或有决策任务既无后备答案也无“otherwise”任务。请在“设置 › 决策模型”中配置提供方。</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One 可选</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>此团队可使用或不使用决策模型（System One）运行，由启动时决定：不使用时，每个决策任务使用其后备答案。</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>此团队可使用或不使用决策模型（System One）运行，由启动时决定：不使用时，每个决策任务由其接替智能体或后备答案作答，原本由 System One 选择的内容改用团队或设置中指定的值。</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>使用默认模型（{0}）</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>使用默认模型</value></data>
-  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>勾选后，团队在运行开始时使用选定的默认设置，并在其变化时跟随。取消勾选后，团队保持在下方选择的设置上。</value></data>
+  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>开启后，团队在运行开始时使用选定的默认设置，并在其变化时跟随。关闭后，团队保持在下方选择的设置上。</value></data>
   <data name="Studio.Teams.PinnedLlm" xml:space="preserve"><value>或使用此设置运行：</value></data>
   <data name="Studio.Teams.ChangeLlm" xml:space="preserve"><value>更改模型</value></data>
   <data name="Studio.Teams.LlmSaved" xml:space="preserve"><value>{0} 现在运行于：{1}。</value></data>
@@ -3818,6 +4019,14 @@
   <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>提供方</value></data>
   <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>自动</value></data>
   <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>自动：引擎选用下方唯一已配置的提供方，或其密钥已就绪的提供方。若有两个，它将拒绝启动：请指定一个。</value></data>
+  <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>System One 选择的内容</value></data>
+  <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>团队可以让 System One 为每个任务选择模型配置（llm.profile: auto）和思考级别（thinking: { effort: auto }）。这两个列表规定了可选范围。</value></data>
+  <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>可选的模型配置</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>两个或更多模型配置，成本由低到高，用逗号或分号分隔：“default”或“设置 › AI 模型”中的模型配置。留空时，要求此选择的团队在加载时会被拒绝。</value></data>
+  <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}：这些设置中没有以此命名的模型配置，因此要求此选择的团队在加载时会被拒绝。</value></data>
+  <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>可选的思考级别</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>从 {0} 中选取，成本由低到高，用逗号或分号分隔，小写。留空时：{1}。</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>工具桥</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} 回答决策任务。</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} 回答决策任务（由其配置段或密钥推断）。</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>未配置提供方：运行将不使用决策模型。</value></data>
@@ -4093,6 +4302,12 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>某个智能体的文件系统范围与此次运行的文件夹不符。</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>这些设置中的工具桥会在启动时中止运行：{0}</value></data>
+  <data name="Studio.Run.BlockedLlmProvider" xml:space="preserve"><value>本次运行读取的模型设置会在启动时中止运行：{0} 请在 {1} 中修正。</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} 请在“设置 › 限制与索引”（专家模式）中工具桥的卡片上保存令牌。</value></data>
+  <data name="Studio.Run.BridgeTokenRefusedOtherVariable" xml:space="preserve"><value>{0} 此设置文件从变量 {1} 读取令牌，而“设置 › 限制与索引”（专家模式）中工具桥的卡片将其保存在 {2} 下：请在环境中设置 {1}，或在文件中指定 {2}。</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>这些设置指定了工具桥（{0}），但未允许任何工具使用它：不会桥接任何内容，所有工具都在本机运行。</value></data>
+  <data name="Studio.Run.WarnBridge" xml:space="preserve"><value>按本机设置，工具桥会在启动时中止运行：{0} 除非 CLI 选用的设置文件另有规定，否则运行不会启动。</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>未允许</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>允许此文件夹</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">
@@ -4122,7 +4337,7 @@
   <data name="Studio.Run.Stop" xml:space="preserve"><value>停止</value></data>
   <data name="Studio.Chat.Subtitle" xml:space="preserve"><value>未经您同意不做任何更改</value></data>
   <data name="Studio.Chat.YourQuestion" xml:space="preserve"><value>您的问题</value></data>
-  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>逐个令牌的文本仅在显示进度时出现：请勾选「显示进度，而不是原始输出」。</value></data>
+  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>逐个令牌的文本仅在显示进度时出现：请开启「显示进度，而不是原始输出」。</value></data>
   <data name="Studio.History.Today" xml:space="preserve"><value>今天</value></data>
   <data name="Studio.History.Yesterday" xml:space="preserve"><value>昨天</value></data>
   <data name="Studio.History.AllTeams" xml:space="preserve"><value>所有团队</value></data>
@@ -4161,7 +4376,7 @@
   <data name="Studio.Diagnostics.Problem.dotnet-runtime" xml:space="preserve"><value>找不到引擎所需的 .NET 运行时。</value></data>
   <data name="Studio.Diagnostics.Problem.esbuild" xml:space="preserve"><value>此计算机上缺少脚本编译器。</value></data>
   <data name="Studio.Diagnostics.Problem.install-channel" xml:space="preserve"><value>Studio 无法识别引擎的安装方式；将不会提供更新。</value></data>
-  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>尚未为团队配置模型。</value></data>
+  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>尚未为团队配置模型，或其设置需要注意。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profile-key" xml:space="preserve"><value>某个模型没有密钥，或找不到其密钥。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profiles" xml:space="preserve"><value>设置中有模型不完整。</value></data>
   <data name="Studio.Diagnostics.Problem.llm-reachability" xml:space="preserve"><value>模型无响应：请检查其地址和密钥。</value></data>
@@ -4182,6 +4397,9 @@
     <value>已描述，已解决 {0} 个问题</value>
   </data>
   <data name="Studio.Create.TabNeedEmpty" xml:space="preserve"><value>待描述</value></data>
+  <data name="Studio.Create.TabDecisionNone" xml:space="preserve"><value>不使用</value></data>
+  <data name="Studio.Create.TabDecisionOptional" xml:space="preserve"><value>可用时使用</value></data>
+  <data name="Studio.Create.TabDecisionRequired" xml:space="preserve"><value>始终</value></data>
   <data name="Studio.Create.TabFoldersPending" xml:space="preserve"><value>{0} 个文件夹待确认</value></data>
   <data name="Studio.Create.TabFoldersPendingToChoose" xml:space="preserve">
     <value>{0} 个文件夹 · {1} 个待选择</value>
@@ -4317,6 +4535,7 @@
   <data name="Studio.Create.WaitPlaceholderAdopt" xml:space="preserve"><value>采用团队以完成，或提出问题</value></data>
   <data name="Studio.Create.WaitShowCard" xml:space="preserve"><value>查看文件夹</value></data>
   <data name="Studio.Create.TabNeed" xml:space="preserve"><value>需求</value></data>
+  <data name="Studio.Create.TabDecision" xml:space="preserve"><value>决策模型</value></data>
   <data name="Studio.Create.TabFolders" xml:space="preserve"><value>团队文件夹</value></data>
   <data name="Studio.Create.FoldersTabEmptyBody" xml:space="preserve"><value>助手读取您的需求后，会在组建过程中提出团队的文件夹。它们将显示在这里。</value></data>
   <data name="Studio.Create.FolderFieldName" xml:space="preserve"><value>团队中的名称</value></data>
@@ -4452,4 +4671,27 @@
   <!-- hrm:L14 begin -->
   <!-- hrm:L14 end -->
 
+  <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>更多工具…</value></data>
+  <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>收起工具</value></data>
+  <data name="Studio.Create.TaskTitleAdd" xml:space="preserve"><value>添加任务</value></data>
+  <data name="Studio.Create.TaskTitleEdit" xml:space="preserve"><value>编辑任务</value></data>
+  <data name="Studio.Create.TaskAdd" xml:space="preserve"><value>添加到团队</value></data>
+  <data name="Studio.Create.TaskEditorSub" xml:space="preserve"><value>团队中某一步要做什么、由谁负责、需要等待什么。保存时助手会检查所有内容。</value></data>
+  <data name="Studio.Create.TaskDoes" xml:space="preserve"><value>要做什么</value></data>
+  <data name="Studio.Create.TaskExpected" xml:space="preserve"><value>预期结果</value></data>
+  <data name="Studio.Create.TaskWho" xml:space="preserve"><value>由谁负责</value></data>
+  <data name="Studio.Create.TaskDeliverable" xml:space="preserve"><value>生成的文件（可选）</value></data>
+  <data name="Studio.Create.TaskAfterField" xml:space="preserve"><value>在此之后</value></data>
+  <data name="Studio.Create.TaskTools" xml:space="preserve"><value>此任务的工具</value></data>
+  <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>之后：{0}</value></data>
+  <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>条件：{0}</value></data>
+  <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>无法移除：{0} 的条件读取了它的答案</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>无法移除：决策 {0} 依据它的输出作出决定</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>无法移除：团队至少保留一项任务</value></data>
+  <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>决策需通过与助手对话来修改</value></data>
+  <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>任务</value></data>
+  <data name="Studio.Create.AddTask" xml:space="preserve"><value>添加任务</value></data>
+  <data name="Studio.Create.TaskMoveUp" xml:space="preserve"><value>上移</value></data>
+  <data name="Studio.Create.TaskMoveDown" xml:space="preserve"><value>下移</value></data>
+  <data name="Studio.Create.TaskRemove" xml:space="preserve"><value>移除任务</value></data>
 </root>

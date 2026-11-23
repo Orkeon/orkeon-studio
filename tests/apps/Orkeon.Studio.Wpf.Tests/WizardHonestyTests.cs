@@ -116,8 +116,10 @@ public sealed class WizardHonestyTests
     }
 
     /// <summary>
-    /// RunInProgress is raised by run.started and cleared only by run.finished — which never
-    /// arrives when the child dies. The indicator used to stay lit until «Recommencer».
+    /// RunInProgress is raised by run.started and cleared by run.finished — which never
+    /// arrives when the child dies. The indicator used to stay lit until «Recommencer»: the
+    /// screen stops spinning with the engine, and the model is told the engine is gone, so the
+    /// next run of the session does not start as a trial under way.
     /// </summary>
     [Fact]
     public async Task A_trial_that_crashed_stops_claiming_to_be_running()
@@ -129,8 +131,8 @@ public sealed class WizardHonestyTests
 
         await vm.ComposeCommand.ExecuteAsync();
 
-        Assert.True(vm.RunInProgress);      // the model never heard run.finished — that is true
-        Assert.False(vm.TrialInProgress);   // but the screen must not keep spinning over it
+        Assert.False(vm.RunInProgress);     // the model never heard run.finished: the wizard said the engine was gone
+        Assert.False(vm.TrialInProgress);   // and the screen does not keep spinning over it
     }
 
     [Fact]

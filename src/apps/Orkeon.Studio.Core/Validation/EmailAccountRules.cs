@@ -250,11 +250,13 @@ public static class EmailAccountRules
 
     /// <summary>
     /// The member of <paramref name="names"/> the engine binds <paramref name="text"/> to, in the
-    /// spelling of <see cref="EmailSection"/>, or null when it binds none: a name without regard to
-    /// case, or the member's number, as the configuration binder converts an enumeration.
+    /// spelling of <see cref="EmailSection"/>, or null when it binds none: a single name, without
+    /// regard to case. A number, even one the enumeration defines, and a comma list bind none: the
+    /// engine sets such an account aside (Orkeon #464).
     /// </summary>
     internal static string? Member(IReadOnlyList<string> names, string? text) =>
-        text is not null && EnumerationValue(names, text, flags: false) is { } value && value >= 0 && value < names.Count
+        text is not null && !text.Contains(',', StringComparison.Ordinal)
+            && EnumerationValue(names, text, flags: false) is { } value && value >= 0 && value < names.Count
             ? names[(int)value]
             : null;
 
@@ -297,7 +299,7 @@ public static class EmailAccountRules
         var text = ConfigurationText(document.Email.WithholdRejectedNode);
         return string.IsNullOrEmpty(text) || bool.TryParse(text, out _)
             ? null
-            : $"{WithholdRejectedPath} '{text}' is neither true nor false";
+            : $"{WithholdRejectedPath} is neither true nor false";
     }
 
     /// <summary>The engine's resolver, rule by rule and in its order.</summary>
@@ -498,6 +500,14 @@ public static class EmailAccountRules
     }
 
     /// <summary>
+    /// Whether the account binders read <paramref name="text"/> as a whole number: through the converter
+    /// the configuration binder itself uses (<c>TypeDescriptor.GetConverter(typeof(int))</c>, as
+    /// <c>EmailOptionsBinder.Converts</c> and <c>DriveOptionsBinder.Converts</c> do), which also takes a
+    /// hexadecimal number written <c>0x1F</c> or <c>#1F</c>.
+    /// </summary>
+    internal static bool BindsAsInteger(string text) => AppSettingsDocument.ConvertInt32(text) is not null;
+
+    /// <summary>
     /// The binder's sentence on a typed setting it cannot convert, or null when it reads
     /// <paramref name="text"/> — or when the key is absent, or optional and empty.
     /// </summary>
@@ -508,14 +518,41 @@ public static class EmailAccountRules
 
         return kind switch
         {
-            Kind.Integer => int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _) ? null : $"{key} '{text}' is not a whole number",
-            Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} '{text}' is neither true nor false",
+            Kind.Integer => BindsAsInteger(text) ? null : $"{key} is not a whole number",
+            Kind.Boolean => bool.TryParse(text, out _) ? null : $"{key} is neither true nor false",
             Kind.Rights => EnumerationValue(EmailSection.RightNames, text, flags: true) is { } value && (value & ~(long)EmailSection.AllRights) == 0
                 ? null
-                : $"{key} '{text}' is not a list of {string.Join(", ", EmailSection.RightNames)}, separated by commas",
-            _ => Member(NamesOf(kind), text) is not null ? null : $"{key} '{text}' is not one of {string.Join(", ", NamesOf(kind))}",
+                : EnumerationProblem(key, nameof(EmailRights), EmailSection.RightNames, flags: true, text),
+            _ => Member(NamesOf(kind), text) is not null ? null : EnumerationProblem(key, typeName: null, NamesOf(kind), flags: false, text),
         };
     }
+
+    /// <summary>
+    /// The account binders' sentence on an enumeration <paramref name="text"/> does not bind,
+    /// without the value (Orkeon #465: written under the wrong key, it may be a secret): a number,
+    /// a comma list where one name is expected, or a name the enumeration does not know.
+    /// <paramref name="typeName"/> is the engine's type name of a <c>[Flags]</c> enumeration, whose
+    /// list starts with <c>None</c>, as the binders list every name the key accepts (Orkeon #465).
+    /// </summary>
+    internal static string EnumerationProblem(string key, string? typeName, IReadOnlyList<string> names, bool flags, string text)
+    {
+        if (flags)
+        {
+            var list = string.Join(", ", [nameof(EmailRights.None), .. names]);
+            return HoldsNumber(text)
+                ? $"{key} holds a number where {typeName} takes names: write one or more of {list}, separated by commas"
+                : $"{key} is not a list of {list}, separated by commas";
+        }
+
+        var one = string.Join(", ", names);
+        return HoldsNumber(text) ? $"{key} is a number where a name is expected: write one of {one}"
+            : text.Contains(',', StringComparison.Ordinal) ? $"{key} is a list where a single name is expected: write one of {one}"
+            : $"{key} is not one of {one}";
+    }
+
+    /// <summary>Whether a comma-separated token of <paramref name="text"/> is a whole number, as the binders test it.</summary>
+    internal static bool HoldsNumber(string text) =>
+        text.Split(',').Any(token => long.TryParse(token.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _));
 
     private static IReadOnlyList<string> NamesOf(Kind kind) => kind switch
     {
@@ -530,7 +567,8 @@ public static class EmailAccountRules
     /// The value the binder's converter gives <paramref name="text"/> for an enumeration whose
     /// members are <paramref name="names"/> — numbered from 0, or one bit each for
     /// <paramref name="flags"/> with <c>None</c> for 0 —, or null when it converts none. Members are
-    /// separated by commas and combined; each is a name, without regard to case, or a number.
+    /// separated by commas and combined; each is a name, without regard to case. A number converts
+    /// none, even one the enumeration defines (Orkeon #464).
     /// </summary>
     internal static long? EnumerationValue(IReadOnlyList<string> names, string text, bool flags)
     {
@@ -538,14 +576,6 @@ public static class EmailAccountRules
         foreach (var part in text.Split(','))
         {
             var token = part.Trim();
-            if (token.Length > 0
-                && (char.IsAsciiDigit(token[0]) || token[0] is '-' or '+')
-                && int.TryParse(token, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
-            {
-                value |= (long)number;
-                continue;
-            }
-
             var index = names.Select((name, position) => (name, position))
                 .Where(entry => string.Equals(entry.name, token, StringComparison.OrdinalIgnoreCase))
                 .Select(entry => (int?)entry.position)

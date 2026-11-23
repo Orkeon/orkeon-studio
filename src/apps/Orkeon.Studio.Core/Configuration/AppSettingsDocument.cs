@@ -47,6 +47,12 @@ public sealed class AppSettingsDocument
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
         Decision = new DecisionSection(this);
+        Guardian = new GuardianSection(this);
+        Compaction = new CompactionSection(this);
+        Skills = new SkillsSection(this);
+        ToolBridge = new ToolBridgeSection(this);
+        BridgeServer = new BridgeServerSection(this);
+        AgentCli = new AgentCliSection(this);
     }
 
     /// <summary>The mutable JSON tree backing this document — the raw-edit surface of the UIs.</summary>
@@ -84,6 +90,24 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the decision models: <c>Orkeon:Decision</c> and the provider sections.</summary>
     public DecisionSection Decision { get; }
+
+    /// <summary>What the host's start refuses in <c>Orkeon:Guardian</c>: the guards of a run and its LLM judge.</summary>
+    public GuardianSection Guardian { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Compaction</c>: the compaction of a context and the pruning of its tool results.</summary>
+    public CompactionSection Compaction { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Skills</c>: the library of skills and their sizes.</summary>
+    public SkillsSection Skills { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Tools:Bridge</c>: the tools of a run that execute on another machine.</summary>
+    public ToolBridgeSection ToolBridge { get; }
+
+    /// <summary>Typed view over <c>Orkeon:Bridge</c>: the tools <c>orkeon bridge serve</c> runs for a caller.</summary>
+    public BridgeServerSection BridgeServer { get; }
+
+    /// <summary>What the host's start refuses in <c>Llm:AgentCli</c>, the section of the agent-cli provider module.</summary>
+    public AgentCliSection AgentCli { get; }
 
     /// <summary>Creates an empty document (<c>{}</c>).</summary>
     public static AppSettingsDocument CreateEmpty() => new(new JsonObject());
@@ -138,6 +162,19 @@ public sealed class AppSettingsDocument
     /// </summary>
     public string ToJson() =>
         JsonSerializer.Serialize(Root, WriteOptions) + Environment.NewLine;
+
+    /// <summary>
+    /// What makes the configuration refuse the whole file when a run loads it, with the key it names:
+    /// a value written at a key that already holds one, the keys being compared whatever their letter
+    /// case (<c>Enabled</c> and <c>enabled</c> in one object, or <c>Allow: [...]</c> beside
+    /// <c>Allow:0</c>). The sentence is the configuration's own, which the host prints after the file's
+    /// path. Null when the file loads; two objects that differ only by case merge, and load.
+    /// </summary>
+    public (string Path, string Problem)? LoadRefusal()
+    {
+        SettingsBinding.Flatten(Root, out var duplicateKey);
+        return duplicateKey is null ? null : (duplicateKey, $"A duplicate key '{duplicateKey}' was found.");
+    }
 
     /// <summary>Deep-copies the document, including the keys Studio does not model.</summary>
     public AppSettingsDocument Clone() => Parse(Root.ToJsonString());
@@ -265,10 +302,26 @@ public sealed class AppSettingsDocument
     public static int? ReadInt32(JsonNode? node) => node switch
     {
         JsonValue value when Number(value) is { } number && number.TryGetInt32(out var integer) => integer,
-        JsonValue value when value.TryGetValue<string>(out var text)
-            && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) => parsed,
+        JsonValue value when value.TryGetValue<string>(out var text) && ConvertInt32(text) is { } parsed => parsed,
         _ => null,
     };
+
+    /// <summary>
+    /// <paramref name="text"/> read as a whole number by the converter the configuration binder itself
+    /// uses (<c>TypeDescriptor.GetConverter(typeof(int))</c>), which also takes a hexadecimal number
+    /// written <c>0x1F</c> or <c>#1F</c>; null when the binder cannot convert it.
+    /// </summary>
+    internal static int? ConvertInt32(string text)
+    {
+        try
+        {
+            return System.ComponentModel.TypeDescriptor.GetConverter(typeof(int)).ConvertFromInvariantString(text) as int?;
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Writes an integer value; <see langword="null"/> removes the key.</summary>
     public void SetInt32(string path, int? value) =>

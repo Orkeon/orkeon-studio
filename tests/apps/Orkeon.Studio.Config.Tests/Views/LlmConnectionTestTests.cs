@@ -13,6 +13,7 @@ namespace Orkeon.Studio.Config.Tests.Views;
 /// <c>Application.Invoke</c> does not pump outside <c>Application.Init</c>. The screen reads the
 /// environment a test stages (an empty one by default), never the machine's.
 /// </summary>
+[Collection(TerminalGuiTests.Name)]
 public sealed class LlmConnectionTestTests
 {
     private static LlmSectionView View(LlmForm form, FakeLlmEndpointProbe probe, FakeEnvironmentVariables? environment = null) =>
@@ -105,6 +106,27 @@ public sealed class LlmConnectionTestTests
         await view.TestConnection();
 
         Assert.Contains("probe exploded", view.TestResult, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_workspace_is_loaded_written_trimmed_and_sent_with_the_probe()
+    {
+        // Orkeon #468: an identity-linked Anthropic key acts in one workspace; the probe presents it as a run does.
+        var document = Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse(
+            """{ "Llm": { "BaseUrl": "https://api.anthropic.com", "Model": "claude-x", "WorkspaceId": "wrkspc_01" } }""");
+        var form = new LlmForm();
+        form.LoadFrom(document);
+
+        Assert.Equal("wrkspc_01", form.WorkspaceId);
+        Assert.Equal("wrkspc_01", form.ToProbeRequest(Environment()).WorkspaceId);
+
+        form.WorkspaceId = " wrkspc_02 ";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("wrkspc_02", document.Llm.WorkspaceId);
+
+        form.WorkspaceId = "";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath("Llm:WorkspaceId"));
     }
 
     [Fact]

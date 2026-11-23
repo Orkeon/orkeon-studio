@@ -8,8 +8,9 @@ namespace Orkeon.Studio.Core.Tests.Doubles;
 /// <param name="Authorization">Value of the <c>Authorization</c> header, or null.</param>
 /// <param name="ApiKeyHeader">Value of Anthropic's <c>x-api-key</c> header, or null.</param>
 /// <param name="Body">The request body, or null when the request carried none.</param>
+/// <param name="WorkspaceHeader">Value of Anthropic's <c>anthropic-workspace-id</c> header, or null.</param>
 public sealed record RecordedHttpRequest(
-    string Method, Uri? Uri, string? Authorization, string? ApiKeyHeader, string? Body = null);
+    string Method, Uri? Uri, string? Authorization, string? ApiKeyHeader, string? Body = null, string? WorkspaceHeader = null);
 
 /// <summary>One scripted answer: a status and a body.</summary>
 /// <param name="StatusCode">Status of the answer.</param>
@@ -68,7 +69,8 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler
             request.RequestUri,
             request.Headers.Authorization?.ToString(),
             request.Headers.TryGetValues("x-api-key", out var apiKey) ? string.Join(",", apiKey) : null,
-            body);
+            body,
+            request.Headers.TryGetValues("anthropic-workspace-id", out var workspace) ? string.Join(",", workspace) : null);
         Requests.Add(recorded);
 
         if (OnSend is not null)

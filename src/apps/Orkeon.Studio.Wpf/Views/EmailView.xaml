@@ -220,7 +220,7 @@
           <CheckBox Margin="0,10,0,0" IsChecked="{Binding WithholdRejected}" Foreground="{DynamicResource InkBrush}"
                     ToolTip="Screening:WithholdRejected"
                     Content="{Binding [Studio.Settings.MailWithholdRejected], Source={x:Static services:I18n.Instance}}"/>
-          <TextBlock Style="{StaticResource Hint}" Margin="24,3,0,0" TextWrapping="Wrap"
+          <TextBlock Style="{StaticResource SwitchHint}"
                      Text="{Binding [Studio.Settings.MailWithholdRejectedHint], Source={x:Static services:I18n.Instance}}"/>
           <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5" ToolTip="CredentialsDirectory"
                      Text="{Binding [Studio.Settings.MailCredentialsDirectory], Source={x:Static services:I18n.Instance}}"/>
@@ -551,7 +551,7 @@
                          Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}"/>
                 </StackPanel>
 
-                <!-- ── the rights: six switches, a sentence each; none ticked and the engine refuses the account ── -->
+                <!-- ── the rights: six switches, a sentence each; none on and the engine refuses the account ── -->
                 <StackPanel Visibility="{Binding IsRightsTab, Converter={StaticResource BooleanToVisibility}}">
                 <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" TextWrapping="Wrap"
                            Text="{Binding [Studio.Settings.MailRightsIntro], Source={x:Static services:I18n.Instance}}"/>
@@ -564,8 +564,9 @@
                 <CheckBox Margin="0,7,0,0" IsChecked="{Binding CanSend}" Foreground="{DynamicResource InkBrush}"
                           Content="{Binding [Studio.Settings.MailRightSend], Source={x:Static services:I18n.Instance}}"/>
 
-                <!-- the recipients, as soon as the account may send: an empty list means nobody -->
-                <StackPanel Margin="24,8,0,4"
+                <!-- the recipients, as soon as the account may send: an empty list means nobody; set
+                     under the switch's label (34 px track + 10 px gap, #22) -->
+                <StackPanel Margin="44,8,0,4"
                             Visibility="{Binding ShowRecipients, Converter={StaticResource BooleanToVisibility}}">
                   <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,3"
                              Text="{Binding [Studio.Settings.MailRecipients], Source={x:Static services:I18n.Instance}}"/>

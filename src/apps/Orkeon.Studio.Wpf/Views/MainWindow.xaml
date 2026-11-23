@@ -936,11 +936,109 @@
                            Text="{Binding EndpointReadingLine}"
                            Visibility="{Binding EndpointReadingLine, Converter={StaticResource StringPresentToVisibility}}"/>
               </StackPanel>
-              <StackPanel Grid.Column="2">
-                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>
-                <TextBox Style="{StaticResource InputMono}" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
-              </StackPanel>
             </Grid>
+
+            <!-- One connection, several models: a row per model, its alias naming its setting
+                 (connection.alias) and, in expert mode, what it pins over the connection's
+                 settings. The selected row is the one the test, the found models and the
+                 response-budget hint are about. -->
+            <StackPanel Margin="0,14,0,0"
+                        Visibility="{Binding ShowFields, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ModelsSection], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6" TextWrapping="Wrap"
+                         Text="{Binding [Studio.Settings.ModelsHint], Source={x:Static services:I18n.Instance}}"
+                         Visibility="{Binding HasSeveralModels, Converter={StaticResource BooleanToVisibility}}"/>
+              <ItemsControl ItemsSource="{Binding Models}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="0,0,0,8" Padding="10,8" CornerRadius="6" BorderThickness="1">
+                      <Border.Style>
+                        <Style TargetType="Border">
+                          <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                              <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Border.Style>
+                      <StackPanel>
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/><ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="Auto"/>
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.AliasLabel], Source={x:Static services:I18n.Instance}}"/>
+                            <TextBox Style="{StaticResource InputMono}" Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"/>
+                          </StackPanel>
+                          <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>
+                            <TextBox Style="{StaticResource InputMono}" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
+                          </StackPanel>
+                          <controls:ActionBar Grid.Column="4" ButtonHeight="32" VerticalAlignment="Bottom">
+                            <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding SelectCommand}"
+                                    Content="{Binding [Studio.Settings.SelectModel], Source={x:Static services:I18n.Instance}}"/>
+                            <Button Style="{StaticResource BtnDanger}" controls:ButtonSize.Height="32" Command="{Binding RemoveCommand}"
+                                    controls:ButtonIcon.Kind="trash-2"
+                                    Content="{Binding [Studio.Settings.RemoveModel], Source={x:Static services:I18n.Instance}}"/>
+                          </controls:ActionBar>
+                        </Grid>
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Text="{Binding HostIdText}"
+                                   Visibility="{Binding HostIdText, Converter={StaticResource StringPresentToVisibility}}">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsHostIdIssue}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource WarningInkBrush}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource Hint}" Foreground="{DynamicResource WarningInkBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="{Binding UsedByText}"
+                                   Visibility="{Binding UsedByText, Converter={StaticResource StringPresentToVisibility}}"/>
+                        <!-- What this model pins over the connection: an empty field inherits it. -->
+                        <StackPanel Margin="0,8,0,0"
+                                    Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}">
+                          <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                                     Text="{Binding [Studio.Settings.ModelOverrides], Source={x:Static services:I18n.Instance}}"/>
+                          <WrapPanel Margin="0,4,0,0">
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblThinking], Source={x:Static services:I18n.Instance}}"/>
+                              <ComboBox Width="180" HorizontalAlignment="Left"
+                                        ItemsSource="{Binding DataContext.ModelThinkingChoices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        SelectedItem="{Binding Thinking}"
+                                        DisplayMemberPath="Label"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblThinkingEffort], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="100" Text="{Binding EffortText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblMaxTokens], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="100" Text="{Binding MaxTokensText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,12,0">
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.LblTimeout], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="90" Text="{Binding TimeoutText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel>
+                              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblTemperature], Source={x:Static services:I18n.Instance}}"/>
+                              <TextBox Style="{StaticResource InputMono}" Width="90" Text="{Binding TemperatureText, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                          </WrapPanel>
+                        </StackPanel>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" HorizontalAlignment="Left"
+                      Command="{Binding AddModelCommand}" controls:ButtonIcon.Kind="plus"
+                      Content="{Binding [Studio.Settings.AddModel], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
 
             <!-- pinned temperature, response budget & timeout: empty = nothing pinned (no
                  temperature is sent: the model applies its own, GAP-36).
@@ -1103,6 +1201,17 @@
               </StackPanel>
             </Border>
 
+            <!-- The Anthropic workspace (Orkeon #468): shown for an Anthropic address, or while set.
+                 Beside the key, never under the expert-only URL, so a novice on an Anthropic card
+                 sees it too (#25). -->
+            <StackPanel Margin="0,14,0,0"
+                        Visibility="{Binding ShowWorkspace, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblWorkspace], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMono}" Text="{Binding WorkspaceId, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" TextWrapping="Wrap" Margin="0,5,0,0"
+                         Text="{Binding [Studio.Settings.ProfileWorkspaceHint], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
+
             <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
                         Visibility="{Binding ShowLocalNote, Converter={StaticResource BooleanToVisibility}}">
               <controls:LucideIcon Kind="circle-check" Size="13" Foreground="{DynamicResource SuccessBrush}" VerticalAlignment="Center"/>
@@ -1215,71 +1324,76 @@
             <ItemsControl ItemsSource="{Binding Rows}" Margin="0,14,0,0" Grid.IsSharedSizeScope="True">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <ToggleButton IsChecked="{Binding IsChecked}" Cursor="Hand" Margin="0,0,0,8">
-                    <ToggleButton.Template>
-                      <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Row" Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
-                                CornerRadius="10" Padding="13,11">
-                          <Grid>
-                            <Grid.ColumnDefinitions>
-                              <ColumnDefinition Width="Auto"/>
-                              <ColumnDefinition Width="*"/>
-                              <ColumnDefinition Width="Auto" SharedSizeGroup="RightsBadge"/>
-                            </Grid.ColumnDefinitions>
-                            <Border x:Name="Box" Grid.Column="0" Width="16" Height="16" CornerRadius="5"
-                                    BorderThickness="1.5" BorderBrush="{DynamicResource LineStrongBrush}"
-                                    Background="{DynamicResource PaperSunkBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
-                              <controls:LucideIcon x:Name="Tick" Kind="check" Size="11"
-                                                   Foreground="{DynamicResource AccentFgBrush}" Visibility="Collapsed"/>
-                            </Border>
-                            <!-- One word in the pill, the full label as its tooltip (STUDIO-16): the full
-                                 label ate the width and the disk path read as «C:\Users\…\orkeon\…». -->
-                            <!-- R12 (C13): the shared rights badge, «Lecture» neutral, «Écriture» sky. -->
-                            <controls:Badge Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{Binding RightsTip}" Content="{Binding RightsBadge}">
-                              <controls:Badge.Style>
-                                <Style TargetType="controls:Badge" BasedOn="{StaticResource {x:Type controls:Badge}}">
-                                  <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsReadOnly}" Value="False">
-                                      <Setter Property="Tone" Value="Info"/>
-                                    </DataTrigger>
-                                  </Style.Triggers>
-                                </Style>
-                              </controls:Badge.Style>
-                            </controls:Badge>
-                            <StackPanel Grid.Column="1">
-                              <!-- The name the agents use. The entry's id stays in Réglages › Dossiers, for the
-                                   expert (UX lot 02): the path, or the folder's name, tells two /output rows apart. -->
-                              <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkBrush}">
-                                <Run Text="{Binding VirtualPath, Mode=OneWay}"/>
-                              </TextBlock>
-                              <!-- The real folder on one line, trimmed, whole in the tooltip (lot 11, 067). -->
-                              <TextBlock x:Name="Disk" FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
-                                         TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding PhysicalPath}" Text="{Binding PhysicalPath}"
-                                         Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
-                              <TextBlock x:Name="DiskName" FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
-                                         TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding FolderName}" ToolTip="{Binding PhysicalPath}"
-                                         Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibility}}"/>
-                            </StackPanel>
-                          </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                          <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
-                            <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
-                          </Trigger>
+                  <!-- #22: the row wears the switch of the theme (SwitchRow), not a box to tick. -->
+                  <ToggleButton IsChecked="{Binding IsChecked}" Margin="0,0,0,8"
+                                AutomationProperties.Name="{Binding VirtualPath}" AutomationProperties.HelpText="{Binding RightsTip}">
+                    <ToggleButton.Style>
+                      <Style TargetType="ToggleButton" BasedOn="{StaticResource SwitchRow}">
+                        <Style.Triggers>
                           <!-- Not in « Réglages › Dossiers autorisés » — the border says so. -->
                           <DataTrigger Binding="{Binding IsUndeclared}" Value="True">
-                            <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
-                            <Setter TargetName="Disk" Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-                            <Setter TargetName="DiskName" Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}"/>
                           </DataTrigger>
-                        </ControlTemplate.Triggers>
-                      </ControlTemplate>
-                    </ToggleButton.Template>
+                        </Style.Triggers>
+                      </Style>
+                    </ToggleButton.Style>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="RightsBadge"/>
+                      </Grid.ColumnDefinitions>
+                      <!-- One word in the pill, the full label as its tooltip (STUDIO-16): the full
+                           label ate the width and the disk path read as «C:\Users\…\orkeon\…». -->
+                      <!-- R12 (C13): the shared rights badge, «Lecture» neutral, «Écriture» sky. -->
+                      <controls:Badge Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{Binding RightsTip}" Content="{Binding RightsBadge}">
+                        <controls:Badge.Style>
+                          <Style TargetType="controls:Badge" BasedOn="{StaticResource {x:Type controls:Badge}}">
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding IsReadOnly}" Value="False">
+                                <Setter Property="Tone" Value="Info"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </controls:Badge.Style>
+                      </controls:Badge>
+                      <StackPanel Grid.Column="0">
+                        <!-- The name the agents use. The entry's id stays in Réglages › Dossiers, for the
+                             expert (UX lot 02): the path, or the folder's name, tells two /output rows apart. -->
+                        <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkBrush}">
+                          <Run Text="{Binding VirtualPath, Mode=OneWay}"/>
+                        </TextBlock>
+                        <!-- The real folder on one line, trimmed, whole in the tooltip (lot 11, 067); in danger
+                             ink while the folder is not declared in the Settings. -->
+                        <TextBlock FontSize="13" Margin="0,2,0,0"
+                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding PhysicalPath}" Text="{Binding PhysicalPath}"
+                                   Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="{DynamicResource InkFaintBrush}"/>
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsUndeclared}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock FontSize="13" Margin="0,2,0,0"
+                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding FolderName}" ToolTip="{Binding PhysicalPath}"
+                                   Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibility}}">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="{DynamicResource InkFaintBrush}"/>
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsUndeclared}" Value="True">
+                                  <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                      </StackPanel>
+                    </Grid>
                   </ToggleButton>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -1329,46 +1443,7 @@
                      Text="{Binding WhatItDoes, UpdateSourceTrigger=PropertyChanged}"/>
             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,7"
                        Text="{Binding [Studio.Create.Can], Source={x:Static services:I18n.Instance}}"/>
-            <ItemsControl ItemsSource="{Binding Chips}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <!-- toggleable chip — the ONE chip recipe (mono 11.5, pill), plus the
-                       on/off and hover states a plain ToolChip border cannot carry -->
-                  <!-- UX lot 02: the chip says what the tool does (« lire /docs »), its identifier
-                       in the tooltip, and under the words for the expert. -->
-                  <Button Command="{Binding ToggleCommand}" Cursor="Hand" Margin="0,0,6,6" ToolTip="{Binding Tool}">
-                    <Button.Template>
-                      <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chip" Style="{StaticResource ToolChip}"
-                                Background="{DynamicResource SurfaceBrush}"
-                                BorderBrush="{DynamicResource LineBrush}">
-                          <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="Label" FontSize="13"
-                                       Foreground="{DynamicResource InkMutedBrush}" Text="{Binding Label}"/>
-                            <TextBlock FontSize="11.5" FontFamily="{StaticResource MonoFont}"
-                                       Foreground="{DynamicResource InkFaintBrush}" Text="{Binding Tool}"
-                                       Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
-                          </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                          <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource LineStrongBrush}"/>
-                          </Trigger>
-                          <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                            <Setter TargetName="Chip" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
-                            <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentBrush}"/>
-                          </DataTrigger>
-                        </ControlTemplate.Triggers>
-                      </ControlTemplate>
-                    </Button.Template>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <views:ToolPaletteView DataContext="{Binding Tools}"/>
             <DockPanel Margin="0,10,0,0">
               <TextBlock DockPanel.Dock="Left" FontSize="13" Foreground="{DynamicResource InkMutedBrush}"
                          MinWidth="132" VerticalAlignment="Center"
@@ -1396,6 +1471,99 @@
             </DockPanel>
           </Border>
         </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- ══════════ ÉDITEUR DE TÂCHE (overlay, same template as the agent editor) ══════════
+         The fields sit in a ScrollViewer: a team with many tasks lists many « After » switches. -->
+    <Grid Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource ScrimBrush}" MouseLeftButtonDown="OnTaskEditorBackdropClick"
+          Visibility="{Binding CreateTeam.TaskEditor.IsOpen, Converter={StaticResource BooleanToVisibility}}">
+      <Border Width="660" HorizontalAlignment="Center" VerticalAlignment="Center" MouseLeftButtonDown="OnSwallowClick"
+              Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+              CornerRadius="20" DataContext="{Binding CreateTeam.TaskEditor}" Effect="{DynamicResource ShadowLg}">
+        <DockPanel>
+          <Border DockPanel.Dock="Bottom" Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource LineFaintBrush}"
+                  BorderThickness="0,1,0,0" CornerRadius="0,0,19,19" Padding="22,18" Margin="0,18,0,0">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}" controls:ButtonIcon.Kind="check"
+                      Content="{Binding SaveLabel}"/>
+              <Button DockPanel.Dock="Left" Style="{StaticResource BtnSecondary}" Margin="0,0,12,0" Command="{Binding CancelCommand}"
+                      Content="{Binding [Studio.Common.Cancel], Source={x:Static services:I18n.Instance}}"/>
+              <Button HorizontalAlignment="Left" Command="{Binding RemoveCommand}"
+                      controls:ButtonIcon.Kind="trash-2" ToolTipService.ShowOnDisabled="True"
+                      Content="{Binding [Studio.Create.TaskRemove], Source={x:Static services:I18n.Instance}}"
+                      Visibility="{Binding IsNew, Converter={StaticResource InverseBooleanToVisibility}}">
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource BtnDanger}">
+                    <Setter Property="ToolTip" Value="{Binding RemoveTooltip}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding RemoveTooltip.Length}" Value="0">
+                        <Setter Property="ToolTip" Value="{x:Null}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+            </DockPanel>
+          </Border>
+          <StackPanel DockPanel.Dock="Top" Margin="22,20,22,0">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Style="{StaticResource IconBtnGhost}" VerticalAlignment="Top" Margin="12,0,0,0"
+                      Command="{Binding CancelCommand}" controls:ButtonIcon.Kind="x"
+                      ToolTip="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"
+                      AutomationProperties.Name="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource ModalTitle}" Text="{Binding Title}"/>
+            </DockPanel>
+            <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" TextWrapping="Wrap" LineHeight="18.5"
+                       Margin="0,6,0,0" Text="{Binding [Studio.Create.TaskEditorSub], Source={x:Static services:I18n.Instance}}"/>
+          </StackPanel>
+          <ScrollViewer MaxHeight="520" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="22,0,22,0">
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskDoes], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMultiline}"
+                       Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskExpected], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMultiline}"
+                       Text="{Binding ExpectedOutput, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskWho], Source={x:Static services:I18n.Instance}}"/>
+              <ComboBox ItemsSource="{Binding Agents}" SelectedItem="{Binding Agent}" DisplayMemberPath="Role"
+                        AutomationProperties.Name="{Binding [Studio.Create.TaskWho], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                         Text="{Binding [Studio.Create.TaskDeliverable], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox FontFamily="{StaticResource MonoFont}" Text="{Binding Deliverable, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="{Binding [Studio.Create.TaskDeliverable], Source={x:Static services:I18n.Instance}}"/>
+              <DockPanel Margin="0,8,0,0">
+                <TextBlock DockPanel.Dock="Left" FontSize="13" Foreground="{DynamicResource InkMutedBrush}"
+                           MinWidth="132" VerticalAlignment="Center"
+                           Text="{Binding [Studio.Create.Scope], Source={x:Static services:I18n.Instance}}"/>
+                <TextBlock Style="{StaticResource MonoText}" FontSize="13" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Text="{Binding ScopeInfo}" ToolTip="{Binding ScopeInfo}"/>
+              </DockPanel>
+              <StackPanel Visibility="{Binding HasDependencies, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                           Text="{Binding [Studio.Create.TaskAfterField], Source={x:Static services:I18n.Instance}}"/>
+                <ItemsControl ItemsSource="{Binding Dependencies}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <CheckBox Margin="0,3" IsChecked="{Binding IsChecked}" ToolTip="{Binding Key}">
+                        <TextBlock FontSize="13" TextTrimming="CharacterEllipsis" Text="{Binding Label}"/>
+                      </CheckBox>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,7"
+                         Text="{Binding [Studio.Create.TaskTools], Source={x:Static services:I18n.Instance}}"/>
+              <views:ToolPaletteView DataContext="{Binding Tools}"/>
+              <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkFaintBrush}"
+                         Margin="0,9,0,0" TextTrimming="CharacterEllipsis" Text="{Binding KeyLine}" ToolTip="{Binding KeyLine}"
+                         Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
       </Border>
     </Grid>
 
@@ -1449,79 +1617,54 @@
               <ItemsControl ItemsSource="{Binding Rows}" Grid.IsSharedSizeScope="True">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <ToggleButton IsChecked="{Binding IsChecked}" IsEnabled="{Binding IsSelectable}"
-                                  Cursor="Hand" Margin="0,0,0,8">
-                      <ToggleButton.Template>
-                        <ControlTemplate TargetType="ToggleButton">
-                          <Border x:Name="Row" Background="{DynamicResource SurfaceBrush}"
-                                  BorderBrush="{DynamicResource LineBrush}" BorderThickness="1"
-                                  CornerRadius="10" Padding="13,11">
-                            <Grid>
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto" SharedSizeGroup="RightsBadge"/>
-                              </Grid.ColumnDefinitions>
-                              <Border x:Name="Box" Grid.Column="0" Width="16" Height="16" CornerRadius="5"
-                                      BorderThickness="1.5" BorderBrush="{DynamicResource LineStrongBrush}"
-                                      Background="{DynamicResource PaperSunkBrush}" VerticalAlignment="Center" Margin="0,0,12,0">
-                                <controls:LucideIcon x:Name="Tick" Kind="check" Size="11"
-                                                     Foreground="{DynamicResource AccentFgBrush}" Visibility="Collapsed"/>
-                              </Border>
-                              <!-- Les droits viennent des Réglages et ne se rechoisissent pas ici. One word in
-                                   the pill, the full label as its tooltip (STUDIO-16): the full label ate the
-                                   width and the disk path read as «C:\Users\…\orkeon\…». -->
-                              <!-- R12 (C13): the shared rights badge, «Lecture» neutral, «Écriture» sky. -->
-                              <controls:Badge Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{Binding RightsTip}" Content="{Binding RightsBadge}">
-                                <controls:Badge.Style>
-                                  <Style TargetType="controls:Badge" BasedOn="{StaticResource {x:Type controls:Badge}}">
-                                    <Style.Triggers>
-                                      <DataTrigger Binding="{Binding IsReadOnly}" Value="False">
-                                        <Setter Property="Tone" Value="Info"/>
-                                      </DataTrigger>
-                                    </Style.Triggers>
-                                  </Style>
-                                </controls:Badge.Style>
-                              </controls:Badge>
-                              <StackPanel Grid.Column="1">
-                                <!-- The name the agents use. The entry's id stays in Réglages › Dossiers, for the
-                                     expert (UX lot 02): the path, or the folder's name, tells two /output rows apart. -->
-                                <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkBrush}">
-                                  <Run Text="{Binding VirtualPath, Mode=OneWay}"/>
-                                </TextBlock>
-                                <!-- The real folder on one line, trimmed, whole in the tooltip (lot 11, 067). -->
-                                <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
-                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding PhysicalPath}" Text="{Binding PhysicalPath}"
-                                           Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
-                                <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
-                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding FolderName}" ToolTip="{Binding PhysicalPath}"
-                                           Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibility}}"/>
-                                <!-- Why the row cannot be picked, or that its root is shared: under the path, where
-                                     a sentence has room, not beside the pill where it squeezed the path. -->
-                                <TextBlock FontSize="13" Margin="0,3,0,0" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource InkFaintBrush}" Text="{Binding UnavailableNote}"
-                                           Visibility="{Binding HasNote, Converter={StaticResource BooleanToVisibility}}"/>
-                                <TextBlock FontSize="13" Margin="0,3,0,0" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource InkFaintBrush}" Text="{Binding SharedRootNote}"
-                                           Visibility="{Binding HasSharedRootNote, Converter={StaticResource BooleanToVisibility}}"/>
-                              </StackPanel>
-                            </Grid>
-                          </Border>
-                          <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                              <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
-                              <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                              <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                              <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                              <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                              <Setter TargetName="Row" Property="Background" Value="{DynamicResource PaperSunkBrush}"/>
-                              <Setter TargetName="Row" Property="Opacity" Value="0.62"/>
-                            </Trigger>
-                          </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                      </ToggleButton.Template>
+                    <!-- #22: the row wears the switch of the theme (SwitchRow), not a box to tick; a row that
+                         cannot be picked goes sunk and says why under its path. -->
+                    <ToggleButton Style="{StaticResource SwitchRow}" IsChecked="{Binding IsChecked}" IsEnabled="{Binding IsSelectable}"
+                                  Margin="0,0,0,8"
+                                  AutomationProperties.Name="{Binding VirtualPath}" AutomationProperties.HelpText="{Binding RightsTip}">
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="*"/>
+                          <ColumnDefinition Width="Auto" SharedSizeGroup="RightsBadge"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Les droits viennent des Réglages et ne se rechoisissent pas ici. One word in
+                             the pill, the full label as its tooltip (STUDIO-16): the full label ate the
+                             width and the disk path read as «C:\Users\…\orkeon\…». -->
+                        <!-- R12 (C13): the shared rights badge, «Lecture» neutral, «Écriture» sky. -->
+                        <controls:Badge Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0" ToolTip="{Binding RightsTip}" Content="{Binding RightsBadge}">
+                          <controls:Badge.Style>
+                            <Style TargetType="controls:Badge" BasedOn="{StaticResource {x:Type controls:Badge}}">
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReadOnly}" Value="False">
+                                  <Setter Property="Tone" Value="Info"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </controls:Badge.Style>
+                        </controls:Badge>
+                        <StackPanel Grid.Column="0">
+                          <!-- The name the agents use. The entry's id stays in Réglages › Dossiers, for the
+                               expert (UX lot 02): the path, or the folder's name, tells two /output rows apart. -->
+                          <TextBlock Style="{StaticResource MonoText}" FontSize="13" Foreground="{DynamicResource InkBrush}">
+                            <Run Text="{Binding VirtualPath, Mode=OneWay}"/>
+                          </TextBlock>
+                          <!-- The real folder on one line, trimmed, whole in the tooltip (lot 11, 067). -->
+                          <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
+                                     TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding PhysicalPath}" Text="{Binding PhysicalPath}"
+                                     Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibility}}"/>
+                          <TextBlock FontSize="13" Foreground="{DynamicResource InkFaintBrush}" Margin="0,2,0,0"
+                                     TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Text="{Binding FolderName}" ToolTip="{Binding PhysicalPath}"
+                                     Visibility="{Binding DataContext.Mode.IsExpert, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBooleanToVisibility}}"/>
+                          <!-- Why the row cannot be picked, or that its root is shared: under the path, where
+                               a sentence has room, not beside the pill where it squeezed the path. -->
+                          <TextBlock FontSize="13" Margin="0,3,0,0" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource InkFaintBrush}" Text="{Binding UnavailableNote}"
+                                     Visibility="{Binding HasNote, Converter={StaticResource BooleanToVisibility}}"/>
+                          <TextBlock FontSize="13" Margin="0,3,0,0" TextWrapping="Wrap"
+                                     Foreground="{DynamicResource InkFaintBrush}" Text="{Binding SharedRootNote}"
+                                     Visibility="{Binding HasSharedRootNote, Converter={StaticResource BooleanToVisibility}}"/>
+                        </StackPanel>
+                      </Grid>
                     </ToggleButton>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

@@ -97,6 +97,91 @@ public sealed class ModalDialogsTests
     private const string Blueprint =
         """{"crew":{"name":"veille"},"agents":[{"key":"collecteur","role":"Chercheur","goal":"Trouver","tools":["web_scrape","file_read"]},{"key":"redacteur","role":"Rédacteur","goal":"Écrire","tools":["file_write"]}],"tasks":[{"key":"t1","description":"d","agent":"collecteur"}]}""";
 
+    private const string TaskBlueprint =
+        """{"agents":[{"key":"lecteur","role":"Lecteur"},{"key":"redacteur","role":"Rédacteur"}],"tasks":[{"key":"lire","description":"Lire","expectedOutput":"x","agent":"lecteur"},{"key":"juger","description":"Juger","dependencies":["lire"],"decision":{"questions":{"ok":{"options":["oui","non"]}}}},{"key":"ecrire","description":"Écrire","expectedOutput":"y","agent":"redacteur","dependencies":["lire"],"tools":["pdf_reader"],"when":{"juger.ok":["oui"]}}]}""";
+
+    [Fact]
+    public void Editing_a_task_rewrites_its_fields_and_keeps_its_condition()
+    {
+        var editor = new TaskEditorViewModel();
+        string? sent = null;
+        editor.Open(TaskBlueprint, "ecrire", ["/a:/output:rw"], json => sent = json);
+
+        Assert.False(editor.IsNew);
+        Assert.Equal("Écrire", editor.Description);
+        Assert.Equal("redacteur", editor.Agent!.Key);
+        Assert.Equal(["lire", "juger"], editor.Dependencies.Select(option => option.Key));
+        Assert.True(editor.Dependencies[0].IsChecked);
+        Assert.True(editor.Tools.Chips.Single(chip => chip.Tool == "pdf_reader").IsSelected);
+        Assert.True(editor.CanRemove);
+
+        editor.Agent = editor.Agents[0];
+        editor.Deliverable = "/output/note.md";
+        editor.Dependencies[1].IsChecked = true;
+        editor.Tools.Chips.Single(chip => chip.Tool == "pdf_reader").ToggleCommand.Execute(null);
+        editor.SaveCommand.Execute(null);
+
+        Assert.False(editor.IsOpen);
+        using var document = JsonDocument.Parse(sent!);
+        var task = document.RootElement.GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("key").GetString() == "ecrire");
+        Assert.Equal("lecteur", task.GetProperty("agent").GetString());
+        Assert.Equal("/output/note.md", task.GetProperty("deliverable").GetString());
+        Assert.Equal(["lire", "juger"], task.GetProperty("dependencies").EnumerateArray().Select(d => d.GetString()));
+        Assert.False(task.TryGetProperty("tools", out _));
+        Assert.Equal("oui", task.GetProperty("when").GetProperty("juger.ok")[0].GetString());
+    }
+
+    [Fact]
+    public void A_new_task_needs_what_to_do_and_what_is_expected_and_is_appended()
+    {
+        var editor = new TaskEditorViewModel();
+        string? sent = null;
+        editor.Open(TaskBlueprint, null, [], json => sent = json);
+
+        Assert.True(editor.IsNew);
+        Assert.False(editor.CanRemove);
+        Assert.Equal("lecteur", editor.Agent!.Key);
+        Assert.All(editor.Dependencies, option => Assert.False(option.IsChecked));
+        Assert.False(editor.SaveCommand.CanExecute(null));
+
+        editor.Description = "Relire le tout";
+        Assert.False(editor.SaveCommand.CanExecute(null));
+        editor.ExpectedOutput = "Des remarques";
+        Assert.True(editor.SaveCommand.CanExecute(null));
+        editor.SaveCommand.Execute(null);
+
+        using var document = JsonDocument.Parse(sent!);
+        var last = document.RootElement.GetProperty("tasks").EnumerateArray().Last();
+        Assert.Equal("Relire le tout", last.GetProperty("description").GetString());
+        Assert.Equal("lecteur", last.GetProperty("agent").GetString());
+        Assert.Equal(4, document.RootElement.GetProperty("tasks").GetArrayLength());
+    }
+
+    [Fact]
+    public void A_task_a_condition_reads_cannot_be_removed_and_says_which()
+    {
+        var editor = new TaskEditorViewModel();
+        editor.Open(TaskBlueprint, "juger", [], _ => Assert.Fail("nothing may be sent"));
+
+        Assert.False(editor.CanRemove);
+        Assert.False(editor.RemoveCommand.CanExecute(null));
+        Assert.Contains("Écrire", editor.RemoveTooltip, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Removing_a_task_drops_it_from_the_dependencies_of_the_others()
+    {
+        var editor = new TaskEditorViewModel();
+        string? sent = null;
+        editor.Open(TaskBlueprint, "lire", [], json => sent = json);
+        editor.RemoveCommand.Execute(null);
+
+        using var document = JsonDocument.Parse(sent!);
+        var tasks = document.RootElement.GetProperty("tasks").EnumerateArray().ToList();
+        Assert.Equal(["juger", "ecrire"], tasks.Select(t => t.GetProperty("key").GetString()));
+        Assert.All(tasks, task => Assert.False(task.TryGetProperty("dependencies", out _)));
+    }
+
     [Fact]
     public void Editing_an_agent_rewrites_role_goal_and_tools_in_place()
     {
@@ -126,6 +211,40 @@ public sealed class ModalDialogsTests
         Assert.Equal(["file_read", "file_write"], agent.GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
         // The other agent is untouched.
         Assert.Equal(2, document.RootElement.GetProperty("agents").GetArrayLength());
+    }
+
+    [Fact]
+    public void A_tool_the_team_does_not_hold_yet_is_given_from_the_rest_of_the_catalogue()
+    {
+        var editor = new AgentEditorViewModel();
+        string? sent = null;
+        editor.Open(Blueprint, "redacteur", ["/a:/docs:ro"], json => sent = json);
+
+        Assert.True(editor.Tools.HasMore);
+        Assert.False(editor.Tools.ShowMore);
+        Assert.DoesNotContain(editor.Tools.MoreFamilies.SelectMany(f => f.Chips), c => c.Tool is "file_read" or "shell_command");
+        editor.Tools.ToggleMoreCommand.Execute(null);
+        Assert.True(editor.Tools.ShowMore);
+
+        editor.Tools.MoreFamilies.SelectMany(f => f.Chips).Single(c => c.Tool == "pdf_reader").ToggleCommand.Execute(null);
+        Assert.Contains("pdf_reader", editor.KeyLine, StringComparison.Ordinal);
+        editor.SaveCommand.Execute(null);
+
+        using var document = JsonDocument.Parse(sent!);
+        var agent = document.RootElement.GetProperty("agents").EnumerateArray()
+            .Single(a => a.GetProperty("key").GetString() == "redacteur");
+        Assert.Equal(["file_write", "pdf_reader"], agent.GetProperty("tools").EnumerateArray().Select(t => t.GetString()));
+    }
+
+    [Fact]
+    public void A_tool_a_task_grants_is_among_the_team_chips()
+    {
+        var editor = new AgentEditorViewModel();
+        editor.Open(
+            """{"agents":[{"key":"a","role":"A","goal":"g","tools":["file_read"]}],"tasks":[{"key":"t","description":"d","agent":"a","tools":["grep"]}]}""",
+            "a", [], _ => { });
+
+        Assert.Equal(["file_read", "grep"], editor.Chips.Select(c => c.Tool));
     }
 
     [Fact]

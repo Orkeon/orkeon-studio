@@ -1,4 +1,5 @@
 using Orkeon.Constants.Configuration;
+using Orkeon.Constants.Llm;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Orkeon.Studio.Core.Configuration;
@@ -88,8 +89,11 @@ public sealed class AppSettingsValidator
 
     // The keys of a section of the Llm shape — Llm itself and each entry of Llm:Profiles —, by the
     // kind the run reads them as (LlmSettings): relative to the section.
-    private static readonly string[] LlmStringKeys = ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort"];
-    private static readonly string[] LlmIntegerKeys = ["MaxTokens", "TimeoutSeconds", "StreamIdleSeconds", "MaxRetries"];
+    private static readonly string[] LlmStringKeys =
+        ["Model", "BaseUrl", "ApiKey", ConfigurationKeys.LlmApiKeyEnvVar, "Thinking:Effort", LlmProviderRules.ProviderKey, LlmProviderRules.ResponsesKey,
+         LlmProfilesSection.WorkspaceIdKey];
+    private static readonly string[] LlmIntegerKeys =
+        ["MaxTokens", "TimeoutSeconds", "StreamIdleSeconds", "MaxRetries", LlmProfilesSection.ContextWindowTokensKey];
     private static readonly string[] LlmBooleanKeys = ["Thinking:Enabled", ConfigurationKeys.LlmGrammar];
 
     // The words that make an environment value read as a secret: written in clear in the
@@ -139,9 +143,62 @@ public sealed class AppSettingsValidator
         ValidateMcp(document, messages);
         ValidateEmail(document, messages);
         ValidateDrive(document, messages);
+        ValidateEngineSections(document, messages);
         ValidateSettingPlaceholders(document, messages);
 
         return messages;
+    }
+
+    /// <summary>
+    /// The sections the engine validates at start with rules of its own, judged by those very rules: the
+    /// compaction and the pruning of a context, the skills, both sides of the tool bridge (which every
+    /// host validates, the serving command or not), the guardian, the decision profiles and the agent-cli
+    /// provider module's <c>Llm:AgentCli</c>. One error
+    /// per refused value, at its key.
+    /// </summary>
+    private static void ValidateEngineSections(AppSettingsDocument document, List<ValidationMessage> messages)
+    {
+        // What every check of a section says of a key the configuration refuses as written twice.
+        const string KeyWrittenTwice = "the configuration refuses a key written twice";
+
+        // A file the configuration does not load is said once, whichever section holds the key it names,
+        // and not again where the check of a section already said it of its own keys, in its own words.
+        var load = document.LoadRefusal();
+        if (load is { } refused
+            && !messages.Any(said => said.Severity == ValidationSeverity.Error && said.Text.Contains(KeyWrittenTwice, StringComparison.Ordinal)))
+        {
+            messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, refused.Problem, refused.Path));
+        }
+
+        foreach (var (path, problem) in document.Compaction.Problems()
+            .Concat(document.Skills.Problems())
+            .Concat(document.ToolBridge.Problems())
+            .Concat(document.BridgeServer.Problems())
+            .Concat(document.Guardian.Problems())
+            .Concat(document.AgentCli.Problems())
+            .Concat(document.Decision.Problems())
+            .Where(found => load is null || found != load.Value))
+            messages.Add(ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path));
+
+        // What the start refuses in the decision settings beyond their keys (a switch that is no boolean,
+        // the choice of a provider, the ladder, the provider's section, a profile's name, a fail-closed
+        // judge), unless a section above said that very sentence. A judge the run's environment may give
+        // a provider or a key to is warned of.
+        if (load is null)
+        {
+            foreach (var (path, problem, certain) in document.Decision.StartRefusals())
+            {
+                if (messages.Any(said => said.Text == problem))
+                    continue;
+                messages.Add(certain
+                    ? ValidationMessage.Error(ValidationCodes.EngineSettingRefused, problem, path)
+                    : ValidationMessage.Warning(ValidationCodes.EngineSettingRefused, problem, path));
+            }
+        }
+
+        // Like Orkeon:Rag:LlmProfile: the profile may come from the environment a run is launched with.
+        if (document.Compaction.UnknownProfile() is { } unknown)
+            messages.Add(ValidationMessage.Warning(ValidationCodes.EngineSettingRefused, unknown.Problem, unknown.Path));
     }
 
     /// <summary>
@@ -155,7 +212,7 @@ public sealed class AppSettingsValidator
     private static void ValidateEmail(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var email = document.Email;
-        if (document.GetNode(EmailSection.SectionPath) is JsonObject section)
+        if (document.GetNode(document.PathAsWritten(EmailSection.SectionPath)) is JsonObject section)
             messages.AddRange(EmailTwinKeys.Under(section, EmailSection.SectionPath, email.AccountsNode));
 
         if (EmailAccountRules.ScreeningProblem(document) is { } screening)
@@ -220,7 +277,7 @@ public sealed class AppSettingsValidator
     private static void ValidateDrive(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var drive = document.Drive;
-        if (document.GetNode(DriveSection.SectionPath) is JsonObject section)
+        if (document.GetNode(document.PathAsWritten(DriveSection.SectionPath)) is JsonObject section)
             messages.AddRange(DriveTwinKeys.Under(section, DriveSection.SectionPath, drive.AccountsNode));
 
         if (DriveAccountRules.ScreeningProblem(document) is { } screening)
@@ -410,12 +467,15 @@ public sealed class AppSettingsValidator
                 ValidationCodes.LlmSectionMissing, LlmNotConfiguredWarning, LlmSection.SectionPath));
         }
 
-        if (document.GetNode(LlmSection.SectionPath) is not JsonObject section)
+        // The section as the configuration binds it, whatever the case of its key ("llm"): the run
+        // reads it all the same, and judges every key of it.
+        if (LlmProviderRules.SectionOf(document) is not { } section)
             return;
 
         // STUDIO-55: the default is read as strictly as a profile at start (GAP-40) — its shape is
         // judged the same way, then each entry's.
         ValidateLlmShape(section, LlmSection.SectionPath, messages);
+        messages.AddRange(LlmProviderRules.Check(section, LlmSection.SectionPath));
         ValidateInlineKey(document, section, messages);
         ValidateProfiles(section, messages);
         ValidateModelCapabilities(section, messages);
@@ -438,8 +498,9 @@ public sealed class AppSettingsValidator
     /// them (GAP-40): an entry carries its five keys and no other, so a typo refuses the start, and so does
     /// a model id holding a <c>:</c> (<c>llama3.2:latest</c> is read as the key <c>latest</c> of the entry
     /// <c>llama3.2</c>); a switch, <c>Thinking</c> and each item of <c>ReasoningEfforts</c> are single
-    /// values, so a list or an object that holds anything there refuses the start. A blank value, a JSON
-    /// null, <c>[]</c> and <c>{}</c> read as left out. The text of a <c>ReasoningEfforts</c> item is not
+    /// values, so a list or an object that holds anything there refuses the start; an entry is a section of
+    /// keys, so a single value written for it refuses the start too (Orkeon #454). An empty value, a JSON
+    /// null, <c>[]</c> and <c>{}</c> read as left out; a switch written as blanks alone is refused. The text of a <c>ReasoningEfforts</c> item is not
     /// judged: the run takes a vendor value (<c>none</c>, <c>minimal</c>).
     /// An entry under a blank id - <c>""</c>, <c>" "</c>, or what a key that starts with <c>:</c> is
     /// split into - refuses the start whatever it holds: the run's model table takes no blank id.
@@ -471,13 +532,24 @@ public sealed class AppSettingsValidator
                     entry.Path));
             }
 
+            else if (!entry.HasChildren && entry.Value is { Length: > 0 })
+            {
+                // An entry is a section of keys: a single value there binds nothing, and the host's
+                // start refuses it (Orkeon #454). The value is not echoed, as the engine does not.
+                messages.Add(ValidationMessage.Error(
+                    ValidationCodes.InvalidFieldType,
+                    $"'{entry.Path}' is a single value where a section of keys is expected: write its keys, or leave the key out.",
+                    entry.Path));
+            }
+
             foreach (var field in entry.Children)
             {
                 if (ModelCapabilityBooleanKeys.Contains(field.Key, StringComparer.OrdinalIgnoreCase))
                 {
+                    // Blanks alone are no boolean to the binder: only an empty text reads as left out (Orkeon #454).
                     if (field.HasChildren)
                         messages.Add(WrongType(field.Path, SingleValue));
-                    else if (field.Text is { } raw && !bool.TryParse(raw, out _))
+                    else if (field.Value is { Length: > 0 } raw && !bool.TryParse(raw, out _))
                         messages.Add(WrongType(field.Path, "true or false"));
                 }
                 else if (string.Equals(field.Key, "Thinking", StringComparison.OrdinalIgnoreCase))
@@ -488,9 +560,10 @@ public sealed class AppSettingsValidator
                     }
                     else if (field.Text is { } thinking && !LlmModelCapabilityOverrides.TryParseThinking(thinking, out _))
                     {
+                        // The engine's sentence (Orkeon #465): the entry's path and the key, never the value.
                         messages.Add(ValidationMessage.Error(
                             ValidationCodes.InvalidFieldType,
-                            $"'{field.Path}': '{thinking}' is not a thinking support; the values are None, EffortOnly, Toggle and Budget.",
+                            $"{entry.Path}:Thinking is not a thinking support: write one of {string.Join(", ", Enum.GetNames<ThinkingSupport>())}.",
                             field.Path));
                     }
                 }
@@ -539,8 +612,71 @@ public sealed class AppSettingsValidator
     }
 
     /// <summary>
+    /// A <c>WorkspaceId</c> (Orkeon #468) on a section whose provider is not Anthropic: the run does not
+    /// send it and warns, in the remedy said here. The provider is read as the run builds it: the mock or
+    /// the provider module a section names, else the one its address reads as, else - no address - its
+    /// model's name, then the prefix of the key written in the file, else OpenAI
+    /// (<see cref="LlmEndpointReading.Of"/>). A section that names a provider the start refuses is not
+    /// judged, nor one whose address the start refuses: no provider is built.
+    /// </summary>
+    private static void ValidateWorkspace(JsonObject section, string sectionPath, List<ValidationMessage> messages)
+    {
+        if (Child(section, LlmProfilesSection.WorkspaceIdKey) is not JsonValue workspaceNode
+            || string.IsNullOrWhiteSpace(AppSettingsDocument.ReadString(workspaceNode)))
+        {
+            return;
+        }
+
+        var address = ConfigurationText(section, "BaseUrl");
+        if (!string.IsNullOrWhiteSpace(address) && LlmEndpointReading.Of(address, null, null).Notice == LlmEndpointNotice.Refused)
+            return;
+
+        string provider;
+        if (ConfigurationText(section, LlmProviderRules.ProviderKey) is { } named && !string.IsNullOrWhiteSpace(named))
+        {
+            // The mock, or a provider module: none sends the workspace (the agent-cli module runs on its
+            // CLI's login and warns of it at run time, event 110; doctor says it too, Orkeon #470). A
+            // name no module answers is refused by LlmProviderRules.
+            var key = LlmProviderRules.CliModuleKeys.FirstOrDefault(module => string.Equals(module, named.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (string.Equals(named.Trim(), LlmProviderKeys.Mock, StringComparison.OrdinalIgnoreCase))
+                provider = LlmProviderKeys.Mock;
+            else if (key is not null)
+                provider = key;
+            else
+                return;
+        }
+        else
+        {
+            var model = ConfigurationText(section, "Model");
+            provider = LlmEndpointReading.Of(
+                address, string.IsNullOrWhiteSpace(model) ? null : model, ConfigurationText(section, "ApiKey")).ProviderKey;
+        }
+
+        if (provider == LlmProviderKeys.Anthropic)
+            return;
+
+        var path = $"{sectionPath}:{LlmProfilesSection.WorkspaceIdKey}";
+        messages.Add(ValidationMessage.Warning(ValidationCodes.LlmWorkspace, WorkspaceNotSent(path, provider), path));
+    }
+
+    /// <summary>The single value at <paramref name="relativePath"/>, in the text the JSON configuration gives the run; null for none.</summary>
+    private static string? ConfigurationText(JsonObject section, string relativePath) =>
+        Child(section, relativePath) is JsonValue value ? EmailAccountRules.ConfigurationText(value) : null;
+
+    /// <summary>
+    /// The warning of a workspace the provider does not send, ending on the run's own remedy: the HTTP
+    /// providers' and the mock's, or the agent-cli module's, which adds that its CLI runs on its login.
+    /// </summary>
+    public static string WorkspaceNotSent(string path, string provider) =>
+        $"{path} is not sent: the provider of this section is '{provider}'. "
+        + (provider == LlmProviderRules.AgentCliKey
+            ? "Only Anthropic scopes a key to a workspace, and the agent CLI runs on its login; remove Llm:WorkspaceId (or the profile's) for this provider."
+            : "Only Anthropic scopes a key to a workspace; remove Llm:WorkspaceId (or the profile's) for this provider.");
+
+    /// <summary>
     /// What the run will make of an absolute <c>BaseUrl</c> of a section of the <c>Llm</c> shape: an
-    /// error for an address it refuses, a notice for one it reads without a word.
+    /// error for an address it refuses, a notice for one it reads without a word - unless the section
+    /// names its <c>Provider</c>, which the run then builds without reading the address.
     /// </summary>
     private static void ValidateEndpointReading(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
@@ -560,8 +696,10 @@ public sealed class AppSettingsValidator
                 OperatorMessages.LlmVendorAnthropicPathRefused(path, address, reading.ProviderKey),
                 path));
         }
-        else if (reading.Notice == LlmEndpointNotice.Silent)
+        else if (reading.Notice == LlmEndpointNotice.Silent
+                 && string.IsNullOrWhiteSpace(ConfigurationText(section, LlmProviderRules.ProviderKey)))
         {
+            // A section that names its provider is not read by its address: the run says nothing.
             messages.Add(ValidationMessage.Information(
                 ValidationCodes.LlmEndpoint, OperatorMessages.LlmBaseUrlSilent(path, address), path));
         }
@@ -596,6 +734,14 @@ public sealed class AppSettingsValidator
         foreach (var key in LlmBooleanKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "true or false"));
 
+        // A window of zero or less would leave the agent's loop no room: the host refuses to start.
+        if (Written(section, LlmProfilesSection.ContextWindowTokensKey) is { } windowNode
+            && LlmSection.ContextWindowProblem(sectionPath, AppSettingsDocument.ReadInt32(windowNode)) is { } window)
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.InvalidFieldType, window, $"{sectionPath}:{LlmProfilesSection.ContextWindowTokensKey}"));
+        }
+
         if (Child(section, "BaseUrl") is JsonValue baseUrlNode
             && AppSettingsDocument.ReadString(baseUrlNode) is { } baseUrl
             && !string.IsNullOrWhiteSpace(baseUrl)
@@ -608,6 +754,7 @@ public sealed class AppSettingsValidator
         }
 
         ValidateEndpointReading(section, sectionPath, messages);
+        ValidateWorkspace(section, sectionPath, messages);
         ValidateCache(section, sectionPath, messages);
         ValidateThinkingEffort(section, sectionPath, messages);
 
@@ -801,8 +948,20 @@ public sealed class AppSettingsValidator
                 path));
         }
 
+        if (Orkeon.Application.Interfaces.Ports.LlmProfiles.IsAuto(id))
+        {
+            // The name of the pick itself (llm.profile: auto): the run refuses to start.
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.LlmProfileReservedName,
+                Orkeon.Application.Interfaces.Ports.LlmProfiles.AutoReservedMessage(path),
+                path));
+        }
+
         if (entry is JsonObject shape)
+        {
             ValidateLlmShape(shape, path, messages);
+            messages.AddRange(LlmProviderRules.Check(shape, path));
+        }
         else
             messages.Add(WrongType(path, "an object of the Llm section's keys"));
     }

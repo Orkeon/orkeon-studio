@@ -56,10 +56,17 @@ public static class ForgeSessionHydrator
             ["dir"] = sessionDirectory,
             ["format"] = session["format"]?.DeepClone(),
             ["reference"] = session["reference"]?.DeepClone(),
+            // The decision mode the session designs its crew for: a session parked on the disk shows it
+            // before any engine run states it again. A session written before the option holds none: the
+            // engine derives it from the plan (ForgeSession.CrewDecisionOrDerived), and so does this.
+            ["crewDecision"] = session["crewDecision"]?.DeepClone() ?? DerivedCrewDecision(sessionDirectory),
             ["resumed"] = true,
         };
         Feed(model, envelope.ToJsonString());
     }
+
+    private static string DerivedCrewDecision(string sessionDirectory) =>
+        ForgeCrewDecisions.Derive(TryReadObject(Path.Combine(sessionDirectory, "blueprint.json"), out var blueprint) ? blueprint : null);
 
     /// <summary>
     /// The verdict, with the last trial's metrics folded in the way the live

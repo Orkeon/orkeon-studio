@@ -795,7 +795,7 @@ public sealed class DriveAccountRowViewModel : ObservableObject
             return;
 
         _rights = granted ? _rights | right : _rights & ~right;
-        // A box was touched: what the file said and the engine could not read is replaced.
+        // A switch was touched: what the file said and the engine could not read is replaced.
         _rightsRaw = null;
         OnPropertyChanged(propertyName);
         Commit();

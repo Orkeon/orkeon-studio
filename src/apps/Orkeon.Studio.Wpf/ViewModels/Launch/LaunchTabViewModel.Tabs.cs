@@ -102,7 +102,7 @@ public sealed partial class LaunchTabViewModel
 
             if (!value && _activeTab == CommandTab)
                 ActiveTab = OptionsTab;
-            OnPropertiesChanged(nameof(OptionsNextLabel), nameof(ExitTooltip));
+            OnPropertiesChanged(nameof(OptionsNextLabel), nameof(ExitTooltip), nameof(ShowsBridgeSettingsAction));
         }
     }
 
@@ -203,9 +203,6 @@ public sealed partial class LaunchTabViewModel
 
     // ── The options tab ──
 
-    /// <summary>The options keep their marks to themselves: an empty circle.</summary>
-    public static string OptionsTabState => "Empty";
-
     /// <summary>« Default settings » while the options are untouched; otherwise « Detailed level · Raw output »: the verbosity and the display.</summary>
     public string OptionsTabSubtitle => Options.Verbosity == 0 && Options.WatchProgress
         ? _strings[StudioStringKeys.RunOptionsDefault]
@@ -267,9 +264,6 @@ public sealed partial class LaunchTabViewModel
 
     // ── The command tab ──
 
-    /// <summary>The command keeps its marks to itself: an empty circle.</summary>
-    public static string CommandTabState => "Empty";
-
     /// <summary>The start of the command, the rest folded behind an ellipsis.</summary>
     public string CommandTabSubtitle
     {
@@ -300,7 +294,7 @@ public sealed partial class LaunchTabViewModel
     {
         RunCardState.Running => "Working",
         RunCardState.Succeeded => "Done",
-        RunCardState.Failed or RunCardState.Cancelled => "Warning",
+        RunCardState.Failed or RunCardState.Cancelled or RunCardState.Waiting => "Warning",
         _ => "Empty",
     };
 
@@ -313,6 +307,7 @@ public sealed partial class LaunchTabViewModel
             : _strings[StudioStringKeys.RunPaneSucceeded],
         RunCardState.Failed => _strings[StudioStringKeys.RunTabRunFailed],
         RunCardState.Cancelled => _strings[StudioStringKeys.HistStatusCancelled],
+        RunCardState.Waiting => _strings[StudioStringKeys.HistStatusWaiting],
         _ => _strings[StudioStringKeys.RunTabRunIdle],
     };
 
@@ -323,6 +318,7 @@ public sealed partial class LaunchTabViewModel
         RunCardState.Succeeded => StudioStringKeys.RunPaneDone,
         RunCardState.Failed => StudioStringKeys.RunTabRunFailed,
         RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
+        RunCardState.Waiting => StudioStringKeys.HistStatusWaiting,
         _ => StudioStringKeys.RunStateIdle,
     }];
 
@@ -472,7 +468,13 @@ public sealed partial class LaunchTabViewModel
                 return _strings[StudioStringKeys.RunBlockedScope];
             }
 
-            return IsBlockedByDecision ? DecisionMessage : null;
+            if (IsBlockedByDecision)
+                return DecisionMessage;
+
+            if (IsBlockedByBridge)
+                return BridgeMessage;
+
+            return IsBlockedByLlmProvider ? LlmProviderMessage : null;
         }
     }
 
@@ -482,7 +484,7 @@ public sealed partial class LaunchTabViewModel
     /// </summary>
     private bool IsTeamRefused =>
         IsBlockedByUndeclaredFolders || IsBlockedByUnknownMountIds || IsBlockedByFileSystemScope || IsTargetArchived
-        || IsBlockedByDecision;
+        || IsBlockedByDecision || IsBlockedByBridge || IsBlockedByLlmProvider;
 
     /// <summary>The beat of the status bar moves the durations between the run's events.</summary>
     internal void RefreshClock() =>
@@ -545,7 +547,8 @@ public sealed partial class LaunchTabViewModel
                 break;
             case nameof(TeamHeadline) or nameof(TeamMetaLine) or nameof(IsTargetArchived)
                 or nameof(IsBlockedByUndeclaredFolders) or nameof(IsBlockedByUnknownMountIds)
-                or nameof(IsBlockedByFileSystemScope) or nameof(IsBlockedByDecision):
+                or nameof(IsBlockedByFileSystemScope) or nameof(IsBlockedByDecision) or nameof(IsBlockedByBridge)
+                or nameof(IsBlockedByLlmProvider):
                 RaiseTeamTabChanged();
                 break;
             case nameof(RunLlmChoice):
@@ -602,7 +605,14 @@ public sealed partial class LaunchTabViewModel
         if (Progress.RunningTasks.Any(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)))
             return new(name, "running", _strings[StudioStringKeys.RunLaneRunning], string.Empty);
 
-        if (Progress.Tasks.LastOrDefault(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)) is { } last)
+        // A task a condition or a failed dependency skipped never ran: it is no failure of the
+        // agent, and its zero figures say nothing of the work the agent did. The card reads the
+        // agent's tasks that ran; an agent every task of which was skipped did not run.
+        var ownTasks = Progress.Tasks.Where(t => string.Equals(t.Title, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (ownTasks.Count > 0 && ownTasks.TrueForAll(t => t.Task.Skipped))
+            return new(name, "notrun", _strings[StudioStringKeys.RunLaneWaiting], string.Empty);
+
+        if (ownTasks.LastOrDefault(t => !t.Task.Skipped) is { } last)
         {
             var detail = string.Join(" · ", new[] { last.ToolCalls, last.Tokens, last.Duration }.Where(part => part.Length > 0));
             if (!last.Success)
@@ -615,8 +625,14 @@ public sealed partial class LaunchTabViewModel
             // expert's. A file the engine found not written (Orkeon #392) is a fact, the cap a
             // suspicion: the card takes the first's tone, and its words say both when both hold,
             // on one task or two, so the novice still learns that work was cut short.
+            // The lane is named by the rows' title, translated for the engine's own decision role
+            // («Decision» for "decision"): the completions are matched on the raw identity of the
+            // lane's rows, never on that title.
+            var identities = ownTasks
+                .Select(t => t.Task.AgentRole ?? t.Task.TaskId ?? "—")
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var own = Progress.Model.LastCompletions()
-                .Where(t => t.Success && string.Equals(t.AgentRole ?? t.TaskId ?? "—", name, StringComparison.OrdinalIgnoreCase))
+                .Where(t => t.Success && !t.Skipped && identities.Contains(t.AgentRole ?? t.TaskId ?? "—"))
                 .ToList();
             if (own.Exists(t => t.DeliverableMissing))
             {

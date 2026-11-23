@@ -349,7 +349,7 @@
                 <!-- R11 (D06): words in the UI font, meta size and ink — mono is for machine values. -->
                 <TextBlock Style="{StaticResource MetaText}" Margin="0,4,0,0" Text="{Binding MetaLine}"/>
                 <!-- STUDIO-73 (D6): the model the team runs on, and « Change the model » on the card — the
-                     editor opens in place, like the rename one: the box « Use the default model (X) »,
+                     editor opens in place, like the rename one: the switch « Use the default model (X) »,
                      the list of settings, Save and Cancel. An archived team keeps its model. -->
                 <controls:PropertyRow Margin="0,12,0,0" IsEnabled="{Binding IsConfirmingDelete, Converter={StaticResource Negate}}"
                                       Label="{Binding [Studio.Teams.RowModel], Source={x:Static services:I18n.Instance}}"
@@ -717,9 +717,9 @@
                                Text="{Binding DeleteConsequence}"
                                Visibility="{Binding HasDeleteConsequence, Converter={StaticResource BooleanToVisibility}}"/>
                     <!-- STUDIO-27 (D-07): the workshop session rule R links to this team goes with
-                         it, unless unticked. A copy is linked to none, so it offers none: deleting
+                         it, unless turned off. A copy is linked to none, so it offers none: deleting
                          a copy never touches its original's session. -->
-                    <!-- UX lot 08: a workshop session is an Expert notion — Novice never sees the box. -->
+                    <!-- UX lot 08: a workshop session is an Expert notion — Novice never sees the switch. -->
                     <CheckBox Margin="0,6,0,2" IsChecked="{Binding DeleteSessionToo}"
                               Content="{Binding [Studio.Teams.DeleteSessionToo], Source={x:Static services:I18n.Instance}}">
                       <CheckBox.Visibility>

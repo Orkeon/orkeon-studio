@@ -25,6 +25,7 @@ public static class HostProfileText
             HostProfileStatus.Offered => strings.Format(StudioStringKeys.ProfileHostId, check.Id),
             HostProfileStatus.NoId => strings[StudioStringKeys.ProfileHostIdNone],
             HostProfileStatus.DefaultName => strings[StudioStringKeys.ProfileHostIdReserved],
+            HostProfileStatus.AutoName => strings[StudioStringKeys.ProfileHostIdAuto],
             HostProfileStatus.TakenBySetting => strings.Format(StudioStringKeys.ProfileHostIdTakenBySetting, check.Id, check.TakenBy),
             HostProfileStatus.TakenByFile => strings.Format(StudioStringKeys.ProfileHostIdTakenByFile, check.Id),
             _ => null,

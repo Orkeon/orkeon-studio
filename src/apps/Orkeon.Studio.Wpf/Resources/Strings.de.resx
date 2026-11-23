@@ -485,8 +485,10 @@
   </data>
   <data name="Studio.Run.ExitSuccess" xml:space="preserve"><value>Lauf ohne Fehler abgeschlossen</value></data>
   <data name="Studio.Run.ExitScriptError" xml:space="preserve"><value>Skript- oder Einstellungsfehler: Prüfen Sie die Team-Datei und die Einstellungen, die sie verwendet</value></data>
+  <data name="Studio.Run.ExitDecisionUnavailable" xml:space="preserve"><value>Ausführung abgelehnt: Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen, und sie sind aus. Richten Sie sie unter Einstellungen › Entscheidungsmodelle ein, und lassen Sie „Die Entscheidungsmodelle verwenden“ eingeschaltet</value></data>
   <data name="Studio.Run.ExitRuntimeError" xml:space="preserve"><value>Fehler während des Laufs: Die letzten Protokollzeilen nennen den Grund</value></data>
   <data name="Studio.Run.ExitCancelled" xml:space="preserve"><value>Lauf abgebrochen</value></data>
+  <data name="Studio.Run.ExitWaitingForInput" xml:space="preserve"><value>Lauf wartet auf eine Eingabe: Er hat bei einer Frage angehalten und setzt fort, sobald sie beantwortet ist</value></data>
   <data name="Studio.Run.ExitUnknown" xml:space="preserve"><value>unerwartetes Ende: Prüfen Sie die Ausgabe oben</value></data>
   <data name="Studio.Run.ExitNotStarted" xml:space="preserve"><value>die Engine ist nicht gestartet</value></data>
   <data name="Studio.Settings.OllamaTitle" xml:space="preserve">
@@ -819,6 +821,11 @@
     <value>Bisher nichts gemeldet.</value>
   </data>
   <data name="Studio.Run.SkipReason" xml:space="preserve"><value>Übersprungen: {0}</value></data>
+  <data name="Studio.Run.SkipCondition" xml:space="preserve"><value>Übersprungen: Entscheidung {0} hat {1} geantwortet</value></data>
+  <data name="Studio.Run.SkipDecisionNotRun" xml:space="preserve"><value>Übersprungen: Entscheidung {0} wurde nicht getroffen</value></data>
+  <data name="Studio.Run.SkipDependency" xml:space="preserve"><value>Übersprungen: eine Aufgabe, von der sie abhängt, war nicht erfolgreich</value></data>
+  <data name="Studio.Run.SkipDependenciesConditionSkipped" xml:space="preserve"><value>Übersprungen: alle Aufgaben, von denen sie abhängt, wurden durch eine Entscheidung übersprungen</value></data>
+  <data name="Studio.Run.LaneDecision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.CapNote" xml:space="preserve"><value>Aufgabe vorzeitig beendet: Der Agent hat seine Iterationen aufgebraucht, bevor er fertig war. Seine Arbeit ist möglicherweise unvollständig: Prüfen Sie die Dateien, die er schreiben sollte.</value></data>
   <data name="Studio.Run.DeliverableNote" xml:space="preserve"><value>Datei nicht geschrieben: Die Aufgabe war erfolgreich, hat aber die in ihrem Ergebnis genannte Datei nicht geschrieben (oder aktualisiert). Prüfen Sie, ob ihr Agent ein Werkzeug hat, das diese Datei schreibt, und ob die Aufgabe diese Datei verlangt (wurde die Aufgabe auch vorzeitig beendet, geben Sie dem Agenten mehr Iterationen), und starten Sie das Team dann erneut.</value></data>
   <data name="Studio.Run.LaneCapped" xml:space="preserve"><value>Vorzeitig beendet: Dateien prüfen</value></data>
@@ -832,6 +839,38 @@
   <data name="Studio.Create.ActivityMissingCapped" xml:space="preserve"><value>{0} — fertig, hat seine Datei aber nicht geschrieben; zudem vorzeitig beendet: Iterationen aufgebraucht</value></data>
   <data name="Studio.Run.Decision" xml:space="preserve"><value>Entscheidung</value></data>
   <data name="Studio.Run.DecisionDefaulted" xml:space="preserve"><value>Entscheidung (Standard)</value></data>
+  <data name="Studio.Run.DecisionRelay" xml:space="preserve"><value>Entscheidung (Relais)</value></data>
+  <data name="Studio.Run.NotesTitle" xml:space="preserve"><value>System One und Kontext</value></data>
+  <data name="Studio.Run.NoteDecisionOn" xml:space="preserve"><value>Entscheidungsmodelle ein (Teammodus: {0}).</value></data>
+  <data name="Studio.Run.NoteDecisionOff" xml:space="preserve"><value>Entscheidungsmodelle aus: {1} (Teammodus: {0}).</value></data>
+  <data name="Studio.Run.NoteCauseSwitch" xml:space="preserve"><value>diese Ausführung verzichtet auf sie</value></data>
+  <data name="Studio.Run.NoteCauseSettings" xml:space="preserve"><value>die Einstellungen schalten sie aus</value></data>
+  <data name="Studio.Run.NoteCauseNoProvider" xml:space="preserve"><value>kein Entscheidungsanbieter ist konfiguriert</value></data>
+  <data name="Studio.Run.NoteCauseNoKey" xml:space="preserve"><value>der Entscheidungsanbieter hat keinen API-Schlüssel: Setzen Sie seine Umgebungsvariable oder seinen ApiKey in den Einstellungen</value></data>
+  <data name="Studio.Run.NoteCauseTrial" xml:space="preserve"><value>dieser Durchlauf des Probelaufs verzichtet auf sie</value></data>
+  <data name="Studio.Run.NoteCauseWithDetail" xml:space="preserve"><value>{0}: {1}</value></data>
+  <data name="Studio.Run.NoteRoutePicked" xml:space="preserve"><value>{0}: System One hat das Profil „{1}“ gewählt ({2} %).</value></data>
+  <data name="Studio.Run.NoteRouteDefault" xml:space="preserve"><value>{0}: Profil „{1}“, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteRouteFloor" xml:space="preserve"><value>{0}: Profil „{1}“, die Untergrenze der Leiter, auf die die Wahl von System One gehoben wird.</value></data>
+  <data name="Studio.Run.NoteRouteCeiling" xml:space="preserve"><value>{0}: Profil „{1}“, die Obergrenze der Leiter, auf die die Wahl von System One begrenzt wird.</value></data>
+  <data name="Studio.Run.NoteEffortPicked" xml:space="preserve"><value>{0}: System One hat die Denkstufe {1} gewählt ({2} %).</value></data>
+  <data name="Studio.Run.NoteEffortRaised" xml:space="preserve"><value>{0}: Denkstufe nach einem fehlgeschlagenen Versuch von {1} auf {2} angehoben.</value></data>
+  <data name="Studio.Run.NoteEffortDefault" xml:space="preserve"><value>{0}: Denkstufe {1}, nicht von System One gewählt ({2}).</value></data>
+  <data name="Studio.Run.NoteReasonModel" xml:space="preserve"><value>seine eigene Wahl</value></data>
+  <data name="Studio.Run.NoteReasonLowConfidence" xml:space="preserve"><value>seine Wahl war nicht sicher genug</value></data>
+  <data name="Studio.Run.NoteReasonNoAnswer" xml:space="preserve"><value>es gab keine verwertbare Antwort</value></data>
+  <data name="Studio.Run.NoteReasonCircuitOff" xml:space="preserve"><value>die Entscheidungsmodelle sind ausgeschaltet</value></data>
+  <data name="Studio.Run.NoteReasonNoLadder" xml:space="preserve"><value>keine Leiter zur Auswahl</value></data>
+  <data name="Studio.Run.NoteReasonDecisionNone" xml:space="preserve"><value>das Team fragt es nichts</value></data>
+  <data name="Studio.Run.NoteReasonSingleLevel" xml:space="preserve"><value>nur eine Stufe ist erlaubt</value></data>
+  <data name="Studio.Run.NoteReasonRaised" xml:space="preserve"><value>nach einem fehlgeschlagenen Versuch erhöht</value></data>
+  <data name="Studio.Run.NoteReasonFloor" xml:space="preserve"><value>auf die unterste Stufe der Leiter begrenzt</value></data>
+  <data name="Studio.Run.NoteReasonCeiling" xml:space="preserve"><value>auf die oberste Stufe der Leiter begrenzt</value></data>
+  <data name="Studio.Run.NoteSkills" xml:space="preserve"><value>{0}: Fähigkeiten {1} ({2}).</value></data>
+  <data name="Studio.Run.NoteSkillsNone" xml:space="preserve"><value>{0}: keine Fähigkeit ({1}).</value></data>
+  <data name="Studio.Run.NoteCompacted" xml:space="preserve"><value>{0}: Kontext verdichtet, von {1} auf {2} Tokens.</value></data>
+  <data name="Studio.Run.NoteCompactionFailed" xml:space="preserve"><value>{0}: Der Kontext konnte nicht verdichtet werden ({1}).</value></data>
+  <data name="Studio.Run.NotePruned" xml:space="preserve"><value>{0}: {1} Werkzeugergebnisse gekürzt, etwa {2} Tokens freigegeben.</value></data>
   <data name="Studio.Run.DecisionYes" xml:space="preserve"><value>ja</value></data>
   <data name="Studio.Run.DecisionScore" xml:space="preserve"><value>Wert {0}</value></data>
   <data name="Studio.Run.DecisionLikelihood" xml:space="preserve"><value>Wahrscheinlichkeit {0} %</value></data>
@@ -1567,9 +1606,9 @@
   <data name="Studio.Diagnostics.Code.STUDIO-LLM-ENDPOINT" xml:space="preserve">
     <value>Eine Modelladresse wird abgelehnt oder bleibt stumm: Eine Adresse unter dem Pfad /anthropic eines anderen Anbieters wird abgelehnt, und eine Adresse ohne Pfad wird als OpenAI-kompatibler Server an seiner Wurzel gelesen.</value>
   </data>
-  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve">
-    <value>Ein Modellprofil heißt „default“, der eigene Name des Abschnitts Llm: Die Engine verweigert den Start. Benennen Sie es um.</value>
-  </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROFILE-NAME" xml:space="preserve"><value>Ein Modellprofil trägt einen reservierten Namen („default“, den des Abschnitts Llm selbst, oder „auto“, die Wahl von System One): Die Engine verweigert den Start. Benennen Sie es um.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-PROVIDER" xml:space="preserve"><value>Der Provider von Llm oder eines Profils wird abgelehnt: Er nimmt „mock“ mit seiner Datei Responses oder den Schlüssel eines Anbietermoduls. Ohne ihn ergibt sich der Anbieter aus der Adresse, dem Modellnamen und dem Schlüssel.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-LLM-WORKSPACE" xml:space="preserve"><value>Für einen Anbieter, der nicht Anthropic ist, ist eine WorkspaceId gesetzt: Der Lauf sendet sie nicht. Nur Anthropic bindet einen Schlüssel an einen Arbeitsbereich; entfernen Sie sie für diesen Anbieter.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MOUNT-ID" xml:space="preserve">
     <value>Zwei Ordner tragen dieselbe Kennung: Eine Kennung benennt genau einen Ordner.</value>
   </data>
@@ -1578,12 +1617,17 @@
   </data>
   <data name="Studio.Diagnostics.Code.STUDIO-FS-SCOPE" xml:space="preserve"><value>Die filesystem:-Angabe eines Agenten ist fehlerhaft, oder sein Bereich oder Arbeitsverzeichnis verlangt einen Ordner, den die Einbindungen der Ausführung nicht gewähren: Die Engine lehnt das Team beim Laden ab oder lehnt diesen Agenten ab, wenn die Ausführung ihn startet.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DELIVERABLE-WRITER" xml:space="preserve"><value>Eine Aufgabe muss eine Datei schreiben, für die keiner der Agenten, die sie ausführen können, ein Werkzeug hat, oder eine Entscheidungsaufgabe deklariert ein Ergebnis: Die Ausführung startet, die Datei wird möglicherweise nie geschrieben und die Aufgabe gilt trotzdem als erledigt. Eine Orkeon-1.2-CLI warnt beim Laden ebenfalls davor.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Ein Agent oder eine Aufgabe verwendet system_one_decide, das eine Ausführung erst hat, wenn ein Entscheidungsanbieter konfiguriert ist, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe, was eine Ausführung ablehnt, sobald die Modelle ausgeschaltet sind.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>Die Einstellungen nennen einen Entscheidungsanbieter, den die Engine ablehnt (ein unbekannter Name oder zwei Anbieter, die sie ableiten könnte): Die CLI hält an, bevor sie das Team lädt.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Der Entscheidungsanbieter, den die Ausführung nutzt, braucht einen Schlüssel, und keiner ist vorhanden, weder in seiner Variablen noch in der Einstellungsdatei: Jede Anfrage an ihn scheitert.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL" xml:space="preserve"><value>Die Entscheidungsmodelle sind für diese Ausführung ausgeschaltet, doch ein Agent oder eine Aufgabe verwendet system_one_decide: Das Werkzeug fragt den Anbieter weiterhin, denn der Schalter regelt nur die Entscheidungsaufgaben.</value></data>
-  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe verwendet system_one_decide, und kein Entscheidungsanbieter ist konfiguriert: Mit Orkeon:CrewFactory:StrictTools auf false entfernt die Engine das Werkzeug und führt das Team ohne es aus.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-REQUIRED" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Es deklariert decision.mode: required, ein Agent oder eine Aufgabe verwendet system_one_decide, das die Engine zurückhält, sobald die Modelle aus sind, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe, was eine Ausführung ablehnt, sobald die Modelle aus sind.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROVIDER" xml:space="preserve"><value>Die Engine lehnt die Einstellungen der Entscheidungsmodelle ab (den Anbieter, einen Schalter, die Profilleiter, die Denkstufen, ein Entscheidungsprofil oder den Richter, der von ihnen abhängt): Die CLI hält an, bevor sie das Team lädt. Die Meldung sagt, was sie ablehnt.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-FALLBACK" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe wird von ihrem Relais beantwortet, antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen, und was System One gewählt hätte, fällt auf das zurück, was das Team oder die Einstellungen angeben.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-KEY" xml:space="preserve"><value>Der Entscheidungsanbieter, den die Ausführung nutzt, braucht einen Schlüssel, und keiner ist vorhanden, weder in seiner Variablen noch in der Einstellungsdatei: Die Engine schaltet die Entscheidungsmodelle aus und sendet ihm keine Anfrage. Ein Team, das nicht ohne sie laufen kann, wird abgelehnt; jedes andere läuft ohne sie.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-LADDER" xml:space="preserve"><value>Ein Agent oder eine Aufgabe lässt System One sein Profil wählen (llm.profile: auto), und die Einstellungen ermöglichen das nicht: Sie geben keine Leiter aus zwei oder mehr Modellprofilen vor, oder die Leiter nennt ein Modellprofil, das weder die Einstellungen definieren noch der Start der Ausführung mitgibt. Die Engine lehnt das Team beim Laden ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-MODE" xml:space="preserve"><value>Das Team deklariert decision.mode: none, und ein Agent oder eine Aufgabe lässt System One sein Profil wählen (llm.profile: auto) oder nennt ein Entscheidungsprofil der Einstellungen: Der Modus lehnt jede Nutzung von System One ab, daher lehnt die Engine das Team beim Laden ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-PROFILE-BLOCKED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe läuft auf einem Entscheidungsprofil der Einstellungen, dessen Guard-Stufe blockiert, wenn sie nicht urteilen kann (FailClosed), und die Ausführung verzichtet auf die Entscheidungsmodelle (System One): Die Engine blockiert jeden Aufruf über dieses Profil. Eine Prüfung lädt das Team trotzdem.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-SETTING-REFUSED" xml:space="preserve"><value>Ein Abschnitt, den die Engine beim Start prüft (Verdichtung, Kürzen, Fähigkeiten, Werkzeugbrücke, Guardian, Entscheidungsmodelle und ihre Profile, Llm:AgentCli des Anbieters agent-cli), enthält einen Wert, den ihre Regeln ablehnen, oder einen Schlüssel, der keine Einstellung davon ist: Als Fehler würde keine Ausführung damit starten. Als Warnung nennt er ein Modellprofil, das diese Datei nicht definiert, weshalb eine außerhalb von Studio gestartete Ausführung abgelehnt würde.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-TOKEN" xml:space="preserve"><value>Die Ausführung überbrückt Werkzeuge zu einem anderen Rechner, und das Token der Brücke steht nicht in seiner Umgebungsvariablen oder ist kürzer als 16 Zeichen: Die Ausführung verweigert den Start.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BRIDGE-IDLE" xml:space="preserve"><value>Die Einstellungen nennen die Adresse einer Werkzeugbrücke und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-DECISION-TOOL-DROPPED" xml:space="preserve"><value>Ein Agent oder eine Aufgabe verwendet system_one_decide, und die Ausführung verzichtet auf die Entscheidungsmodelle: Mit Orkeon:CrewFactory:StrictTools auf false hält die Engine das Werkzeug zurück und führt das Team ohne es aus.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-LAUNCH-MOUNT-DASH" xml:space="preserve">
     <value>Eine hinzugefügte Ordnerzeile beginnt mit „-“: Die Engine würde sie als Option lesen.</value>
   </data>
@@ -1638,6 +1682,41 @@
   <data name="Studio.Settings.CardLlmLog" xml:space="preserve">
     <value>LLM-Protokoll</value>
   </data>
+  <data name="Studio.Settings.CardCompaction" xml:space="preserve"><value>Kontextverdichtung</value></data>
+  <data name="Studio.Settings.CompactionIntro" xml:space="preserve"><value>Nähert sich der Kontext eines Agenten dem Fenster seines Modells, werden die älteren Runden durch eine Zusammenfassung ersetzt, damit eine lange Aufgabe weiterläuft. Eingeschaltet, solange Sie sie nicht ausschalten.</value></data>
+  <data name="Studio.Settings.CompactionEnabled" xml:space="preserve"><value>Einen Kontext verdichten, der sich dem Fenster nähert</value></data>
+  <data name="Studio.Settings.LblCompactionTrigger" xml:space="preserve"><value>Bei diesem Anteil des Fensters beginnen (über 0, höchstens 1)</value></data>
+  <data name="Studio.Settings.LblCompactionKeepTurns" xml:space="preserve"><value>Letzte Runden, die unverändert bleiben</value></data>
+  <data name="Studio.Settings.LblCompactionProfile" xml:space="preserve"><value>Modellprofil, das die Zusammenfassung schreibt</value></data>
+  <data name="Studio.Settings.CompactionProfileHint" xml:space="preserve"><value>Leer: Das Modell des jeweiligen Agenten schreibt sie.</value></data>
+  <data name="Studio.Settings.PruneEnabled" xml:space="preserve"><value>Zuerst System One die älteren Werkzeugergebnisse kürzen lassen</value></data>
+  <data name="Studio.Settings.PruneHint" xml:space="preserve"><value>Aus, solange Sie es nicht einschalten. Es fragt die Entscheidungsmodelle: Ohne sie wird nichts gekürzt.</value></data>
+  <data name="Studio.Settings.LblPruneFillShare" xml:space="preserve"><value>Mit dem Kürzen bei diesem Anteil des Fensters beginnen (über 0, höchstens 1)</value></data>
+  <data name="Studio.Settings.LblPruneKeepMessages" xml:space="preserve"><value>Letzte Nachrichten, die nie beurteilt werden</value></data>
+  <data name="Studio.Settings.LblPruneHeadChars" xml:space="preserve"><value>Zeichen, die von einem gekürzten Ergebnis bleiben</value></data>
+  <data name="Studio.Settings.CardSkills" xml:space="preserve"><value>Fähigkeiten</value></data>
+  <data name="Studio.Settings.SkillsIntro" xml:space="preserve"><value>Eine Fähigkeit ist eine Markdown-Datei, die ein Agent in seinem Prompt trägt. Ein Team listet die Fähigkeiten jedes Agenten auf oder lässt System One sie für jede Aufgabe wählen.</value></data>
+  <data name="Studio.Settings.LblSkillsLibrary" xml:space="preserve"><value>Ordner der Fähigkeiten (virtueller Pfad)</value></data>
+  <data name="Studio.Settings.LblSkillsMaxSkillChars" xml:space="preserve"><value>Zeichen, die von einer Fähigkeit bleiben</value></data>
+  <data name="Studio.Settings.LblSkillsMaxBlockChars" xml:space="preserve"><value>Zeichen aller Fähigkeiten eines Prompts</value></data>
+  <data name="Studio.Settings.ProfileLblContextWindow" xml:space="preserve"><value>Kontextfenster des Standardmodells (Tokens)</value></data>
+  <data name="Studio.Settings.ProfileContextWindowHint" xml:space="preserve"><value>Leer: das Fenster, das die Engine für das Modell dokumentiert. Daran wird die Verdichtung eines Kontexts gemessen. Das Fenster eines anderen Modellprofils ist der Schlüssel ContextWindowTokens seines Abschnitts, im Tab „Datei“.</value></data>
+  <data name="Studio.Settings.CardBridgeCaller" xml:space="preserve"><value>Werkzeugbrücke: Werkzeuge, die auf einem anderen Rechner laufen</value></data>
+  <data name="Studio.Settings.BridgeCallerIntro" xml:space="preserve"><value>Manche Werkzeuge einer Ausführung, etwa ein Browser, können auf einem anderen Rechner laufen, auf dem „orkeon bridge serve“ sie ausführt. Nichts wird überbrückt, solange die Adresse leer ist oder kein Werkzeug erlaubt ist.</value></data>
+  <data name="Studio.Settings.LblBridgeAddress" xml:space="preserve"><value>Adresse der Brücke</value></data>
+  <data name="Studio.Settings.BridgeAddressHint" xml:space="preserve"><value>Zum Beispiel https://host:7410/. Sie endet mit „/“ und verwendet https, außer der Host ist dieser Rechner oder host.docker.internal.</value></data>
+  <data name="Studio.Settings.LblBridgeAllow" xml:space="preserve"><value>Zu überbrückende Werkzeuge</value></data>
+  <data name="Studio.Settings.BridgeAllowHint" xml:space="preserve"><value>Durch Kommas oder Semikolons getrennte Namen oder * allein für jedes Werkzeug, das die Brücke bereitstellt.</value></data>
+  <data name="Studio.Settings.LblBridgeDeny" xml:space="preserve"><value>Werkzeuge, die nie überbrückt werden</value></data>
+  <data name="Studio.Settings.LblBridgeTokenVar" xml:space="preserve"><value>Umgebungsvariable, die das Token enthält</value></data>
+  <data name="Studio.Settings.LblBridgeHostHeader" xml:space="preserve"><value>Host-Header, wenn er von dem der Adresse abweicht</value></data>
+  <data name="Studio.Settings.BridgeAdvancedHint" xml:space="preserve"><value>Zeitlimits, Größen und Grenzen behalten die Standardwerte der Engine; ändern Sie sie im Tab „Datei“.</value></data>
+  <data name="Studio.Settings.CardBridgeServer" xml:space="preserve"><value>Werkzeugbrücke: Werkzeuge, die dieser Rechner für einen anderen ausführt</value></data>
+  <data name="Studio.Settings.BridgeServerIntro" xml:space="preserve"><value>„orkeon bridge serve“ führt die hier erlaubten Werkzeuge für einen Aufrufer auf einem anderen Rechner aus, der dasselbe Token besitzt. Nichts wird bereitgestellt, solange kein Werkzeug erlaubt ist. Studio startet die Brücke nicht: Führen Sie den Befehl in einem Terminal aus.</value></data>
+  <data name="Studio.Settings.LblBridgePrefix" xml:space="preserve"><value>Adresse, auf der sie lauscht</value></data>
+  <data name="Studio.Settings.LblBridgeServeAllow" xml:space="preserve"><value>Bereitgestellte Werkzeuge</value></data>
+  <data name="Studio.Settings.BridgeServeAllowHint" xml:space="preserve"><value>Durch Kommas oder Semikolons getrennte Namen oder * allein für jedes überbrückbare Orkeon-Werkzeug.</value></data>
+  <data name="Studio.Settings.LblBridgeServeDeny" xml:space="preserve"><value>Werkzeuge, die nie bereitgestellt werden</value></data>
   <data name="Studio.History.OutcomeSuccess" xml:space="preserve">
     <value>Ohne Fehler beendet.</value>
   </data>
@@ -1647,6 +1726,7 @@
   <data name="Studio.History.OutcomeCancelled" xml:space="preserve">
     <value>Vor dem Ende abgebrochen.</value>
   </data>
+  <data name="Studio.History.OutcomeWaiting" xml:space="preserve"><value>Bei einer Frage angehalten: wartet auf die Antwort.</value></data>
   <data name="Studio.History.OutcomeNotStarted" xml:space="preserve">
     <value>Nie gestartet.</value>
   </data>
@@ -1926,7 +2006,7 @@
     <value>erst vorhanden mit {0}, von Hand in die Einstellungsdatei geschrieben, und nur bei einem Team mit memory: true</value>
   </data>
   <data name="Studio.Settings.ToolOnlyWithDecisionProvider" xml:space="preserve">
-    <value>erst vorhanden, wenn im Tab Entscheidungsmodelle ein Entscheidungsanbieter eingerichtet ist: der Schlüssel TYPESAFE_API_KEY oder LIQUID_API_KEY, Orkeon:Decision:Provider oder ein Abschnitt Orkeon:TypeSafe oder Orkeon:Liquid in der Einstellungsdatei; TypeSafe und Liquid lehnen ohne ihren Schlüssel jeden Aufruf ab</value>
+    <value>erst vorhanden, wenn im Tab Entscheidungsmodelle ein Entscheidungsanbieter eingerichtet ist: der Schlüssel TYPESAFE_API_KEY oder LIQUID_API_KEY, Orkeon:Decision:Provider oder ein Abschnitt Orkeon:TypeSafe oder Orkeon:Liquid in der Einstellungsdatei; ohne den Schlüssel von TypeSafe oder Liquid schaltet die Engine die Entscheidungsmodelle aus und hält das Werkzeug zurück</value>
   </data>
   <data name="Studio.Settings.ToolNeedsRagDataset" xml:space="preserve">
     <value>braucht einen Referenzdatensatz, eine YAML-Datei in einem freigegebenen Ordner; es füllt die Sammlung selbst mit dessen Korpus</value>
@@ -2052,7 +2132,7 @@
     <value>Server</value>
   </data>
   <data name="Studio.Settings.MailRightsIntro" xml:space="preserve">
-    <value>Nichts angekreuzt, nichts erlaubt: Die Engine lehnt ein Konto ab, das kein Recht gewährt.</value>
+    <value>Nichts eingeschaltet, nichts erlaubt: Die Engine lehnt ein Konto ab, das kein Recht gewährt.</value>
   </data>
   <data name="Studio.Settings.MailRightRead" xml:space="preserve">
     <value>Lesen — Ordner auflisten, suchen, Nachrichten lesen und Anhänge speichern</value>
@@ -2290,12 +2370,38 @@
   <data name="Studio.Create.AssistantNotRunning" xml:space="preserve">
     <value>Der Assistent läuft nicht — starten Sie die Komposition (Schritt 1, Zusammenstellen) oder setzen Sie die Sitzung fort; Ihre Frage wurde aufbewahrt.</value>
   </data>
+  <data name="Studio.Create.CrewDecisionNone" xml:space="preserve"><value>Nein: Das Team fragt sie nie</value></data>
+  <data name="Studio.Create.CrewDecisionOptional" xml:space="preserve"><value>Wenn verfügbar: Das Team läuft mit oder ohne sie</value></data>
+  <data name="Studio.Create.CrewDecisionRequired" xml:space="preserve"><value>Immer: Das Team kann nicht ohne sie laufen</value></data>
+  <data name="Studio.Create.CrewDecisionRequiredOff" xml:space="preserve"><value>Die Entscheidungsmodelle sind auf diesem Rechner aus ({0}): Das Team kann zusammengestellt werden, sein Probelauf wird aber abgelehnt, bis sie unter Einstellungen › Entscheidungsmodelle eingerichtet sind.</value></data>
+  <data name="Studio.Create.CrewDecisionOptionalOff" xml:space="preserve"><value>Die Entscheidungsmodelle sind auf diesem Rechner aus ({0}): Der Probelauf läuft nur ohne sie.</value></data>
+  <data name="Studio.Create.CrewDecisionSession" xml:space="preserve"><value>Das Team auf dem Bildschirm wurde mit „{0}“ zusammengestellt und behält es: Die Auswahl oben gilt für das nächste „Team zusammenstellen“.</value></data>
+  <data name="Studio.Create.TrialPassWith" xml:space="preserve"><value>Durchlauf {0} von {1}: mit den Entscheidungsmodellen</value></data>
+  <data name="Studio.Create.TrialPassWithout" xml:space="preserve"><value>Durchlauf {0} von {1}: ohne die Entscheidungsmodelle</value></data>
+  <data name="Studio.Create.PassWith" xml:space="preserve"><value>mit den Entscheidungsmodellen</value></data>
+  <data name="Studio.Create.PassWithout" xml:space="preserve"><value>ohne die Entscheidungsmodelle</value></data>
+  <data name="Studio.Create.VerdictWithMet" xml:space="preserve"><value>Mit den Entscheidungsmodellen: Kriterien erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithNotMet" xml:space="preserve"><value>Mit den Entscheidungsmodellen: Kriterien nicht erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithoutMet" xml:space="preserve"><value>Ohne die Entscheidungsmodelle: Kriterien erfüllt</value></data>
+  <data name="Studio.Create.VerdictWithoutNotMet" xml:space="preserve"><value>Ohne die Entscheidungsmodelle: Kriterien nicht erfüllt</value></data>
+  <data name="Studio.Create.AssistantDecisionOn" xml:space="preserve"><value>Der Assistent arbeitet mit den Entscheidungsmodellen (Aufrufe in diesem Lauf: {0}).</value></data>
+  <data name="Studio.Create.AssistantDecisionTokens" xml:space="preserve"><value>Diese Aufrufe haben in der Sitzung {0} Token verbraucht.</value></data>
+  <data name="Studio.Create.AssistantDecisionOff" xml:space="preserve"><value>Der Assistent arbeitet ohne die Entscheidungsmodelle.</value></data>
+  <data name="Studio.Create.AssistantDecisionOffBecause" xml:space="preserve"><value>Der Assistent arbeitet ohne die Entscheidungsmodelle: {0}.</value></data>
+  <data name="Studio.Create.AssistantDecisionCauseSwitch" xml:space="preserve"><value>Sie haben ihn gebeten, ohne sie zu fragen zusammenzustellen</value></data>
+  <data name="Studio.Create.CrewDecisionLabel" xml:space="preserve"><value>Soll das Team die Entscheidungsmodelle (System One) verwenden?</value></data>
+  <data name="Studio.Create.CrewDecisionHint" xml:space="preserve"><value>Sie beantworten eine Frage mit einer Wahrscheinlichkeit: welcher Weg zu nehmen ist, ob eine Arbeit fertig ist. Die Wahl wird beim Zusammenstellen des Teams getroffen und bleibt bei ihm; mit „Wenn verfügbar“ läuft der Probelauf zweimal, mit ihnen und dann ohne sie.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOne" xml:space="preserve"><value>Zusammenstellen, ohne die Entscheidungsmodelle zu fragen</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneHint" xml:space="preserve"><value>Der Assistent selbst kann sie befragen, während er das Team zusammenstellt. Aktivieren Sie dies, wenn sie nicht eingerichtet sind, oder zum Vergleichen.</value></data>
+  <data name="Studio.Create.DesignWithoutSystemOneLocked" xml:space="preserve"><value>Die Entscheidungsmodelle sind in den Einstellungen ausgeschaltet: Der Assistent stellt ohne sie zusammen. Das Team kann trotzdem dafür vorgesehen werden, sie zu nutzen.</value></data>
   <data name="Studio.Create.EngineBusy" xml:space="preserve">
     <value>Der Assistent ist noch mit „{0}“ beschäftigt — stoppen Sie ihn, oder lassen Sie ihn fertig werden, bevor Sie ein Team öffnen.</value>
   </data>
   <data name="Studio.Run.JournalCopy" xml:space="preserve">
     <value>Kopieren</value>
   </data>
+  <data name="Studio.Settings.ProfileLblWorkspace" xml:space="preserve"><value>Anthropic-Arbeitsbereich (optional)</value></data>
+  <data name="Studio.Settings.ProfileWorkspaceHint" xml:space="preserve"><value>Ein identitätsgebundener Anthropic-Schlüssel lehnt jeden Aufruf ohne seinen Arbeitsbereich ab: Fügen Sie dessen ID hier ein. Ein klassischer Schlüssel braucht keinen. Kein Geheimnis.</value></data>
   <data name="Studio.Settings.ProfileLblTemperature" xml:space="preserve">
     <value>Temperatur (optional)</value>
   </data>
@@ -2333,7 +2439,7 @@
     <value>Zum Team hinzufügen</value>
   </data>
   <data name="Studio.Teams.TeamMountsSub" xml:space="preserve">
-    <value>Haken Sie an, was dieses Team sehen darf. Jeder abgewählte Ordner wird für es unsichtbar, auch wenn andere Teams ihn nutzen.</value>
+    <value>Schalten Sie ein, was dieses Team sehen darf. Jeder ausgeschaltete Ordner wird für es unsichtbar, auch wenn andere Teams ihn nutzen.</value>
   </data>
   <data name="Studio.Teams.AddAnother" xml:space="preserve">
     <value>Weiteren Ordner freigeben…</value>
@@ -2408,23 +2514,44 @@
   <data name="Studio.Run.WarnDeliverableFixBinaryNoTool" xml:space="preserve"><value>Geben Sie dem Agenten, der die Datei schreiben soll, ein Werkzeug, das sie schreibt (das eines MCP-Servers, eines Plugins), oder liefern Sie stattdessen ein Textformat (.md, .html, .csv).</value></data>
   <data name="Studio.Run.WarnDeliverableDecision" xml:space="preserve"><value>Aufgabe „{0}“ ist eine Entscheidungsaufgabe und muss {1} schreiben, aber eine Entscheidung schreibt keine Datei: Entfernen Sie das Ergebnis, oder verschieben Sie es in eine Aufgabe, die ein Agent ausführt.</value></data>
   <data name="Studio.Run.UseDecisionModels" xml:space="preserve"><value>Die Entscheidungsmodelle verwenden (System One)</value></data>
-  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Nicht angehakt kommen die Entscheidungsaufgaben ohne sie aus (--no-decision): Jede antwortet mit ihrer Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen, und ein Lauf verweigert eine, die keins von beiden hat. Das Werkzeug system_one_decide fragt den Anbieter weiterhin.</value></data>
-  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>Die Einstellungen nennen einen Entscheidungsanbieter, den die Engine ablehnt, daher startet die CLI nicht: {0} Beheben Sie es unter Einstellungen › Entscheidungsmodelle.</value></data>
-  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>Die Einstellungen dieses Rechners nennen einen Entscheidungsanbieter, den die Engine ablehnt: Sofern die Einstellungsdatei, die die CLI wählt, nichts anderes sagt, startet sie nicht. {0}</value></data>
+  <data name="Studio.Run.UseDecisionModelsHint" xml:space="preserve"><value>Ausgeschaltet verzichtet die Ausführung auf die Entscheidungsmodelle (--no-decision): Eine Entscheidungsaufgabe erhält die Antwort ihres Relais oder ihre Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen; die Engine hält das Werkzeug system_one_decide zurück; ein Team, das nicht ohne sie laufen kann, wird abgelehnt.</value></data>
+  <data name="Studio.Run.BlockedDecisionProvider" xml:space="preserve"><value>Die Engine lehnt die Einstellungen ab, die diese Ausführung liest, daher startet die CLI nicht: {0} Korrigieren Sie sie in {1}.</value></data>
+  <data name="Studio.Run.BlockedDecisionSharedName" xml:space="preserve"><value>Die Engine lehnt die Einstellungen ab, die diese Ausführung liest, daher startet die CLI nicht: {0} Ein Entscheidungsprofil und ein Modellprofil dürfen nicht denselben Namen tragen: Benennen Sie eines der beiden um. Das Entscheidungsprofil steht unter Orkeon:Decision:Profiles in {1}.</value></data>
+  <data name="Studio.Run.WarnDecisionProvider" xml:space="preserve"><value>Die Engine lehnt die Entscheidungseinstellungen dieses Rechners ab: Sofern die Einstellungsdatei, die die CLI wählt, nichts anderes sagt, startet sie nicht. {0}</value></data>
   <data name="Studio.Run.BlockedDecisionRequired" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: {0}. {1}</value></data>
   <data name="Studio.Run.WarnDecisionRequiredUnknown" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: {0}. Die CLI wählt die Einstellungsdatei selbst: Prüfen Sie, dass sie sie bereitstellt, oder heften Sie die Datei an. {1}</value></data>
-  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Diese Ausführung verzichtet darauf: Haken Sie „Die Entscheidungsmodelle verwenden“ an.</value></data>
+  <data name="Studio.Run.DecisionOffRunSwitch" xml:space="preserve"><value>Diese Ausführung verzichtet darauf: Schalten Sie „Die Entscheidungsmodelle verwenden“ ein.</value></data>
   <data name="Studio.Run.DecisionOffSettings" xml:space="preserve"><value>Die Einstellungen schalten die Entscheidungsmodelle aus: Schalten Sie sie unter Einstellungen › Entscheidungsmodelle ein.</value></data>
+  <data name="Studio.Run.DecisionOffSettingsInFile" xml:space="preserve"><value>Die Einstellungsdatei, die diese Ausführung liest, schaltet die Entscheidungsmodelle aus: Setzen Sie Orkeon:Decision:Enabled in {0} auf true.</value></data>
   <data name="Studio.Run.DecisionOffNoProvider" xml:space="preserve"><value>Es ist kein Entscheidungsanbieter konfiguriert: Richten Sie einen unter Einstellungen › Entscheidungsmodelle ein.</value></data>
-  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} verwenden system_one_decide, das einen Anbieter braucht</value></data>
+  <data name="Studio.Run.DecisionOffNoKey" xml:space="preserve"><value>{0} hat keinen Schlüssel (die Variable {1} ist leer und die Einstellungsdatei enthält keinen), daher schaltet die Engine die Entscheidungsmodelle aus: Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
+  <data name="Studio.Run.DecisionOffNoKeyNamedBySetting" xml:space="preserve"><value>{0} hat keinen Schlüssel (die von {1} benannte Variable ist leer und die Einstellungsdatei enthält keinen), daher schaltet die Engine die Entscheidungsmodelle aus: Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
+  <data name="Studio.Run.DecisionNeedTool" xml:space="preserve"><value>{0} verwenden system_one_decide, das die Engine ohne die Entscheidungsmodelle zurückhält</value></data>
   <data name="Studio.Run.DecisionNeedAnswer" xml:space="preserve"><value>die Entscheidungsaufgabe {0} hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe und braucht daher eingeschaltete Entscheidungsmodelle</value></data>
-  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} hat keinen Schlüssel: Die Variable {1} ist leer und die Einstellungsdatei enthält keinen, daher scheitert jede Anfrage an ihn und mit ihr jede Entscheidungsaufgabe, die ihn fragt. Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
-  <data name="Studio.Run.WarnDecisionToolIgnoresSwitch" xml:space="preserve"><value>{0} verwenden system_one_decide: In diesem Lauf fragt das Werkzeug weiterhin {1}, denn der Schalter schickt nur die Entscheidungsaufgaben zu ihrer Ersatzantwort.</value></data>
-  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} verwenden system_one_decide, aber kein Entscheidungsanbieter ist konfiguriert: Mit Orkeon:CrewFactory:StrictTools auf false entfernt die Engine das Werkzeug und führt das Team ohne es aus.</value></data>
-  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Jede Entscheidungsaufgabe antwortet mit ihrer Ersatzantwort. {0}</value></data>
+  <data name="Studio.Run.DecisionNeedMode" xml:space="preserve"><value>es deklariert decision.mode: required, daher lehnt die Engine die Ausführung vor ihrer ersten Aufgabe ab</value></data>
+  <data name="Studio.Run.BlockedDecisionLadder" xml:space="preserve"><value>{0} lassen System One ihr Profil wählen (llm.profile: auto), und {1}: Die Engine lehnt das Team beim Laden ab. {2}</value></data>
+  <data name="Studio.Run.DecisionLadderFixSettings" xml:space="preserve"><value>Legen Sie die Leiter unter Einstellungen › Entscheidungsmodelle fest.</value></data>
+  <data name="Studio.Run.DecisionLadderFixFile" xml:space="preserve"><value>Legen Sie die Leiter (Orkeon:Decision:Route:Ladder) in {0} fest.</value></data>
+  <data name="Studio.Run.BlockedDecisionModeProfile" xml:space="preserve"><value>{0} nennen ein Entscheidungsprofil, und das Team deklariert decision.mode: none, das jede Nutzung von System One ablehnt: Die Engine lehnt das Team beim Laden ab.</value></data>
+  <data name="Studio.Run.BlockedDecisionModeAuto" xml:space="preserve"><value>{0} lassen System One ihr Profil wählen (llm.profile: auto), und das Team deklariert decision.mode: none, das jede Nutzung von System One ablehnt: Die Engine lehnt das Team beim Laden ab.</value></data>
+  <data name="Studio.Run.BlockedDecisionProfileClosed" xml:space="preserve"><value>{0} laufen auf einem Entscheidungsprofil, dessen Guard-Stufe blockiert, wenn sie nicht urteilen kann (FailClosed), und diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Die Engine blockiert jeden Aufruf über dieses Profil. {1}</value></data>
+  <data name="Studio.Run.JudgedOnMachineSettings" xml:space="preserve"><value>Nach den Einstellungen dieses Rechners beurteilt; die Einstellungsdatei, die die CLI wählt, kann etwas anderes sagen. {0}</value></data>
+  <data name="Studio.Run.DecisionLadderMissing" xml:space="preserve"><value>die Einstellungen geben keine Leiter aus zwei oder mehr Profilen zur Auswahl vor</value></data>
+  <data name="Studio.Run.DecisionLadderUnknownRungs" xml:space="preserve"><value>die Leiter nennt {0}, wofür weder die Einstellungen ein Modellprofil definieren noch Studio der Ausführung eines mitgibt</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissing" xml:space="preserve"><value>{0} hat keinen Schlüssel: Die Variable {1} ist leer und die Einstellungsdatei enthält keinen, daher schaltet die Engine die Entscheidungsmodelle aus und sendet ihm keine Anfrage: Das Team läuft ohne sie, jede Entscheidungsaufgabe erhält die Antwort ihres Relais oder ihre Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen. Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
+  <data name="Studio.Run.WarnDecisionKeyMissingNamedBySetting" xml:space="preserve"><value>{0} hat keinen Schlüssel: Die von {1} benannte Variable ist leer und die Einstellungsdatei enthält keinen, daher schaltet die Engine die Entscheidungsmodelle aus und sendet ihm keine Anfrage: Das Team läuft ohne sie, jede Entscheidungsaufgabe erhält die Antwort ihres Relais oder ihre Ersatzantwort oder lässt ihre „otherwise“-Aufgabe laufen. Speichern Sie den Schlüssel unter Einstellungen › Entscheidungsmodelle.</value></data>
+  <data name="Studio.Run.WarnDecisionToolDropped" xml:space="preserve"><value>{0} verwenden system_one_decide, und diese Ausführung verzichtet auf die Entscheidungsmodelle: Mit Orkeon:CrewFactory:StrictTools auf false hält die Engine das Werkzeug zurück und führt das Team ohne es aus. {1}</value></data>
+  <data name="Studio.Run.InfoDecisionFallback" xml:space="preserve"><value>Diese Ausführung verzichtet auf die Entscheidungsmodelle (System One): Das Team antwortet ohne sie. {0}</value></data>
   <data name="Studio.Run.InfoDecisionFallbackItem" xml:space="preserve"><value>Aufgabe „{0}“: {1}</value></data>
   <data name="Studio.Run.InfoDecisionOtherwiseItem" xml:space="preserve"><value>Aufgabe „{0}“: keine Antwort, stattdessen läuft Aufgabe „{1}“.</value></data>
+  <data name="Studio.Run.InfoDecisionRelayItem" xml:space="preserve"><value>Aufgabe „{0}“: Der Agent „{1}“ antwortet anstelle des Modells.</value></data>
+  <data name="Studio.Run.InfoDecisionRouteItem" xml:space="preserve"><value>„{0}“: Es wird kein Profil gewählt, es läuft mit dem Standardprofil.</value></data>
+  <data name="Studio.Run.InfoDecisionEffortItem" xml:space="preserve"><value>„{0}“: Es wird keine Denkstufe gewählt, die seines Profils gilt.</value></data>
+  <data name="Studio.Run.InfoDecisionSkillsItem" xml:space="preserve"><value>„{0}“: Es wird keine Fähigkeit gewählt, der Agent trägt seine Ersatzfähigkeiten, falls vorhanden.</value></data>
+  <data name="Studio.Run.InfoDecisionPruneItem" xml:space="preserve"><value>„{0}“: Es wird kein Werkzeugergebnis gekürzt.</value></data>
+  <data name="Studio.Run.InfoDecisionProfileItem" xml:space="preserve"><value>„{0}“: Die Entscheidungsstufen seines Profils werden übersprungen.</value></data>
   <data name="Studio.Run.OpenDecisionSettings" xml:space="preserve"><value>Einstellungen der Entscheidungsmodelle</value></data>
+  <data name="Studio.Run.OpenBridgeSettings" xml:space="preserve"><value>Einstellungen der Werkzeugbrücke</value></data>
   <data name="Studio.Run.OriginSelectedById" xml:space="preserve"><value>{0} (per Kennung ausgewählt unter {1})</value></data>
   <data name="Studio.Run.OriginNotSelected" xml:space="preserve"><value>{0} (für diesen Lauf nicht eingehängt)</value></data>
   <data name="Studio.Run.OriginConflict" xml:space="preserve"><value>{0} (einer von {1} Einträgen — nichts wählt ihn aus)</value></data>
@@ -2515,6 +2642,7 @@
   <data name="Studio.Teams.RunFail" xml:space="preserve">
     <value>fehlgeschlagen</value>
   </data>
+  <data name="Studio.Teams.RunWaiting" xml:space="preserve"><value>wartet auf Eingabe</value></data>
   <data name="Studio.Teams.NeverRan" xml:space="preserve">
     <value>Nie ausgeführt</value>
   </data>
@@ -3552,6 +3680,78 @@
   <data name="Studio.Settings.HostIdReserved" xml:space="preserve">
     <value>Ein Team würde profile: default schreiben, den für das Standardprofil reservierten Namen – wählen Sie einen anderen Namen.</value>
   </data>
+  <data name="Studio.Settings.HostIdAuto" xml:space="preserve">
+    <value>Ein Team würde profile: auto schreiben, den Namen der automatischen Auswahl – wählen Sie einen anderen Namen.</value>
+  </data>
+  <data name="Studio.Settings.ConnectionModelCount" xml:space="preserve">
+    <value>{0} Modelle</value>
+  </data>
+  <data name="Studio.Settings.ModelsSection" xml:space="preserve">
+    <value>Modelle</value>
+  </data>
+  <data name="Studio.Settings.ModelsHint" xml:space="preserve">
+    <value>Eine Verbindung, mehrere Modelle: Jedes ist eine eigene Einstellung namens verbindung.alias, die Teams und die Entscheidungsleiter wählen können.</value>
+  </data>
+  <data name="Studio.Settings.AddModel" xml:space="preserve">
+    <value>Modell hinzufügen</value>
+  </data>
+  <data name="Studio.Settings.RemoveModel" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Studio.Settings.AliasLabel" xml:space="preserve">
+    <value>Kurzname</value>
+  </data>
+  <data name="Studio.Settings.AliasRequired" xml:space="preserve">
+    <value>Jedes Modell braucht einen Alias, sobald die Verbindung mehrere hat.</value>
+  </data>
+  <data name="Studio.Settings.AliasTaken" xml:space="preserve">
+    <value>Ein anderes Modell dieser Verbindung hat diesen Alias bereits.</value>
+  </data>
+  <data name="Studio.Settings.PairNameTaken" xml:space="preserve">
+    <value>Eine andere Einstellung trägt diesen Namen bereits.</value>
+  </data>
+  <data name="Studio.Settings.ModelUsedBy" xml:space="preserve">
+    <value>Verwendet von {0}: Wird dieses Modell entfernt, fehlt diesen Teams ihre Einstellung.</value>
+  </data>
+  <data name="Studio.Settings.ModelOverrides" xml:space="preserve">
+    <value>Einstellungen dieses Modells – ein leeres Feld übernimmt den Wert der Verbindung.</value>
+  </data>
+  <data name="Studio.Settings.ThinkingInherit" xml:space="preserve">
+    <value>Wie die Verbindung</value>
+  </data>
+  <data name="Studio.Settings.DeleteUsedWarning" xml:space="preserve">
+    <value>Verwendet von {0}: Diese Teams finden ihre Einstellung nicht mehr.</value>
+  </data>
+  <data name="Studio.Settings.DeleteAnyway" xml:space="preserve">
+    <value>Trotzdem löschen</value>
+  </data>
+  <data name="Studio.Settings.Keep" xml:space="preserve">
+    <value>Behalten</value>
+  </data>
+  <data name="Studio.Settings.SelectModel" xml:space="preserve">
+    <value>Auswählen</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUp" xml:space="preserve">
+    <value>Nach oben (günstiger)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungDown" xml:space="preserve">
+    <value>Nach unten (teurer)</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungRemove" xml:space="preserve">
+    <value>Aus der Leiter entfernen</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungAdd" xml:space="preserve">
+    <value>Zur Leiter hinzufügen</value>
+  </data>
+  <data name="Studio.Settings.DecisionLadderEmpty" xml:space="preserve">
+    <value>Noch keine Stufe: Ein Agent mit « profile: auto » lädt erst, wenn die Leiter eine nennt.</value>
+  </data>
+  <data name="Studio.Settings.DecisionRungUnknown" xml:space="preserve">
+    <value>unbekannt</value>
+  </data>
+  <data name="Studio.Settings.CompactionProfileNone" xml:space="preserve">
+    <value>Der des Agenten</value>
+  </data>
   <data name="Studio.Settings.HostIdTakenBySetting" xml:space="preserve">
     <value>Das Profil „{1}“ hört bereits auf profile: {0} – wählen Sie einen anderen Namen.</value>
   </data>
@@ -3606,6 +3806,7 @@
   <data name="Studio.Run.OutcomeSucceeded" xml:space="preserve"><value>Erfolgreich</value></data>
   <data name="Studio.Run.OutcomeFailed" xml:space="preserve"><value>Fehlgeschlagen</value></data>
   <data name="Studio.Run.OutcomeCancelled" xml:space="preserve"><value>Abgebrochen</value></data>
+  <data name="Studio.Run.OutcomeWaiting" xml:space="preserve"><value>Wartet auf Eingabe</value></data>
   <data name="Studio.Run.ExitCodeLabel" xml:space="preserve"><value>Exit-Code</value></data>
   <data name="Studio.Run.ColAgent" xml:space="preserve"><value>AGENT</value></data>
   <data name="Studio.Run.ColToolCalls" xml:space="preserve"><value>TOOL-AUFRUFE</value></data>
@@ -3742,12 +3943,12 @@
   <data name="Studio.Teams.ScheduledRunNoDefault" xml:space="preserve"><value>Der geplante Lauf antwortet als Echo: Die gespeicherte Einstellungsdatei hat kein Standardmodell. Speichern Sie die Einstellungen.</value></data>
   <data name="Studio.Teams.CrewOverridesLlm" xml:space="preserve"><value>{0} Agent(en) oder Aufgabe(n) dieses Teams nennen ihr eigenes Modell: Die Wahl gilt nur für die anderen.</value></data>
   <data name="Studio.Teams.DecisionRequired" xml:space="preserve"><value>System One erforderlich</value></data>
-  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Ein Agent verwendet system_one_decide, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe. Richten Sie einen Anbieter unter Einstellungen › Entscheidungsmodelle ein.</value></data>
+  <data name="Studio.Teams.DecisionRequiredTip" xml:space="preserve"><value>Dieses Team kann nicht ohne die Entscheidungsmodelle (System One) laufen: Es deklariert decision.mode: required, ein Agent verwendet system_one_decide, oder eine Entscheidungsaufgabe hat weder eine Ersatzantwort noch eine „otherwise“-Aufgabe. Richten Sie einen Anbieter unter Einstellungen › Entscheidungsmodelle ein.</value></data>
   <data name="Studio.Teams.DecisionOptional" xml:space="preserve"><value>System One optional</value></data>
-  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Dieses Team läuft mit den Entscheidungsmodellen (System One) oder ohne sie, wie der Start es wählt: Ohne sie antwortet jede Entscheidungsaufgabe mit ihrer Ersatzantwort.</value></data>
+  <data name="Studio.Teams.DecisionOptionalTip" xml:space="preserve"><value>Dieses Team läuft mit den Entscheidungsmodellen (System One) oder ohne sie, wie der Start es wählt: Ohne sie wird jede Entscheidungsaufgabe von ihrem Relais oder mit ihrer Ersatzantwort beantwortet, und was System One gewählt hätte, fällt auf das zurück, was das Team oder die Einstellungen angeben.</value></data>
   <data name="Studio.Teams.UseDefaultLlm" xml:space="preserve"><value>Standardmodell verwenden ({0})</value></data>
   <data name="Studio.Teams.UseDefaultLlmNone" xml:space="preserve"><value>Standardmodell verwenden</value></data>
-  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Aktiviert läuft das Team auf der beim Start gewählten Standardeinstellung und folgt ihr, wenn sie sich ändert. Deaktiviert bleibt es bei der unten gewählten Einstellung.</value></data>
+  <data name="Studio.Teams.UseDefaultLlmHint" xml:space="preserve"><value>Eingeschaltet läuft das Team auf der beim Start gewählten Standardeinstellung und folgt ihr, wenn sie sich ändert. Ausgeschaltet bleibt es bei der unten gewählten Einstellung.</value></data>
   <data name="Studio.Teams.PinnedLlm" xml:space="preserve"><value>Oder mit dieser Einstellung laufen:</value></data>
   <data name="Studio.Teams.ChangeLlm" xml:space="preserve"><value>Modell ändern</value></data>
   <data name="Studio.Teams.LlmSaved" xml:space="preserve"><value>{0} läuft jetzt auf: {1}.</value></data>
@@ -3818,6 +4019,14 @@
   <data name="Studio.Settings.DecisionProvider" xml:space="preserve"><value>Anbieter</value></data>
   <data name="Studio.Settings.DecisionProviderAuto" xml:space="preserve"><value>Automatisch</value></data>
   <data name="Studio.Settings.DecisionProviderHint" xml:space="preserve"><value>Automatisch: Die Engine nimmt den einzigen unten eingerichteten Anbieter oder den, dessen Schlüssel vorhanden ist. Bei zweien verweigert sie den Start: Nennen Sie einen.</value></data>
+  <data name="Studio.Settings.DecisionPicksTitle" xml:space="preserve"><value>Was System One wählt</value></data>
+  <data name="Studio.Settings.DecisionPicksIntro" xml:space="preserve"><value>Ein Team kann System One für jede Aufgabe ein Modellprofil (llm.profile: auto) und eine Denkstufe (thinking: { effort: auto }) wählen lassen. Diese beiden Listen legen fest, woraus es wählt.</value></data>
+  <data name="Studio.Settings.DecisionLadder" xml:space="preserve"><value>Profile zur Auswahl</value></data>
+  <data name="Studio.Settings.DecisionLadderHint" xml:space="preserve"><value>Zwei oder mehr Modellprofile, das günstigste zuerst, durch Kommas oder Semikolons getrennt: „default“ oder ein Profil aus Einstellungen › KI-Modell. Bleibt die Liste leer, wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
+  <data name="Studio.Settings.DecisionLadderUnknown" xml:space="preserve"><value>{0}: Kein Modellprofil dieser Einstellungen trägt diesen Namen, daher wird ein Team, das diese Wahl verlangt, beim Laden abgelehnt.</value></data>
+  <data name="Studio.Settings.DecisionEffortLevels" xml:space="preserve"><value>Denkstufen zur Auswahl</value></data>
+  <data name="Studio.Settings.DecisionEffortLevelsHint" xml:space="preserve"><value>Aus {0}, die günstigste zuerst, durch Kommas oder Semikolons getrennt, in Kleinbuchstaben. Bleibt die Liste leer: {1}.</value></data>
+  <data name="Studio.Settings.BridgeTokenUsedBy" xml:space="preserve"><value>die Werkzeugbrücke</value></data>
   <data name="Studio.Settings.DecisionStatusNamed" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben.</value></data>
   <data name="Studio.Settings.DecisionStatusDeduced" xml:space="preserve"><value>{0} beantwortet die Entscheidungsaufgaben, abgeleitet aus seinem Abschnitt oder seinem Schlüssel.</value></data>
   <data name="Studio.Settings.DecisionStatusNone" xml:space="preserve"><value>Es ist kein Anbieter eingerichtet: Die Ausführungen verzichten auf die Entscheidungsmodelle.</value></data>
@@ -4093,6 +4302,12 @@
   <data name="Studio.Run.BlockedScope" xml:space="preserve">
     <value>Der Dateisystembereich eines Agenten passt nicht zu den Ordnern dieser Ausführung.</value>
   </data>
+  <data name="Studio.Run.BlockedBridge" xml:space="preserve"><value>Die Werkzeugbrücke dieser Einstellungen stoppt die Ausführung beim Start: {0}</value></data>
+  <data name="Studio.Run.BlockedLlmProvider" xml:space="preserve"><value>Die Modelleinstellungen, die diese Ausführung liest, stoppen sie beim Start: {0} Korrigieren Sie sie in {1}.</value></data>
+  <data name="Studio.Run.BridgeTokenRefused" xml:space="preserve"><value>{0} Speichern Sie das Token unter Einstellungen › Limits &amp; Index (Expertenmodus) auf der Karte der Werkzeugbrücke.</value></data>
+  <data name="Studio.Run.BridgeTokenRefusedOtherVariable" xml:space="preserve"><value>{0} Diese Einstellungsdatei liest das Token aus der Variable {1}, während die Karte der Werkzeugbrücke unter Einstellungen › Limits &amp; Index (Expertenmodus) es unter {2} speichert: Setzen Sie {1} in der Umgebung, oder nennen Sie {2} in der Datei.</value></data>
+  <data name="Studio.Run.InfoBridgeIdle" xml:space="preserve"><value>Diese Einstellungen nennen eine Werkzeugbrücke ({0}) und erlauben darauf kein Werkzeug: Nichts wird überbrückt, jedes Werkzeug läuft auf diesem Rechner.</value></data>
+  <data name="Studio.Run.WarnBridge" xml:space="preserve"><value>Mit den Einstellungen dieses Rechners würde die Werkzeugbrücke die Ausführung beim Start stoppen: {0} Sofern die Einstellungsdatei, die die CLI wählt, nichts anderes sagt, startet die Ausführung nicht.</value></data>
   <data name="Studio.Run.FolderNotAllowed" xml:space="preserve"><value>Nicht erlaubt</value></data>
   <data name="Studio.Run.AllowThisFolder" xml:space="preserve"><value>Diesen Ordner erlauben</value></data>
   <data name="Studio.Run.BlockedArchived" xml:space="preserve">
@@ -4122,7 +4337,7 @@
   <data name="Studio.Run.Stop" xml:space="preserve"><value>Anhalten</value></data>
   <data name="Studio.Chat.Subtitle" xml:space="preserve"><value>Ändert nichts ohne Ihre Zustimmung</value></data>
   <data name="Studio.Chat.YourQuestion" xml:space="preserve"><value>Ihre Frage</value></data>
-  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>Der Text Token für Token erscheint nur mit dem Fortschritt: Aktivieren Sie „Fortschritt statt Rohausgabe anzeigen“.</value></data>
+  <data name="Studio.Run.StreamNeedsWatch" xml:space="preserve"><value>Der Text Token für Token erscheint nur mit dem Fortschritt: Schalten Sie „Fortschritt statt Rohausgabe anzeigen“ ein.</value></data>
   <data name="Studio.History.Today" xml:space="preserve"><value>Heute</value></data>
   <data name="Studio.History.Yesterday" xml:space="preserve"><value>Gestern</value></data>
   <data name="Studio.History.AllTeams" xml:space="preserve"><value>Alle Teams</value></data>
@@ -4161,7 +4376,7 @@
   <data name="Studio.Diagnostics.Problem.dotnet-runtime" xml:space="preserve"><value>Die .NET-Laufzeit, die die Engine braucht, wurde nicht gefunden.</value></data>
   <data name="Studio.Diagnostics.Problem.esbuild" xml:space="preserve"><value>Der Skript-Compiler fehlt auf diesem Rechner.</value></data>
   <data name="Studio.Diagnostics.Problem.install-channel" xml:space="preserve"><value>Studio erkennt nicht, wie die Engine installiert wurde; Aktualisierungen werden nicht angeboten.</value></data>
-  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>Für die Teams ist kein Modell eingerichtet.</value></data>
+  <data name="Studio.Diagnostics.Problem.llm-config" xml:space="preserve"><value>Für die Teams ist kein Modell eingerichtet, oder seine Einstellungen erfordern Aufmerksamkeit.</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profile-key" xml:space="preserve"><value>Einem Modell fehlt der Schlüssel, oder er wird nicht gefunden.</value></data>
   <data name="Studio.Diagnostics.Problem.llm-profiles" xml:space="preserve"><value>Ein Modell ist in den Einstellungen unvollständig.</value></data>
   <data name="Studio.Diagnostics.Problem.llm-reachability" xml:space="preserve"><value>Das Modell antwortet nicht: prüfen Sie Adresse und Schlüssel.</value></data>
@@ -4182,6 +4397,9 @@
     <value>Beschrieben, {0} {0:plural:Frage|Fragen} geklärt</value>
   </data>
   <data name="Studio.Create.TabNeedEmpty" xml:space="preserve"><value>Zu beschreiben</value></data>
+  <data name="Studio.Create.TabDecisionNone" xml:space="preserve"><value>Nicht genutzt</value></data>
+  <data name="Studio.Create.TabDecisionOptional" xml:space="preserve"><value>Wenn verfügbar</value></data>
+  <data name="Studio.Create.TabDecisionRequired" xml:space="preserve"><value>Immer</value></data>
   <data name="Studio.Create.TabFoldersPending" xml:space="preserve"><value>{0} {0:plural:Ordner zu bestätigen|Ordner zu bestätigen}</value></data>
   <data name="Studio.Create.TabFoldersPendingToChoose" xml:space="preserve">
     <value>{0} Ordner · {1} zu wählen</value>
@@ -4317,6 +4535,7 @@
   <data name="Studio.Create.WaitPlaceholderAdopt" xml:space="preserve"><value>Übernehmen Sie das Team zum Abschluss, oder stellen Sie eine Frage</value></data>
   <data name="Studio.Create.WaitShowCard" xml:space="preserve"><value>Ordner anzeigen</value></data>
   <data name="Studio.Create.TabNeed" xml:space="preserve"><value>Bedarf</value></data>
+  <data name="Studio.Create.TabDecision" xml:space="preserve"><value>Entscheidungsmodelle</value></data>
   <data name="Studio.Create.TabFolders" xml:space="preserve"><value>Ordner des Teams</value></data>
   <data name="Studio.Create.FoldersTabEmptyBody" xml:space="preserve"><value>Der Assistent schlägt die Ordner des Teams vor, sobald er Ihren Bedarf gelesen hat, während der Zusammenstellung. Sie erscheinen hier.</value></data>
   <data name="Studio.Create.FolderFieldName" xml:space="preserve"><value>Name im Team</value></data>
@@ -4452,4 +4671,27 @@
   <!-- hrm:L14 begin -->
   <!-- hrm:L14 end -->
 
+  <data name="Studio.Create.PaletteMore" xml:space="preserve"><value>Weitere Werkzeuge…</value></data>
+  <data name="Studio.Create.PaletteLess" xml:space="preserve"><value>Weniger Werkzeuge</value></data>
+  <data name="Studio.Create.TaskTitleAdd" xml:space="preserve"><value>Aufgabe hinzufügen</value></data>
+  <data name="Studio.Create.TaskTitleEdit" xml:space="preserve"><value>Aufgabe bearbeiten</value></data>
+  <data name="Studio.Create.TaskAdd" xml:space="preserve"><value>Zum Team hinzufügen</value></data>
+  <data name="Studio.Create.TaskEditorSub" xml:space="preserve"><value>Was ein Schritt des Teams tut, wer ihn übernimmt und worauf er wartet. Der Assistent prüft alles beim Speichern.</value></data>
+  <data name="Studio.Create.TaskDoes" xml:space="preserve"><value>Was zu tun ist</value></data>
+  <data name="Studio.Create.TaskExpected" xml:space="preserve"><value>Was erwartet wird</value></data>
+  <data name="Studio.Create.TaskWho" xml:space="preserve"><value>Wer sie übernimmt</value></data>
+  <data name="Studio.Create.TaskDeliverable" xml:space="preserve"><value>Erzeugte Datei (optional)</value></data>
+  <data name="Studio.Create.TaskAfterField" xml:space="preserve"><value>Nach</value></data>
+  <data name="Studio.Create.TaskTools" xml:space="preserve"><value>Werkzeuge dieser Aufgabe</value></data>
+  <data name="Studio.Create.TaskAfter" xml:space="preserve"><value>nach: {0}</value></data>
+  <data name="Studio.Create.TaskWhen" xml:space="preserve"><value>wenn: {0}</value></data>
+  <data name="Studio.Create.TaskRemoveBlocked" xml:space="preserve"><value>Entfernen nicht möglich: die Bedingung von {0} liest ihre Antwort</value></data>
+  <data name="Studio.Create.TaskRemoveState" xml:space="preserve"><value>Entfernen nicht möglich: die Entscheidung {0} entscheidet über ihr Ergebnis</value></data>
+  <data name="Studio.Create.TaskRemoveOnly" xml:space="preserve"><value>Entfernen nicht möglich: ein Team behält mindestens eine Aufgabe</value></data>
+  <data name="Studio.Create.TaskDecisionTip" xml:space="preserve"><value>Eine Entscheidung ändern Sie im Gespräch mit dem Assistenten</value></data>
+  <data name="Studio.Create.TasksTitle" xml:space="preserve"><value>Aufgaben</value></data>
+  <data name="Studio.Create.AddTask" xml:space="preserve"><value>Aufgabe hinzufügen</value></data>
+  <data name="Studio.Create.TaskMoveUp" xml:space="preserve"><value>Nach oben</value></data>
+  <data name="Studio.Create.TaskMoveDown" xml:space="preserve"><value>Nach unten</value></data>
+  <data name="Studio.Create.TaskRemove" xml:space="preserve"><value>Aufgabe entfernen</value></data>
 </root>

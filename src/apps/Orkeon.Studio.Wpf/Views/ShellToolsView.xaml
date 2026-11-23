@@ -19,7 +19,7 @@
                    Text="{Binding [Studio.Settings.ShellIntro], Source={x:Static services:I18n.Instance}}"/>
         <CheckBox Margin="0,14,0,0" IsChecked="{Binding Config.ShellTools.AllowInterpreters}"
                   Content="{Binding [Studio.Settings.ShellAllowInterpreters], Source={x:Static services:I18n.Instance}}"/>
-        <TextBlock Style="{StaticResource Hint}" Margin="24,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource WarningInkBrush}"
+        <TextBlock Style="{StaticResource SwitchHint}" Foreground="{DynamicResource WarningInkBrush}"
                    Text="{Binding [Studio.Settings.ShellAllowInterpretersHint], Source={x:Static services:I18n.Instance}}"/>
         <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
                    Text="{Binding [Studio.Settings.ShellExtra], Source={x:Static services:I18n.Instance}}"/>

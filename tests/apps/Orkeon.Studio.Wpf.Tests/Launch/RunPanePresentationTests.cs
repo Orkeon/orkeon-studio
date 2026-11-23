@@ -21,7 +21,7 @@ public sealed class RunPanePresentationTests : IDisposable
             Directory.Delete(_root, recursive: true);
     }
 
-    private static (LaunchTabViewModel Tab, FakeProcessLauncher Launcher) Build(FakeTargetProbe probe)
+    private static (LaunchTabViewModel Tab, FakeProcessLauncher Launcher) Build(FakeTargetProbe probe, IStudioStrings? strings = null)
     {
         var launcher = new FakeProcessLauncher();
         var tab = new LaunchTabViewModel(new LaunchTabDependencies
@@ -32,6 +32,7 @@ public sealed class RunPanePresentationTests : IDisposable
             Directories = new FakeDirectoryProbe(),
             HistoryStore = new FakeLaunchHistoryStore(),
             SettingsStore = new FakeAppSettingsStore(),
+            Strings = strings,
         });
         return (tab, launcher);
     }
@@ -192,6 +193,90 @@ public sealed class RunPanePresentationTests : IDisposable
 
         Assert.Equal("capped", Assert.Single(tab.AgentCards).State);
         Assert.Equal("Succeeded · 1 task cut short", tab.RunBadgeText);
+    }
+
+    /// <summary>
+    /// The engine's own decision task has the lane «Decision», translated, while its completions carry the
+    /// raw role "decision": the lane reads them all the same, in a language whose word is not the role's.
+    /// </summary>
+    [Fact]
+    public async Task The_decision_lane_reads_its_tasks_by_their_raw_role_not_by_its_translated_name()
+    {
+        var crew = WriteCrew("redacteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew), new FakeResxStudioStrings("fr", "fr"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"pick","agentRole":"decision","success":true,"durationMs":900,"endedOnIterationCap":true,"isDecision":true,"defaulted":false,"decisionSource":"model"}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var lane = Assert.Single(tab.AgentLanes, lane => lane.Name == "Décision");
+        Assert.Equal("capped", lane.State);
+    }
+
+    private static ProcessOutputLine Skipped(string taskId, string role) => ProcessOutputLine.Now(
+        ProcessOutputChannel.StandardOutput,
+        $$"""{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"{{taskId}}","agentRole":"{{role}}","success":false,"skipped":true,"durationMs":0,"tokens":0,"toolCalls":0,"skipReason":"decision pick did not run"}""");
+
+    /// <summary>
+    /// A task a decision skipped never ran: its agent did not fail. The card reads the agent's task
+    /// that ran, with its figures, and an agent all of whose tasks were skipped did not run.
+    /// </summary>
+    [Fact]
+    public async Task A_task_a_decision_skipped_leaves_its_agents_card_on_the_task_that_ran()
+    {
+        var crew = WriteCrew("lecteur", "redacteur", "relecteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":1,"ts":"t","kind":"task.completed","taskId":"t-1","agentRole":"Lecteur","success":true,"durationMs":34600,"tokens":30098,"toolCalls":5}"""));
+        launcher.OutputToEmit.Add(Skipped("t-2", "Lecteur"));
+        launcher.OutputToEmit.Add(Completed("Redacteur"));
+        launcher.OutputToEmit.Add(Skipped("t-4", "Relecteur"));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(["done", "done", "notrun"], tab.AgentCards.Select(card => card.State));
+        Assert.Contains("30", tab.AgentCards[0].Detail, StringComparison.Ordinal);
+        Assert.Contains("34.6", tab.AgentCards[0].Detail.Replace(',', '.'), StringComparison.Ordinal);
+        Assert.Equal("Succeeded · 1 agent not run", tab.RunBadgeText);
+    }
+
+    [Fact]
+    public async Task A_task_that_failed_still_fails_its_agents_card()
+    {
+        var crew = WriteCrew("lecteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Completed("Lecteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-2","agentRole":"Lecteur","success":false,"durationMs":900}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("failed", Assert.Single(tab.AgentCards).State);
+    }
+
+    [Fact]
+    public async Task The_engines_own_decision_has_a_card_named_Decision_without_its_role_under_it()
+    {
+        var crew = WriteCrew("lecteur");
+        var (tab, launcher) = Build(new FakeTargetProbe().WithFile(crew));
+        launcher.OutputToEmit.Add(Completed("Lecteur"));
+        launcher.OutputToEmit.Add(ProcessOutputLine.Now(
+            ProcessOutputChannel.StandardOutput,
+            """{"v":2,"seq":2,"ts":"t","kind":"task.completed","taskId":"t-2","agentRole":"decision","success":true,"durationMs":400,"isDecision":true,"decisionSource":"model"}"""));
+        tab.Target.Select(crew);
+
+        await tab.RunAsync(TestContext.Current.CancellationToken);
+
+        var decision = tab.AgentCards[1];
+        Assert.Equal("Decision", decision.DisplayName);
+        Assert.False(decision.HasIdentifier);
+        Assert.Equal("done", decision.State);
     }
 
     [Fact]

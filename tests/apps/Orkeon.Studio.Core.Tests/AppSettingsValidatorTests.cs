@@ -295,6 +295,20 @@ public sealed class AppSettingsValidatorTests
         Assert.DoesNotContain(messages, m => m.Severity == ValidationSeverity.Error);
     }
 
+    /// <summary>
+    /// A section that names its <c>Provider</c> is built by that name, its address unread: the run
+    /// says nothing of an address without a path (RunnerHost.WarnSilentAddresses), and neither does Studio.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Llm": { "Provider": "mock", "Responses": "/r.jsonl", "Model": "m", "BaseUrl": "http://localhost:8080" } }""")]
+    [InlineData("""{ "Llm": { "Model": "m", "Profiles": { "p": { "Provider": "MOCK", "Responses": "/r.jsonl", "Model": "m", "BaseUrl": "http://localhost:8080" } } } }""")]
+    public void ShouldNotReportASilentAddress_WhenTheSectionNamesItsProvider(string json)
+    {
+        var messages = Validator().Validate(AppSettingsDocument.Parse(json), ValidationScope.Saving);
+
+        Assert.DoesNotContain(messages, m => m.Code == ValidationCodes.LlmEndpoint);
+    }
+
     [Fact]
     public void An_unknown_rag_profile_is_an_error_listing_the_known_ones()
     {
@@ -553,8 +567,12 @@ public sealed class AppSettingsValidatorTests
 
         var messages = Validator().Validate(document);
 
-        Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error
+        var refusal = Assert.Single(messages, m => m.Severity == ValidationSeverity.Error
             && m.Path == "Llm:ModelCapabilities:openrouter/google/gemini-3.7:Thinking");
+        // The engine's sentence (Orkeon #465): the key and the names, never the value.
+        Assert.Equal(
+            "Llm:ModelCapabilities:openrouter/google/gemini-3.7:Thinking is not a thinking support: write one of None, EffortOnly, Toggle, Budget.",
+            refusal.Text);
     }
 
     [Theory]
@@ -657,7 +675,6 @@ public sealed class AppSettingsValidatorTests
     // Equal but for the case, a value on both sides.
     [InlineData("""{ "gpt-4o": { "Vision": true, "vision": false } }""", "Llm:ModelCapabilities:gpt-4o:Vision")]
     [InlineData("""{ "gpt-4o": { "Thinking": "Toggle" }, "GPT-4O": { "thinking": "None" } }""", "Llm:ModelCapabilities:gpt-4o:Thinking")]
-    [InlineData("""{ "gpt-4o": "x", "GPT-4O": "y" }""", "Llm:ModelCapabilities:gpt-4o")]
     // The same path once a key is split at its ':'.
     [InlineData("""{ "llama3.2:Vision": true, "llama3.2": { "Vision": false } }""", "Llm:ModelCapabilities:llama3.2:Vision")]
     // An item of a list is a value too, and so is a null.
@@ -678,6 +695,38 @@ public sealed class AppSettingsValidatorTests
         Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
         Assert.Equal(path, message.Path);
         Assert.Contains("the configuration refuses a key written twice", message.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Two single values under one id in two letter cases: the key written twice, and the single value
+    /// where the entry's keys are expected, which the start refuses since Orkeon #454.
+    /// </summary>
+    [Fact]
+    public void ShouldRejectSettings_WhenTwoModelCapabilityEntriesInTwoCasesAreSingleValues()
+    {
+        var messages = ModelCapabilityMessages("""{ "gpt-4o": "x", "GPT-4O": "y" }""");
+
+        Assert.All(messages, message => Assert.Equal("Llm:ModelCapabilities:gpt-4o", message.Path));
+        Assert.Single(messages, message => message.Text.Contains("the configuration refuses a key written twice", StringComparison.Ordinal));
+        Assert.Single(messages, message => message.Text.Contains("is a single value where a section of keys is expected", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// An entry written as a single value, and a switch of an entry written as blanks, are refused by the
+    /// start since Orkeon #454: the run's binder no longer drops them without a word.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "gpt-4o": "x" }""", "Llm:ModelCapabilities:gpt-4o", "is a single value where a section of keys is expected")]
+    [InlineData("""[ "x" ]""", "Llm:ModelCapabilities:0", "is a single value where a section of keys is expected")]
+    [InlineData("""{ "gpt-4o": { "AudioOutput": " " } }""", "Llm:ModelCapabilities:gpt-4o:AudioOutput", "must be true or false")]
+    public void ShouldRejectSettings_WhenAModelCapabilityEntryIsASingleValueOrASwitchIsBlank(string json, string path, string words)
+    {
+        var message = Assert.Single(ModelCapabilityMessages(json));
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(path, message.Path);
+        Assert.Contains(words, message.Text, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -786,13 +835,11 @@ public sealed class AppSettingsValidatorTests
 
     [Theory]
     // Left out, each in its own way.
-    [InlineData("""{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": " ", "ReasoningEfforts": [] } }""")]
+    [InlineData("""{ "gpt-4o": { "Thinking": [], "Vision": {}, "AudioInput": null, "AudioOutput": "", "ReasoningEfforts": [] } }""")]
     [InlineData("""{ "gpt-4o": { "Thinking": {}, "Vision": [] } }""")]
     // An entry that holds nothing to judge.
-    [InlineData("""{ "gpt-4o": "x" }""")]
     [InlineData("""{ "gpt-4o": [] }""")]
     [InlineData("""{ "gpt-4o": {} }""")]
-    [InlineData("""[ "x" ]""")]
     [InlineData("""[ { "Thinking": "Toggle" } ]""")]
     // Scalar vendor efforts stay the run's to judge.
     [InlineData("""{ "gpt-4o": { "ReasoningEfforts": ["none", "minimal", 3] } }""")]

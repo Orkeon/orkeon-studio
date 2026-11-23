@@ -101,5 +101,21 @@ internal sealed class LauncherFixture
         Settings,
         TeamsRoot,
         Targets,
-        Environment);
+        Environment,
+        () => EnvironmentNames);
+
+    /// <summary>The names of the environment's variables, as the launcher lists them: none unless <see cref="WithEnvironment"/> sets some.</summary>
+    public IReadOnlyList<string> EnvironmentNames { get; private set; } = [];
+
+    /// <summary>
+    /// Sets the environment the launcher is started in: each variable read under its exact name, as
+    /// Linux reads one, and listed among <see cref="EnvironmentNames"/>.
+    /// </summary>
+    public LauncherFixture WithEnvironment(params (string Name, string Value)[] variables)
+    {
+        var values = variables.ToDictionary(variable => variable.Name, variable => variable.Value, StringComparer.Ordinal);
+        Environment = name => values.GetValueOrDefault(name);
+        EnvironmentNames = [.. values.Keys];
+        return this;
+    }
 }

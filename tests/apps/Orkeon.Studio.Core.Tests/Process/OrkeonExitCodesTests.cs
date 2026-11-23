@@ -17,6 +17,25 @@ public sealed class OrkeonExitCodesTests
         Assert.Equal(130, OrkeonExitCodes.Cancelled);
     }
 
+    [Fact]
+    public void A_refused_System_One_crew_has_the_code_of_the_cli_and_reads_as_a_rejection()
+    {
+        Assert.Equal(69, OrkeonExitCodes.DecisionUnavailable);
+        Assert.Equal(RunOutcome.ScriptError, OrkeonExitCodes.Classify(69));
+        Assert.Contains("System One", OrkeonExitCodes.Describe(69), StringComparison.Ordinal);
+    }
+
+    /// <summary>A run that stopped on a question (exit code 75) waits for its answer: neither a failure nor unknown.</summary>
+    [Fact]
+    public void A_run_waiting_for_input_has_the_code_of_the_cli_and_reads_as_waiting()
+    {
+        Assert.Equal(Orkeon.Constants.Cli.RunExitCodes.WaitingForInput, OrkeonExitCodes.WaitingForInput);
+        Assert.Equal(75, OrkeonExitCodes.WaitingForInput);
+        Assert.Equal(RunOutcome.WaitingForInput, OrkeonExitCodes.Classify(75));
+        Assert.DoesNotContain("Unexpected", OrkeonExitCodes.Describe(75), StringComparison.Ordinal);
+        Assert.Contains("--resume", OrkeonExitCodes.Describe(75), StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(0, RunOutcome.Success)]
     [InlineData(1, RunOutcome.ScriptError)]

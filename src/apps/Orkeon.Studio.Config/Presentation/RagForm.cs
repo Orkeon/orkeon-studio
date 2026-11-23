@@ -28,10 +28,16 @@ internal sealed class RagForm : ISettingsForm
     public static IReadOnlyList<string> ProfileChoices { get; } =
         new List<string> { UnsetProfileLabel }.Concat(RagSection.KnownProfiles).ToList().AsReadOnly();
 
-    /// <summary>Explains why a single web-fallback switch does nothing on its own.</summary>
-    public const string WebFallbackNotice =
-        "Web fallback is a double opt-in: the corrective policy switch AND the transport switch " +
-        "must both be on, and the transport must be registered with AddOrkeonRagWebFallback().";
+    /// <summary>
+    /// Explains why a single web-fallback switch does nothing on its own: a double opt-in, the policy
+    /// switch and the transport switch, and a transport the host registers. One row of the screen each.
+    /// </summary>
+    public static IReadOnlyList<string> WebFallbackNotice { get; } =
+    [
+        "Web fallback needs both switches on, and",
+        "its transport registered by the host with",
+        "AddOrkeonRagWebFallback().",
+    ];
 
     /// <summary>Selected profile, or null for "no key".</summary>
     public string? Profile { get; set; }

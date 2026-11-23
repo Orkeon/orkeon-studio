@@ -66,8 +66,9 @@ public enum ToolRequirement
     /// The tool is registered only once a decision provider resolves: named by the setting in
     /// <see cref="ToolInfo.Argument"/>, or deduced from an <c>Orkeon:TypeSafe</c> or
     /// <c>Orkeon:Liquid</c> section, else from the <c>TYPESAFE_API_KEY</c> or <c>LIQUID_API_KEY</c>
-    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). TypeSafe and Liquid
-    /// refuse every call without their key. No tab of Studio writes the settings.
+    /// environment variable (the engine's <c>DecisionProviderChoice.Resolve</c>). Without the key of
+    /// TypeSafe or Liquid the engine turns the decision circuit off (<c>no-key</c>, Orkeon #451) and
+    /// withholds the tool. No tab of Studio writes the settings.
     /// </summary>
     OnlyWithDecisionProvider,
 
@@ -160,7 +161,7 @@ public static class ToolCatalog
     /// <summary>Where an MCP server is declared: <c>mcp_prompt_get</c> is registered once one is.</summary>
     public const string McpServers = McpSection.ServersPath;
 
-    /// <summary>The setting that names a decision provider: <c>system_one_decide</c> is registered once one is configured.</summary>
+    /// <summary>The setting that names a decision provider: <c>system_one_decide</c> is registered once one is configured, and withheld while the decision circuit is off.</summary>
     public const string DecisionProvider = "Orkeon:Decision:Provider";
 
     /// <summary>The switch of the cognitive memory: <c>memory_recall</c> is registered once it is on.</summary>

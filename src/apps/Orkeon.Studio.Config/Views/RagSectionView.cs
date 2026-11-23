@@ -6,7 +6,8 @@ namespace Orkeon.Studio.Config.Views;
 /// <summary>
 /// The <c>Orkeon:Rag</c> screen. The profile comes from a closed list — the names
 /// <c>RagProfilePresets</c> knows — and the web fallback is shown for what it is: two
-/// switches that do nothing apart.
+/// switches that do nothing apart. Every line of text takes one row, so none runs into the row under it;
+/// the caption of a switch the file writes as no boolean is fitted to its row, what the file holds kept in sight.
 /// </summary>
 internal sealed class RagSectionView : SectionView
 {
@@ -20,14 +21,15 @@ internal sealed class RagSectionView : SectionView
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public RagSectionView(RagForm form)
-        : base("RAG")
+        : base("RAG", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
 
-        _profile = FormLayout.AddChoiceList(
+        // Under its caption, on the whole width: beside it, the first choice would be cut.
+        _profile = FormLayout.AddChoiceListBelow(
             this, 0, RagForm.ProfileChoices.Count, "Profile", RagForm.ProfileChoices, _form.ProfileChoiceIndex);
 
-        var next = RagForm.ProfileChoices.Count + 1;
+        var next = RagForm.ProfileChoices.Count + 2;
         _provider = FormLayout.AddField(this, next, "Document store provider", _form.Provider);
 
         _hybrid = FormLayout.AddOptionalSwitch(
@@ -36,9 +38,11 @@ internal sealed class RagSectionView : SectionView
             this, next + 3, CorrectiveWebFallbackCaption, _form.CorrectiveWebFallbackEnabled);
         _webFallback = FormLayout.AddOptionalSwitch(
             this, next + 4, WebFallbackCaption, _form.WebFallbackEnabled);
-        FormLayout.AddNote(this, next + 5, RagForm.WebFallbackNotice);
+        for (var line = 0; line < RagForm.WebFallbackNotice.Count; line++)
+            FormLayout.AddLine(this, next + 5 + line, RagForm.WebFallbackNotice[line]);
 
-        _maxIterations = FormLayout.AddField(this, next + 7, "Corrective max iterations", _form.CorrectiveMaxIterations);
+        _maxIterations = FormLayout.AddField(
+            this, next + 6 + RagForm.WebFallbackNotice.Count, "Corrective max iterations", _form.CorrectiveMaxIterations);
 
         FormLayout.TrackUnreadable(_hybrid, HybridCaption,
             () => _form.HybridRetrievalEnabledAsWritten, () => _form.HybridRetrievalEnabledAsWritten = null);

@@ -10,6 +10,7 @@ namespace Orkeon.Studio.Config.Tests.Views;
 /// constructed outside <c>Application.Init</c>, which is how
 /// tests/cli/Orkeon.Cli.TerminalGui.Tests covers its own panes.
 /// </summary>
+[Collection(TerminalGuiTests.Name)]
 public class SectionViewsTests
 {
     [Fact]
@@ -34,6 +35,31 @@ public class SectionViewsTests
         Assert.Equal("512", form.MaxTokens);
     }
 
+    /// <summary>
+    /// The notice of the base URL's reading is a sentence of several rows: it is shown whole in the
+    /// status, at the end of the screen, and the row under the reading, which holds one line, says
+    /// where to read it; without a notice that row says where the reading comes from.
+    /// </summary>
+    [Fact]
+    public void The_llm_screen_shows_the_notice_of_the_reading_whole_in_its_status()
+    {
+        var form = new LlmForm { BaseUrl = "http://localhost:8080" };
+        using var view = new LlmSectionView(form, new FakeLlmEndpointProbe());
+        view.Load();
+
+        Assert.Equal(form.NoticeLine, view.StatusText);
+        Assert.Contains(view.SubViews.OfType<Terminal.Gui.Views.Label>(), label => label.Text == LlmForm.NoticeBelow);
+
+        form.BaseUrl = "http://localhost:11434";
+        view.Load();
+        Assert.Equal("", view.StatusText);
+        Assert.Contains(view.SubViews.OfType<Terminal.Gui.Views.Label>(), label => label.Text == LlmForm.ReadingNotice);
+        Assert.All(
+            LlmForm.ApiKeyRecommendationLines.Concat(LlmForm.ProfilesNotice).Append(LlmForm.ReadingNotice).Append(LlmForm.NoticeBelow)
+                .Append(LlmForm.ClearTextWarning).Append(LlmForm.ThinkingNotice),
+            line => Assert.True(line.Length <= FormLayout.NarrowWidth, line));
+    }
+
     [Fact]
     public void The_llm_screen_lists_the_named_profiles_read_only()
     {
@@ -48,7 +74,7 @@ public class SectionViewsTests
         view.Load();
 
         Assert.Equal(["profile: claude — claude-sonnet-5"], view.ProfileLines);
-        Assert.Equal("Document search (RAG) answers on profile: claude", view.RagLlmProfileText);
+        Assert.Equal("Document search (RAG) profile: claude", view.RagLlmProfileText);
 
         form.LoadFrom(Orkeon.Studio.Core.Configuration.AppSettingsDocument.Parse("""{ "Llm": { "Model": "qwen3" } }"""));
         view.Load();

@@ -94,24 +94,7 @@ public sealed class ToolFamilyViewModel : ObservableObject
     /// The localized family name. A family with no label of its own shows its raw key, which
     /// a test catches, rather than borrowing another family's label, which nothing would.
     /// </summary>
-    public string Label => _strings[_family.Key switch
-    {
-        ToolCatalog.WebFamily => StudioStringKeys.ToolFamilyWeb,
-        ToolCatalog.SearchFamily => StudioStringKeys.ToolFamilySearch,
-        ToolCatalog.FilesFamily => StudioStringKeys.ToolFamilyFiles,
-        ToolCatalog.DataFamily => StudioStringKeys.ToolFamilyData,
-        ToolCatalog.EmailFamily => StudioStringKeys.ToolFamilyEmail,
-        ToolCatalog.DriveFamily => StudioStringKeys.ToolFamilyDrive,
-        ToolCatalog.CodeFamily => StudioStringKeys.ToolFamilyCode,
-        ToolCatalog.SessionFamily => StudioStringKeys.ToolFamilySession,
-        ToolCatalog.EventsFamily => StudioStringKeys.ToolFamilyEvents,
-        ToolCatalog.AnalysisFamily => StudioStringKeys.ToolFamilyAnalysis,
-        ToolCatalog.CollaborationFamily => StudioStringKeys.ToolFamilyCollaboration,
-        ToolCatalog.DecisionFamily => StudioStringKeys.ToolFamilyDecision,
-        ToolCatalog.McpFamily => StudioStringKeys.ToolFamilyMcp,
-        ToolCatalog.MountsFamily => StudioStringKeys.ToolFamilyMounts,
-        _ => _family.Key,
-    }];
+    public string Label => _strings[ToolFamilyLabels.KeyFor(_family.Key)];
 
     /// <summary>The tools, as chips.</summary>
     public IReadOnlyList<ToolChipViewModel> Tools { get; }

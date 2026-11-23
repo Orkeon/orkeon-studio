@@ -52,6 +52,11 @@ public class LaunchOutcomeFormatterTests
     [InlineData(OrkeonExitCodes.RuntimeError, "Exit code 2 — runtime error: the last log lines say why")]
     [InlineData(OrkeonExitCodes.Cancelled, "Exit code 130 — run interrupted")]
     [InlineData(42, "Exit code 42 — unexpected end: check the output above")]
+    [InlineData(OrkeonExitCodes.WaitingForInput, "Exit code 75 — run waiting for input: it stopped on a question and goes on once it is answered")]
+    [InlineData(
+        OrkeonExitCodes.DecisionUnavailable,
+        "Exit code 69 — run refused: this team cannot run without the decision models (System One) and they are off. "
+        + "Set them up in Settings › Decision models, and keep « Use the decision models » on")]
     public void The_localized_overload_says_the_outcome_in_the_ports_words_never_the_engines(int exitCode, string expected)
     {
         var result = Exited(exitCode);
@@ -60,6 +65,38 @@ public class LaunchOutcomeFormatterTests
 
         Assert.Equal(expected, text);
         Assert.DoesNotContain(result.Description, text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The engine's refusal of a crew that requires System One is classified a script error, and has a
+    /// sentence of its own all the same: the general one names neither the decision models nor where
+    /// they are set up. A dry run carries it after its verdict, should the engine ever refuse one so.
+    /// </summary>
+    [Fact]
+    public void A_refused_required_crew_is_not_said_as_a_plain_script_error()
+    {
+        var refused = Exited(OrkeonExitCodes.DecisionUnavailable);
+        var strings = EnglishStudioStrings.Instance;
+        Assert.Equal(RunOutcome.ScriptError, refused.Outcome);
+
+        var run = LaunchOutcomeFormatter.DescribeRun(refused, strings);
+        var general = LaunchOutcomeFormatter.DescribeRun(Exited(OrkeonExitCodes.ScriptError), strings);
+
+        Assert.Contains(strings[StudioStringKeys.LaunchExitDecisionUnavailable], run, StringComparison.Ordinal);
+        Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitScriptError], run, StringComparison.Ordinal);
+        Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitDecisionUnavailable], general, StringComparison.Ordinal);
+        Assert.Equal(
+            $"{LaunchOutcomeFormatter.ValidationFailed} — {run}",
+            LaunchOutcomeFormatter.Describe(refused, dryRun: true, strings));
+        // The English launcher of the terminal keeps the engine's own sentence, which names the cause,
+        // and never Studio's, whose remedy is a switch of the window (« Use the decision models »): the
+        // terminal's control is the --no-decision box, of the opposite polarity.
+        foreach (var terminal in new[] { LaunchOutcomeFormatter.DescribeRun(refused), LaunchOutcomeFormatter.Describe(refused, dryRun: false), LaunchOutcomeFormatter.Describe(refused, dryRun: true) })
+        {
+            Assert.Contains("the crew requires System One", terminal, StringComparison.Ordinal);
+            Assert.DoesNotContain(strings[StudioStringKeys.LaunchExitDecisionUnavailable], terminal, StringComparison.Ordinal);
+            Assert.DoesNotContain("Use the decision models", terminal, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

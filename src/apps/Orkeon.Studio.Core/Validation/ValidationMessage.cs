@@ -74,12 +74,26 @@ public static class ValidationCodes
     /// </summary>
     public const string SettingPlaceholder = "STUDIO-SETTING-PLACEHOLDER";
 
+    /// <summary>
+    /// A <c>Provider</c> of <c>Llm</c> or of a profile the engine's start refuses (Orkeon #457): a vendor
+    /// of the catalogue, which its address picks; a name no provider module answers; <c>mock</c> without
+    /// its <c>Responses</c> file; a <c>Responses</c> beside a module's key.
+    /// </summary>
+    public const string LlmProvider = "STUDIO-LLM-PROVIDER";
+
+    /// <summary>
+    /// A <c>WorkspaceId</c> of <c>Llm</c> or of a profile whose provider is not Anthropic (Orkeon #468):
+    /// the run does not send it, and warns.
+    /// </summary>
+    public const string LlmWorkspace = "STUDIO-LLM-WORKSPACE";
+
     /// <summary>A model address the run refuses (a vendor's <c>/anthropic</c> path) or reads silently (a custom address with no path).</summary>
     public const string LlmEndpoint = "STUDIO-LLM-ENDPOINT";
 
     /// <summary>
     /// An entry of <c>Llm:Profiles</c> named <c>default</c> (or blank) — the <c>Llm</c> section's own
-    /// name, which the run refuses at start (STUDIO-55).
+    /// name — or <c>auto</c>, the name of System One's pick of a profile: the run refuses both at start
+    /// (STUDIO-55).
     /// </summary>
     public const string LlmProfileReservedName = "STUDIO-LLM-PROFILE-NAME";
 
@@ -142,46 +156,95 @@ public static class ValidationCodes
     public const string DeliverableWithoutWriter = "STUDIO-DELIVERABLE-WRITER";
 
     /// <summary>
-    /// A crew that cannot run without the decision models (System One): an agent or a task holds
-    /// <c>system_one_decide</c>, a tool a run registers only once a provider is configured, or a decision
-    /// task has neither a fallback nor an <c>otherwise</c> task, which a run refuses once the circuit is
-    /// off. An error when the run cannot give them for sure (no provider in the file the run reads for the
-    /// tool; for such a task, the models switched off there or <c>--no-decision</c> too); a warning for a
-    /// check, and while the CLI resolves the settings.
+    /// The crew cannot run without the decision models and the run goes without them: it states
+    /// <c>decision.mode: required</c> (the engine refuses it before its first task, exit code 69), or,
+    /// stating no mode, an agent or a task holds <c>system_one_decide</c> (withheld once the circuit is
+    /// off, a refusal under strict tools) or a decision task has neither a fallback nor an
+    /// <c>otherwise</c> task. An error when the circuit is off for sure (in the file the run reads, or by
+    /// <c>--no-decision</c>); a warning for a check, and while the CLI resolves the settings.
     /// </summary>
     public const string DecisionRequired = "STUDIO-DECISION-REQUIRED";
 
     /// <summary>
-    /// The settings name a decision provider the engine refuses (an unknown name, two providers it could
-    /// deduce): the host stops before it loads the crew, a check included. An error when the file is the
-    /// one the run reads; a warning otherwise.
+    /// An agent or a task names a decision profile of the settings that is fail-closed and carries a
+    /// guard stage, and the run goes without the decision models: the guard cannot judge, so the engine
+    /// blocks every call made through the profile. An error for a run on the file it reads; a warning
+    /// for a check, which loads the crew, and while the CLI resolves the settings: never an error for a
+    /// check.
+    /// </summary>
+    public const string DecisionProfileBlocked = "STUDIO-DECISION-PROFILE-BLOCKED";
+
+    /// <summary>
+    /// The engine refuses the decision settings: a provider it does not know or cannot deduce, a ladder of
+    /// profiles or a list of thinking levels its rules refuse, a decision profile its rules refuse (the
+    /// name <c>auto</c>, no target, no stage, a stage it cannot build) or named as a model profile of the
+    /// settings or of the run's environment is, a value of the guardian its section refuses, or a
+    /// fail-closed LLM judge while the circuit is off, the run's own <c>--no-decision</c> included. The
+    /// host stops before it loads the crew, a check included. An error when the file is the one the run
+    /// reads; a warning otherwise.
     /// </summary>
     public const string DecisionProviderRefused = "STUDIO-DECISION-PROVIDER";
 
     /// <summary>
-    /// A crew that runs with or without the decision models goes without them: each decision task
-    /// answers from its fallback, or lets its <c>otherwise</c> task run. Information.
+    /// A crew that runs with or without the decision models goes without them: each decision task is
+    /// answered by its relay, answers from its fallback, or lets its <c>otherwise</c> task run, and what
+    /// System One would pick falls back to what the crew or the settings state. Information.
     /// </summary>
     public const string DecisionFallback = "STUDIO-DECISION-FALLBACK";
 
     /// <summary>
     /// The decision provider the run uses needs a key and none is in place, neither in its variable nor
-    /// in the file: each request fails, and with it each decision task that asks it. A warning.
+    /// in the file: the engine turns the decision circuit off and sends the provider no request, and a
+    /// crew that can run without the decision models runs without them. A warning.
     /// </summary>
     public const string DecisionKeyMissing = "STUDIO-DECISION-KEY";
 
     /// <summary>
-    /// The circuit is off for the run while an agent or a task holds <c>system_one_decide</c>: the tool
-    /// still asks the provider, the circuit governing the decision tasks only. A warning.
-    /// </summary>
-    public const string DecisionToolIgnoresSwitch = "STUDIO-DECISION-TOOL";
-
-    /// <summary>
-    /// An agent or a task holds <c>system_one_decide</c>, no provider is configured, and the runner resolves
-    /// tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine drops the tool and runs
-    /// the crew without it. A warning.
+    /// An agent or a task holds <c>system_one_decide</c>, the run goes without the decision models, and the
+    /// runner resolves tools leniently (<c>Orkeon:CrewFactory:StrictTools</c> false): the engine withholds
+    /// the tool and runs the crew without it. A warning.
     /// </summary>
     public const string DecisionToolDropped = "STUDIO-DECISION-TOOL-DROPPED";
+
+    /// <summary>
+    /// An agent or a task is on <c>llm.profile: auto</c> and the settings give no ladder of profiles for
+    /// System One to pick on (<c>Orkeon:Decision:Route:Ladder</c>), or a rung of it names a profile
+    /// neither the settings define nor the launch lays in the run's environment: the engine refuses the
+    /// crew at load. An error when the file is the one the run reads (a warning for a check, which
+    /// stays offered and reports the engine's line); a warning otherwise.
+    /// </summary>
+    public const string DecisionLadder = "STUDIO-DECISION-LADDER";
+
+    /// <summary>
+    /// The crew states <c>decision.mode: none</c> and an agent or a task is routed on
+    /// <c>llm.profile: auto</c>, or names a decision profile of the settings: the mode refuses any use of
+    /// System One, and the engine refuses the crew at load. An error for a holder on <c>auto</c>, whatever
+    /// the settings, and for a decision profile of the file the run reads (a warning for a check, which
+    /// stays offered and reports the engine's line); a warning otherwise.
+    /// </summary>
+    public const string DecisionModeRefused = "STUDIO-DECISION-MODE";
+
+    /// <summary>
+    /// A value, or a key, of a section the engine validates at start (the compaction, the pruning, the
+    /// skills, the tool bridge, the guardian, the decision models and their profiles, the agent-cli provider
+    /// module's <c>Llm:AgentCli</c>) that its own rules
+    /// refuse: the run would not start. The sentence is the
+    /// engine's. A warning for a summary profile the file does not define, which the run's environment
+    /// may give.
+    /// </summary>
+    public const string EngineSettingRefused = "STUDIO-SETTING-REFUSED";
+
+    /// <summary>
+    /// The run bridges tools (<c>Orkeon:Tools:Bridge</c> names an address and allows a tool) and the
+    /// bridge's token is not in its environment variable, or is shorter than the engine accepts: the
+    /// run refuses to start.
+    /// </summary>
+    public const string BridgeToken = "STUDIO-BRIDGE-TOKEN";
+
+    /// <summary>
+    /// The settings name a bridge's address and allow no tool on it: nothing is bridged. Information.
+    /// </summary>
+    public const string BridgeIdle = "STUDIO-BRIDGE-IDLE";
 
     /// <summary>An MCP server identifier is empty or carries characters the binder would mangle (STUDIO-21).</summary>
     public const string McpServerIdInvalid = "STUDIO-MCP-ID";

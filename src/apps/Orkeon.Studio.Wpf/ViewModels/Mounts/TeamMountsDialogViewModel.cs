@@ -7,7 +7,7 @@ using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Mounts;
 
-/// <summary>One checkbox row of the team-mounts modal.</summary>
+/// <summary>One switch row of the team-mounts modal.</summary>
 public sealed class TeamMountRowViewModel : ObservableObject
 {
     private readonly TeamMountsDialogViewModel _owner;
@@ -94,7 +94,7 @@ public sealed class TeamMountRowViewModel : ObservableObject
 
 /// <summary>
 /// The folders-of-team-X modal (remediation v2, F-03): the team's mount strings as
-/// checkbox rows, an add button routed through the shared folder picker, and a save that
+/// switch rows, an add button routed through the shared folder picker, and a save that
 /// writes the sidecar — the card chips, this list and the launch arguments are one list.
 /// </summary>
 public sealed class TeamMountsDialogViewModel : ObservableObject
@@ -176,7 +176,7 @@ public sealed class TeamMountsDialogViewModel : ObservableObject
     /// <summary>The mount strings a save would keep — the checked rows, in order.</summary>
     public IReadOnlyList<string> CheckedMounts => [.. Rows.Where(r => r.IsChecked).Select(r => r.MountString)];
 
-    /// <summary>The checkbox rows.</summary>
+    /// <summary>The switch rows.</summary>
     public ObservableCollection<TeamMountRowViewModel> Rows { get; } = [];
 
     /// <summary>The modal's title: the folders of team X.</summary>

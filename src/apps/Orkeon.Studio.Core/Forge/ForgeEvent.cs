@@ -74,6 +74,14 @@ public static class ForgeEventKinds
     /// <summary>The diagnosis produced its verdict.</summary>
     public const string VerdictReady = "verdict.ready";
 
+    /// <summary>
+    /// The assistant asked System One a question for its own work (which process, how well a need is
+    /// covered, an estimate, the criteria): <c>stage</c>, <c>use</c>, <c>circuit</c>, <c>questions</c>,
+    /// <c>answers</c>, <c>model</c> and its tokens. Absent from an engine that predates it, and from a
+    /// run started with <c>--no-decision</c>.
+    /// </summary>
+    public const string SystemOneAnswered = "systemone.answered";
+
     /// <summary>The engine waits for a human arbitration.</summary>
     public const string DecisionNeeded = "decision.needed";
 
@@ -89,9 +97,12 @@ public static class ForgeEventKinds
     public const string SessionRenamed = "session.renamed";
 
     /// <summary>
-    /// Something the command could not do while everything it was asked for stands: <c>code</c>
-    /// (<c>FORGE-…</c>) and <c>message</c> — a session folder the disk would not rename after a
-    /// written promotion (STUDIO-26, D-05). Never an error: the run's outcome is its exit code.
+    /// Something the command could not do, or did on its own account, while everything it was asked
+    /// for stands: <c>code</c> (<c>FORGE-…</c>) and <c>message</c>. A session folder the disk would
+    /// not rename after a written promotion (STUDIO-26, D-05), a <c>run.cmd</c> too long to launch
+    /// anything, a schedule a re-adoption left installed, a mount named twice, a decision mode the
+    /// engine derived from the crew, a System One question the assistant went without (budget
+    /// spent, or the call failed). Never an error: the run's outcome is its exit code.
     /// </summary>
     public const string Warning = "warning";
 
@@ -123,7 +134,13 @@ public static class ForgeEventKinds
     /// </summary>
     public const string TeamRenamed = "team.renamed";
 
-    /// <summary>An anomaly, recoverable or not.</summary>
+    /// <summary>
+    /// An anomaly: <c>code</c>, <c>message</c>, <c>recoverable</c> and, for a schedule verb the
+    /// operating system refused, the <c>command</c> a person can run instead. A fatal one is the last
+    /// thing the engine says before <c>session.finished</c>. A recoverable one says the session can go
+    /// on, not that this run of the engine does: after an invalid edit the engine asks again, after a
+    /// spent budget it stops, and only <c>session.finished</c> tells the two apart.
+    /// </summary>
     public const string Error = "error";
 
     /// <summary>Inbound: the user's next conversation turn (stdin).</summary>

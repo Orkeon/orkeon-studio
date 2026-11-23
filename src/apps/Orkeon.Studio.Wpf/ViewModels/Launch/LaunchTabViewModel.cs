@@ -113,6 +113,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _environmentForTarget = seams.EnvironmentForTarget;
         _declaredMounts = seams.DeclaredMounts ?? (() => []);
         _machineDecisionStatus = seams.MachineDecisionStatus ?? (() => null);
+        _machineBridgeFinding = seams.MachineBridgeFinding ?? (() => null);
+        _machineBridgeTokenVariable = seams.MachineBridgeTokenVariable ?? (() => null);
+        _offeredLlmProfiles = seams.OfferedLlmProfiles ?? (() => []);
         _keyStore = seams.KeyStore ?? new EnvironmentApiKeyStore();
         _clipboard = seams.Clipboard ?? new InMemoryClipboardService();
         _directories = seams.Directories ?? PhysicalDirectoryProbe.Instance;
@@ -137,7 +140,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             OnPropertiesChanged(nameof(BinaryStatus), nameof(ValidationSummary),
                 nameof(CliBanner), nameof(TeamMetaLine), nameof(TeamDescription), nameof(OpenResultLabel), nameof(ArchivedTargetMessage),
                 nameof(TeamSettingsLine), nameof(CrewLlmWarning),
-                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo));
+                nameof(DecisionMessage), nameof(DecisionWarning), nameof(DecisionInfo), nameof(BridgeMessage), nameof(BridgeInfo), nameof(BridgeWarning));
             // The « Default (X) » entry is worded in the language: the list and its selection move with it.
             RaiseRunLlmChanged();
             RaiseRunStateChanged();
@@ -177,6 +180,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         CancelCommand = new RelayCommand(Cancel, () => IsRunning);
         OpenAllowedFoldersCommand = new RelayCommand(() => OpenAllowedFoldersRequested?.Invoke(this, EventArgs.Empty));
         OpenDecisionSettingsCommand = new RelayCommand(() => OpenDecisionSettingsRequested?.Invoke(this, EventArgs.Empty));
+        OpenBridgeSettingsCommand = new RelayCommand(() => OpenBridgeSettingsRequested?.Invoke(this, EventArgs.Empty));
         RestoreTargetCommand = new RelayCommand(() => RestoreTeamAt(_team.TeamDirectory), () => IsTargetArchived);
         CopyCommandLineCommand = new RelayCommand(CopyCommandLine, () => CommandLinePreview is { Length: > 0 });
         ChooseTeamCommand = new RelayCommand(() => ChooseTeamRequested?.Invoke(this, EventArgs.Empty));
@@ -479,6 +483,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         _settingsDecisionKnown = known && document is not null;
         _settingsDecisionDocument = _settingsDecisionKnown ? document : null;
         RefreshDecisionVerdict();
+        RaiseLlmProviderChanged();
     }
 
     /// <summary>
@@ -727,12 +732,73 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     // offers the restore instead of a button that would run it anyway.
     private bool CanLaunch() => CanValidate() && !IsBlockedByFileSystemScope && !IsBlockedByDecision;
 
+    private readonly Func<ToolBridgePreflightFinding?> _machineBridgeFinding;
+    private readonly Func<string?> _machineBridgeTokenVariable;
+    private readonly Func<IReadOnlyCollection<string>> _offeredLlmProfiles;
+    private ToolBridgePreflightFinding? _bridgeFinding;
+    private bool _bridgeKnown;
+
+    /// <summary>
+    /// Whether the tool bridge of the file the run reads stops it at start, a check included
+    /// (<see cref="ToolBridgePreflight"/>): a value of one of its two sections the host refuses, or tools
+    /// to bridge with no token in its environment variable.
+    /// </summary>
+    public bool IsBlockedByBridge => _bridgeKnown && _bridgeFinding?.BlocksStart == true;
+
+    /// <summary>Why the tool bridge stops the run, in the engine's words; empty when it does not.</summary>
+    public string BridgeMessage => IsBlockedByBridge ? _strings.Format(StudioStringKeys.RunBlockedBridge, BridgeReason(_bridgeFinding!)) : "";
+
+    /// <summary>
+    /// Whether the tool bridge of this machine's settings would stop the run while the CLI picks the
+    /// settings file itself: a warning that never blocks, the file it picks may say otherwise.
+    /// </summary>
+    public bool HasBridgeWarning => !_bridgeKnown && _bridgeFinding?.BlocksStart == true;
+
+    /// <summary>The warning of <see cref="HasBridgeWarning"/>.</summary>
+    public string BridgeWarning => HasBridgeWarning ? _strings.Format(StudioStringKeys.RunWarnBridge, BridgeReason(_bridgeFinding!)) : "";
+
+    /// <summary>
+    /// The engine's sentence, and for a token where to put it: the bridge's card of Settings keeps it
+    /// under the variable the machine's settings name, which lifts the refusal only when the file the
+    /// run reads names the same one. A pinned or team file that names another is told its own variable.
+    /// </summary>
+    private string BridgeReason(ToolBridgePreflightFinding finding)
+    {
+        if (finding.Kind != ToolBridgePreflightKind.TokenRefused)
+            return finding.Reason;
+
+        var ofCard = _machineBridgeTokenVariable();
+        return _bridgeKnown && finding.TokenVariable is { } ofFile && ofCard is not null
+            && !string.Equals(ofFile, ofCard, StringComparison.Ordinal)
+            ? _strings.Format(StudioStringKeys.RunBridgeTokenRefusedOtherVariable, finding.Reason, ofFile, ofCard)
+            : _strings.Format(StudioStringKeys.RunBridgeTokenRefused, finding.Reason);
+    }
+
+    /// <summary>Whether the settings name a bridge that bridges nothing: an address, no tool allowed.</summary>
+    public bool HasBridgeInfo => _bridgeFinding is { Kind: ToolBridgePreflightKind.NothingBridged };
+
+    /// <summary>
+    /// The information of <see cref="HasBridgeInfo"/>: said of the file the run reads, or, while the CLI
+    /// picks the file itself, as what this machine's settings give.
+    /// </summary>
+    public string BridgeInfo => !HasBridgeInfo ? ""
+        : _bridgeKnown ? _strings.Format(StudioStringKeys.RunInfoBridgeIdle, _bridgeFinding!.Reason)
+        : _strings.Format(
+            StudioStringKeys.RunJudgedOnMachineSettings,
+            _strings.Format(StudioStringKeys.RunInfoBridgeIdle, _bridgeFinding!.Reason));
+
+    /// <summary>
+    /// Whether the bridge alerts offer « Tool bridge settings »: the bridge's cards are on a tab of
+    /// Settings that only Expert mode shows.
+    /// </summary>
+    public bool ShowsBridgeSettingsAction => IsExpertMode;
+
     // A check (--validate) loads the crew and starts no agent: of the scope refusals, only a malformed
     // declaration fails it (#349).
     private bool CanValidate() =>
         IsBinaryAvailable && !IsRunning && Target.IsResolved && !IsBlockedByUndeclaredFolders && !IsBlockedByUnknownMountIds
         && !IsTargetArchived && !_fileSystemScopeRefusals.Any(refusal => refusal.Kind == FileSystemScopeRefusalKind.Load)
-        && _decisionFinding?.BlocksValidate != true;
+        && _decisionFinding?.BlocksValidate != true && !IsBlockedByBridge && !IsBlockedByLlmProvider;
 
     private async Task<ProcessRunResult?> LaunchAsync(bool validate, CancellationToken cancellationToken)
     {
@@ -758,6 +824,18 @@ public sealed partial class LaunchTabViewModel : ObservableObject
 
         if (RefusesDecision(validate))
             return null;
+
+        if (IsBlockedByBridge)
+        {
+            StatusMessage = BridgeMessage;
+            return null;
+        }
+
+        if (IsBlockedByLlmProvider)
+        {
+            StatusMessage = LlmProviderMessage;
+            return null;
+        }
 
         var options = BuildOptions(validate);
         // The team's file counts as a pin here (STUDIO-62): a launch that reads another file
@@ -1274,7 +1352,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 return;
 
             _runUsesDefaultLlm = value;
-            // Unticked, the list offers the first setting rather than nothing.
+            // Off, the list offers the first setting rather than nothing.
             if (!value && _runLlmProfile is null && LlmProfiles is [var first, ..])
                 _runLlmProfile = first;
             RaiseRunLlmChanged();
@@ -1332,7 +1410,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public IReadOnlyList<string> LlmProfiles =>
         _modelSettings is null ? [] : [.. _modelSettings().Profiles.Select(profile => profile.Name)];
 
-    /// <summary>Whether this machine has a setting at all: otherwise the box is greyed and « Configure a model » shows.</summary>
+    /// <summary>Whether this machine has a setting at all: otherwise the switch is greyed and « Configure a model » shows.</summary>
     public bool HasLlmProfiles => LlmProfiles.Count > 0;
 
     /// <summary>« Use the default model (X) », X the setting elected; without one, says so.</summary>
@@ -1574,18 +1652,23 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Whether the crew asks anything of the decision models (System One): a decision task, or an agent
-    /// or a task holding <c>system_one_decide</c> (<see cref="CrewDecisionUsage"/>). The option
+    /// Whether the crew asks anything of the decision models (System One): a decision task, an agent
+    /// or a task holding <c>system_one_decide</c>, something System One picks, or a profile the settings
+    /// define as a decision profile (<see cref="CrewDecisionUsage"/>, <see cref="DecisionPreflight.Effective"/>);
+    /// or whether nothing is known of the crew (a script, a crew the engine refuses at load), in which
+    /// case the option is offered rather than withheld on a guess. The option
     /// « Use the decision models » is offered only then.
     /// </summary>
-    public bool UsesDecisionModels => _decisionUsage.Mode != CrewDecisionMode.None;
+    public bool UsesDecisionModels => _usesDecisionModels;
+
+    private bool _usesDecisionModels;
 
     /// <summary>
-    /// Whether the launch is refused on the decision models (<see cref="DecisionPreflight"/>): the crew
-    /// cannot run without them and the run goes without them, or the file the run reads names a provider
-    /// the engine refuses. A check stays offered on the first: it loads a crew whose decision task has no
-    /// answer of its own, and for a holder of <c>system_one_decide</c> it reports the engine's unknown-tool
-    /// line (under the default <c>Orkeon:CrewFactory:StrictTools</c>).
+    /// Whether the launch is refused on the decision models (<see cref="DecisionPreflight"/>,
+    /// <see cref="DecisionPreflightFinding.BlocksLaunch"/>): the crew cannot run without them and the run
+    /// goes without them, the engine refuses the crew when it loads it (its mode, the ladder), a
+    /// fail-closed guarded profile would block each call, or the file the run reads names a provider the
+    /// engine refuses. A check stays offered on all but the last.
     /// </summary>
     public bool IsBlockedByDecision => _decisionFinding?.BlocksLaunch == true;
 
@@ -1593,27 +1676,20 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public string DecisionMessage => IsBlockedByDecision ? DescribeDecision(_decisionFinding!) : "";
 
     /// <summary>
-    /// Whether the decision models may fail the run, a warning that never blocks: the settings the CLI
-    /// picks are not known while the crew needs the models and the machine's file does not give them,
-    /// or names a provider the engine refuses; the provider has no key; a holder of
-    /// <c>system_one_decide</c> runs with the circuit off, the tool still asking the provider; or a holder
-    /// of the tool runs without a provider on a lenient runner, which drops the tool.
+    /// Whether the decision models may fail the run, a warning that never blocks
+    /// (<see cref="DecisionPreflightSeverity.Warning"/>): the settings the CLI picks are not known while
+    /// the machine's file would have the engine refuse the run; the provider has no key; or a holder of
+    /// <c>system_one_decide</c> runs with the circuit off on a lenient runner, which withholds the tool.
     /// </summary>
-    public bool HasDecisionWarning =>
-        _decisionFinding is
-        {
-            BlocksLaunch: false,
-            Kind: DecisionPreflightKind.RequiredUnknownSettings or DecisionPreflightKind.ProviderRefused
-                or DecisionPreflightKind.ProviderKeyMissing or DecisionPreflightKind.ToolIgnoresSwitch
-                or DecisionPreflightKind.ToolDroppedWithoutProvider,
-        };
+    public bool HasDecisionWarning => _decisionFinding is { Severity: DecisionPreflightSeverity.Warning };
 
     /// <summary>The warning of <see cref="HasDecisionWarning"/>.</summary>
     public string DecisionWarning => HasDecisionWarning ? DescribeDecision(_decisionFinding!) : "";
 
     /// <summary>
     /// Whether the run goes without the decision models on a crew that runs either way: each decision
-    /// task answers from its fallback, or lets its <c>otherwise</c> task run. Information only.
+    /// task is answered by its relay, answers from its fallback, or lets its <c>otherwise</c> task run,
+    /// and what System One picks falls back. Information only.
     /// </summary>
     public bool HasDecisionInfo => _decisionFinding is { Kind: DecisionPreflightKind.OptionalWithoutModel };
 
@@ -1621,7 +1697,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     public string DecisionInfo => HasDecisionInfo ? DescribeDecision(_decisionFinding!) : "";
 
     /// <summary>
-    /// Whether the information alert offers the decision models settings: not when the run's own box is
+    /// Whether the information alert offers the decision models settings: not when the run's own switch is
     /// all that turns them off, which the settings cannot change.
     /// </summary>
     public bool ShowsDecisionSettingsAction =>
@@ -1644,12 +1720,23 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         var status = _settingsDecisionKnown
             ? _settingsDecisionDocument?.Decision.Resolve(_keyStore.Peek)
             : _machineDecisionStatus();
-        // The box is offered only to a crew that asks the models; hidden, it sends no --no-decision.
-        Options.OffersDecisionModels = UsesDecisionModels;
-        var finding = DecisionPreflight.Check(_decisionUsage, status, _settingsDecisionKnown, Options.SwitchesDecisionOff);
+        // What the crew asks once the settings are read: a profile it names may be a decision profile.
+        // First of all: the switch is offered only to a crew that asks the models and, hidden, sends no
+        // --no-decision, so the run's switch is read once it is offered or withdrawn for this crew.
+        var effective = DecisionPreflight.Effective(_decisionUsage, status);
+        _usesDecisionModels = effective.Mode != CrewDecisionMode.None || _decisionUsage.Unknown;
+        Options.OffersDecisionModels = _usesDecisionModels;
+        var finding = DecisionPreflight.Check(
+            _decisionUsage, status, _settingsDecisionKnown, Options.SwitchesDecisionOff, _offeredLlmProfiles());
         _decisionFinding = finding;
+        // The bridge of the very file the run reads blocks; the machine's, standing in for the file the
+        // CLI picks, only warns, as for the decision models.
+        _bridgeKnown = _settingsDecisionKnown && _settingsDecisionDocument is not null;
+        _bridgeFinding = _bridgeKnown ? ToolBridgePreflight.Check(_settingsDecisionDocument!, _keyStore.Peek) : _machineBridgeFinding();
         OnPropertiesChanged(nameof(UsesDecisionModels), nameof(IsBlockedByDecision), nameof(DecisionMessage),
             nameof(HasDecisionWarning), nameof(DecisionWarning), nameof(HasDecisionInfo), nameof(DecisionInfo),
+            nameof(IsBlockedByBridge), nameof(BridgeMessage), nameof(HasBridgeInfo), nameof(BridgeInfo),
+            nameof(HasBridgeWarning), nameof(BridgeWarning),
             nameof(ShowsDecisionSettingsAction));
         RunCommand.RaiseCanExecuteChanged();
         ValidateCommand.RaiseCanExecuteChanged();
@@ -1668,57 +1755,113 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         return true;
     }
 
-    /// <summary>What a decision finding says, in the window's language.</summary>
+    /// <summary>
+    /// What a decision finding says, in the window's language. One read on the machine's settings while
+    /// the CLI picks the file (<see cref="DecisionPreflightFinding.OnStandInSettings"/>) says so first,
+    /// unless its own wording already does.
+    /// </summary>
     private string DescribeDecision(DecisionPreflightFinding finding)
     {
-        var reasons = string.Join(" ", finding.Reasons.Select(reason => _strings[reason switch
+        var text = DecisionText(finding);
+        return finding.OnStandInSettings
+            && finding.Kind is DecisionPreflightKind.ProfileRefusedByMode or DecisionPreflightKind.RouteWithoutLadder
+                or DecisionPreflightKind.ProfileBlockedWithoutModel or DecisionPreflightKind.ProviderKeyMissing
+                or DecisionPreflightKind.ToolWithheld or DecisionPreflightKind.OptionalWithoutModel
+            ? _strings.Format(StudioStringKeys.RunJudgedOnMachineSettings, text)
+            : text;
+    }
+
+    private string DecisionText(DecisionPreflightFinding finding)
+    {
+        // Settings known to be the run's are those of a pinned or team file, which Settings does not
+        // edit: the file is named where the machine's settings are sent to their section.
+        var file = finding.SettingsKnown && ResolvedSettingsPath is { Length: > 0 } read ? read : null;
+        var reasons = string.Join(" ", finding.Reasons.Select(reason => reason switch
         {
-            DecisionOffReason.RunSwitch => StudioStringKeys.RunDecisionOffRunSwitch,
-            DecisionOffReason.SettingsSwitch => StudioStringKeys.RunDecisionOffSettings,
-            _ => StudioStringKeys.RunDecisionOffNoProvider,
-        }]));
+            DecisionOffReason.RunSwitch => _strings[StudioStringKeys.RunDecisionOffRunSwitch],
+            DecisionOffReason.SettingsSwitch when file is not null => _strings.Format(StudioStringKeys.RunDecisionOffSettingsInFile, file),
+            DecisionOffReason.SettingsSwitch => _strings[StudioStringKeys.RunDecisionOffSettings],
+            DecisionOffReason.NoKey when finding.Status?.MissingKeyVariableSetting is { } setting
+                => _strings.Format(StudioStringKeys.RunDecisionOffNoKeyNamedBySetting, finding.Status?.Provider?.DisplayName ?? "", setting),
+            DecisionOffReason.NoKey => _strings.Format(
+                StudioStringKeys.RunDecisionOffNoKey, finding.Status?.Provider?.DisplayName ?? "", finding.Status?.MissingKeyVariable ?? ""),
+            _ => _strings[StudioStringKeys.RunDecisionOffNoProvider],
+        }));
         var provider = finding.Status?.Provider?.DisplayName ?? "";
         switch (finding.Kind)
         {
+            case DecisionPreflightKind.ProviderRefused when !finding.SettingsKnown:
+                return _strings.Format(StudioStringKeys.RunWarnDecisionProvider, finding.Status?.Refusal ?? "");
             case DecisionPreflightKind.ProviderRefused:
+                // A name two profiles share is mended by renaming one, wherever the model profile comes from.
                 return _strings.Format(
-                    finding.SettingsKnown ? StudioStringKeys.RunBlockedDecisionProvider : StudioStringKeys.RunWarnDecisionProvider,
-                    finding.Status?.Refusal ?? "");
+                    finding.Status is { RefusalStage: DecisionRefusalStage.Profiles }
+                        ? StudioStringKeys.RunBlockedDecisionSharedName
+                        : StudioStringKeys.RunBlockedDecisionProvider,
+                    finding.Status?.Refusal ?? "",
+                    file ?? "");
+            case DecisionPreflightKind.ProfileRefusedByMode:
+                // A holder on auto is refused whatever the file; a decision profile is one of the settings,
+                // said beside it only when they are the run's.
+                var refused = new List<string>();
+                if (finding.RoutedHolders is { Count: > 0 } routed)
+                    refused.Add(_strings.Format(StudioStringKeys.RunBlockedDecisionModeAuto, Quoted(routed)));
+                if (finding.DecisionProfileHolders is { Count: > 0 } named && (finding.SettingsKnown || refused.Count == 0))
+                    refused.Add(_strings.Format(StudioStringKeys.RunBlockedDecisionModeProfile, Quoted(named)));
+                return string.Join(" ", refused);
+            case DecisionPreflightKind.RouteWithoutLadder:
+                // No ladder, or a rung neither the file defines nor this launch lays in the environment.
+                return _strings.Format(
+                    StudioStringKeys.RunBlockedDecisionLadder,
+                    Quoted(finding.RoutedHolders),
+                    finding.UnknownRungs.Count > 0
+                        ? _strings.Format(StudioStringKeys.RunDecisionLadderUnknownRungs, Quoted(finding.UnknownRungs))
+                        : _strings[StudioStringKeys.RunDecisionLadderMissing],
+                    file is null
+                        ? _strings[StudioStringKeys.RunDecisionLadderFixSettings]
+                        : _strings.Format(StudioStringKeys.RunDecisionLadderFixFile, file));
             case DecisionPreflightKind.RequiredWithoutModel:
                 return _strings.Format(StudioStringKeys.RunBlockedDecisionRequired, DecisionNeeds(finding), reasons).TrimEnd();
+            case DecisionPreflightKind.ProfileBlockedWithoutModel:
+                return _strings.Format(StudioStringKeys.RunBlockedDecisionProfileClosed, Quoted(finding.BlockedProfileHolders), reasons).TrimEnd();
             case DecisionPreflightKind.RequiredUnknownSettings:
                 return _strings.Format(StudioStringKeys.RunWarnDecisionRequiredUnknown, DecisionNeeds(finding), reasons).TrimEnd();
             case DecisionPreflightKind.ProviderKeyMissing:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider, finding.Status?.MissingKeyVariable ?? "");
-            case DecisionPreflightKind.ToolIgnoresSwitch:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionToolIgnoresSwitch, Quoted(finding.Usage.ToolHolders), provider);
-            case DecisionPreflightKind.ToolDroppedWithoutProvider:
-                return _strings.Format(StudioStringKeys.RunWarnDecisionToolDropped, Quoted(finding.Usage.ToolHolders));
+                // The variable is named when it is the provider's own; another one by its setting, never
+                // the value written there, which may be a key pasted by mistake (as the engine, Orkeon #467).
+                return finding.Status?.MissingKeyVariableSetting is { } setting
+                    ? _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissingNamedBySetting, provider, setting)
+                    : _strings.Format(StudioStringKeys.RunWarnDecisionKeyMissing, provider, finding.Status?.MissingKeyVariable ?? "");
+            case DecisionPreflightKind.ToolWithheld:
+                return _strings.Format(StudioStringKeys.RunWarnDecisionToolDropped, Quoted(finding.Usage.ToolHolders), reasons).TrimEnd();
             default:
                 // Only the tasks that answer without the model are listed: one that has neither a
                 // fallback nor an otherwise task makes the finding a refusal, never this information.
                 return string.Join('\n', finding.Usage.DecisionTasks
                     .Where(task => task.AnswersWithoutModel)
-                    .Select(task => "\u2022 " + DecisionFallbackLine(task))
+                    .Select(DecisionFallbackLine)
+                    .Concat(finding.Usage.OtherUses.Select(DecisionPickLine))
+                    .Select(line => "\u2022 " + line)
                     .Prepend(_strings.Format(StudioStringKeys.RunInfoDecisionFallback, reasons).TrimEnd()));
         }
     }
 
     /// <summary>
-    /// What the crew needs of the decision models that this run may not give, joined with « ; »: the
-    /// holders of <c>system_one_decide</c> while no provider is in sight (unless a lenient runner drops
-    /// the tool), and the decision tasks without an answer of their own while the circuit is off or may be.
+    /// What the crew needs of the decision models that this run may not give, joined with « ; »: its
+    /// own word (<c>decision.mode: required</c>), or, of a crew that states no mode, the holders of
+    /// <c>system_one_decide</c> (unless a lenient runner withholds the tool and goes on) and the decision
+    /// tasks without an answer of their own.
     /// </summary>
     private string DecisionNeeds(DecisionPreflightFinding finding)
     {
+        if (finding.Usage.Declared)
+            return _strings[StudioStringKeys.RunDecisionNeedMode];
+
         var needs = new List<string>();
-        if (finding.Usage.ToolHolders.Count > 0 && finding.Status is not { StrictTools: false } && finding.Status?.Provider is null)
+        if (finding.Usage.ToolHolders.Count > 0 && finding.Status is not { StrictTools: false })
             needs.Add(_strings.Format(StudioStringKeys.RunDecisionNeedTool, Quoted(finding.Usage.ToolHolders)));
-        if (finding.Usage.TasksWithoutAnswer is { Count: > 0 } unanswered
-            && (finding.SwitchedOffForRun || finding.Status is not { CircuitOn: true }))
-        {
+        if (finding.Usage.TasksWithoutAnswer is { Count: > 0 } unanswered)
             needs.Add(_strings.Format(StudioStringKeys.RunDecisionNeedAnswer, Quoted(unanswered)));
-        }
 
         return string.Join("; ", needs);
     }
@@ -1728,12 +1871,15 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         string.Join(", ", names.Select(name => _strings.Format(StudioStringKeys.RunWarnDeliverableQuotedAgent, name)));
 
     /// <summary>
-    /// What one decision task answers once the circuit is off: its fallback answer to each question, or
-    /// the task its <c>otherwise</c> branch runs.
+    /// What one decision task answers once the circuit is off: its relay answers, or its fallback answer
+    /// to each question stands, or the task its <c>otherwise</c> branch runs.
     /// </summary>
     private string DecisionFallbackLine(CrewDecisionTask task)
     {
-        // A task listed here answers without the model (AnswersWithoutModel): one of the two is there.
+        // A task listed here answers without the model (AnswersWithoutModel): one of the three is there.
+        if (task.RelayAgent is { } relay)
+            return _strings.Format(StudioStringKeys.RunInfoDecisionRelayItem, task.Task, relay);
+
         if (task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise)
             return _strings.Format(StudioStringKeys.RunInfoDecisionOtherwiseItem, task.Task, otherwise);
 
@@ -1742,6 +1888,18 @@ public sealed partial class LaunchTabViewModel : ObservableObject
             .Select(question => question + " = " + task.Fallback[question]));
         return _strings.Format(StudioStringKeys.RunInfoDecisionFallbackItem, task.Task, answers);
     }
+
+    /// <summary>What becomes, once the circuit is off, of one thing the crew lets System One pick.</summary>
+    private string DecisionPickLine(CrewSystemOneUse use) => _strings.Format(
+        use.Kind switch
+        {
+            CrewSystemOneUseKind.RouteAuto => StudioStringKeys.RunInfoDecisionRouteItem,
+            CrewSystemOneUseKind.SkillsAuto => StudioStringKeys.RunInfoDecisionSkillsItem,
+            CrewSystemOneUseKind.Prune => StudioStringKeys.RunInfoDecisionPruneItem,
+            CrewSystemOneUseKind.DecisionProfile => StudioStringKeys.RunInfoDecisionProfileItem,
+            _ => StudioStringKeys.RunInfoDecisionEffortItem,
+        },
+        use.Holder);
 
     /// <summary>
     /// Whether the selected target is an archived team (STUDIO-31, D-07): Studio neither launches
@@ -1794,6 +1952,12 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// <summary>Opens the decision models settings, from an alert of the decision preflight.</summary>
     public RelayCommand OpenDecisionSettingsCommand { get; }
 
+    /// <summary>« Tool bridge settings », the action of the bridge alerts: opens Settings on the tab that holds the bridge's cards.</summary>
+    public RelayCommand OpenBridgeSettingsCommand { get; }
+
+    /// <summary>Raised by <see cref="OpenBridgeSettingsCommand"/>: the shell lands on the tab of the tool bridge.</summary>
+    public event EventHandler? OpenBridgeSettingsRequested;
+
     /// <summary>Raised by <see cref="OpenDecisionSettingsCommand"/>: the shell lands on the decision models tab.</summary>
     public event EventHandler? OpenDecisionSettingsRequested;
 
@@ -1817,6 +1981,9 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         Succeeded,
         Failed,
         Cancelled,
+
+        // Exit code 75: the run stopped on a question and waits for its answer, neither done nor failed.
+        Waiting,
     }
 
     // Title, badge, tone and button label are four readings of one and the same state, so they
@@ -1837,6 +2004,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                 RunOutcome.Success => RunCardState.Succeeded,
                 // A Stop is the user's own gesture, not a failure of the team.
                 RunOutcome.Cancelled => RunCardState.Cancelled,
+                RunOutcome.WaitingForInput => RunCardState.Waiting,
                 _ => RunCardState.Failed,
             };
         }
@@ -1869,6 +2037,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
                     RunCardState.Idle => StudioStringKeys.RunBadgeIdle,
                     RunCardState.Succeeded => StudioStringKeys.RunBadgeDone,
                     RunCardState.Cancelled => StudioStringKeys.HistStatusCancelled,
+                    RunCardState.Waiting => StudioStringKeys.HistStatusWaiting,
                     _ => StudioStringKeys.RunBadgeFailed,
                 }],
             };
@@ -1901,7 +2070,7 @@ public sealed partial class LaunchTabViewModel : ObservableObject
         RunCardState.Succeeded => AgentCards.Any(card => card.State == "notrun") || CappedTaskCount > 0 || MissingDeliverableCount > 0
             ? "warn"
             : "ok",
-        RunCardState.Cancelled => "warn",
+        RunCardState.Cancelled or RunCardState.Waiting => "warn",
         _ => "fail",
     };
 
@@ -2034,8 +2203,8 @@ public sealed partial class LaunchTabViewModel : ObservableObject
     /// <c>--allow-external-mounts</c>; a team's own <c>./output</c>, resolved under the team
     /// folder — which is the launch's working directory — needs no such flag, a declared folder
     /// elsewhere on the disk does. So the flag follows the sidecar instead of waiting for the
-    /// user to find an expert checkbox: it goes on when a team folder reaches outside the team
-    /// and off when none does. The checkbox itself stays, for the per-launch mounts.
+    /// user to find an expert switch: it goes on when a team folder reaches outside the team
+    /// and off when none does. The switch itself stays, for the per-launch mounts.
     /// </para>
     /// </summary>
     private bool ReachesOutsideTheTeam()
@@ -2465,6 +2634,27 @@ public sealed record LaunchTabDependencies
     /// not known; the verdict then warns of a crew that needs the decision models.
     /// </summary>
     public Func<DecisionStatus?>? MachineDecisionStatus { get; init; }
+
+    /// <summary>
+    /// What the tool bridge of the machine's settings file as saved does to a run
+    /// (<see cref="ToolBridgePreflight"/>), read at each verdict: what the run likely meets while the CLI
+    /// picks the file itself, a warning then, never a block. Null when it is not known.
+    /// </summary>
+    public Func<ToolBridgePreflightFinding?>? MachineBridgeFinding { get; init; }
+
+    /// <summary>
+    /// The environment variable the tool bridge's card of Settings keeps the token under: the one the
+    /// machine's settings file as saved names. A pinned or team file that reads another is told so,
+    /// the card lifting nothing for it. Null when it is not known.
+    /// </summary>
+    public Func<string?>? MachineBridgeTokenVariable { get; init; }
+
+    /// <summary>
+    /// The ids of the LLM profiles the launch lays in the run's environment
+    /// (<see cref="EnvironmentForTarget"/>), read at each verdict: a rung of the decision ladder that
+    /// names one is served, whatever the settings file the run reads. None when absent.
+    /// </summary>
+    public Func<IReadOnlyCollection<string>>? OfferedLlmProfiles { get; init; }
 
     /// <summary>
     /// Where the decision providers' keys are read when a pinned or team file is judged; the process and

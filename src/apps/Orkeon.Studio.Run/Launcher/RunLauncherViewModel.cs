@@ -26,6 +26,7 @@ internal sealed class RunLauncherViewModel
     private readonly ITargetProbe _targetProbe;
     private readonly IDirectoryProbe _directories;
     private readonly Func<string, string?> _environment;
+    private readonly Func<IEnumerable<string>> _environmentNames;
 
     /// <summary>
     /// Creates the launcher over explicit collaborators (the test seam). <paramref name="teamsRoot"/>
@@ -33,7 +34,10 @@ internal sealed class RunLauncherViewModel
     /// and the root a team's own settings file is anchored on (STUDIO-62); null stamps nothing and
     /// finds no team file. <paramref name="targetProbe"/> is the disk the team file is looked up on
     /// — the detector's, in production; the real disk when absent. <paramref name="environment"/> is
-    /// where the decision providers' keys are read, the process environment the child inherits when absent.
+    /// where the decision providers' keys are read, the process environment the child inherits when absent;
+    /// <paramref name="environmentNames"/> lists the names of its variables, for the settings a run reads
+    /// under names this launcher cannot spell in advance (a model profile laid in any letter case): the
+    /// process environment's when both are absent, none when only <paramref name="environment"/> is given.
     /// </summary>
     public RunLauncherViewModel(
         RunTargetDetector detector,
@@ -43,7 +47,8 @@ internal sealed class RunLauncherViewModel
         IAppSettingsReader? settingsReader = null,
         TeamsRootResolution? teamsRoot = null,
         ITargetProbe? targetProbe = null,
-        Func<string, string?>? environment = null)
+        Func<string, string?>? environment = null,
+        Func<IEnumerable<string>>? environmentNames = null)
     {
         ArgumentNullException.ThrowIfNull(detector);
         ArgumentNullException.ThrowIfNull(runner);
@@ -55,6 +60,7 @@ internal sealed class RunLauncherViewModel
         _settingsReader = settingsReader ?? PhysicalAppSettingsReader.Instance;
         _targetProbe = targetProbe ?? PhysicalTargetProbe.Instance;
         _directories = new TargetProbeDirectories(_targetProbe);
+        _environmentNames = environmentNames ?? (environment is null ? LaunchLlmProfiles.ProcessEnvironmentNames : () => []);
         _environment = environment ?? Environment.GetEnvironmentVariable;
     }
 
@@ -132,6 +138,28 @@ internal sealed class RunLauncherViewModel
 
     /// <summary>The decision circuit of the settings file read here; null while the CLI resolves the file.</summary>
     private DecisionStatus? _settingsDecision;
+    private ToolBridgePreflightFinding? _settingsBridge;
+
+    /// <summary>
+    /// The engine's refusal of an <c>Orkeon:Compaction:Profile</c> the settings file read here does not
+    /// define and the environment does not lay; null when there is none.
+    /// </summary>
+    private (string Path, string Problem)? _settingsCompactionProfile;
+
+    /// <summary>
+    /// The <c>Provider</c> refusals of the <c>Llm</c> section and its profiles in the settings file read
+    /// here (<see cref="LlmProviderRules"/>): the host's start refuses each; empty while the CLI resolves
+    /// the file.
+    /// </summary>
+    private IReadOnlyList<ValidationMessage> _settingsLlmProvider = [];
+
+    /// <summary>
+    /// The rungs of the ladder and the decision profiles of the settings file read here that the
+    /// environment of this launcher lays as LLM profiles (the spawned CLI inherits them): the only
+    /// profiles a run gets besides the file's, this launcher laying none itself. A rung is then served;
+    /// a decision profile then shares its name, which the engine refuses.
+    /// </summary>
+    private IReadOnlyList<string> _profilesLaidInEnvironment = [];
 
     /// <summary>Options the form leaves enabled for the detected target.</summary>
     public IReadOnlyList<RunOption> AvailableOptions => LaunchOptionsModel.AvailableOptions(Target.Target);
@@ -200,44 +228,112 @@ internal sealed class RunLauncherViewModel
         messages.AddRange(ValidateFileSystemScopes(dryRun));
         messages.AddRange(ValidateDeliverableWriters());
         messages.AddRange(ValidateDecisionModels(dryRun));
+        messages.AddRange(ValidateToolBridge());
+        foreach (var refused in _settingsLlmProvider)
+        {
+            // The host refuses the start on it, a check included.
+            messages.Add(ValidationMessage.Error(
+                refused.Code, "The model settings stop the run at start: " + refused.Text, refused.Path));
+        }
+
+        if (_settingsCompactionProfile is { } unknown)
+        {
+            // Nothing lays the profile for this run: the host refuses to start, a check included.
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.EngineSettingRefused,
+                "The compaction of the settings stops the run at start: " + unknown.Problem,
+                unknown.Path));
+        }
+
         return messages;
     }
 
     /// <summary>
+    /// What the tool bridge of the settings file read here does to the run (<see cref="ToolBridgePreflight"/>):
+    /// an error when the host would refuse to start, a check included (a value of one of the bridge's
+    /// two sections it refuses, or tools to bridge with no token in its environment variable);
+    /// information when an address is named and no tool allowed. Nothing while the CLI resolves the
+    /// settings itself.
+    /// </summary>
+    private List<ValidationMessage> ValidateToolBridge() => _settingsBridge switch
+    {
+        null => [],
+        { Kind: ToolBridgePreflightKind.SettingsRefused } refused => [ValidationMessage.Error(
+            ValidationCodes.EngineSettingRefused,
+            "The tool bridge of the settings stops the run at start: " + refused.Reason,
+            refused.Path)],
+        { Kind: ToolBridgePreflightKind.TokenRefused } token => [ValidationMessage.Error(
+            ValidationCodes.BridgeToken,
+            "The tool bridge refuses the start: " + token.Reason,
+            ToolBridgeSection.SectionPath)],
+        var idle => [ValidationMessage.Information(
+            ValidationCodes.BridgeIdle,
+            $"The settings name a tool bridge ({idle.Reason}) and allow no tool on it: nothing is bridged, every tool runs on this machine.",
+            ToolBridgeSection.SectionPath)],
+    };
+
+    /// <summary>
     /// What the decision models (System One) change to the run (<see cref="DecisionPreflight"/>), the
-    /// crew read again. An error when the launch is refused for sure: a holder of <c>system_one_decide</c>
-    /// and no provider in the settings file read here (tools resolved strictly), a decision task with
-    /// neither a fallback nor an <c>otherwise</c> task on a run with the circuit off, or a provider that
-    /// file names and the engine refuses (a check too). A warning while the CLI resolves the settings
-    /// itself, for a check of a crew a run would refuse (the check stays offered: it loads the crew for
-    /// such a decision task, and reports the engine's unknown-tool line for a holder of the tool), for a
-    /// provider without its key, for a holder of the tool on a run with the circuit off (the tool still
-    /// asks the provider), and for a holder of the tool a lenient runner drops; information for decision
-    /// tasks that go on their fallbacks.
+    /// crew read again. An error when the launch is refused for sure: a crew that states
+    /// <c>decision.mode: required</c>, a holder of <c>system_one_decide</c> under strict tools, or a
+    /// decision task with neither a fallback nor an <c>otherwise</c> task, on a run with the circuit off;
+    /// a crew that states <c>decision.mode: none</c> and is routed on <c>llm.profile: auto</c>; and, with
+    /// the settings file read here, a provider the engine refuses or a decision profile that bears the
+    /// name of a model profile the environment lays (a check too), a crew routed on
+    /// <c>llm.profile: auto</c> the ladder does not serve (none, or a rung that names a profile neither
+    /// the file defines nor the environment lays: this launcher lays none), a decision profile named
+    /// under the mode none, and a fail-closed guarded profile on a run with the circuit off. A warning
+    /// while the CLI resolves the settings itself, for a check of what only a run refuses (the check
+    /// stays offered: it loads the crew, and reports the engine's line when the load fails), for a
+    /// provider without its key, and for a holder of the tool a lenient runner withholds; information
+    /// for a crew that goes on its relays, its fallbacks and what the settings state.
     /// </summary>
     private List<ValidationMessage> ValidateDecisionModels(bool dryRun)
     {
         if (Target.Target is not { } target
-            || DecisionPreflight.Check(CrewDecisionUsage.Of(target), _settingsDecision, _settingsDecision is not null, Options.NoDecision)
+            || DecisionPreflight.Check(
+                CrewDecisionUsage.Of(target), _settingsDecision, _settingsDecision is not null, Options.NoDecision, _profilesLaidInEnvironment)
                 is not { } finding)
         {
             return [];
         }
 
-        var holders = string.Join(", ", finding.Usage.ToolHolders.Select(holder => $"'{holder}'"));
-        var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason)));
+        var holders = Quoted(finding.Usage.ToolHolders);
+        var reasons = string.Concat(finding.Reasons.Select(reason => " " + ReasonText(reason, finding.Status)));
         var blocks = dryRun ? finding.BlocksValidate : finding.BlocksLaunch;
         return finding.Kind switch
         {
             DecisionPreflightKind.ProviderRefused => [Say(
                 ValidationCodes.DecisionProviderRefused,
                 blocks,
-                $"The settings name a decision provider the engine refuses, so the CLI will not start: {finding.Status?.Refusal}")],
+                $"The engine refuses the decision settings, so the CLI will not start: {finding.Status?.Refusal}")],
+            DecisionPreflightKind.ProfileRefusedByMode => [Say(
+                ValidationCodes.DecisionModeRefused,
+                blocks,
+                ModeRefusalText(finding)
+                + ", and the crew states decision.mode: none, which refuses any use of System One: "
+                + "the engine refuses the crew when it loads it.")],
+            DecisionPreflightKind.RouteWithoutLadder => [Say(
+                ValidationCodes.DecisionLadder,
+                blocks,
+                Quoted(finding.RoutedHolders)
+                + " run on llm.profile: auto, and "
+                + (finding.UnknownRungs.Count > 0
+                    ? $"Orkeon:Decision:Route:Ladder names {Quoted(finding.UnknownRungs)}, a profile neither the settings define "
+                      + "(Llm:Profiles) nor the environment lays: the engine refuses the crew when it loads it."
+                    : "the settings give no ladder of two profiles or more in Orkeon:Decision:Route:Ladder: the engine refuses the crew when it loads it."))],
             DecisionPreflightKind.RequiredWithoutModel => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,
-                (dryRun ? CheckOfRequiredText(finding) : "")
-                + $"this crew cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
+                (dryRun ? CheckOfRequiredText(finding) + "this crew" : "This crew")
+                + $" cannot run without the decision models (System One): {NeedsText(finding)}." + reasons)],
+            DecisionPreflightKind.ProfileBlockedWithoutModel => [Say(
+                ValidationCodes.DecisionProfileBlocked,
+                blocks,
+                (dryRun ? "A check loads this crew, but a run will fail: " : "")
+                + Quoted(finding.BlockedProfileHolders)
+                + " run on a fail-closed decision profile with a guard stage, and this run goes without the decision models "
+                + "(System One): the guard cannot judge, so the engine blocks every call made through the profile." + reasons)],
             DecisionPreflightKind.RequiredUnknownSettings => [Say(
                 ValidationCodes.DecisionRequired,
                 blocks,
@@ -246,23 +342,20 @@ internal sealed class RunLauncherViewModel
             DecisionPreflightKind.ProviderKeyMissing => [ValidationMessage.Warning(
                 ValidationCodes.DecisionKeyMissing,
                 $"The decision provider {finding.Status?.Provider?.DisplayName} needs an API key and none is in place: "
-                + $"set {finding.Status?.MissingKeyVariable} (or ApiKey in its section). Until then each request it gets fails, "
-                + "and with it each decision task and each system_one_decide call that asks it.",
+                + $"set {KeyVariableText(finding.Status)} (or ApiKey in its section). Until then the engine turns the decision models off "
+                + "and sends it no request: the crew runs without them, each decision task taking its relay's answer or its fallback, "
+                + "or letting its otherwise task run.",
                 target.RunPath)],
-            DecisionPreflightKind.ToolDroppedWithoutProvider => [ValidationMessage.Warning(
+            DecisionPreflightKind.ToolWithheld => [ValidationMessage.Warning(
                 ValidationCodes.DecisionToolDropped,
-                $"{holders} use system_one_decide, but no decision provider is configured: with Orkeon:CrewFactory:StrictTools "
-                + "false, the engine drops the tool and runs the crew without it.",
-                target.RunPath)],
-            DecisionPreflightKind.ToolIgnoresSwitch => [ValidationMessage.Warning(
-                ValidationCodes.DecisionToolIgnoresSwitch,
-                $"{holders} use system_one_decide: on this run the tool still asks {finding.Status?.Provider?.DisplayName}: "
-                + "--no-decision and Orkeon:Decision:Enabled only send the decision tasks to their fallbacks.",
+                $"{holders} use system_one_decide, and this run goes without the decision models: with "
+                + "Orkeon:CrewFactory:StrictTools false, the engine withholds the tool and runs the crew without it." + reasons,
                 target.RunPath)],
             _ => [ValidationMessage.Information(
                 ValidationCodes.DecisionFallback,
                 "This run goes without the decision models (System One): "
-                + string.Join("; ", finding.Usage.DecisionTasks.Where(task => task.AnswersWithoutModel).Select(FallbackText))
+                + string.Join("; ", finding.Usage.DecisionTasks.Where(task => task.AnswersWithoutModel).Select(FallbackText)
+                    .Concat(finding.Usage.OtherUses.Select(PickText)))
                 + "." + reasons,
                 target.RunPath)],
         };
@@ -271,33 +364,52 @@ internal sealed class RunLauncherViewModel
             error ? ValidationMessage.Error(code, text, target.RunPath) : ValidationMessage.Warning(code, text, target.RunPath);
     }
 
+    /// <summary>The names of agents, tasks or profiles, each quoted, comma-separated.</summary>
+    private static string Quoted(IEnumerable<string> names) => string.Join(", ", names.Select(name => $"'{name}'"));
+
     /// <summary>
-    /// What a check of a crew a run refuses does: it stays offered, loads the crew for a decision task
-    /// without an answer of its own, and for a holder of <c>system_one_decide</c> with no provider fails
-    /// on the engine's unknown-tool line (tools resolved strictly, the default).
+    /// What a crew that states <c>decision.mode: none</c> asks System One all the same: a profile to
+    /// pick, a decision profile of the settings, or both.
+    /// </summary>
+    private static string ModeRefusalText(DecisionPreflightFinding finding)
+    {
+        var asks = new List<string>();
+        if (finding.RoutedHolders.Count > 0)
+            asks.Add(Quoted(finding.RoutedHolders) + " run on llm.profile: auto, which System One picks");
+        if (finding.DecisionProfileHolders.Count > 0)
+            asks.Add(Quoted(finding.DecisionProfileHolders) + " name a decision profile");
+        return string.Join("; ", asks);
+    }
+
+    /// <summary>
+    /// What a check of a crew a run refuses does: it stays offered, loads the crew and reports what the
+    /// run would refuse as a warning.
     /// </summary>
     private static string CheckOfRequiredText(DecisionPreflightFinding finding) =>
-        finding.RefusesToolAtLoad
-            ? "The check reports the engine's unknown-tool line for system_one_decide, and a run will refuse this crew: "
+        finding.RefusedByMode
+            ? "A check loads this crew and warns, but a run will refuse it (exit code 69): "
             : "A check loads this crew, but a run will refuse it: ";
 
     /// <summary>
-    /// Why the crew needs the decision models on this run: the holders of <c>system_one_decide</c> while
-    /// no provider is in sight (unless a lenient runner drops the tool), and the decision tasks without an
-    /// answer while the circuit may be off.
+    /// Why the crew needs the decision models on this run: its own word (<c>decision.mode: required</c>),
+    /// or, of a crew that states no mode, the holders of <c>system_one_decide</c> (unless a lenient runner
+    /// withholds the tool and goes on) and the decision tasks without an answer of their own.
     /// </summary>
     private static string NeedsText(DecisionPreflightFinding finding)
     {
+        if (finding.Usage.Declared)
+            return "it states decision.mode: required, so the engine refuses the run before its first task";
+
         var needs = new List<string>();
         var holders = finding.Usage.ToolHolders;
-        if (holders.Count > 0 && finding.Status is not { StrictTools: false } && finding.Status?.Provider is null)
+        if (holders.Count > 0 && finding.Status is not { StrictTools: false })
         {
             needs.Add(string.Join(", ", holders.Select(holder => $"'{holder}'"))
-                + " use system_one_decide, which needs a decision provider");
+                + " use system_one_decide, which the engine withholds without the decision models");
         }
 
         var unanswered = finding.Usage.TasksWithoutAnswer;
-        if (unanswered.Count > 0 && (finding.SwitchedOffForRun || finding.Status is not { CircuitOn: true }))
+        if (unanswered.Count > 0)
         {
             var tasks = string.Join(", ", unanswered.Select(task => $"'{task}'"));
             needs.Add(unanswered.Count == 1
@@ -309,20 +421,43 @@ internal sealed class RunLauncherViewModel
     }
 
     /// <summary>One reason the run goes without the decision models, and its fix.</summary>
-    private static string ReasonText(DecisionOffReason reason) => reason switch
+    private static string ReasonText(DecisionOffReason reason, DecisionStatus? status) => reason switch
     {
         DecisionOffReason.NoProvider => "No decision provider is configured (an Orkeon:TypeSafe or Orkeon:Liquid section, or its API key; Kev must be named in Orkeon:Decision:Provider).",
-        DecisionOffReason.SettingsSwitch => "The settings switch the decision tasks off (Orkeon:Decision:Enabled is false).",
-        DecisionOffReason.RunSwitch => "This run switches the decision tasks off: untick --no-decision.",
+        DecisionOffReason.SettingsSwitch => "The settings switch the decision models off (Orkeon:Decision:Enabled is false).",
+        DecisionOffReason.NoKey => $"The decision provider {status?.Provider?.DisplayName} has no API key, so the engine turns the decision models off: "
+            + $"set {KeyVariableText(status)} (or ApiKey in its section).",
+        DecisionOffReason.RunSwitch => "This run switches the decision models off: untick --no-decision.",
         _ => "",
     };
 
+    /// <summary>
+    /// The variable to set for a missing key: the provider's own by name; another one by the setting that
+    /// names it, never the value written there, which may be a key pasted by mistake (as the engine, Orkeon #467).
+    /// </summary>
+    private static string KeyVariableText(DecisionStatus? status) =>
+        status?.MissingKeyVariableSetting is { } setting
+            ? $"the variable named by {setting}"
+            : status?.MissingKeyVariable ?? "";
+
     /// <summary>What one decision task answers once the circuit is off.</summary>
     private static string FallbackText(CrewDecisionTask task) =>
-        task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise
-            ? $"task '{task.Task}' gives no answer and task '{otherwise}' runs instead"
-            : $"task '{task.Task}' answers "
-              + string.Join(", ", task.Questions.Where(task.Fallback.ContainsKey).Select(question => $"{question} = {task.Fallback[question]}"));
+        task.RelayAgent is { } relay
+            ? $"the agent '{relay}' answers task '{task.Task}' in place of the model"
+            : task.Fallback.Count == 0 && task.OtherwiseTask is { } otherwise
+                ? $"task '{task.Task}' gives no answer and task '{otherwise}' runs instead"
+                : $"task '{task.Task}' answers "
+                  + string.Join(", ", task.Questions.Where(task.Fallback.ContainsKey).Select(question => $"{question} = {task.Fallback[question]}"));
+
+    /// <summary>What becomes, once the circuit is off, of one thing the crew lets System One pick.</summary>
+    private static string PickText(CrewSystemOneUse use) => use.Kind switch
+    {
+        CrewSystemOneUseKind.RouteAuto => $"'{use.Holder}' runs on the default profile, no profile being picked",
+        CrewSystemOneUseKind.SkillsAuto => $"'{use.Holder}' carries its fallback skills, none being picked",
+        CrewSystemOneUseKind.Prune => $"'{use.Holder}' prunes no tool result",
+        CrewSystemOneUseKind.DecisionProfile => $"the decision stages of the profile of '{use.Holder}' are skipped",
+        _ => $"'{use.Holder}' keeps the thinking level of its profile, none being picked",
+    };
 
     /// <summary>
     /// The agents the engine will refuse with the mounts of this run (#349): a <c>filesystem:</c>
@@ -460,6 +595,10 @@ internal sealed class RunLauncherViewModel
         var path = ResolvedSettingsPath;
         _settingsMountsKnown = false;
         _settingsDecision = null;
+        _settingsBridge = null;
+        _settingsCompactionProfile = null;
+        _settingsLlmProvider = [];
+        _profilesLaidInEnvironment = [];
 
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -487,6 +626,20 @@ internal sealed class RunLauncherViewModel
         SettingsMounts = document.Mounts.RawEntries;
         _settingsMountsKnown = true;
         _settingsDecision = document.Decision.Resolve(_environment);
+        _settingsBridge = ToolBridgePreflight.Check(document, _environment);
+        _settingsLlmProvider = LlmProviderRules.StartRefusals(document);
+
+        // The environment is listed once: a profile is looked up among the names it lays.
+        var laid = LaunchLlmProfiles.LaidIn(_environmentNames());
+        _profilesLaidInEnvironment =
+        [
+            .. _settingsDecision.UnknownRungs.Concat(_settingsDecision.DecisionProfiles)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(laid.Contains),
+        ];
+        _settingsCompactionProfile = document.Compaction.Profile is { } profile && laid.Contains(profile.Trim())
+            ? null
+            : document.Compaction.UnknownProfile();
         SettingsMountsNotice = SettingsMounts.Count == 0
             ? $"'{path}' declares no mount."
             : null;

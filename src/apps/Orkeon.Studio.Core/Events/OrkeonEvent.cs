@@ -43,6 +43,13 @@ public sealed record OrkeonEvent
             ? value.GetString()
             : null;
 
+    /// <summary>
+    /// String property, null when absent, not a string, or blank (empty or white space): a sentence the
+    /// screen appends, which a blank value would leave as a dangling separator.
+    /// </summary>
+    public string? GetNonBlankString(string name) =>
+        GetString(name) is { } text && !string.IsNullOrWhiteSpace(text) ? text : null;
+
     /// <summary>Boolean property, null when absent.</summary>
     public bool? GetBool(string name) =>
         Root.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
@@ -126,6 +133,12 @@ public static class OrkeonEventParser
     {
         orkeonEvent = null;
         if (string.IsNullOrWhiteSpace(line))
+            return false;
+
+        // An event is a JSON object: a log line in plain text ("22:00:01 ...", "Task ...") is
+        // refused before parsing, so that it does not throw and catch a JsonException per line,
+        // which floods a debugger's output with first-chance exceptions on every run.
+        if (line.AsSpan().TrimStart()[0] != '{')
             return false;
 
         try

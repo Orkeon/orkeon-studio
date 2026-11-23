@@ -98,7 +98,22 @@ public sealed record ForgeTaskProgress(
     bool Success,
     long? DurationMs,
     bool EndedOnIterationCap = false,
-    bool DeliverableMissing = false);
+    bool DeliverableMissing = false)
+{
+    /// <summary>
+    /// The pass of the trial the task ran in: <c>on</c> (with the decision models) or <c>off</c>, for a
+    /// crew that runs either way, whether its trial takes two passes or, the decision models being off
+    /// on this machine, the <c>off</c> one alone; null for a crew of any other mode.
+    /// </summary>
+    public string? Circuit { get; init; }
+
+    /// <summary>
+    /// Whether the trial the task ran in takes two passes, as the <c>run.started</c> of its pass said:
+    /// kept with the task, so that a trial that stops during its first pass still says which pass its
+    /// lines come from once <see cref="ForgeSessionModel.TrialPasses"/> is forgotten.
+    /// </summary>
+    public bool InTwoPassTrial { get; init; }
+}
 
 /// <summary>One finding of the verdict, as the checklist will show it.</summary>
 /// <param name="Id">The finding's own identifier, when the judge gave one.</param>
@@ -119,6 +134,21 @@ public sealed record ForgeFindingView(
     /// <summary>Whether this finding blocks — a minor one must not look the same.</summary>
     public bool IsBlocking =>
         string.Equals(Severity, SeverityBlocking, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The pass of the trial the finding comes from, <c>on</c> (with the decision models) or <c>off</c>,
+    /// for a crew that runs either way, whether its trial took two passes or the <c>off</c> one alone;
+    /// null for a crew of any other mode.
+    /// </summary>
+    public string? Circuit { get; init; }
+
+    /// <summary>
+    /// Whether the finding fails nothing: a <c>minor</c> one, a remark on a criterion met, or an
+    /// <c>info</c> one, a fact of the trial itself (a pass that was not run, say).
+    /// </summary>
+    public bool IsRemark =>
+        string.Equals(Severity, "minor", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Severity, "info", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>One suggestion of the verdict.</summary>
@@ -152,18 +182,40 @@ public sealed record ForgeVerdictView(
 
     /// <summary>Cache-missed prompt tokens of the last trial.</summary>
     public long? CacheMissTokens { get; init; }
+
+    /// <summary>
+    /// The verdict of each pass of the trial, in the engine's order: one pass for a crew that asks
+    /// nothing of System One or cannot run without it, two for one that runs either way, with the
+    /// decision models (<c>on</c>) then without them (<c>off</c>). Empty from an engine that predates
+    /// the passes.
+    /// </summary>
+    public IReadOnlyList<ForgeVerdictPassView> Passes { get; init; } = [];
 }
+
+/// <summary>The verdict of one pass of a trial.</summary>
+/// <param name="Circuit">Whether the pass ran with the decision models: <c>on</c> or <c>off</c>.</param>
+/// <param name="Passing">Whether the pass met the acceptance.</param>
+/// <param name="Score">Its score, from 0 to 1.</param>
+public sealed record ForgeVerdictPassView(string Circuit, bool Passing, double Score);
 
 /// <summary>
 /// One line of the ✔/✘ checklist: a criterion's statement, whether it held — null when the
 /// judge was unavailable and honesty demands "judge for yourself" — and the finding's
 /// wording when it did not.
 /// <para>
-/// <see cref="IsRemark"/> sets a finding the engine does not block on (a minor one) apart from
+/// <see cref="IsRemark"/> sets a finding the engine does not block on (a minor or an info one) apart from
 /// a failure: the criterion carries a remark, drawn amber, never the red of a failure.
 /// </para>
 /// </summary>
-public sealed record ForgeChecklistItem(string Statement, bool? Passed, string? Detail, bool IsRemark = false);
+public sealed record ForgeChecklistItem(string Statement, bool? Passed, string? Detail, bool IsRemark = false)
+{
+    /// <summary>
+    /// The pass of a two-pass trial the line's finding comes from, <c>on</c> or <c>off</c>: two passes
+    /// can each leave the same finding, and the screen says which is which. Null for a line with no
+    /// finding, and whenever the verdict holds a single pass.
+    /// </summary>
+    public string? Circuit { get; init; }
+}
 
 /// <summary>What a promotion produced.</summary>
 public sealed record ForgePromotion(string Path, string Launcher, string? Install);
@@ -178,6 +230,18 @@ public sealed record ForgeMailActionView(
     string Folder,
     string Target)
 {
+    /// <summary>
+    /// The pass of the trial the action was simulated in, <c>on</c> or <c>off</c>, as its
+    /// <c>run.finished</c> names it; null when the engine names none.
+    /// </summary>
+    public string? Circuit { get; init; }
+
+    /// <summary>
+    /// Whether the trial the action was simulated in takes two passes, as the <c>run.started</c> of its
+    /// pass said: kept with the action, like <see cref="ForgeTaskProgress.InTwoPassTrial"/>.
+    /// </summary>
+    public bool InTwoPassTrial { get; init; }
+
     /// <summary>The one-line reading of the action.</summary>
     public string Line
     {
@@ -195,8 +259,51 @@ public sealed record ForgeMailActionView(
     }
 }
 
-/// <summary>An <c>error</c> event.</summary>
-public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverable);
+/// <summary>
+/// An <c>error</c> event. <see cref="Recoverable"/> says whether the session can be resumed later;
+/// <see cref="Terminal"/> whether this process goes no further (Orkeon #453), null from an engine that
+/// does not say it.
+/// </summary>
+public sealed record ForgeErrorInfo(string Code, string Message, bool Recoverable)
+{
+    /// <summary>Whether the process ends after this error; null when the engine does not say.</summary>
+    public bool? Terminal { get; init; }
+
+    /// <summary>The cause of a decision circuit off (<c>FORGE-DECISION-UNAVAILABLE</c>), as the engine words it; null when none.</summary>
+    public string? Cause { get; init; }
+
+    /// <summary>
+    /// The off circuit's own sentence beside <see cref="Cause"/>, in English as the engine writes it
+    /// (<c>detail</c>, Orkeon #467); null when the cause has none, the engine writes it blank, or predates it.
+    /// </summary>
+    public string? Detail { get; init; }
+
+    /// <summary>
+    /// The error as Studio shows it, in the engine's words: <c>CODE: message</c>, followed by
+    /// <see cref="Detail"/> when the engine gave one the message does not already say (the message's
+    /// closing full stop gives way to it). The engine's <c>FORGE-DECISION-UNAVAILABLE</c> message ends
+    /// its off reason with the detail (<c>... and the decision circuit is off: no Liquid API key: ...</c>):
+    /// said once, never twice.
+    /// </summary>
+    public string Headline
+    {
+        get
+        {
+            var head = Message.Length > 0 ? $"{Code}: {Message}" : Code;
+            return Detail is { } detail
+                && !string.IsNullOrWhiteSpace(detail)
+                && !Message.Contains(detail.Trim(), StringComparison.Ordinal)
+                ? $"{head.TrimEnd().TrimEnd('.')}: {detail.Trim()}"
+                : head;
+        }
+    }
+
+    /// <summary>
+    /// Whether the session goes no further in this process: what <see cref="Terminal"/> says, else, from an
+    /// engine that does not say it, a fatal error (not <see cref="Recoverable"/>), as before.
+    /// </summary>
+    public bool GoesNoFurther => Terminal ?? !Recoverable;
+}
 
 /// <summary>A <c>warning</c> event: something not done while what was asked for stands (STUDIO-26).</summary>
 public sealed record ForgeWarningInfo(string Code, string Message);
@@ -233,6 +340,52 @@ public sealed class ForgeSessionModel
 
     /// <summary>Whether this run resumed an existing session.</summary>
     public bool Resumed { get; private set; }
+
+    /// <summary>
+    /// The decision mode of the crew the session designs (<see cref="ForgeCrewDecisions"/>), as the
+    /// engine states it at <c>session.started</c>; null from an engine that predates the modes. A
+    /// session read off the disk states what its <c>session.json</c> holds: one written before the
+    /// modes holds none, so it reads null, which a screen shows as <see cref="ForgeCrewDecisions.None"/>,
+    /// until an engine run states the mode it derives from the crew.
+    /// </summary>
+    public string? CrewDecision { get; private set; }
+
+    /// <summary>
+    /// Whether the assistant asks System One for its own work on this run: <c>on</c> or <c>off</c>; null
+    /// from an engine that predates it.
+    /// </summary>
+    public string? ForgeCircuit { get; private set; }
+
+    /// <summary>
+    /// Why the assistant goes without System One (<c>switch</c>, <c>settings</c>, <c>no-provider</c>, or
+    /// another word of the engine's, shown as written); null when it does not, or the engine gives none.
+    /// </summary>
+    public string? ForgeCircuitCause { get; private set; }
+
+    /// <summary>
+    /// The off circuit's own sentence beside <see cref="ForgeCircuitCause"/>, in English as the engine writes
+    /// it (<c>forgeCircuitDetail</c>, Orkeon #467): for <c>no-key</c>, the environment variable and the setting
+    /// the key is read from, never the key; null when the cause has none, or the engine predates it.
+    /// </summary>
+    public string? ForgeCircuitDetail { get; private set; }
+
+    /// <summary>How many calls the assistant made to System One on this run of the engine (<c>systemone.answered</c>).</summary>
+    public int SystemOneAnswers { get; private set; }
+
+    /// <summary>
+    /// The tokens the assistant's own System One calls spent over the whole session, already in
+    /// <see cref="TokensSpent"/>; null until the engine says, and from one that predates it.
+    /// </summary>
+    public long? SystemOneTokens { get; private set; }
+
+    /// <summary>The pass of the trial under way, from 1; null when the engine names none.</summary>
+    public int? TrialPass { get; private set; }
+
+    /// <summary>How many passes the trial under way runs; null when the engine names none.</summary>
+    public int? TrialPasses { get; private set; }
+
+    /// <summary>Whether the pass under way runs with the decision models: <c>on</c> or <c>off</c>; null when the engine does not say.</summary>
+    public string? TrialCircuit { get; private set; }
 
     /// <summary>
     /// The use case the session is composed from (STUDIO-40), from <c>session.started</c> — live,
@@ -391,8 +544,30 @@ public sealed class ForgeSessionModel
     /// <summary>1-based number of the running (or last) try.</summary>
     public int? RunNumber { get; private set; }
 
-    /// <summary>Whether a try is currently running.</summary>
+    /// <summary>
+    /// Whether a try is currently running: from <c>run.started</c> to the <c>run.finished</c> of its
+    /// last pass, and never past the run of the engine that started it (<see cref="EndTrial"/>).
+    /// </summary>
     public bool RunInProgress { get; private set; }
+
+    /// <summary>
+    /// The engine process is gone: a trial it left under way is over, whatever the stream said last. A
+    /// process that is stopped or dies writes no <c>run.finished</c> and no <c>session.finished</c>.
+    /// </summary>
+    public void AcknowledgeEngineExit() => EndTrial();
+
+    /// <summary>
+    /// No trial is under way any more, and no pass of one: a trial ends with the run of the engine that
+    /// started it. A two-pass trial that stops after its first pass (a crash of the bench, a budget
+    /// spent between the passes, an interruption) writes no <c>run.finished</c> for a second one.
+    /// </summary>
+    private void EndTrial()
+    {
+        RunInProgress = false;
+        TrialPass = null;
+        TrialPasses = null;
+        TrialCircuit = null;
+    }
 
     /// <summary>Completed tasks of the current try, in completion order.</summary>
     public IReadOnlyList<ForgeTaskProgress> Activity => _activity;
@@ -503,8 +678,15 @@ public sealed class ForgeSessionModel
                 ProposedFoldersAreDefaults = false;
                 ReferenceUseCaseId = ReadReferenceId(orkeonEvent);
                 Resumed = orkeonEvent.GetBool("resumed") ?? false;
+                CrewDecision = ForgeCrewDecisions.Normalize(orkeonEvent.GetString("crewDecision"));
+                ForgeCircuit = orkeonEvent.GetString("forgeCircuit");
+                ForgeCircuitCause = orkeonEvent.GetString("forgeCircuitCause");
+                ForgeCircuitDetail = orkeonEvent.GetNonBlankString("forgeCircuitDetail");
+                SystemOneAnswers = 0;
                 EngineVersion = orkeonEvent.GetString("engine");
                 FinishedStatus = null;
+                // A new run of the engine: the trial a previous one left under way is not this one's.
+                EndTrial();
                 break;
 
             case ForgeEventKinds.StageEntered:
@@ -562,8 +744,17 @@ public sealed class ForgeSessionModel
             case ForgeEventKinds.RunStarted:
                 RunNumber = (int)(orkeonEvent.GetInt64("run") ?? 0);
                 RunInProgress = true;
-                _activity.Clear();
-                _mailActions.Clear();
+                // A crew that runs either way is tried twice, with the decision models then without.
+                TrialPass = (int?)orkeonEvent.GetInt64("pass");
+                TrialPasses = (int?)orkeonEvent.GetInt64("passes");
+                TrialCircuit = orkeonEvent.GetString("circuit");
+                // The second pass of a trial continues it: what the first one did stays on the screen.
+                if (TrialPass is not > 1)
+                {
+                    _activity.Clear();
+                    _mailActions.Clear();
+                }
+
                 break;
 
             case ForgeEventKinds.TaskCompleted:
@@ -576,7 +767,11 @@ public sealed class ForgeSessionModel
                     // The trial's task ended on its iteration cap: a success whose work may be missing.
                     orkeonEvent.GetBool("endedOnIterationCap") ?? false,
                     // The trial's task succeeded without writing its file (Orkeon #392).
-                    orkeonEvent.GetBool("deliverableMissing") ?? false));
+                    orkeonEvent.GetBool("deliverableMissing") ?? false)
+                {
+                    Circuit = orkeonEvent.GetString("circuit"),
+                    InTwoPassTrial = TrialPasses > 1,
+                });
                 break;
 
             case ForgeEventKinds.CostUpdated:
@@ -586,13 +781,24 @@ public sealed class ForgeSessionModel
                 PromptTokens = orkeonEvent.GetInt64("promptTokens") ?? PromptTokens;
                 CompletionTokens = orkeonEvent.GetInt64("completionTokens") ?? CompletionTokens;
                 EstimatedTokens = orkeonEvent.GetInt64("estimatedTokens") ?? EstimatedTokens;
+                SystemOneTokens = orkeonEvent.GetInt64("systemOneTokens") ?? SystemOneTokens;
                 TokensRemaining = orkeonEvent.GetInt64("budgetRemaining");
                 break;
 
             case ForgeEventKinds.RunFinished:
-                RunInProgress = false;
-                _mailActions.Clear();
-                _mailActions.AddRange(ReadMailActions(orkeonEvent.Root));
+                // Each pass of a trial ends with its own line: the trial is over at the last one, and
+                // the mail actions of the passes add up.
+                RunInProgress = TrialPass is { } pass && TrialPasses is { } passes && pass < passes;
+                if (TrialPass is not > 1)
+                    _mailActions.Clear();
+                var finishedCircuit = orkeonEvent.GetString("circuit");
+                var twoPasses = TrialPasses > 1;
+                _mailActions.AddRange(ReadMailActions(orkeonEvent.Root).Select(
+                    action => action with { Circuit = finishedCircuit, InTwoPassTrial = twoPasses }));
+                break;
+
+            case ForgeEventKinds.SystemOneAnswered:
+                SystemOneAnswers++;
                 break;
 
             case ForgeEventKinds.VerdictReady:
@@ -628,6 +834,7 @@ public sealed class ForgeSessionModel
                 _decisionOptions.Clear();
                 FoldersPending = false;
                 FillPending = false;
+                EndTrial();
                 // Ready is the engine's ordinary stop — no runner, no stage.entered — and
                 // for the user it IS the Adopt milestone: the crew waits to be taken.
                 if (string.Equals(FinishedStatus, "ready", StringComparison.Ordinal))
@@ -643,7 +850,19 @@ public sealed class ForgeSessionModel
                 LastError = new ForgeErrorInfo(
                     orkeonEvent.GetString("code") ?? "",
                     orkeonEvent.GetString("message") ?? "",
-                    orkeonEvent.GetBool("recoverable") ?? false);
+                    orkeonEvent.GetBool("recoverable") ?? false)
+                {
+                    Terminal = orkeonEvent.GetBool("terminal"),
+                    Cause = orkeonEvent.GetString("cause"),
+                    Detail = orkeonEvent.GetNonBlankString("detail"),
+                };
+                // An error the process goes no further after (terminal, Orkeon #453) is said last before
+                // session.finished: the trial it interrupts is over, and the bench that failed on the
+                // first pass of two never starts the second. One it carries on after (an invalid edit,
+                // asked again; a spent budget at the arbitration) leaves the trial to session.finished,
+                // or to the end of the process. An engine that does not say it: a fatal error ends it.
+                if (LastError.GoesNoFurther)
+                    EndTrial();
                 break;
 
             default:
@@ -698,14 +917,19 @@ public sealed class ForgeSessionModel
     /// The ✔/✘ checklist of the result card (UX study §4.3): the "success" card's criteria,
     /// re-read against the verdict — same statements, word for word. A criterion with no
     /// finding passes only when a real judge looked at it; a deterministic verdict says
-    /// "judge for yourself" (null) instead of inventing a ✔. Findings that name no
-    /// criterion (the mechanical ones) are prepended as failed lines.
+    /// "judge for yourself" (null) instead of inventing a ✔. Findings that name no criterion of
+    /// the card (the mechanical ones, or an acceptance the card does not carry) are prepended: as
+    /// failed lines, or as remarks for a <c>minor</c> or an <c>info</c> one. In a verdict of two passes,
+    /// each line carries the pass of its finding, and a criterion with no finding passes only when
+    /// every pass was judged (<see cref="EveryPassWasJudged"/>).
     /// </summary>
     public IReadOnlyList<ForgeChecklistItem> BuildChecklist()
     {
         if (Verdict is not { } verdict)
             return [];
 
+        var twoPasses = verdict.Passes.Count > 1;
+        var judged = EveryPassWasJudged(verdict);
         var items = new List<ForgeChecklistItem>();
         foreach (var finding in verdict.Findings)
         {
@@ -715,47 +939,68 @@ public sealed class ForgeSessionModel
             var orphaned = string.IsNullOrWhiteSpace(finding.Acceptance)
                 || !_criteria.Any(c => string.Equals(c.Id, finding.Acceptance, StringComparison.OrdinalIgnoreCase));
             if (orphaned)
-                items.Add(new ForgeChecklistItem(finding.Statement, false, finding.Evidence, IsRemark: IsRemark(finding)));
+            {
+                items.Add(new ForgeChecklistItem(finding.Statement, false, finding.Evidence, IsRemark: finding.IsRemark)
+                {
+                    Circuit = twoPasses ? finding.Circuit : null,
+                });
+            }
         }
 
         foreach (var criterion in _criteria)
         {
-            var finding = verdict.Findings.FirstOrDefault(f =>
-                string.Equals(f.Acceptance, criterion.Id, StringComparison.OrdinalIgnoreCase));
-            items.Add(BuildChecklistItem(criterion, finding, verdict.Judge));
+            // A crew that runs either way is judged once per pass: the criterion is as good as its
+            // worst finding, so a pass that fails it is never hidden by one that only remarks on it.
+            var finding = verdict.Findings
+                .Where(f => string.Equals(f.Acceptance, criterion.Id, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(f => f.IsRemark)
+                .FirstOrDefault();
+            items.Add(BuildChecklistItem(criterion, finding, judged) with { Circuit = twoPasses ? finding?.Circuit : null });
         }
 
         return items;
     }
 
     /// <summary>
+    /// Whether a real judge looked at every pass of the verdict. The verdict names one judge, the first
+    /// pass's: in a verdict of two passes, a pass that did not pass and left no finding on any
+    /// criterion (a judge's finding names one, a mechanical finding never does) may have had the
+    /// mechanical checks alone, its run having failed, and the absence of a finding then says nothing
+    /// of the criteria.
+    /// </summary>
+    private static bool EveryPassWasJudged(ForgeVerdictView verdict)
+    {
+        if (!string.Equals(verdict.Judge, ForgeVerdictView.JudgeLlm, StringComparison.Ordinal))
+            return false;
+        if (verdict.Passes.Count <= 1)
+            return true;
+
+        return verdict.Passes.All(pass => pass.Passing || verdict.Findings.Any(finding =>
+            !string.IsNullOrWhiteSpace(finding.Acceptance)
+            && string.Equals(finding.Circuit, pass.Circuit, StringComparison.Ordinal)));
+    }
+
+    /// <summary>
     /// One line of the checklist. A finding fails the criterion and says why, with the
     /// judge's own evidence appended when it carried some. No finding passes it only when a
-    /// real judge looked: a deterministic verdict says "judge for yourself" (null) rather
-    /// than inventing a ✔.
+    /// real judge looked, at every pass: otherwise the line says "judge for yourself" (null)
+    /// rather than inventing a ✔.
     /// </summary>
     private static ForgeChecklistItem BuildChecklistItem(
-        ForgeCriterion criterion, ForgeFindingView? finding, string judge)
+        ForgeCriterion criterion, ForgeFindingView? finding, bool judged)
     {
         if (finding is null)
-        {
-            bool? passed = string.Equals(judge, ForgeVerdictView.JudgeLlm, StringComparison.Ordinal)
-                ? true
-                : null;
-            return new ForgeChecklistItem(criterion.Statement, passed, null);
-        }
+            return new ForgeChecklistItem(criterion.Statement, judged ? true : null, null);
+
 
         var detail = finding.Evidence is { Length: > 0 } evidence
             ? $"{finding.Statement} — {evidence}"
             : finding.Statement;
         // UX lot 05 (019, 020): a major or blocking finding fails the criterion — the engine
-        // judges such a verdict not passing; only a minor one is a remark on a criterion met.
-        return new ForgeChecklistItem(criterion.Statement, false, detail, IsRemark: IsRemark(finding));
+        // judges such a verdict not passing. A minor one is a remark on a criterion met, and an
+        // info one a fact of the trial itself: neither fails anything (ForgeFindingView.IsRemark).
+        return new ForgeChecklistItem(criterion.Statement, false, detail, IsRemark: finding.IsRemark);
     }
-
-    /// <summary>Whether a finding blocks nothing — a minor one: the criterion stays met, with a remark.</summary>
-    private static bool IsRemark(ForgeFindingView f) =>
-        string.Equals(f.Severity, "minor", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The <c>id</c> of the event's <c>reference</c> object; null when there is none.</summary>
     private static string? ReadReferenceId(OrkeonEvent orkeonEvent) =>
@@ -1212,7 +1457,10 @@ public sealed class ForgeSessionModel
                     ReadString(finding, "severity") ?? "",
                     ReadString(finding, "acceptance"),
                     ReadString(finding, "statement") ?? "",
-                    ReadString(finding, "evidence")));
+                    ReadString(finding, "evidence"))
+                {
+                    Circuit = ReadString(finding, "circuit"),
+                });
             }
         }
 
@@ -1245,7 +1493,28 @@ public sealed class ForgeSessionModel
             CompletionTokens = orkeonEvent.GetInt64("completionTokens"),
             CacheHitTokens = orkeonEvent.GetInt64("cacheHitTokens"),
             CacheMissTokens = orkeonEvent.GetInt64("cacheMissTokens"),
+            Passes = ReadPasses(orkeonEvent.Root),
         };
+    }
+
+    private static List<ForgeVerdictPassView> ReadPasses(JsonElement root)
+    {
+        var passes = new List<ForgeVerdictPassView>();
+        if (!root.TryGetProperty("passes", out var raw) || raw.ValueKind != JsonValueKind.Array)
+            return passes;
+
+        foreach (var pass in raw.EnumerateArray())
+        {
+            if (pass.ValueKind != JsonValueKind.Object || ReadString(pass, "circuit") is not { Length: > 0 } circuit)
+                continue;
+
+            passes.Add(new ForgeVerdictPassView(
+                circuit,
+                pass.TryGetProperty("passing", out var passing) && passing.ValueKind == JsonValueKind.True,
+                pass.TryGetProperty("score", out var score) && score.ValueKind == JsonValueKind.Number ? score.GetDouble() : 0.0));
+        }
+
+        return passes;
     }
 
     private static string? ReadString(JsonElement element, string name) =>

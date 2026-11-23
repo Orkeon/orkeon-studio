@@ -45,6 +45,6 @@ public sealed class UnknownEventKindToleranceTests
         Assert.Equal("graph.node.entered", RunEventKinds.GraphNodeEntered);
         Assert.Contains(Orkeon.Constants.Protocol.RunEventKinds.LlmFallback, Orkeon.Constants.Protocol.RunEventKinds.All);
         Assert.Contains(RunEventKinds.GraphNodeEntered, Orkeon.Constants.Protocol.RunEventKinds.All);
-        Assert.Equal(19, Orkeon.Constants.Protocol.RunEventKinds.All.Count);
+        Assert.Equal(25, Orkeon.Constants.Protocol.RunEventKinds.All.Count);
     }
 }

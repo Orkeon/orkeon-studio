@@ -33,7 +33,7 @@ internal static class FieldText
             return true;
         }
 
-        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName}: '{text.Trim()}' is not true or false.");
+        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName} is not true or false.");
         return false;
     }
 
@@ -59,7 +59,7 @@ internal static class FieldText
             return true;
         }
 
-        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName}: '{text.Trim()}' is not a whole number.");
+        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName} is not a whole number.");
         return false;
     }
 
@@ -83,7 +83,7 @@ internal static class FieldText
             return true;
         }
 
-        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName}: '{text.Trim()}' is not a number.");
+        error = string.Create(CultureInfo.InvariantCulture, $"{fieldName} is not a finite number.");
         return false;
     }
 

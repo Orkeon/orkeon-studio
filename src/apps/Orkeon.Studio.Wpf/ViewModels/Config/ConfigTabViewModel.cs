@@ -65,10 +65,14 @@ public sealed class ConfigTabViewModel : ObservableObject
         Rag = new RagSectionViewModel(() => _document, MarkDirty, _strings);
         Logging = new LoggingSectionViewModel(() => _document, MarkDirty);
         LlmLogging = new LlmLoggingSectionViewModel(() => _document, MarkDirty, _strings);
+        Compaction = new CompactionSectionViewModel(() => _document, MarkDirty);
+        Skills = new SkillsSectionViewModel(() => _document, MarkDirty);
         ShellTools = new ShellToolsSectionViewModel(() => _document, MarkDirty);
         Mcp = new McpSectionViewModel(() => _document, MarkDirty, _strings);
         // The decision models: their keys go to the store of the model keys, never to the document.
         Decision = new DecisionSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
+        ToolBridge = new ToolBridgeSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
+        BridgeServer = new BridgeServerSectionViewModel(() => _document, MarkDirty);
 
         Mounts = new MountsEditorViewModel(seams.Directories, Picker, requireAtLeastOne: true, _strings, seams.Clipboard);
         Mounts.Changed += OnMountsChanged;
@@ -207,6 +211,18 @@ public sealed class ConfigTabViewModel : ObservableObject
 
     /// <summary>The <c>LlmLogging</c> form.</summary>
     public LlmLoggingSectionViewModel LlmLogging { get; }
+
+    /// <summary>The <c>Orkeon:Compaction</c> form, the pruning of tool results included.</summary>
+    public CompactionSectionViewModel Compaction { get; }
+
+    /// <summary>The <c>Orkeon:Skills</c> form.</summary>
+    public SkillsSectionViewModel Skills { get; }
+
+    /// <summary>The <c>Orkeon:Tools:Bridge</c> form: the tools of a run that execute on another machine.</summary>
+    public ToolBridgeSectionViewModel ToolBridge { get; }
+
+    /// <summary>The <c>Orkeon:Bridge</c> form: the tools <c>orkeon bridge serve</c> runs for a caller.</summary>
+    public BridgeServerSectionViewModel BridgeServer { get; }
 
     /// <summary>The <c>Orkeon:Tools:Shell</c> form of the Tools tab (STUDIO-21).</summary>
     public ShellToolsSectionViewModel ShellTools { get; }
@@ -359,6 +375,10 @@ public sealed class ConfigTabViewModel : ObservableObject
         Rag.Refresh();
         Logging.Refresh();
         LlmLogging.Refresh();
+        Compaction.Refresh();
+        Skills.Refresh();
+        ToolBridge.Refresh();
+        BridgeServer.Refresh();
         ShellTools.Refresh();
         Mcp.Refresh();
         Decision.Refresh();
@@ -579,6 +599,11 @@ public sealed class ConfigTabViewModel : ObservableObject
     private void MarkDirty()
     {
         IsDirty = true;
+        // What the decision and compaction cards say depends on the profiles another tab edits: a
+        // ladder rung or a summary profile that names one is judged again whatever was edited. The
+        // decision status is resolved once here, and announced only when it changed.
+        Decision?.RefreshVerdict();
+        Compaction?.RefreshVerdict();
         RefreshRawJson();
         DocumentEdited?.Invoke(this, EventArgs.Empty);
     }

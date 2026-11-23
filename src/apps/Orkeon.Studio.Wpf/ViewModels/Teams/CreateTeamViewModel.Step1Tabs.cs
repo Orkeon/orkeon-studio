@@ -1,11 +1,14 @@
+using Orkeon.Studio.Core.Forge;
 using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Wpf.ViewModels.Mvvm;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Teams;
 
 /// <summary>
-/// Step 1 in three tabs (refonte R14): « Need », « The team's folders », « Composition
-/// instruction ». The flow is the one it was: the need opens the step, the folders tab exists
+/// Step 1 in four tabs (refonte R14, #22): « Decision models », « Need », « The team's folders »,
+/// « Composition instruction ». The decision models come first, but the need opens the step and
+/// « Back » on it leads to them; a resumed or reopened session whose mode this machine cannot serve
+/// opens on them instead, so their warning is seen (<see cref="OpenStep1WhereAttentionIsNeeded"/>). The flow is the one it was: the folders tab exists
 /// from the start (empty until the composition proposes them), and when the engine proposes
 /// the folders that tab opens and carries the step's wait point (R13). Each tab has a state —
 /// a check, an amber dot, an empty circle — a state subtitle, and its pane's own footer.
@@ -14,20 +17,23 @@ namespace Orkeon.Studio.Wpf.ViewModels.Teams;
 /// </summary>
 public sealed partial class CreateTeamViewModel
 {
-    /// <summary>The « Need » tab.</summary>
-    public const int Step1NeedTab = 0;
+    /// <summary>The « Decision models » tab (#22): System One, first of the step.</summary>
+    public const int Step1DecisionTab = 0;
+
+    /// <summary>The « Need » tab, the one the step opens on unless a decision needs the user's attention.</summary>
+    public const int Step1NeedTab = 1;
 
     /// <summary>The « The team's folders » tab.</summary>
-    public const int Step1FoldersTab = 1;
+    public const int Step1FoldersTab = 2;
 
     /// <summary>The « Composition instruction » tab.</summary>
-    public const int Step1NotesTab = 2;
+    public const int Step1NotesTab = 3;
 
     private const string TabEmpty = "Empty";
     private const string TabDone = "Done";
     private const string TabExpected = "Expected";
 
-    private int _step1TabIndex;
+    private int _step1TabIndex = Step1NeedTab;
 
     /// <summary>The tab on screen in step 1.</summary>
     public int Step1TabIndex
@@ -35,7 +41,7 @@ public sealed partial class CreateTeamViewModel
         get => _step1TabIndex;
         set
         {
-            if (SetProperty(ref _step1TabIndex, Math.Clamp(value, Step1NeedTab, Step1NotesTab)))
+            if (SetProperty(ref _step1TabIndex, Math.Clamp(value, Step1DecisionTab, Step1NotesTab)))
                 Step1BackCommand?.RaiseCanExecuteChanged();
         }
     }
@@ -45,6 +51,30 @@ public sealed partial class CreateTeamViewModel
 
     /// <summary>The step's « Back »: the tab before the one on screen.</summary>
     public RelayCommand Step1BackCommand { get; private set; } = null!;
+
+    /// <summary>
+    /// The « Decision models » tab's state: the amber warning when the mode shown meets something on
+    /// this machine (<see cref="CrewDecisionNotice"/>), a check when the team is meant to use them,
+    /// an empty circle when it is not.
+    /// </summary>
+    public string DecisionTabState
+    {
+        get
+        {
+            if (CrewDecisionNotice.Length > 0)
+                return TabWarning;
+
+            return ShownCrewDecision == ForgeCrewDecisions.None ? TabEmpty : TabDone;
+        }
+    }
+
+    /// <summary>The mode shown, in short: « Not used », « When available » or « Always ».</summary>
+    public string DecisionTabSubtitle => _strings[ShownCrewDecision switch
+    {
+        ForgeCrewDecisions.Required => StudioStringKeys.WizardTabDecisionRequired,
+        ForgeCrewDecisions.Optional => StudioStringKeys.WizardTabDecisionOptional,
+        _ => StudioStringKeys.WizardTabDecisionNone,
+    }];
 
     /// <summary>
     /// The « Need » tab's state: done once the need is typed — amber when the assistant stopped
@@ -196,7 +226,7 @@ public sealed partial class CreateTeamViewModel
     private void InitializeStep1Tabs()
     {
         ShowFoldersTabCommand = new RelayCommand(() => Step1TabIndex = Step1FoldersTab);
-        Step1BackCommand = new RelayCommand(() => Step1TabIndex--, () => _step1TabIndex > Step1NeedTab);
+        Step1BackCommand = new RelayCommand(() => Step1TabIndex--, () => _step1TabIndex > Step1DecisionTab);
         ComposeNotes.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(StepNotesViewModel.HasConsigne))
@@ -221,8 +251,23 @@ public sealed partial class CreateTeamViewModel
         SyncProgress();
     }
 
+    /// <summary>
+    /// A session just put on screen (a resume, a reopen) opens step 1 on « Decision models » when
+    /// what its mode meets on this machine is to be said (<see cref="CrewDecisionNotice"/>): « the
+    /// wizard still opens on « Need » unless a decision needs the user's attention » (#22). Only the
+    /// opening tab moves: a tab the session's wait point chose (the folders) stays, and nothing
+    /// moves later on, neither a compose nor a change of the decision settings, which leave the
+    /// user where they are with the tab's amber state as the cue.
+    /// </summary>
+    private void OpenStep1WhereAttentionIsNeeded()
+    {
+        if (_step1TabIndex == Step1NeedTab && CrewDecisionNotice.Length > 0)
+            Step1TabIndex = Step1DecisionTab;
+    }
+
     /// <summary>Republishes every tab's state, subtitle and footer.</summary>
     private void RefreshStep1Tabs() => OnPropertiesChanged(
+        nameof(DecisionTabState), nameof(DecisionTabSubtitle),
         nameof(NeedTabState), nameof(NeedTabSubtitle),
         nameof(FoldersTabState), nameof(FoldersTabSubtitle), nameof(IsFoldersTabEmpty), nameof(FoldersFooter),
         nameof(NotesTabState), nameof(NotesTabSubtitle), nameof(NotesFooter), nameof(ComposeTip), nameof(HasComposeTip));

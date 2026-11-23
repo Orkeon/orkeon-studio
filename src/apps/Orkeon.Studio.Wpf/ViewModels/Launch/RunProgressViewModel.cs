@@ -30,8 +30,13 @@ public sealed class RunTaskViewModel
     /// <summary>The underlying Core record.</summary>
     public RunTaskProgress Task { get; }
 
-    /// <summary>The agent that ran it, or its identifier when the run named no agent.</summary>
-    public string Title => Task.AgentRole ?? Task.TaskId ?? "—";
+    /// <summary>
+    /// The agent that ran it, or its identifier when the run named no agent; a decision task the
+    /// engine answered itself reads «Decision» in the user's language, not the bare role.
+    /// </summary>
+    public string Title => RunDecisionRole.Is(Task.AgentRole)
+        ? _strings[StudioStringKeys.RunLaneDecision]
+        : Task.AgentRole ?? Task.TaskId ?? "—";
 
     /// <summary>Whether it succeeded.</summary>
     public bool Success => Task.Success;
@@ -57,10 +62,36 @@ public sealed class RunTaskViewModel
         ? _strings.Format(StudioStringKeys.RunProgressToolCalls, calls)
         : string.Empty;
 
-    /// <summary>Why the task was skipped, or an empty label when it was not (or the run did not say).</summary>
-    public string SkipReason => Task.Skipped && !string.IsNullOrEmpty(Task.SkipReason)
-        ? _strings.Format(StudioStringKeys.RunProgressSkipReason, Task.SkipReason)
-        : string.Empty;
+    /// <summary>
+    /// Why the task was skipped, in the user's language when the engine's sentence is one Studio
+    /// reads (<see cref="SkipReasonReading"/>), else its raw text; an empty label when it was not
+    /// skipped (or the run did not say).
+    /// </summary>
+    public string SkipReason
+    {
+        get
+        {
+            if (!Task.Skipped || string.IsNullOrEmpty(Task.SkipReason))
+                return string.Empty;
+
+            var reading = SkipReasonReading.Parse(Task.SkipReason);
+            var answers = reading.Kind == SkipReasonKind.ConditionNotHeld
+                ? string.Join(", ", DecisionAnswerReading.Parse(reading.DecisionAnswers).Select(answer => answer.Question + " = " + ValueOf(answer)))
+                : string.Empty;
+            return reading.Kind switch
+            {
+                SkipReasonKind.ConditionNotHeld when answers.Length > 0 =>
+                    _strings.Format(StudioStringKeys.RunProgressSkipCondition, reading.DecisionTask!, answers),
+                SkipReasonKind.DecisionNotRun => _strings.Format(StudioStringKeys.RunProgressSkipDecisionNotRun, reading.DecisionTask!),
+                SkipReasonKind.DependencyFailed => _strings[StudioStringKeys.RunProgressSkipDependency],
+                SkipReasonKind.DependenciesConditionSkipped => _strings[StudioStringKeys.RunProgressSkipDependenciesConditionSkipped],
+                _ => _strings.Format(StudioStringKeys.RunProgressSkipReason, Task.SkipReason),
+            };
+        }
+    }
+
+    /// <summary>The engine's own sentence of a skipped task, for the expert's tooltip; empty when it was not skipped.</summary>
+    public string SkipReasonRaw => Task.Skipped ? Task.SkipReason ?? string.Empty : string.Empty;
 
     /// <summary>
     /// Whether the task succeeded on the answer its agent gave once its iterations were spent:
@@ -87,7 +118,7 @@ public sealed class RunTaskViewModel
     /// <summary>Whether the row's icon is a warning: a success cut short, or one that did not write its file.</summary>
     public bool HasWarning => EndedOnIterationCap || DeliverableMissing;
 
-    /// <summary>"decision" or "decision (defaulted)" for a decision task, else an empty label.</summary>
+    /// <summary>"decision", "decision (defaulted)" or "decision (relay)" for a decision task, else an empty label.</summary>
     public string DecisionLabel
     {
         get
@@ -97,9 +128,18 @@ public sealed class RunTaskViewModel
                 return string.Empty;
             }
 
+            // The row already reads «Decision»: a plain answer of the engine's own says nothing more.
+            if (RunDecisionRole.Is(Task.AgentRole) && !Task.Defaulted
+                && !string.Equals(Task.DecisionSource, Orkeon.Constants.Protocol.DecisionSources.Relay, StringComparison.Ordinal))
+            {
+                return string.Empty;
+            }
+
             var key = Task.Defaulted
                 ? StudioStringKeys.RunProgressDecisionDefaulted
-                : StudioStringKeys.RunProgressDecision;
+                : string.Equals(Task.DecisionSource, Orkeon.Constants.Protocol.DecisionSources.Relay, StringComparison.Ordinal)
+                    ? StudioStringKeys.RunProgressDecisionRelay
+                    : StudioStringKeys.RunProgressDecision;
             return _strings[key];
         }
     }
@@ -123,14 +163,7 @@ public sealed class RunTaskViewModel
         if (answer is { Chosen: null, Score: null, Likelihood: null })
             return answer.Question + " = " + _strings[StudioStringKeys.RunProgressDecisionNoAnswer];
 
-        var value = answer switch
-        {
-            { Chosen: { } chosen } => chosen,
-            { Score: { } score } => _strings.Format(
-                StudioStringKeys.RunProgressDecisionScore, score.ToString("0.##", CultureInfo.CurrentCulture)),
-            { Likelihood: not null } => _strings[StudioStringKeys.RunProgressDecisionYes],
-            _ => "—",
-        };
+        var value = ValueOf(answer);
         var figures = new List<string>(2);
         if (answer.Likelihood is { } likelihood)
             figures.Add(_strings.Format(StudioStringKeys.RunProgressDecisionLikelihood, Percent(likelihood)));
@@ -144,6 +177,16 @@ public sealed class RunTaskViewModel
         // A pattern with no words in it: "question = value · figure · figure".
         return string.Join(" · ", figures.Prepend(answer.Question + " = " + value));
     }
+
+    // What a question was answered: the option, the score, or the yes of a yes/no question.
+    private string ValueOf(DecisionAnswerReading answer) => answer switch
+    {
+        { Chosen: { } chosen } => chosen,
+        { Score: { } score } => _strings.Format(
+            StudioStringKeys.RunProgressDecisionScore, score.ToString("0.##", CultureInfo.CurrentCulture)),
+        { Likelihood: not null } => _strings[StudioStringKeys.RunProgressDecisionYes],
+        _ => "—",
+    };
 
     private static string Percent(double share) =>
         Math.Round(Math.Clamp(share, 0, 1) * 100, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
@@ -165,8 +208,10 @@ public sealed class RunningTaskViewModel
     /// <summary>The underlying Core record.</summary>
     public RunTaskInFlight Task { get; }
 
-    /// <summary>The agent whose turn it is, or the task's identifier when the run named no agent.</summary>
-    public string Title => Task.AgentRole ?? Task.TaskId ?? "—";
+    /// <summary>The agent whose turn it is, or the task's identifier when the run named no agent; the engine's own decision reads «Decision».</summary>
+    public string Title => RunDecisionRole.Is(Task.AgentRole)
+        ? _strings[StudioStringKeys.RunLaneDecision]
+        : Task.AgentRole ?? Task.TaskId ?? "—";
 
     /// <summary>"since HH:mm:ss", local time, from the run's own clock; empty when the start carried none.</summary>
     public string Since => Task.StartedAt is { } started
@@ -300,6 +345,45 @@ public sealed class RunProgressViewModel : ObservableObject
     /// <summary>Whether any hub message arrived — gates the hub panel's visibility.</summary>
     public bool HasHubMessages => HubMessages.Count > 0;
 
+    /// <summary>
+    /// What the run said of the decision models and did around its agents' model calls, one line each,
+    /// oldest first: the circuit, the profiles and thinking levels picked, the skills carried, the
+    /// contexts compacted or pruned.
+    /// </summary>
+    public ObservableCollection<string> AgentNotes { get; } = [];
+
+    /// <summary>Whether any such line arrived: gates the panel's visibility.</summary>
+    public bool HasAgentNotes => AgentNotes.Count > 0;
+
+    /// <summary>
+    /// How many lines <see cref="AgentNotes"/> keeps: the oldest go first, the circuit line excepted,
+    /// which stays the first of the list, every « circuit-off » or « relay » note below it being read
+    /// against it.
+    /// </summary>
+    internal const int MaxAgentNotes = 200;
+
+    private string? _pendingCircuitNote;
+
+    /// <summary>Whether the first line of <see cref="AgentNotes"/> is the run's circuit line, which the cap never evicts.</summary>
+    private bool _circuitNotePinned;
+
+    /// <summary>
+    /// Puts the circuit line the run stated first in the list, wherever the run was when it stated it:
+    /// above the notes that came before it, and in place of the line of an earlier statement.
+    /// </summary>
+    private void ShowCircuitNote()
+    {
+        if (_pendingCircuitNote is not { } line)
+            return;
+
+        _pendingCircuitNote = null;
+        if (_circuitNotePinned)
+            AgentNotes[0] = line;
+        else
+            AgentNotes.Insert(0, line);
+        _circuitNotePinned = true;
+    }
+
     /// <summary>The cost line, empty until the meter moves.</summary>
     public string CostSummary => _model.Cost is { } cost
         ? _strings.Format(
@@ -384,6 +468,9 @@ public sealed class RunProgressViewModel : ObservableObject
         Tasks.Clear();
         RunningTasks.Clear();
         HubMessages.Clear();
+        AgentNotes.Clear();
+        _pendingCircuitNote = null;
+        _circuitNotePinned = false;
         AnswerText = string.Empty;
         ReplyText = string.Empty;
         _model = new RunProgressModel(_time);
@@ -417,6 +504,8 @@ public sealed class RunProgressViewModel : ObservableObject
 
         var before = _model.Tasks.Count;
         var hubBefore = _model.HubMessages.Count;
+        var notesBefore = _model.AgentNotes.Count;
+        var circuitBefore = _model.DecisionCircuit;
         _model.Apply(orkeonEvent!);
 
         for (var index = before; index < _model.Tasks.Count; index++)
@@ -438,6 +527,26 @@ public sealed class RunProgressViewModel : ObservableObject
 
         for (var index = hubBefore; index < _model.HubMessages.Count; index++)
             HubMessages.Add(Describe(_model.HubMessages[index]));
+
+        // Every run says what its circuit is, a crew that asks nothing of System One included: the line
+        // is shown at once for a crew that states it runs with the models (optional, required), and held
+        // for the others until the run does something it explains: a decision task completed, or any
+        // note of this panel (a profile or a thinking level picked or not, skills, a compaction, a pruning).
+        if (_model.DecisionCircuit is { } circuit && !ReferenceEquals(circuit, circuitBefore))
+        {
+            _pendingCircuitNote = Describe(circuit);
+            if (circuit.Mode is Orkeon.Constants.Protocol.RunDecisionModes.Optional or Orkeon.Constants.Protocol.RunDecisionModes.Required)
+                ShowCircuitNote();
+        }
+
+        if (_model.AgentNotes.Count > notesBefore || _model.Tasks.Skip(before).Any(task => task.IsDecision))
+            ShowCircuitNote();
+        for (var index = notesBefore; index < _model.AgentNotes.Count; index++)
+            AgentNotes.Add(Describe(_model.AgentNotes[index]));
+        // A long tool loop prunes or compacts at each turn: the panel keeps the latest lines, under
+        // the circuit line that explains them.
+        while (AgentNotes.Count > MaxAgentNotes)
+            AgentNotes.RemoveAt(_circuitNotePinned ? 1 : 0);
 
         // A delta arrives per token, on the UI thread. Re-raising the eleven labels plus the
         // command state for each one would mean thousands of change notifications per
@@ -509,6 +618,96 @@ public sealed class RunProgressViewModel : ObservableObject
         return $"{topic}{from}{message.Payload ?? string.Empty}";
     }
 
+    /// <summary>What the run said of the decision models, as the panel lists it.</summary>
+    private string Describe(RunDecisionCircuit circuit)
+    {
+        var mode = circuit.Mode ?? "\u2014";
+        if (circuit.On)
+            return _strings.Format(StudioStringKeys.RunNoteDecisionOn, mode);
+
+        // A cause this build does not know is said as the engine wrote it.
+        var cause = DecisionCircuitCauseKeys.KeyOf(circuit.Cause) is { } key
+            ? _strings[key]
+            : circuit.Cause ?? "\u2014";
+        // The engine's own sentence (Orkeon #467) follows Studio's, in English as written: it names the
+        // variable and the setting the key is read from, which Studio's sentence cannot.
+        if (circuit.Detail is { Length: > 0 } detail)
+            cause = _strings.Format(StudioStringKeys.RunNoteCauseWithDetail, cause, detail);
+        return _strings.Format(StudioStringKeys.RunNoteDecisionOff, mode, cause);
+    }
+
+    // The two clamps of a pick (Orkeon #460), read from the engine's own constants: a renamed reason
+    // fails the build. The type is experimental (ORKEXP008); only its literals are taken.
+#pragma warning disable ORKEXP008
+    private const string RouteFloor = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Floor;
+    private const string RouteCeiling = Orkeon.Application.Crew.Routing.SystemOnePickReasons.Ceiling;
+
+    /// <summary>
+    /// The words of every reason the engine gives a profile or a thinking level it did not take from the
+    /// model's pick (<c>AgentRouteReasons</c>, <c>AgentEffortReasons</c>, <c>SystemOnePickReasons</c>), read from
+    /// its own constants: a renamed reason fails the build, a new one fails the drift test of the list.
+    /// A reason none of them names is shown as the engine wrote it.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> PickReasonKeys = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.Model] = StudioStringKeys.RunNoteReasonModel,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.LowConfidence] = StudioStringKeys.RunNoteReasonLowConfidence,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.NoAnswer] = StudioStringKeys.RunNoteReasonNoAnswer,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.CircuitOff] = StudioStringKeys.RunNoteReasonCircuitOff,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.NoLadder] = StudioStringKeys.RunNoteReasonNoLadder,
+        [Orkeon.Application.Interfaces.Ports.AgentRouteReasons.DecisionNone] = StudioStringKeys.RunNoteReasonDecisionNone,
+        [Orkeon.Application.Interfaces.Ports.AgentEffortReasons.SingleLevel] = StudioStringKeys.RunNoteReasonSingleLevel,
+        [Orkeon.Application.Interfaces.Ports.AgentEffortReasons.Raised] = StudioStringKeys.RunNoteReasonRaised,
+        [RouteFloor] = StudioStringKeys.RunNoteReasonFloor,
+        [RouteCeiling] = StudioStringKeys.RunNoteReasonCeiling,
+    };
+#pragma warning restore ORKEXP008
+
+    /// <summary>The words of an engine's pick reason in the window's language; the engine's own when it is none Studio knows.</summary>
+    private string PickReason(string? reason) =>
+        reason is null ? "—"
+        : PickReasonKeys.TryGetValue(reason, out var key) ? _strings[key]
+        : reason;
+
+    /// <summary>
+    /// One thing the run did around an agent's model calls, as the panel lists it. Why a profile or a
+    /// thinking level was not the model's pick is said in the window's language (<see cref="PickReasonKeys"/>);
+    /// the engine's other words (a skills mode, an outcome) are shown as written: they are what its
+    /// documentation names.
+    /// </summary>
+    private string Describe(RunAgentNote note)
+    {
+        var who = note.AgentRole is { Length: > 0 } role ? role : note.TaskId ?? "\u2014";
+        var value = note.Value ?? "\u2014";
+        var reason = PickReason(note.Reason);
+        var share = note.Probability is { } probability
+            ? Math.Round(Math.Clamp(probability, 0, 1) * 100, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture)
+            : "\u2014";
+        return note.Kind switch
+        {
+            // A bound of the ladder the model's pick is held to (Orkeon #460): neither the pick nor a fallback.
+            RunAgentNoteKind.Route when note.Reason == RouteFloor => _strings.Format(StudioStringKeys.RunNoteRouteFloor, who, value),
+            RunAgentNoteKind.Route when note.Reason == RouteCeiling => _strings.Format(StudioStringKeys.RunNoteRouteCeiling, who, value),
+            RunAgentNoteKind.Route => note.Picked
+                ? _strings.Format(StudioStringKeys.RunNoteRoutePicked, who, value, share)
+                : _strings.Format(StudioStringKeys.RunNoteRouteDefault, who, value, reason),
+            RunAgentNoteKind.Effort when note.Previous is { Length: > 0 } previous =>
+                _strings.Format(StudioStringKeys.RunNoteEffortRaised, who, previous, value),
+            RunAgentNoteKind.Effort => note.Picked
+                ? _strings.Format(StudioStringKeys.RunNoteEffortPicked, who, value, share)
+                : _strings.Format(StudioStringKeys.RunNoteEffortDefault, who, value, reason),
+            RunAgentNoteKind.Skills => note.Names.Count > 0
+                ? _strings.Format(StudioStringKeys.RunNoteSkills, who, string.Join(", ", note.Names), note.Reason ?? value)
+                : _strings.Format(StudioStringKeys.RunNoteSkillsNone, who, note.Reason ?? value),
+            RunAgentNoteKind.Compacted when string.Equals(value, Orkeon.Application.Interfaces.Ports.AgentCompactionOutcomes.Compacted, StringComparison.Ordinal) =>
+                _strings.Format(StudioStringKeys.RunNoteCompacted, who, Count(note.TokensBefore), Count(note.TokensAfter)),
+            RunAgentNoteKind.Compacted => _strings.Format(StudioStringKeys.RunNoteCompactionFailed, who, value),
+            _ => _strings.Format(StudioStringKeys.RunNotePruned, who, Count(note.Count), Count(note.TokensAfter)),
+        };
+
+        static string Count(long? count) => count?.ToString("N0", CultureInfo.CurrentCulture) ?? "\u2014";
+    }
+
     private void RaiseLabels()
     {
         OnPropertyChanged(nameof(Summary));
@@ -529,6 +728,7 @@ public sealed class RunProgressViewModel : ObservableObject
         OnPropertyChanged(nameof(AgentRequestFrom));
         OnPropertyChanged(nameof(AgentRequestPayload));
         OnPropertyChanged(nameof(HasHubMessages));
+        OnPropertyChanged(nameof(HasAgentNotes));
         OnPropertyChanged(nameof(HasRunningTasks));
         OnPropertyChanged(nameof(ActivityLine));
         OnPropertyChanged(nameof(HasActivity));

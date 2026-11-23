@@ -12,6 +12,7 @@ namespace Orkeon.Studio.Config.Tests.Presentation;
 /// written or removed whole, and every key the form does not show (the timeouts, the decision profiles)
 /// survives an edit while the section stays ticked.
 /// </summary>
+[Collection(Orkeon.Studio.Config.Tests.Views.TerminalGuiTests.Name)]
 public sealed class DecisionFormTests
 {
     private static DecisionForm Form(Func<string, string?>? environment = null) => new(environment ?? (_ => null));
@@ -40,7 +41,7 @@ public sealed class DecisionFormTests
     public void Apply_writes_in_place_and_keeps_what_the_form_does_not_show()
     {
         var document = AppSettingsDocument.Parse("""
-            {"Orkeon":{"Decision":{"Profiles":{"triage":{"Llm":"fast"}}},"Liquid":{"TimeoutSeconds":60},"TypeSafe":{}}}
+            {"Orkeon":{"Decision":{"Profiles":{"triage":{"Target":"fast","Stages":[{"Kind":"verify","EscalateTo":"strong"}]}}},"Liquid":{"TimeoutSeconds":60},"TypeSafe":{}}}
             """);
         var form = Form();
         form.LoadFrom(document);
@@ -128,6 +129,46 @@ public sealed class DecisionFormTests
         form.LoadFrom(document);
         Assert.Null(form.ProviderAsWritten);
         Assert.Equal(DecisionForm.StandardChoices, form.ProviderChoices);
+    }
+
+    /// <summary>
+    /// A successful apply loads the form again from the document, as the context and the bridge forms
+    /// do: the row of the unknown name leaves the list, on the screen too, and a list shows as stored.
+    /// A refused apply leaves everything as typed.
+    /// </summary>
+    [Fact]
+    public void A_successful_apply_reloads_the_form_and_the_screen_follows()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Decision":{"Provider":"acme"}}}""");
+        var form = Form();
+        form.LoadFrom(document);
+        using var view = new DecisionSectionView(form);
+        view.Load();
+
+        form.RouteLadder = "alone";
+        Assert.NotEmpty(form.ApplyTo(document));
+        view.Refresh();
+        Assert.Equal("alone", form.RouteLadder);
+        Assert.Equal("acme", form.ProviderAsWritten);
+        Assert.Equal((DecisionForm.StandardChoices.Count + 1, DecisionForm.StandardChoices.Count), view.ProviderRowsForTest);
+
+        form.SelectProvider(1);
+        form.RouteLadder = " default ;strong";
+        Assert.Empty(form.ApplyTo(document));
+        view.Refresh();
+
+        Assert.Null(form.ProviderAsWritten);
+        Assert.Equal(DecisionForm.StandardChoices, form.ProviderChoices);
+        Assert.Equal((DecisionForm.StandardChoices.Count, 1), view.ProviderRowsForTest);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Equal(["default", "strong"], document.Decision.RouteLadder);
+
+        // The screen shows what the form now holds, and hands it back unchanged.
+        view.Apply();
+        Assert.Equal("typesafe", form.Provider);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("typesafe", document.GetString(DecisionSection.ProviderPath));
     }
 
     [Fact]
@@ -225,5 +266,170 @@ public sealed class DecisionFormTests
         var model = new ConfigEditorModel(new FakeDirectoryProbe("/data/in"), runner, new FakeLlmEndpointProbe());
 
         Assert.Contains(model.Forms, f => f is DecisionForm);
+    }
+
+    [Fact]
+    public void The_ladder_and_the_levels_are_typed_as_comma_separated_lists()
+    {
+        var document = AppSettingsDocument.Parse("""
+            {"Llm":{"Model":"small","Profiles":{"strong":{"Model":"big"}}},
+             "Orkeon":{"Decision":{"Route":{"Ladder":["default","strong"]}},"Liquid":{}}}
+            """);
+        var form = Form();
+        form.LoadFrom(document);
+        Assert.Equal("default, strong", form.RouteLadder);
+        Assert.Equal("", form.EffortLevels);
+
+        form.RouteLadder = "";
+        form.EffortLevels = " low,medium ";
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        Assert.Equal(["low", "medium"], document.Decision.EffortLevels);
+    }
+
+    [Theory]
+    [InlineData("", "high, low", "cheapest first")]
+    [InlineData("", "low, ultra", "is not a thinking level")]
+    [InlineData("default", "", "a route needs two or more")]
+    [InlineData("default, auto", "", "the name of the route itself")]
+    public void A_ladder_or_levels_the_engine_refuses_are_refused_at_apply_and_nothing_is_written(string ladder, string levels, string reason)
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{}}}""");
+        var before = document.ToJson();
+        var form = Form();
+        form.LoadFrom(document);
+
+        form.RouteLadder = ladder;
+        form.EffortLevels = levels;
+        var errors = form.ApplyTo(document);
+
+        Assert.Contains(errors, error => error.Contains(reason, StringComparison.Ordinal));
+        Assert.Equal(before, document.ToJson());
+    }
+
+    /// <summary>
+    /// A list the file writes as an object (which the engine reads as a list) cannot be shown whole in a
+    /// field: left as loaded it is not written, through any number of applies, and so is everything else.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"Orkeon":{"Decision":{"Route":{"Ladder":{"0":"fast","1":"deep"}},"Effort":{"Levels":{"0":"low","1":"high"}}},"Liquid":{}}}""")]
+    [InlineData("""{"Orkeon":{"Decision":{"Enabled":"True","Provider":"LIQUID","Route":{"Ladder":["fast","deep"]}},"Liquid":{"Model":"d1","BaseUrl":"https://liquid.example/"},"TypeSafe":null}}""")]
+    [InlineData("""{"orkeon":{"decision":{"enabled":false,"route":{"ladder":["fast","deep"]},"effort":{"levels":["low"]}},"kev":{"model":"k"}}}""")]
+    public void An_apply_of_the_form_as_loaded_writes_nothing(string json)
+    {
+        var document = AppSettingsDocument.Parse(json);
+        var before = document.ToJson();
+        var form = Form();
+        form.LoadFrom(document);
+        using var view = new DecisionSectionView(form);
+
+        view.Load();
+        view.Apply();
+        Assert.Empty(form.ApplyTo(document));
+        view.Apply();
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.Equal(before, document.ToJson());
+    }
+
+    /// <summary>
+    /// A blank rung, which the field does not show, is a ladder the engine's start refuses: the apply
+    /// says so and rewrites nothing, instead of dropping the rung in silence.
+    /// </summary>
+    [Fact]
+    public void A_blank_rung_left_as_loaded_is_refused_and_not_rewritten()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Decision":{"Route":{"Ladder":["fast","","deep"]}},"Liquid":{}}}""");
+        var before = document.ToJson();
+        var form = Form();
+        form.LoadFrom(document);
+
+        Assert.NotEmpty(form.ApplyTo(document));
+        Assert.Equal(before, document.ToJson());
+
+        // Typed again, the ladder is the field's.
+        form.RouteLadder = "fast, deep";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal(["fast", "deep"], document.Decision.RouteLadder);
+    }
+
+    /// <summary>
+    /// Applied twice to its document: a value set, then blanked, is written then removed; a refused
+    /// apply writes nothing and keeps the text for a correction; a section unticked then ticked again
+    /// gets its fields anew.
+    /// </summary>
+    [Fact]
+    public void A_second_apply_writes_what_changed_since_the_first()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Liquid":{"Model":"d1","TimeoutSeconds":60}}}""");
+        var form = Form();
+        form.LoadFrom(document);
+        var liquid = form.Providers.Single(p => p.Descriptor.Key == "liquid");
+
+        form.EffortLevels = "low, high";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal(["low", "high"], document.Decision.EffortLevels);
+
+        form.EffortLevels = "";
+        Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath(DecisionSection.EffortLevelsPath));
+
+        form.RouteLadder = "default";
+        Assert.NotEmpty(form.ApplyTo(document));
+        Assert.Equal("default", form.RouteLadder);
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        form.RouteLadder = "";
+        Assert.Empty(form.ApplyTo(document));
+
+        liquid.SetUp = false;
+        Assert.Empty(form.ApplyTo(document));
+        Assert.False(document.ContainsPath("Orkeon:Liquid"));
+        liquid.SetUp = true;
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal("d1", document.GetString("Orkeon:Liquid:Model"));
+        Assert.False(document.ContainsPath("Orkeon:Liquid:TimeoutSeconds"));
+    }
+
+    /// <summary>A switch the file writes as no boolean, set back to unset, loses its key: the state changed, though it reads as before.</summary>
+    [Fact]
+    public void An_unreadable_switch_set_back_to_unset_is_removed()
+    {
+        var document = AppSettingsDocument.Parse("""{"Orkeon":{"Decision":{"Enabled":"maybe"}}}""");
+        var form = Form();
+        form.LoadFrom(document);
+        Assert.Null(form.Enabled);
+
+        form.EnabledAsWritten = null;
+        Assert.Empty(form.ApplyTo(document));
+
+        Assert.False(document.ContainsPath(DecisionSection.EnabledPath));
+    }
+
+    /// <summary>
+    /// A switch the file writes without a value (a JSON null, an empty object) binds to false: the
+    /// screen shows it off, as the run gets it, and leaves the key as written until the switch is
+    /// touched; set back to unset, the key goes and the default (on) stands.
+    /// </summary>
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    public void A_switch_written_without_a_value_is_shown_off_and_kept_until_touched(string value)
+    {
+        var document = AppSettingsDocument.Parse("{\"Orkeon\":{\"Decision\":{\"Enabled\":" + value + "},\"Liquid\":{\"ApiKey\":\"k\"}}}");
+        var before = document.ToJson();
+        var form = Form();
+        form.LoadFrom(document);
+
+        Assert.False(form.Enabled);
+        Assert.Null(form.EnabledAsWritten);
+        Assert.StartsWith("Off:", form.Status, StringComparison.Ordinal);
+        Assert.Empty(form.ApplyTo(document));
+        Assert.Equal(before, document.ToJson());
+
+        form.Enabled = null;
+        Assert.Empty(form.ApplyTo(document));
+        Assert.True(document.Decision.IsEnabled);
+        Assert.DoesNotContain("Enabled", document.ToJson(), StringComparison.Ordinal);
     }
 }

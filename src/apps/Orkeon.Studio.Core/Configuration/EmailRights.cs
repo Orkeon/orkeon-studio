@@ -2,8 +2,8 @@ namespace Orkeon.Studio.Core.Configuration;
 
 /// <summary>
 /// What an agent may do with an account (STUDIO-65): the six rights the engine's
-/// <c>EmailRights</c> declares, with the same values, so that the numeric spelling the binder
-/// accepts reads the same here. Written as the engine reads it, <c>"Read, Organize, Draft"</c>.
+/// <c>EmailRights</c> declares, with the same values. Written by name, as the engine reads it,
+/// <c>"Read, Organize, Draft"</c>: the engine refuses a number (Orkeon #464).
 /// </summary>
 [Flags]
 public enum EmailRights

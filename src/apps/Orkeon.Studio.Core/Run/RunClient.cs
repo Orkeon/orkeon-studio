@@ -65,6 +65,24 @@ public static class RunEventKinds
 
     /// <summary>A graph engine entered a node; carries the node, its visit and the task or graph.</summary>
     public const string GraphNodeEntered = Orkeon.Constants.Protocol.RunEventKinds.GraphNodeEntered;
+
+    /// <summary>What the run says of the decision models before its first task: the crew's mode, the circuit and its cause.</summary>
+    public const string RunDecision = Orkeon.Constants.Protocol.RunEventKinds.RunDecision;
+
+    /// <summary>The profile a task on <c>llm.profile: auto</c> runs on.</summary>
+    public const string AgentRoute = Orkeon.Constants.Protocol.RunEventKinds.AgentRoute;
+
+    /// <summary>The thinking level a task on <c>thinking: auto</c> runs with, and each raise of it.</summary>
+    public const string AgentEffort = Orkeon.Constants.Protocol.RunEventKinds.AgentEffort;
+
+    /// <summary>The skills an agent carries on a task.</summary>
+    public const string AgentSkills = Orkeon.Constants.Protocol.RunEventKinds.AgentSkills;
+
+    /// <summary>An agent's context compacted into a summary.</summary>
+    public const string AgentCompacted = Orkeon.Constants.Protocol.RunEventKinds.AgentCompacted;
+
+    /// <summary>Tool results pruned from an agent's context.</summary>
+    public const string AgentPruned = Orkeon.Constants.Protocol.RunEventKinds.AgentPruned;
 }
 
 /// <summary>

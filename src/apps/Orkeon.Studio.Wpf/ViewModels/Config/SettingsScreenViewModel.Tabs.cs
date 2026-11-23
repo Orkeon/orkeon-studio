@@ -170,9 +170,23 @@ public sealed partial class SettingsScreenViewModel
     {
         NotifyCollectionChangedEventHandler collectionChanged = (_, _) => RefreshTabStates();
         Profiles.Profiles.CollectionChanged += collectionChanged;
+        // The ladder and the compaction name the model settings: their lists follow every change of them.
+        Config.Decision.ProfileSet = () => Profiles.Set;
+        Config.Compaction.ProfileSet = () => Profiles.Set;
+        Profiles.Profiles.CollectionChanged += (_, _) =>
+        {
+            Config.Decision.RefreshProfileChoices();
+            Config.Compaction.RefreshProfileChoices();
+        };
         // A key remembered changes the keys tab: the rows are rebuilt with the profiles, so each
         // new row is followed as it comes.
-        EventHandler keyStored = (_, _) => RefreshTabStates();
+        // A key stored on any screen may be one a decision provider reads: its status is resolved
+        // again first, since the decision tab shows the one it keeps.
+        EventHandler keyStored = (_, _) =>
+        {
+            Config.Decision.RefreshVerdict();
+            RefreshTabStates();
+        };
         Profiles.Secrets.CollectionChanged += (_, e) =>
         {
             foreach (var row in e.NewItems?.OfType<SecretRowViewModel>() ?? [])

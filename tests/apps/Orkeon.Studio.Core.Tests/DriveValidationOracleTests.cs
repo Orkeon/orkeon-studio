@@ -120,9 +120,21 @@ public sealed class DriveValidationOracleTests
                 "share": { "allowedrecipients": ["*@example.com"], "allowpubliclinks": "True" },
                 "maxuploadmegabytes": "250", "timeoutseconds": 60 } } }
             """, []),
+        // The binder's converter reads a hexadecimal number (Int32Converter): 0x1E is thirty seconds.
+        ["a limit and a timeout written in hexadecimal"] = ("""
+            { "Accounts": { "work": { "Provider": "GoogleDrive", "Rights": "Read", "Auth": { "ClientId": "c", "ClientSecretEnvVar": "S" },
+              "MaxUploadMegabytes": "#FA", "TimeoutSeconds": "0x1E" } } }
+            """, []),
+        // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
         ["numbers for the provider and the rights"] = ("""
             { "Accounts": { "work": { "Provider": 1, "Rights": "63", "Auth": { "ClientId": "c" } } } }
-            """, []),
+            """, [ValidationCodes.DriveValue, ValidationCodes.DriveValue]),
+        ["the rights as a number alone"] = ("""
+            { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "3", "Auth": { "ClientId": "c" } } } }
+            """, [ValidationCodes.DriveValue]),
+        ["the rights as a number among names"] = ("""
+            { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "Read, 2", "Auth": { "ClientId": "c" } } } }
+            """, [ValidationCodes.DriveValue]),
         ["a number with a bit no right has"] = ("""
             { "Accounts": { "work": { "Provider": "OneDrive", "Rights": "64", "Auth": { "ClientId": "c" } } } }
             """, [ValidationCodes.DriveValue]),
@@ -197,6 +209,34 @@ public sealed class DriveValidationOracleTests
         Assert.DoesNotContain("GOCSPX", finding.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Orkeon #465: a secret written in every typed key of an account whose name holds an apostrophe
+    /// is never said back, by the engine's binder or by Studio, and both say the same of it. The
+    /// binder's own refusal, which the engine rewords without the value (#469), is never met: every
+    /// typed key is judged before the account is bound, and Studio's rules say the binder's words for
+    /// each of them, never its sentence.
+    /// </summary>
+    [Fact]
+    public void A_secret_in_every_typed_key_is_never_said_back()
+    {
+        const string Secret = "sk-ant-api03-studio-oracle' at 'secret";
+        const string Equipe = "l'equipe";
+        var value = System.Text.Json.JsonSerializer.Serialize(Secret);
+        var document = AppSettingsDocument.Parse($$"""
+            { "Orkeon": { "Tools": { "Drive": { "Accounts": { "{{Equipe}}": {
+              "Provider": {{value}}, "Rights": {{value}}, "MaxUploadMegabytes": {{value}}, "TimeoutSeconds": {{value}},
+              "Share": { "AllowPublicLinks": {{value}} } } } } } } }
+            """);
+
+        var findings = DriveAccountRules.Check(document, Equipe);
+        var engine = new DriveAccountRegistry(Options.Create(Bind(document))).Inspect(Equipe).Problems;
+
+        Assert.Equal(DriveOptionsBinder.TypedAccountSettings.Count, findings.Count(finding => finding.Code == ValidationCodes.DriveValue));
+        Assert.All(findings, finding => Assert.DoesNotContain("sk-ant", finding.Text, StringComparison.Ordinal));
+        Assert.All(engine, problem => Assert.DoesNotContain("sk-ant", problem, StringComparison.Ordinal));
+        AssertSameAsTheEngine(document, Equipe, findings);
+    }
+
     [Fact]
     public void Every_finding_on_an_account_is_a_warning_at_a_path_under_the_account()
     {
@@ -247,15 +287,12 @@ public sealed class DriveValidationOracleTests
         // Usable or set aside.
         Assert.Equal(resolution.Account is null, findings.Count > 0);
 
-        // The same number of problems in each family, and the same first sentence.
+        // The same families, and in each the same sentences, every one of them.
         var engine = resolution.Problems.ToLookup(FamilyOf);
         var studio = findings.ToLookup(finding => finding.Code, finding => finding.Text);
         Assert.Equal(engine.Select(family => family.Key).Order(StringComparer.Ordinal), studio.Select(family => family.Key).Order(StringComparer.Ordinal));
         foreach (var family in engine)
-        {
-            Assert.Equal(family.Count(), studio[family.Key].Count());
-            Assert.Equal(family.First(), studio[family.Key].First());
-        }
+            Assert.Equal(family, studio[family.Key]);
     }
 
     /// <summary>The code Studio files an engine sentence under: the drive families of <see cref="ValidationCodes"/>.</summary>
@@ -263,10 +300,15 @@ public sealed class DriveValidationOracleTests
     {
         _ when problem.Contains(" is not an account setting: ", StringComparison.Ordinal) => ValidationCodes.DriveKey,
         _ when problem.StartsWith(ConfigurationKeys.ToolsDrive + ":Screening:", StringComparison.Ordinal) => ValidationCodes.DriveScreening,
-        _ when problem.Contains("' is not one of ", StringComparison.Ordinal)
-            || problem.Contains("' is not a list of ", StringComparison.Ordinal)
-            || problem.EndsWith("' is neither true nor false", StringComparison.Ordinal)
-            || problem.EndsWith("' is not a whole number", StringComparison.Ordinal) => ValidationCodes.DriveValue,
+        // The binder's sentences name the key and never the value (Orkeon #465); a number written for
+        // an enumeration is one of them (#464).
+        _ when problem.Contains(" is not one of ", StringComparison.Ordinal)
+            || problem.Contains(" is not a list of ", StringComparison.Ordinal)
+            || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
+            || problem.EndsWith(" is neither true nor false", StringComparison.Ordinal)
+            || problem.EndsWith(" is not a whole number", StringComparison.Ordinal) => ValidationCodes.DriveValue,
         _ when problem.StartsWith("the account name ", StringComparison.Ordinal) => ValidationCodes.DriveName,
         _ when problem.StartsWith("Provider ", StringComparison.Ordinal) => ValidationCodes.DriveProvider,
         _ when problem.StartsWith("Rights ", StringComparison.Ordinal) => ValidationCodes.DriveRights,

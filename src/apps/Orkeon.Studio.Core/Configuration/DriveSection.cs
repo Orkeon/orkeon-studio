@@ -236,7 +236,8 @@ public sealed class DriveSection
     }
 
     /// <summary>The section's object, or null when the file holds none.</summary>
-    private JsonObject? Section => _document.GetNode(SectionPath) as JsonObject;
+    /// <remarks>The key is found whatever its letter case (<c>orkeon:tools:email</c>), as the configuration binds it.</remarks>
+    private JsonObject? Section => _document.GetNode(_document.PathAsWritten(SectionPath)) as JsonObject;
 
     /// <summary>The accounts dictionary as the file holds it, whatever the case of its key; null when there is none.</summary>
     internal JsonObject? AccountsNode => Node(Section, Keys.Accounts) as JsonObject;
@@ -250,7 +251,7 @@ public sealed class DriveSection
             return section;
 
         section = [];
-        _document.SetNode(SectionPath, section);
+        _document.SetNode(_document.PathAsWritten(SectionPath), section);
         return section;
     }
 
@@ -275,13 +276,15 @@ public sealed class DriveSection
     }
 
     /// <summary>
-    /// Reads the rights the way the binder's converter does (names without regard to case, or a
-    /// number), and refuses what it would refuse: a number with an undefined bit, and nothing granted.
+    /// Reads the rights the way the engine's binder does, names without regard to case, and refuses
+    /// what it refuses: a number, even one whose bits are rights (Orkeon #464), and nothing granted.
+    /// A file that holds a number is then read as granting nothing and kept as written.
     /// </summary>
     private static bool TryParseRights(string? text, out DriveRights rights)
     {
         rights = DriveRights.None;
         if (text is null
+            || Orkeon.Studio.Core.Validation.EmailAccountRules.HoldsNumber(text)
             || !Enum.TryParse(text, ignoreCase: true, out DriveRights parsed)
             || parsed == DriveRights.None
             || (parsed & ~AllRights) != DriveRights.None)

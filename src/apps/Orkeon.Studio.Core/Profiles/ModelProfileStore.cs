@@ -145,11 +145,22 @@ public sealed class ModelProfileFileStore : IModelProfileStore
             // STUDIO-55: JSON reads 1e400 as an infinity, a number it has no text for — a setting that
             // could never be written again, and whose launch would pass "Infinity" to the run. Such a
             // file is refused like one the serializer cannot convert, its reason naming the setting.
-            return set.Profiles.OfType<ModelProfile>().FirstOrDefault(profile => profile.Temperature is { } t && !double.IsFinite(t)) is { } infinite
+            // The connection's own temperature is judged too: when every one of its models pins its own,
+            // no pair shows it, yet the file could never be written again.
+            set = WithoutNulls(set);
+            if (set.Profiles.FirstOrDefault(profile => profile.Temperature is { } t && !double.IsFinite(t)) is { } infinite)
+            {
+                return new ModelProfileLoadResult(
+                    ModelProfileSet.Empty,
+                    string.Create(CultureInfo.InvariantCulture,
+                        $"{FilePath}: setting '{infinite.Name}': Temperature is not a finite number ({infinite.Temperature})."));
+            }
+
+            return set.Connections.FirstOrDefault(connection => connection.Temperature is { } t && !double.IsFinite(t)) is { } infiniteConnection
                 ? new ModelProfileLoadResult(
                     ModelProfileSet.Empty,
                     string.Create(CultureInfo.InvariantCulture,
-                        $"{FilePath}: setting '{infinite.Name}': Temperature is not a finite number ({infinite.Temperature})."))
+                        $"{FilePath}: connection '{infiniteConnection.Name}': Temperature is not a finite number ({infiniteConnection.Temperature})."))
                 : new ModelProfileLoadResult(WithCards(set));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
@@ -159,12 +170,23 @@ public sealed class ModelProfileFileStore : IModelProfileStore
     }
 
     /// <summary>
-    /// The set with each setting on its card's name. A <c>null</c> in the list — a hand edit — is
-    /// no setting, and is left out.
+    /// The set without the <c>null</c> a hand edit leaves in a list — no connection, no model — and
+    /// without the connections that keep no name.
     /// </summary>
+    private static ModelProfileSet WithoutNulls(ModelProfileSet set) => set with
+    {
+        Connections =
+        [
+            .. set.Connections.OfType<ModelConnection>()
+                .Where(connection => !string.IsNullOrWhiteSpace(connection.Name))
+                .Select(connection => connection.Models is null ? connection : connection with { Models = [.. connection.Models.OfType<ConnectionModel>()] }),
+        ],
+    };
+
+    /// <summary>The set with each connection on its card's name, as its first pair reads it.</summary>
     private static ModelProfileSet WithCards(ModelProfileSet set) => set with
     {
-        Profiles = [.. set.Profiles.OfType<ModelProfile>().Select(profile => profile with { Provider = LlmPresets.CardOf(profile) })],
+        Connections = [.. set.Connections.Select(connection => connection with { Provider = LlmPresets.CardOf(connection.Flatten()[0]) })],
     };
 
     /// <summary>

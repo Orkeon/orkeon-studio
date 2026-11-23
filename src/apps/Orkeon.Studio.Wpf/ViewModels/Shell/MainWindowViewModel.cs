@@ -33,6 +33,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly string _teamsHome;
     private readonly Func<IReadOnlyList<string>> _declaredMounts;
     private readonly Func<TeamLauncherContext> _launcherContext;
+    private readonly Func<IEnumerable<string>> _environmentNames;
     private AppSettingsDocument? _savedSettings;
     private int _selectedTabIndex;
 
@@ -126,6 +127,7 @@ public sealed class MainWindowViewModel : ObservableObject
         // The store the settings screen reads and writes through: what a run outside Studio reads is
         // the file as this store saved it (STUDIO-52).
         _settingsStore = settingsStore ?? PhysicalAppSettingsStore.Instance;
+        _environmentNames = seams.EnvironmentNames ?? Orkeon.Studio.Core.Launch.LaunchLlmProfiles.ProcessEnvironmentNames;
 
         Launch = new LaunchTabViewModel(new LaunchTabDependencies
         {
@@ -142,6 +144,9 @@ public sealed class MainWindowViewModel : ObservableObject
             DeclaredMounts = declaredMounts,
             // The decision circuit of the settings file as saved, keys read where Settings stores them.
             MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+            MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
+            MachineBridgeTokenVariable = () => (_savedSettings ?? Config.Document).ToolBridge.EffectiveTokenEnvVar,
+            OfferedLlmProfiles = OfferedLlmProfiles,
             KeyStore = keyStore,
             Clipboard = seams.Clipboard,
             Clock = seams.Clock,
@@ -175,7 +180,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 Balances = Balances,
                 ShellOpener = shellOpener,
                 // STUDIO-52: a renamed setting's teams follow it before the change is mirrored.
-                FollowRename = FollowRenamedSetting,
+                FollowRename = FollowRenamedSettings,
             }),
             Mode,
             // STUDIO-14 settings (D-13, P-1): the folders tab also lists each adopted team's own
@@ -227,6 +232,8 @@ public sealed class MainWindowViewModel : ObservableObject
                 // « Open the folder » in the wizard's header (STUDIO-14, D-15) — the same
                 // opener the team cards use, gated the same way.
                 ShellOpener = shellOpener,
+                // What a decision mode chosen on the first step meets on this machine.
+                MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
                 // STUDIO-39: the gallery reads the catalogue of the binary every other screen
                 // runs, through the same runner. The suggestions pause on a timer of their own,
                 // and the problem a chosen case writes is read in the language the window speaks.
@@ -290,6 +297,9 @@ public sealed class MainWindowViewModel : ObservableObject
                 ShellOpener = shellOpener,
                 DeclaredMounts = declaredMounts,
                 MachineDecisionStatus = () => MachineDecisionStatus(keyStore),
+            MachineBridgeFinding = () => Orkeon.Studio.Core.Launch.ToolBridgePreflight.Check(_savedSettings ?? Config.Document, keyStore.Peek),
+            MachineBridgeTokenVariable = () => (_savedSettings ?? Config.Document).ToolBridge.EffectiveTokenEnvVar,
+            OfferedLlmProfiles = OfferedLlmProfiles,
                 KeyStore = keyStore,
                 Clock = seams.Clock,
                 // No teams root: a trial stamps no last run (STUDIO-31, D-05). It still reads the
@@ -449,6 +459,9 @@ public sealed class MainWindowViewModel : ObservableObject
         Teams.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
         Run.Trial.OpenAllowedFoldersRequested += (_, _) => Settings.ShowFoldersCommand.Execute(null);
         Run.Trial.OpenDecisionSettingsRequested += (_, _) => Settings.ShowDecisionCommand.Execute(null);
+        // The bridge's cards are on the Limits tab, which the Expert mode shows.
+        Launch.OpenBridgeSettingsRequested += (_, _) => Settings.ShowLimitsCommand.Execute(null);
+        Run.Trial.OpenBridgeSettingsRequested += (_, _) => Settings.ShowLimitsCommand.Execute(null);
         // STUDIO-73: « Configure a model » on a machine without one lands on the model tab.
         Launch.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);
         Run.Trial.ConfigureModelRequested += (_, _) => Settings.ShowModelCommand.Execute(null);
@@ -549,7 +562,28 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 Launch.RefreshDecision();
                 Run.Trial.RefreshDecision();
+                CreateTeam.RefreshDecisionNotice();
             }
+        };
+        // The bridge's token stored: the launch a missing token blocked is judged again at once. So is
+        // an edit of either bridge section: while no settings file is saved, the machine's bridge the
+        // launchers warn of is the document being edited, read live like the decision models'.
+        void RefreshBridge()
+        {
+            Launch.RefreshDecision();
+            Run.Trial.RefreshDecision();
+        }
+
+        Config.ToolBridge.TokenStored += (_, _) => RefreshBridge();
+        Config.ToolBridge.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(ToolBridgeSectionViewModel.ProblemsText) or nameof(ToolBridgeSectionViewModel.Token) or "" or null)
+                RefreshBridge();
+        };
+        Config.BridgeServer.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(BridgeServerSectionViewModel.ProblemsText) or "" or null)
+                RefreshBridge();
         };
         Settings.Profiles.PropertyChanged += (_, e) =>
         {
@@ -894,14 +928,15 @@ public sealed class MainWindowViewModel : ObservableObject
     private string? RestoreArchivedTeam(string teamPath) => Teams.RestoreTeam(teamPath);
 
     /// <summary>
-    /// A setting the settings screen renamed (STUDIO-52, decision 1), before the change reaches the
-    /// cards, the settings file and the launchers: every team of the catalog naming it — archived
-    /// ones included — names its new name, and so does the team the wizard is adopting.
+    /// The settings one save of the settings screen renamed (STUDIO-52, decision 1), before the change
+    /// reaches the cards, the settings file and the launchers: every team of the catalog naming one —
+    /// archived ones included — names its new name, and so does the team the wizard is adopting; all
+    /// at once, so a swap swaps and a chain moves each team once.
     /// </summary>
-    private void FollowRenamedSetting(string from, string to)
+    private void FollowRenamedSettings(IReadOnlyList<(string From, string To)> renames)
     {
-        TeamCatalog.RenameSetting(_teamsHome, from, to);
-        CreateTeam.FollowRenamedSetting(from, to);
+        TeamCatalog.RenameSettings(_teamsHome, renames);
+        CreateTeam.FollowRenamedSettings(renames);
         Teams.Refresh();
         Run.RefreshTeams();
     }
@@ -914,6 +949,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         Teams.RefreshSettings();
         CreateTeam.ScheduleOffer.RefreshNotice();
+        CreateTeam.RefreshDecisionNotice();
         Launch.RefreshTeamDescription();
         Run.Trial.RefreshTeamDescription();
         Launch.RefreshLlmSettings();
@@ -1078,6 +1114,18 @@ public sealed class MainWindowViewModel : ObservableObject
         };
         return profile is null ? profiles.LaunchEnvironment() : profiles.LaunchEnvironmentOf(profile);
     }
+
+    /// <summary>
+    /// The ids of the LLM profiles every run is offered whatever the settings file it reads: the host
+    /// profiles <see cref="TeamEnvironment"/> lays in its environment, and those the environment the CLI
+    /// inherits lays (<c>Llm__Profiles__x__Model</c>), as the terminal launcher counts them
+    /// (<see cref="Orkeon.Studio.Core.Launch.LaunchLlmProfiles"/>): a rung of the decision ladder that names
+    /// one is served. Only the environment's while the settings screen is not built yet.
+    /// </summary>
+    private IReadOnlyCollection<string> OfferedLlmProfiles() =>
+        Orkeon.Studio.Core.Launch.LaunchLlmProfiles.Offered(
+            Settings is { } settings ? HostLlmProfiles.Offered(settings.Profiles.Set).Values : [],
+            _environmentNames());
 
     /// <summary>
     /// « Remember for this team » (STUDIO-73): the team's companion file takes the model, and its

@@ -5,7 +5,7 @@ Start from `docs/INDEX.md` (`docs/fr/` is its French mirror); the architecture i
 
 ## Orkeon as packages
 
-Orkeon is consumed through NuGet packages, never project references: `Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui`, the `Orkeon.Compliance.Vfs` analyzer (wired in `src/Directory.Build.props`), and for the tests `Orkeon.Tools` and `Orkeon.Scripting` (which carries `Orkeon.Hosting.dll`). One `OrkeonVersion` property in `Directory.Packages.props` sets them all. They come from nuget.org (`nuget.config` has no other source); CI clones the Orkeon tag `v<OrkeonVersion>` for the drift tests, so moving `OrkeonVersion` moves both.
+Orkeon is consumed through NuGet packages, never project references: `Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui`, the `Orkeon.Compliance.Vfs` analyzer (wired in `src/Directory.Build.props`), and for the tests `Orkeon.Tools`, `Orkeon.Scripting` (which carries `Orkeon.Hosting.dll`) and `Orkeon.Interop.AgentCli` (the agent-cli provider module, for its drift tests). One `OrkeonVersion` property in `Directory.Packages.props` sets them all. They come from nuget.org (`nuget.config` has no other source; to build against an untagged Orkeon, a temporary tracked `dev-feed/` of its packs is added as a source, with `OrkeonSourceRef` in `Directory.Packages.props` naming their commit, and removed once Orkeon is tagged); CI clones the Orkeon tag `v<OrkeonVersion>` (or that commit) for the drift tests, so moving `OrkeonVersion` moves both.
 The drift tests of `Orkeon.Studio.Core.Tests` read files of an Orkeon checkout (`OrkeonSources.Root()`: `ORKEON_SOURCE_ROOT`, else `../orkeon`); without one they fail, never pass on nothing.
 
 ## Commands

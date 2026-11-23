@@ -54,6 +54,12 @@ public sealed class LlmProfilesSectionTests
     [InlineData("""{ "Llm": { "Thinking": { } } }""", false)]
     [InlineData("""{ "Llm": { "Model": "", "Temperature": 0.2 } }""", true)]
     [InlineData("""{ "Llm": { "Thinking": { "Enabled": false } } }""", true)]
+    // The keys that describe no default provider: the agent-cli module's section (Orkeon #470), the capabilities, the replay.
+    [InlineData("""{ "Llm": { "AgentCli": { "Command": "claude" }, "Profiles": { "p": { "Provider": "agent-cli", "Model": "claude-x" } } } }""", false)]
+    [InlineData("""{ "Llm": { "agentcli": { "MaxProcesses": 2 } } }""", false)]
+    [InlineData("""{ "Llm": { "ModelCapabilities": { "m": { "Vision": true } } } }""", false)]
+    [InlineData("""{ "Llm": { "Replay": { "Path": "/x" } } }""", false)]
+    [InlineData("""{ "Llm": { "AgentCli": { "Command": "claude" }, "Provider": "agent-cli", "Model": "claude-x" } }""", true)]
     public void The_default_exists_as_the_runtime_reads_it_and_profiles_alone_do_not_make_one(string json, bool expected)
     {
         var document = AppSettingsDocument.Parse(json);
@@ -62,6 +68,44 @@ public sealed class LlmProfilesSectionTests
         Assert.Equal(expected, document.Llm.Exists);
         // The runtime's own reading: a section holding profiles alone leaves the default unset.
         Assert.Equal(LlmSettings.HasDefault(runtime), document.Llm.Exists);
+    }
+
+    [Fact]
+    public void Choosing_no_model_keeps_the_profiles_and_the_agent_cli_section_they_share()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Llm": { "Provider": "agent-cli", "Model": "claude-x", "AgentCli": { "Command": "/opt/claude" }, "Profiles": { "sub": { "Provider": "agent-cli", "Model": "claude-x" } } } }
+            """);
+
+        document.Llm.Remove();
+
+        Assert.False(document.Llm.Exists);
+        Assert.Equal("/opt/claude", document.GetString("Llm:AgentCli:Command"));
+        Assert.Equal("agent-cli", document.GetString("Llm:Profiles:sub:Provider"));
+        Assert.Null(document.GetString("Llm:Provider"));
+        Assert.Null(document.GetString("Llm:Model"));
+    }
+
+    /// <summary>
+    /// « No model » for the default takes the default provider out, and only it: the capabilities
+    /// declared per model and the replay are host-wide settings the profiles read too.
+    /// </summary>
+    [Fact]
+    public void Choosing_no_model_keeps_the_model_capabilities_and_the_replay()
+    {
+        var document = AppSettingsDocument.Parse("""
+            { "Llm": { "Model": "qwen3", "BaseUrl": "http://localhost:11434",
+                       "ModelCapabilities": { "qwen3": { "Vision": true } }, "Replay": { "Path": "/x" },
+                       "Profiles": { "sub": { "Model": "qwen3:32b" } } } }
+            """);
+
+        document.Llm.Remove();
+
+        Assert.False(document.Llm.Exists);
+        Assert.Null(document.GetString("Llm:Model"));
+        Assert.True(document.GetBoolean("Llm:ModelCapabilities:qwen3:Vision"));
+        Assert.Equal("/x", document.GetString("Llm:Replay:Path"));
+        Assert.Equal("qwen3:32b", document.GetString("Llm:Profiles:sub:Model"));
     }
 
     [Fact]

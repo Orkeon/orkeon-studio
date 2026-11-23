@@ -1203,7 +1203,9 @@
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
   </Style>
 
-  <Style TargetType="CheckBox">
+  <!-- The box: the CheckBox drawn as a box to tick. No view wears it since #22, every CheckBox being
+       a switch (the implicit style below); it holds the text setters the switch is based on. -->
+  <Style x:Key="CheckBoxBox" TargetType="CheckBox">
     <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
@@ -1231,6 +1233,102 @@
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- A switch: a CheckBox for a setting that is on or off rather than a box to tick. The track wears
+       the field recipe off and the accent on, like the box (T-31); the knob slides to the right. -->
+  <Style x:Key="Switch" TargetType="CheckBox" BasedOn="{StaticResource CheckBoxBox}">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border x:Name="track" Width="34" Height="18" CornerRadius="9" VerticalAlignment="Center"
+                    Background="{DynamicResource FieldBrush}"
+                    BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1">
+              <Ellipse x:Name="knob" Width="12" Height="12" Margin="2,0,0,0"
+                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                       Fill="{DynamicResource FieldBorderBrush}"/>
+            </Border>
+            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="knob" Property="Fill" Value="{DynamicResource AccentFgBrush}"/>
+              <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right"/>
+              <Setter TargetName="knob" Property="Margin" Value="0,0,2,0"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.45"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- #22: every CheckBox of Studio is a switch, those to come included; no view sets another style. -->
+  <Style TargetType="CheckBox" BasedOn="{StaticResource Switch}"/>
+
+  <!-- #22: the hint under a switch starts where the switch's label does: the 34 px track plus the
+       10 px gap of the Switch template, not the 24 px of the former box. -->
+  <Style x:Key="SwitchHint" TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+    <Setter Property="Margin" Value="44,3,0,0"/>
+    <Setter Property="TextWrapping" Value="Wrap"/>
+  </Style>
+
+  <!-- #22: a row of a list to pick from (a team's folders, the allowed-folder chooser) is a
+       ToggleButton the whole width of the row, and wears the switch of the Switch style, never a box
+       to tick. The row's content is the button's content; the row turns accent while on and goes
+       sunk while it cannot be picked. A view adds its own triggers on BorderBrush (they beat these
+       template triggers). -->
+  <Style x:Key="SwitchRow" TargetType="ToggleButton">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="13,11"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToggleButton">
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Border x:Name="track" Width="34" Height="18" CornerRadius="9" VerticalAlignment="Center"
+                      Background="{DynamicResource FieldBrush}"
+                      BorderBrush="{DynamicResource FieldBorderBrush}" BorderThickness="1">
+                <Ellipse x:Name="knob" Width="12" Height="12" Margin="2,0,0,0"
+                         HorizontalAlignment="Left" VerticalAlignment="Center"
+                         Fill="{DynamicResource FieldBorderBrush}"/>
+              </Border>
+              <ContentPresenter Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" RecognizesAccessKey="True"/>
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
+              <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="track" Property="Background" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="track" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              <Setter TargetName="knob" Property="Fill" Value="{DynamicResource AccentFgBrush}"/>
+              <Setter TargetName="knob" Property="HorizontalAlignment" Value="Right"/>
+              <Setter TargetName="knob" Property="Margin" Value="0,0,2,0"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Background" Value="{DynamicResource PaperSunkBrush}"/>
+              <Setter Property="Opacity" Value="0.62"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>

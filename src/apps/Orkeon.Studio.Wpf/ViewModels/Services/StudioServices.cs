@@ -159,4 +159,10 @@ public sealed record StudioServices
     /// the screenshot campaign so a run in flight shows the same duration in every pass.
     /// </summary>
     public TimeProvider? Clock { get; init; }
+
+    /// <summary>
+    /// The names of the variables of the environment a spawned <c>orkeon</c> inherits, for the LLM
+    /// profiles it lays besides the settings file's (<c>Llm__Profiles__x__Model</c>): this process's when absent.
+    /// </summary>
+    public Func<IEnumerable<string>>? EnvironmentNames { get; init; }
 }

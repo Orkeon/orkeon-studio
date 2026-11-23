@@ -51,7 +51,7 @@ dotnet build Orkeon.Studio.sln --no-restore
 dotnet test Orkeon.Studio.sln --no-build --filter "Category!=Integration&Category!=Slow"
 ```
 
-Studio consumes Orkeon as NuGet packages (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui`; the tests add `Orkeon.Tools` and `Orkeon.Scripting`). Their version is the `OrkeonVersion` property in `Directory.Packages.props`. They come from nuget.org, like every other package (`nuget.config`).
+Studio consumes Orkeon as NuGet packages (`Orkeon`, `Orkeon.Constants.Cli`, `Orkeon.Cli.Abstractions`, `Orkeon.Cli.TerminalGui`; the tests add `Orkeon.Tools`, `Orkeon.Scripting` and `Orkeon.Interop.AgentCli`). Their version is the `OrkeonVersion` property in `Directory.Packages.props`. They come from nuget.org, like every other package (`nuget.config`); while Studio builds against an untagged Orkeon, a temporary `dev-feed/` that `nuget.config` adds serves them instead.
 
 The drift tests of `Orkeon.Studio.Core.Tests` pin Studio against files Orkeon ships but does not package (example crews, the installer's sample settings, the tool inventory, the CLI sources). They read them from an Orkeon checkout: set `ORKEON_SOURCE_ROOT` to one, or clone Orkeon next to this repository as `../orkeon`.
 
@@ -78,7 +78,7 @@ dotnet run --project src/apps/Orkeon.Studio.Wpf      # Windows only
 pwsh -File .\scripts\install-from-source.ps1 -WithOrkeon  # Windows: the CLI, then Studio
 ```
 
-The script packs the Orkeon packages into `orkeon-feed/` at a version dated by the Orkeon checkout's last commit, or at the tag's version when that commit is tagged (see `scripts/resolve-version.sh`) and builds Studio against them: a new Orkeon commit gives a new version, never a stale copy from the NuGet cache. It refuses to pack an Orkeon checkout with uncommitted changes, or to reuse packages of the same version packed from another commit. That build reads a `nuget.config` the script writes, which resolves `Orkeon.*` from `orkeon-feed/`; the repository's own reads nuget.org alone. Studio goes into the CLI's installation (`lib/orkeon/libexec`, or `libexec\` of `%LOCALAPPDATA%\Programs\Orkeon`), where it finds the CLI first. The CLI's installer replaces that directory whole: after reinstalling the CLI, run the script again.
+The script packs the Orkeon packages into `orkeon-feed/` at a version dated by the Orkeon checkout's last commit, or at the tag's version when that commit is tagged (see `scripts/resolve-version.sh`) and builds Studio against them: a new Orkeon commit gives a new version, never a stale copy from the NuGet cache. It refuses to pack an Orkeon checkout with uncommitted changes, or to reuse packages of the same version packed from another commit. That build reads a `nuget.config` the script writes, which resolves `Orkeon.*` from `orkeon-feed/`; the repository's own reads nuget.org (plus, at times, its temporary `dev-feed/`). Studio goes into the CLI's installation (`lib/orkeon/libexec`, or `libexec\` of `%LOCALAPPDATA%\Programs\Orkeon`), where it finds the CLI first. The CLI's installer replaces that directory whole: after reinstalling the CLI, run the script again.
 
 ## Contributing
 

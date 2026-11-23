@@ -53,6 +53,14 @@ public sealed record ModelProfile
     public string? KeyEnvName { get; init; }
 
     /// <summary>
+    /// The Anthropic workspace the key acts in (<c>WorkspaceId</c>, Orkeon #468), sent as
+    /// <c>anthropic-workspace-id</c>: an identity-linked key refuses every call without it. Not a
+    /// secret, so the store carries it; null for every other key. Travels as
+    /// <c>ORKEON_Llm__WorkspaceId</c>.
+    /// </summary>
+    public string? WorkspaceId { get; init; }
+
+    /// <summary>
     /// Sampling temperature this profile pins, or null to leave the engine's default.
     /// Some vendors mandate a value per model (Moonshot's K3 family accepts only 1) —
     /// pinning it here makes the first request right instead of relying on the
@@ -102,6 +110,18 @@ public sealed record ModelProfile
     /// <c>ORKEON_Llm__Thinking__Effort</c>.
     /// </summary>
     public string? ThinkingEffort { get; init; }
+
+    /// <summary>
+    /// The connection this setting is a model of (<see cref="ModelConnection"/>), or null for a setting
+    /// built on its own. Computed with the pair, never stored: the screens group by it without reading
+    /// the name back.
+    /// </summary>
+    [JsonIgnore]
+    public string? Connection { get; init; }
+
+    /// <summary>The model's alias in its connection, or null for the one model of a connection that names none.</summary>
+    [JsonIgnore]
+    public string? Alias { get; init; }
 
     /// <summary>Endpoint base URL.</summary>
     [SuppressMessage("Design", "CA1056",
@@ -158,10 +178,13 @@ public sealed record ModelProfile
             BaseUrl = BaseUrl is { Length: > 0 } ? BaseUrl : null,
             Model = Model is { Length: > 0 } ? Model : null,
             ApiKeyEnvVar = string.IsNullOrWhiteSpace(KeyEnvName) ? null : KeyEnvName.Trim(),
+            WorkspaceId = string.IsNullOrWhiteSpace(WorkspaceId) ? null : WorkspaceId.Trim(),
             ApiKeyPlaceholder = LlmPresets.PlaceholderKeyOf(LlmPresets.CardOf(this)),
             Temperature = Temperature,
             TimeoutSeconds = TimeoutSeconds is > 0 ? TimeoutSeconds : null,
             StreamIdleSeconds = StreamIdleSeconds is > 0 ? StreamIdleSeconds : null,
+            // What a launch lays (OverrideValues): a run outside Studio reads the same call mode.
+            CallMode = CallMode is { } callMode && IsKnownCallMode(callMode) ? callMode : null,
             MaxTokens = MaxTokens is > 0 ? MaxTokens : null,
             ThinkingEnabled = ThinkingEnabled,
             ThinkingEffort = string.IsNullOrWhiteSpace(ThinkingEffort) ? null : ThinkingEffort.Trim(),
@@ -224,7 +247,7 @@ public sealed record ModelProfile
     /// </summary>
     private static readonly string[] OverriddenFields =
     [
-        "Model", "BaseUrl", "Temperature", "TimeoutSeconds", "StreamIdleSeconds", "CallMode", "MaxTokens", "Thinking__Enabled", "Thinking__Effort", "ApiKey",
+        "Model", "BaseUrl", "Temperature", "TimeoutSeconds", "StreamIdleSeconds", "CallMode", "MaxTokens", "Thinking__Enabled", "Thinking__Effort", "ApiKey", "WorkspaceId",
     ];
 
     private static string HostProfilePrefix(string id) => $"{DefaultSectionPrefix}Profiles__{id.Trim()}__";
@@ -256,6 +279,7 @@ public sealed record ModelProfile
         yield return ("Thinking__Enabled", ThinkingEnabled switch { true => "true", false => "false", null => null });
         yield return ("Thinking__Effort", string.IsNullOrWhiteSpace(ThinkingEffort) ? null : ThinkingEffort.Trim());
         yield return ("ApiKey", ApiKeyOf(environment));
+        yield return ("WorkspaceId", string.IsNullOrWhiteSpace(WorkspaceId) ? null : WorkspaceId.Trim());
     }
 
     private static string? Positive(int? value)

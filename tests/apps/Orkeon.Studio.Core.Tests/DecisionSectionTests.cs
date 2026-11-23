@@ -164,15 +164,72 @@ public sealed class DecisionSectionTests
         Assert.Equal("LIQUID_API_KEY", document.Decision.Resolve(NoEnvironment).MissingKeyVariable);
         Assert.Null(document.Decision.Resolve(name => name == "LIQUID_API_KEY" ? "k" : null).MissingKeyVariable);
 
-        var custom = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": "MY_KEY" } } }""");
-        Assert.Equal("MY_KEY", custom.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.True(document.Decision.Resolve(NoEnvironment).KeyMissing);
+        Assert.Null(document.Decision.Resolve(NoEnvironment).MissingKeyVariableSetting);
+
+        // The provider's own variable written out is named as when unset.
+        var ownWritten = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": " LIQUID_API_KEY " } } }""");
+        Assert.Equal("LIQUID_API_KEY", ownWritten.Decision.Resolve(NoEnvironment).MissingKeyVariable);
 
         var inFile = AppSettingsDocument.Parse("""{ "Orkeon": { "Liquid": { "ApiKey": "k" } } }""");
         Assert.Null(inFile.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.False(inFile.Decision.Resolve(NoEnvironment).KeyMissing);
 
         // A local server needs no key.
         var kev = AppSettingsDocument.Parse("""{ "Orkeon": { "Decision": { "Provider": "kev" } } }""");
         Assert.Null(kev.Decision.Resolve(NoEnvironment).MissingKeyVariable);
+        Assert.False(kev.Decision.Resolve(NoEnvironment).KeyMissing);
+    }
+
+    /// <summary>
+    /// Another variable than the provider's own is read, and never named: what is written in
+    /// <c>ApiKeyEnvVar</c> may be a key pasted there by mistake, whatever its shape. As the engine
+    /// (<c>DecisionApiKey.Remedy</c>, Orkeon #467), Studio names the setting that holds it instead.
+    /// </summary>
+    [Theory]
+    [InlineData("MY_KEY")]
+    [InlineData("sk_live_0123456789abcdef")]
+    [InlineData("sk-ant-api03-0123456789")]
+    [InlineData("liquid_api_key")]
+    public void A_variable_other_than_the_providers_own_is_named_by_its_setting_never_by_its_value(string written)
+    {
+        var document = AppSettingsDocument.Parse($$"""{ "Orkeon": { "Liquid": { "ApiKeyEnvVar": "{{written}}" } } }""");
+
+        var missing = document.Decision.Resolve(NoEnvironment);
+        Assert.True(missing.KeyMissing);
+        Assert.Null(missing.MissingKeyVariable);
+        Assert.Equal("Orkeon:Liquid:ApiKeyEnvVar", missing.MissingKeyVariableSetting);
+
+        // That variable is the one read: holding a key, nothing is missing; the provider's own is not read.
+        var held = document.Decision.Resolve(name => name == written ? "k" : null);
+        Assert.False(held.KeyMissing);
+        Assert.True(document.Decision.Resolve(name => name == "LIQUID_API_KEY" ? "k" : null).KeyMissing);
+    }
+
+    /// <summary>
+    /// The engine's rule, read in the Orkeon checkout (<c>DecisionApiKey</c>): the variable read is
+    /// <c>ApiKeyEnvVar</c> trimmed, the provider's own when blank; it is named only when it is the
+    /// provider's own, compared ordinally; otherwise the remedy names the settings alone.
+    /// </summary>
+    [Fact]
+    public void The_engine_names_the_missing_keys_variable_as_Studio_does()
+    {
+        var path = Path.Combine(
+            Orkeon.Studio.Tests.Shared.OrkeonSources.Root(), "src", "core", "Orkeon.Infrastructure", "Decision", "SystemOne", "DecisionApiKey.cs");
+        Assert.True(File.Exists(path), "DecisionApiKey.cs is no longer in the Orkeon checkout.");
+        var source = File.ReadAllText(path);
+
+        Assert.Contains(
+            "string.IsNullOrWhiteSpace(options.ApiKeyEnvVar) ? provider.DefaultApiKeyVariable : options.ApiKeyEnvVar.Trim()",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "string.Equals(Variable(provider, options), provider.DefaultApiKeyVariable, StringComparison.Ordinal)",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains("$\"set the environment variable {provider.DefaultApiKeyVariable}, or {provider.Section}:ApiKey\"", source, StringComparison.Ordinal);
+        Assert.Contains("$\"set the variable named by {provider.Section}:ApiKeyEnvVar, or {provider.Section}:ApiKey\"", source, StringComparison.Ordinal);
+        Assert.Equal("Orkeon:Liquid:ApiKeyEnvVar", DecisionSection.ApiKeyEnvVarSetting(DecisionProviderDescriptor.Liquid));
     }
 
     [Fact]
@@ -182,5 +239,121 @@ public sealed class DecisionSectionTests
 
         Assert.True(document.Decision.For(DecisionProviderDescriptor.Liquid).Exists);
         Assert.Same(DecisionProviderDescriptor.Liquid, document.Decision.Resolve(NoEnvironment).Provider);
+    }
+
+    /// <summary>
+    /// A fail-closed LLM judge cannot judge without the decision model: the host refuses to start once
+    /// the circuit is off, naming the settings' switch before the missing provider, as the engine does.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": true } } } }""", "no decision provider resolved")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Enabled": false }, "Liquid": {}, "Guardian": { "Llm": { "Enabled": true } } } }""", "Orkeon:Decision:Enabled=false")]
+    public void A_fail_closed_llm_judge_refuses_the_start_once_the_circuit_is_off(string json, string cause)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.True(status.ClosedJudge);
+        Assert.Contains("Orkeon:Guardian:Llm:Enabled is true with FailMode Closed", status.Refusal, StringComparison.Ordinal);
+        Assert.Contains(cause, status.Refusal, StringComparison.Ordinal);
+        Assert.False(status.CircuitOn);
+    }
+
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": true, "FailMode": "Open" } } } }""")]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Enabled": false, "Llm": { "Enabled": true } } } }""")]
+    [InlineData("""{ "Orkeon": { "Guardian": { "Llm": { "Enabled": false } } } }""")]
+    public void A_judge_that_fails_open_is_off_or_has_its_guardian_off_refuses_nothing(string json)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.False(status.ClosedJudge);
+        Assert.Null(status.Refusal);
+        Assert.Null(status.RefusalOfRunSwitch);
+    }
+
+    [Fact]
+    public void A_fail_closed_llm_judge_starts_with_the_circuit_on_and_refuses_the_runs_own_switch()
+    {
+        var status = AppSettingsDocument
+            .Parse("""{ "Orkeon": { "Liquid": { "ApiKey": "in-file" }, "Guardian": { "Llm": { "Enabled": true } } } }""")
+            .Decision.Resolve(_ => null);
+
+        Assert.True(status.CircuitOn);
+        Assert.Null(status.Refusal);
+        Assert.Contains("--no-decision", status.RefusalOfRunSwitch, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_ladder_and_the_levels_are_written_as_lists_and_removed_when_emptied()
+    {
+        var document = AppSettingsDocument.Parse("""{ "Orkeon": { "Decision": { "Provider": "liquid" } } }""");
+        var section = document.Decision;
+        Assert.Empty(section.RouteLadder);
+        Assert.Empty(section.EffortLevels);
+
+        section.RouteLadder = DecisionSection.SplitList(" default , strong;\n");
+        section.EffortLevels = ["low", "high"];
+
+        var reparsed = AppSettingsDocument.Parse(document.ToJson());
+        Assert.Equal(["default", "strong"], reparsed.Decision.RouteLadder);
+        Assert.Equal(["low", "high"], reparsed.Decision.EffortLevels);
+        Assert.Equal("liquid", reparsed.Decision.Provider);
+
+        section.RouteLadder = [];
+        section.EffortLevels = [];
+        Assert.False(document.ContainsPath(DecisionSection.RouteLadderPath));
+        Assert.False(document.ContainsPath(DecisionSection.EffortLevelsPath));
+    }
+
+    /// <summary>The start refuses what the engine's own rules refuse in the two lists, whatever the circuit.</summary>
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["default"] } } } }""", "a route needs two or more")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "auto"] } } } }""", "the name of the route itself")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Route": { "Ladder": ["fast", "FAST"] } } } }""", "more than once")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Effort": { "Levels": ["low", "extreme"] } } } }""", "is not a thinking level")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Effort": { "Levels": ["high", "low"] } } } }""", "cheapest first")]
+    [InlineData("""{ "Orkeon": { "Decision": { "Profiles": { "auto": { "Target": "default" } } } } }""", "is a reserved profile name")]
+    public void A_ladder_levels_or_a_decision_profile_the_engine_refuses_stop_the_start(string json, string reason)
+    {
+        var status = AppSettingsDocument.Parse(json).Decision.Resolve(_ => null);
+
+        Assert.Contains(reason, status.Refusal, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_ladder_serves_when_each_of_its_two_rungs_or_more_is_a_profile_of_the_settings()
+    {
+        var served = AppSettingsDocument.Parse("""
+            { "Llm": { "Model": "small", "Profiles": { "strong": { "Model": "big" } } },
+              "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "Strong"] } } } }
+            """).Decision.Resolve(_ => null);
+        Assert.Null(served.Refusal);
+        Assert.Equal(["default", "Strong"], served.RouteLadder);
+        Assert.Empty(served.UnknownRungs);
+        Assert.True(served.ServesRouteAuto);
+
+        var unknown = AppSettingsDocument.Parse("""
+            { "Orkeon": { "Decision": { "Route": { "Ladder": ["default", "strong"] } } } }
+            """).Decision.Resolve(_ => null);
+        Assert.Null(unknown.Refusal);
+        Assert.Equal(["strong"], unknown.UnknownRungs);
+        Assert.False(unknown.ServesRouteAuto);
+
+        Assert.False(AppSettingsDocument.Parse("{}").Decision.Resolve(_ => null).ServesRouteAuto);
+    }
+
+    [Fact]
+    public void A_ladder_of_the_environment_is_read_above_the_file()
+    {
+        var environment = new Dictionary<string, string?>
+        {
+            ["ORKEON_Orkeon__Decision__Route__Ladder__0"] = "default",
+            ["ORKEON_Orkeon__Decision__Route__Ladder__1"] = "default",
+        };
+
+        var status = AppSettingsDocument.Parse("{}").Decision.Resolve(name => environment.GetValueOrDefault(name));
+
+        // One variable per rung, as the configuration reads a list: the ladder is seen, and refused.
+        Assert.Contains("more than once", status.Refusal, StringComparison.Ordinal);
     }
 }

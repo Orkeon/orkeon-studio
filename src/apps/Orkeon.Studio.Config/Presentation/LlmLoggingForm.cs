@@ -11,9 +11,11 @@ internal sealed class LlmLoggingForm : ISettingsForm
     /// <inheritdoc />
     public string Title => "LLM logging";
 
-    /// <summary>Shown above the fields.</summary>
-    public const string ActivationNotice =
-        "These knobs shape HTTP exchange logging; the logging itself is turned on per run with `orkeon run --llm-log`.";
+    /// <summary>Shown above the fields: what the keys of the screen are for.</summary>
+    public const string Notice = "These keys shape the HTTP exchange log.";
+
+    /// <summary>Shown under <see cref="Notice"/>: the log itself is turned on per run.</summary>
+    public const string ActivationNotice = "Turned on per run: orkeon run --llm-log";
 
     private const string FullEmbeddingLogPath = "LlmLogging:FullEmbeddingLog";
     private const string LogStreamingExchangesPath = "LlmLogging:LogStreamingExchanges";

@@ -42,16 +42,16 @@ public sealed class LlmSectionViewModel : DocumentSectionViewModel
 
     /// <summary>
     /// Brings <c>Llm:Profiles</c> in line with a change of Studio's model settings (STUDIO-48,
-    /// <see cref="HostLlmProfiles.Mirror"/>), and heals a default the election wrote before it
+    /// <see cref="HostLlmProfiles.Mirror(AppSettingsDocument, ModelProfileSet, ModelProfileSet, IReadOnlyList{ValueTuple{string, string}})"/>), and heals a default the election wrote before it
     /// named its key's variable (STUDIO-49, <see cref="HostLlmProfiles.HealDefault"/>): one edit of
     /// the document when anything changed, so the write travels through the screen's own
     /// edit-then-save cycle like the election.
     /// </summary>
-    public void MirrorModelProfiles(ModelProfileSet before, ModelProfileSet after, string? renamedFrom = null, string? renamedTo = null)
+    public void MirrorModelProfiles(ModelProfileSet before, ModelProfileSet after, IReadOnlyList<(string From, string To)>? renames = null)
     {
         ArgumentNullException.ThrowIfNull(after);
 
-        var profilesChanged = HostLlmProfiles.Mirror(Document, before, after, renamedFrom, renamedTo);
+        var profilesChanged = HostLlmProfiles.Mirror(Document, before, after, renames ?? []);
         var defaultHealed = HostLlmProfiles.HealDefault(Document, after);
         if (!profilesChanged && !defaultHealed)
             return;
@@ -86,4 +86,8 @@ public sealed class LlmSectionViewModel : DocumentSectionViewModel
     /// <summary>The standing a name typed in the profile editor would have, against this document's entries.</summary>
     public HostProfileCheck CheckHostProfile(string name, string? previousName, bool describesProvider, ModelProfileSet set) =>
         HostLlmProfiles.Check(name, previousName, describesProvider, set, Document);
+
+    /// <summary>The standing one model of a connection being edited would have, against this document's entries.</summary>
+    public HostProfileCheck CheckHostProfile(string pairName, IReadOnlyCollection<string> replaced, IReadOnlyList<string> above, bool describesProvider, ModelProfileSet set) =>
+        HostLlmProfiles.Check(pairName, replaced, above, describesProvider, set, Document);
 }

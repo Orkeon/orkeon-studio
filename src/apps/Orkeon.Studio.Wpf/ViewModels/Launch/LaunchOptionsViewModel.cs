@@ -267,11 +267,11 @@ public sealed class LaunchOptionsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Whether the run uses the decision models (System One) the settings configure; unticked, the run
-    /// passes <c>--no-decision</c> (once offered, <see cref="OffersDecisionModels"/>): each decision task
-    /// answers from its fallback, or lets its <c>otherwise</c> task run, and one that has neither refuses
-    /// the run; <c>system_one_decide</c> still asks the provider. It only turns the circuit off: the
-    /// settings decide whether there is one to use.
+    /// Whether the run uses the decision models (System One) the settings configure; off, the run
+    /// passes <c>--no-decision</c> (once offered, <see cref="OffersDecisionModels"/>): no consumer asks
+    /// the model. A decision task is answered by its relay or from its fallback, or lets its
+    /// <c>otherwise</c> task run; <c>system_one_decide</c> is withheld; a crew that cannot run without
+    /// the models is refused. It only turns the circuit off: the settings decide whether there is one to use.
     /// </summary>
     public bool UseDecisionModels
     {
@@ -289,7 +289,7 @@ public sealed class LaunchOptionsViewModel : ObservableObject
     /// <summary>
     /// Whether « Use the decision models » is offered: the crew asks something of them. The launch tab
     /// sets it with each judgement of the crew, and rebuilds the command line after. While it is false
-    /// the box is hidden and <see cref="SwitchesDecisionOff"/> is false, whatever the box was left at.
+    /// the switch is hidden and <see cref="SwitchesDecisionOff"/> is false, whatever the switch was left at.
     /// </summary>
     public bool OffersDecisionModels
     {
@@ -301,7 +301,7 @@ public sealed class LaunchOptionsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Whether the run passes <c>--no-decision</c>: the box is offered and unticked.</summary>
+    /// <summary>Whether the run passes <c>--no-decision</c>: the switch is offered and off.</summary>
     public bool SwitchesDecisionOff => OffersDecisionModels && !UseDecisionModels;
 
     /// <summary>Whether to pass <c>--llm-log</c>.</summary>

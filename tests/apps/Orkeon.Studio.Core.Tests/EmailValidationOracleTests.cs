@@ -160,13 +160,20 @@ public sealed class EmailValidationOracleTests
         ["a port written in words"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "abc" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a port with a decimal point"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Outgoing": { "Port": 465.0 }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a port written as text"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": " 1993 " }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
+        // The binder's converter reads a hexadecimal number (Int32Converter): 0x3E1 and #3E1 are port 993.
+        ["a port written in hexadecimal"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x3E1" }, "Send": { "MaxPerHour": "#A" }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
+        ["a port written in hexadecimal out of range"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x10000" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailServer]),
+        ["a port with a hexadecimal sign but no digit"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "0x" }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a blank port"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "Incoming": { "Port": "  " }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a switch that is neither true nor false"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "SaveSentCopy": "yes", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["a switch written as text"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "SaveSentCopy": " TRUE ", "Auth": { "PasswordEnvVar": "P" } }"""), []),
         ["a quota written in words and a timeout with its unit"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read", "TimeoutSeconds": "5s", "Send": { "MaxPerHour": "ten", "MaxRecipients": true }, "Auth": { "PasswordEnvVar": "P" } }"""),
             [ValidationCodes.EmailValue, ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
-        ["a provider written as its number"] = (Account("""{ "Provider": 1, "Address": "me@gmail.com", "Rights": 9, "Incoming": { "Security": " StartTls " }, "Auth": { "PasswordEnvVar": "P" } }"""), []),
-        ["members separated by commas"] = (Account("""{ "Provider": "Custom, Gmail", "Address": "me@gmail.com", "Rights": "None, read , SEND", "Auth": { "Method": "+0", "PasswordEnvVar": "P" } }"""), []),
+        // An enumeration is written by its name, never as a number, even one it defines (Orkeon #464).
+        ["a provider and rights written as numbers"] = (Account("""{ "Provider": 1, "Address": "me@gmail.com", "Rights": 9, "Incoming": { "Security": " StartTls " }, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
+        ["rights written as a number alone"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "3", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
+        ["rights written as numbers beside names"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": "Read, 2", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
+        ["members separated by commas"] = (Account("""{ "Provider": "Custom, Gmail", "Address": "me@gmail.com", "Rights": "None, read , SEND", "Auth": { "Method": "+0", "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         ["a member left empty between commas"] = (Account("""{ "Provider": "Gmail,", "Address": "me@gmail.com", "Rights": "Read,", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue, ValidationCodes.EmailValue]),
         ["a provider number the engine does not define"] = (Account("""{ "Provider": 3, "Address": "me@gmail.com", "Rights": "Read", "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
         ["rights with a bit the engine does not define"] = (Account("""{ "Provider": "Gmail", "Address": "me@gmail.com", "Rights": 64, "Auth": { "PasswordEnvVar": "P" } }"""), [ValidationCodes.EmailValue]),
@@ -248,6 +255,37 @@ public sealed class EmailValidationOracleTests
         AssertSameAsTheEngine(document, Name, findings, document.Email.GetAccount(Name) ?? new EmailAccountDefinition { Name = Name });
     }
 
+    /// <summary>
+    /// Orkeon #465: a secret written in every typed key of an account whose name holds an apostrophe
+    /// is never said back, by the engine's binder or by Studio, and both say the same of it. The
+    /// binder's own refusal, which the engine rewords without the value (#469), is never met: every
+    /// typed key is judged before the account is bound, and Studio's rules say the binder's words for
+    /// each of them, never its sentence.
+    /// </summary>
+    [Fact]
+    public void A_secret_in_every_typed_key_is_never_said_back()
+    {
+        const string Secret = "sk-ant-api03-studio-oracle' at 'secret";
+        const string Equipe = "l'equipe";
+        var value = System.Text.Json.JsonSerializer.Serialize(Secret);
+        var document = AppSettingsDocument.Parse($$"""
+            { "Orkeon": { "Tools": { "Email": { "Accounts": { "{{Equipe}}": {
+              "Provider": {{value}}, "Address": "me@gmail.com", "Rights": {{value}}, "TimeoutSeconds": {{value}}, "SaveSentCopy": {{value}},
+              "Incoming": { "Protocol": {{value}}, "Port": {{value}}, "Security": {{value}} },
+              "Outgoing": { "Protocol": {{value}}, "Port": {{value}}, "Security": {{value}} },
+              "Auth": { "Method": {{value}}, "PasswordEnvVar": "P" },
+              "Send": { "MaxRecipients": {{value}}, "MaxPerHour": {{value}} } } } } } } }
+            """);
+
+        var findings = EmailAccountRules.Check(document, Equipe);
+        var engine = new EmailAccountRegistry(Options.Create(Bind(document))).Inspect(Equipe).Problems;
+
+        Assert.Equal(EmailOptionsBinder.TypedAccountSettings.Count, findings.Count(finding => finding.Code == ValidationCodes.EmailValue));
+        Assert.All(findings, finding => Assert.DoesNotContain("sk-ant", finding.Text, StringComparison.Ordinal));
+        Assert.All(engine, problem => Assert.DoesNotContain("sk-ant", problem, StringComparison.Ordinal));
+        AssertSameAsTheEngine(document, Equipe, findings, document.Email.GetAccount(Equipe) ?? new EmailAccountDefinition { Name = Equipe });
+    }
+
     [Fact]
     public void Every_finding_on_an_account_is_a_warning_at_a_path_under_the_account()
     {
@@ -284,15 +322,12 @@ public sealed class EmailValidationOracleTests
         // Usable or set aside.
         Assert.Equal(resolution.Account is null, findings.Count > 0);
 
-        // The same number of problems in each family, and the same first sentence.
+        // The same families, and in each the same sentences, every one of them.
         var engine = resolution.Problems.ToLookup(FamilyOf);
         var studio = findings.ToLookup(finding => finding.Code, finding => finding.Text);
         Assert.Equal(engine.Select(family => family.Key).Order(StringComparer.Ordinal), studio.Select(family => family.Key).Order(StringComparer.Ordinal));
         foreach (var family in engine)
-        {
-            Assert.Equal(family.Count(), studio[family.Key].Count());
-            Assert.Equal(family.First(), studio[family.Key].First());
-        }
+            Assert.Equal(family, studio[family.Key]);
 
         // What a field left blank is worth. A value the binder could not read leaves the engine an
         // empty account, of which it says nothing more.
@@ -310,10 +345,15 @@ public sealed class EmailValidationOracleTests
     {
         _ when problem.Contains(" is not an account setting: ", StringComparison.Ordinal) => ValidationCodes.EmailKey,
         _ when problem.StartsWith(ConfigurationKeys.ToolsEmail + ":Screening:", StringComparison.Ordinal) => ValidationCodes.EmailScreening,
-        _ when problem.Contains("' is not one of ", StringComparison.Ordinal)
-            || problem.Contains("' is not a list of ", StringComparison.Ordinal)
-            || problem.EndsWith("' is neither true nor false", StringComparison.Ordinal)
-            || problem.EndsWith("' is not a whole number", StringComparison.Ordinal) => ValidationCodes.EmailValue,
+        // The binder's sentences name the key and never the value (Orkeon #465); a number written for
+        // an enumeration is one of them (#464).
+        _ when problem.Contains(" is not one of ", StringComparison.Ordinal)
+            || problem.Contains(" is not a list of ", StringComparison.Ordinal)
+            || problem.Contains(" is a number where a name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" is a list where a single name is expected: ", StringComparison.Ordinal)
+            || problem.Contains(" takes names: write one or more of ", StringComparison.Ordinal)
+            || problem.EndsWith(" is neither true nor false", StringComparison.Ordinal)
+            || problem.EndsWith(" is not a whole number", StringComparison.Ordinal) => ValidationCodes.EmailValue,
         _ when problem.StartsWith("the account name ", StringComparison.Ordinal) => ValidationCodes.EmailName,
         _ when problem.StartsWith("Address ", StringComparison.Ordinal) => ValidationCodes.EmailAddress,
         _ when problem.StartsWith("Rights is required", StringComparison.Ordinal) => ValidationCodes.EmailRights,

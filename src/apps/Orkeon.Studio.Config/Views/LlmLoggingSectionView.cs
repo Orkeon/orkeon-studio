@@ -3,7 +3,10 @@ using Terminal.Gui.Views;
 
 namespace Orkeon.Studio.Config.Views;
 
-/// <summary>The <c>LlmLogging</c> screen: what an exchange log contains once a run turns it on.</summary>
+/// <summary>
+/// The <c>LlmLogging</c> screen: what an exchange log contains once a run turns it on. Every line of
+/// text takes one row, so none runs into the row under it.
+/// </summary>
 internal sealed class LlmLoggingSectionView : SectionView
 {
     private readonly LlmLoggingForm _form;
@@ -13,16 +16,17 @@ internal sealed class LlmLoggingSectionView : SectionView
 
     /// <summary>Builds the screen over <paramref name="form"/>.</summary>
     public LlmLoggingSectionView(LlmLoggingForm form)
-        : base("LLM logging")
+        : base("LLM logging", scrolls: true)
     {
         _form = form ?? throw new ArgumentNullException(nameof(form));
 
-        FormLayout.AddNote(this, 0, LlmLoggingForm.ActivationNotice);
+        FormLayout.AddLine(this, 0, LlmLoggingForm.Notice);
+        FormLayout.AddLine(this, 1, LlmLoggingForm.ActivationNotice);
         _fullEmbeddingLog = FormLayout.AddOptionalSwitch(
-            this, 2, FullEmbeddingLogCaption, _form.FullEmbeddingLog);
+            this, 3, FullEmbeddingLogCaption, _form.FullEmbeddingLog);
         _logStreamingExchanges = FormLayout.AddOptionalSwitch(
-            this, 3, LogStreamingExchangesCaption, _form.LogStreamingExchanges);
-        _maxBodyLength = FormLayout.AddField(this, 5, "Max body length (chars, 0 = no limit)", _form.MaxBodyLengthChars);
+            this, 4, LogStreamingExchangesCaption, _form.LogStreamingExchanges);
+        _maxBodyLength = FormLayout.AddField(this, 6, "Max body chars (0 = no limit)", _form.MaxBodyLengthChars);
 
         FormLayout.TrackUnreadable(_fullEmbeddingLog, FullEmbeddingLogCaption,
             () => _form.FullEmbeddingLogAsWritten, () => _form.FullEmbeddingLogAsWritten = null);

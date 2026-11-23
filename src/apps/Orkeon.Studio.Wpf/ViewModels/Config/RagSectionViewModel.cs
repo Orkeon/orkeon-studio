@@ -10,7 +10,7 @@ namespace Orkeon.Studio.Wpf.ViewModels.Config;
 /// switches. The web fallback is a genuine double opt-in — the corrective policy and the transport
 /// are two separate keys — and the form says so rather than hiding one behind the other. The
 /// switches are plain booleans resolving an absent key to the engine's off (STUDIO-22): a nullable
-/// bound to a check box swallows the first click, and a switch turned back off removes its key.
+/// bound to a CheckBox swallows the first click, and a switch turned back off removes its key.
 /// </summary>
 public sealed class RagSectionViewModel : DocumentSectionViewModel
 {

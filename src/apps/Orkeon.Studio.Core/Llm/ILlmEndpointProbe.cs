@@ -40,6 +40,12 @@ public sealed record LlmProbeRequest
     /// </summary>
     public TimeSpan Timeout { get; init; } = DefaultTimeout;
 
+    /// <summary>
+    /// The Anthropic workspace the key acts in (<c>WorkspaceId</c>, Orkeon #468), sent with both
+    /// steps to an Anthropic endpoint as the run sends it; ignored by every other dialect.
+    /// </summary>
+    public string? WorkspaceId { get; init; }
+
     /// <summary>The model of the profile, sent by the test completion.</summary>
     public string? Model { get; init; }
 

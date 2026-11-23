@@ -20,8 +20,9 @@
        no cache is ever cleared. Two commits of the same minute share a version, and
        NuGet keeps the first copy it extracted: the script refuses to pack a checkout
        with uncommitted changes, or to reuse a feed packed from another commit. The
-       repository's nuget.config reads nuget.org alone: the build reads a nuget.config
-       the script writes next to it, which resolves Orkeon.* from orkeon-feed\ instead;
+       repository's nuget.config reads nuget.org (plus, at times, a temporary
+       dev-feed\): the build reads a nuget.config the script writes next to it, which
+       resolves Orkeon.* from orkeon-feed\ instead;
     4. publishes the Studio apps -- orkeon-studio (WPF), orkeon-studio-config and
        orkeon-studio-run -- into <InstallDir>\libexec, next to the CLI, where Studio
        looks for it first; writes their launchers into <InstallDir>\bin, which the CLI's
@@ -108,7 +109,7 @@ $apps = @(
 )
 
 # The Orkeon packages the apps restore and the project each is packed from: the same list
-# as install-from-source.sh (Orkeon.Tools and Orkeon.Scripting serve the tests alone).
+# as install-from-source.sh (Orkeon.Tools, Orkeon.Scripting and Orkeon.Interop.AgentCli serve the tests alone).
 $packages = @(
     @{ Id = 'Orkeon';                        Project = 'src\packaging\Orkeon\Orkeon.csproj' },
     @{ Id = 'Orkeon.Constants.Cli';          Project = 'src\constants\Orkeon.Constants.Cli\Orkeon.Constants.Cli.csproj' },
@@ -303,7 +304,8 @@ if (Test-FeedComplete) {
 
 $orkeonInstaller = Join-Path $OrkeonSrc 'scripts\install-from-source.ps1'
 $stage = Join-Path $RepoRoot "artifacts\install-from-source\$rid"
-# The restore reads this nuget.config instead of the repository's (nuget.org alone): it maps
+# The restore reads this nuget.config instead of the repository's (nuget.org, plus at times
+# a temporary dev-feed): it maps
 # Orkeon.* to orkeon-feed\, where the packages of the checkout are, and the rest to nuget.org.
 $restoreConfig = Join-Path $stage 'nuget.config'
 # NU1603 is the restore settling for a higher version than the one asked when that one is

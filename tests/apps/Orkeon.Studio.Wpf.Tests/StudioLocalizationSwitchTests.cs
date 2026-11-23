@@ -287,6 +287,29 @@ public sealed class StudioLocalizationSwitchTests
         return editor;
     }
 
+    /// <summary>
+    /// A model row's thinking switch is one of the choices the editor offers after a language switch,
+    /// which rebuilds them under new labels: the picker shows it, in the new language, never blank.
+    /// </summary>
+    [Fact]
+    public void A_model_rows_thinking_switch_follows_the_language_and_stays_among_the_choices()
+    {
+        var strings = new SwitchableStrings();
+        var (profiles, _, _, _) = ModelSettingsWithSeams(strings);
+        var editor = OpenCompatibleEditor(profiles);
+        var row = editor.Models[0];
+        row.Thinking = editor.ModelThinkingChoices.Single(choice => choice.Value == true);
+        var raised = new List<string>();
+        row.PropertyChanged += (_, e) => raised.Add(e.PropertyName ?? "");
+
+        strings.SwitchToFrench();
+
+        Assert.Contains(row.Thinking, editor.ModelThinkingChoices);
+        Assert.Equal(true, row.Thinking.Value);
+        Assert.Equal("Activée", row.Thinking.Label);
+        Assert.Contains(nameof(row.Thinking), raised);
+    }
+
     [Fact]
     public void The_open_editor_speaks_the_new_language_and_keeps_what_was_typed()
     {

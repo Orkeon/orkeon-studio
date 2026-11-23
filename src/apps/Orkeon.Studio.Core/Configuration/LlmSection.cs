@@ -17,6 +17,12 @@ public sealed partial class LlmSection
 
     private readonly AppSettingsDocument _document;
 
+    // The section, and each of its keys, where the file spells them, in whatever letter case: what the
+    // run binds, and never a twin the configuration would refuse as a duplicate.
+    private string Section => _document.PathAsWritten(SectionPath);
+
+    private string Key(string key) => _document.PathAsWritten($"{SectionPath}:{key}");
+
     internal LlmSection(AppSettingsDocument document)
     {
         _document = document;
@@ -30,23 +36,35 @@ public sealed partial class LlmSection
     public LlmProfilesSection Profiles { get; }
 
     /// <summary>
-    /// True when the section describes the default provider: at least one key besides
-    /// <c>Profiles</c> that holds a value, the runtime's own reading (<c>LlmSettings.HasDefault</c>,
-    /// where a blank value reads as absent — STUDIO-49). False is the WIN-01 condition: the runtime
-    /// silently falls back to the <c>&lt;undefined-llm&gt;</c> echo provider — a section holding
-    /// profiles alone included.
+    /// True when the section describes the default provider: at least one key that holds a value
+    /// besides those that describe none (<see cref="KeysBesideTheDefault"/>), the runtime's own
+    /// reading (<c>LlmSettings.HasDefault</c>, where a blank value reads as absent — STUDIO-49).
+    /// False is the WIN-01 condition: the runtime silently falls back to the
+    /// <c>&lt;undefined-llm&gt;</c> echo provider — a section holding profiles alone included.
     /// </summary>
     public bool Exists =>
-        _document.GetNode(SectionPath) is JsonObject section
+        _document.GetNode(Section) is JsonObject section
         && section.Any(property =>
-            !string.Equals(property.Key, ConfigurationKeys.LlmProfiles, StringComparison.OrdinalIgnoreCase)
+            !KeysBesideTheDefault.Contains(property.Key, StringComparer.OrdinalIgnoreCase)
             && HoldsValue(property.Value));
 
-    /// <summary>Model identifier (<c>Llm:Model</c>).</summary>
+    /// <summary>
+    /// The keys of <c>Llm</c> that say nothing of the default provider, as the runtime lists them
+    /// (<c>LlmSettings.HasDefault</c>): the named profiles, the capabilities declared per model, the
+    /// replay and the section of the agent-cli provider module (<c>Llm:AgentCli</c>, Orkeon #470),
+    /// which every profile on that provider shares.
+    /// </summary>
+    // Also what "no model" leaves in the section (Remove): each of them serves the profiles too.
+    internal static readonly string[] KeysBesideTheDefault = [ConfigurationKeys.LlmProfiles, "ModelCapabilities", "Replay", "AgentCli"];
+
+    /// <summary>
+    /// Model identifier (<c>Llm:Model</c>). Setting another model than the one the section holds takes
+    /// <see cref="ContextWindowTokens"/> out with it (<see cref="LlmProfilesSection.SetModel"/>).
+    /// </summary>
     public string? Model
     {
-        get => _document.GetString($"{SectionPath}:Model");
-        set => _document.SetString($"{SectionPath}:Model", value);
+        get => _document.GetString(Key("Model"));
+        set => LlmProfilesSection.SetModel(_document, SectionPath, value);
     }
 
     /// <summary>Endpoint base URL (<c>Llm:BaseUrl</c>).</summary>
@@ -56,8 +74,8 @@ public sealed partial class LlmSection
                         "cannot represent. Validation reports it instead of rejecting the text.")]
     public string? BaseUrl
     {
-        get => _document.GetString($"{SectionPath}:BaseUrl");
-        set => _document.SetString($"{SectionPath}:BaseUrl", value);
+        get => _document.GetString(Key("BaseUrl"));
+        set => _document.SetString(Key("BaseUrl"), value);
     }
 
     /// <summary>
@@ -68,8 +86,8 @@ public sealed partial class LlmSection
     /// </summary>
     public string? ApiKey
     {
-        get => _document.GetString($"{SectionPath}:ApiKey");
-        set => _document.SetString($"{SectionPath}:ApiKey", value);
+        get => _document.GetString(Key("ApiKey"));
+        set => _document.SetString(Key("ApiKey"), value);
     }
 
     /// <summary>
@@ -79,29 +97,51 @@ public sealed partial class LlmSection
     /// </summary>
     public string? ApiKeyEnvVar
     {
-        get => _document.GetString($"{SectionPath}:{ConfigurationKeys.LlmApiKeyEnvVar}");
-        set => _document.SetString($"{SectionPath}:{ConfigurationKeys.LlmApiKeyEnvVar}", value);
+        get => _document.GetString(Key($"{ConfigurationKeys.LlmApiKeyEnvVar}"));
+        set => _document.SetString(Key($"{ConfigurationKeys.LlmApiKeyEnvVar}"), value);
+    }
+
+    /// <summary>
+    /// The Anthropic workspace the default's key acts in (<c>Llm:WorkspaceId</c>, Orkeon #468), sent as
+    /// <c>anthropic-workspace-id</c>: an identity-linked key refuses every call without it. Not a secret.
+    /// Another provider does not send it, and the run warns.
+    /// </summary>
+    public string? WorkspaceId
+    {
+        get => _document.GetString(Key(LlmProfilesSection.WorkspaceIdKey));
+        set => _document.SetString(Key(LlmProfilesSection.WorkspaceIdKey), value);
     }
 
     /// <summary>Sampling temperature (<c>Llm:Temperature</c>).</summary>
     public double? Temperature
     {
-        get => _document.GetDouble($"{SectionPath}:Temperature");
-        set => _document.SetDouble($"{SectionPath}:Temperature", value);
+        get => _document.GetDouble(Key("Temperature"));
+        set => _document.SetDouble(Key("Temperature"), value);
+    }
+
+    /// <summary>
+    /// The model's context window, in tokens (<c>Llm:ContextWindowTokens</c>), above zero: what the
+    /// compaction of a context measures against. Null lets the engine take the window it documents for
+    /// the model. It describes the model the section holds, and goes when <see cref="Model"/> changes.
+    /// </summary>
+    public int? ContextWindowTokens
+    {
+        get => _document.GetInt32(Key($"{LlmProfilesSection.ContextWindowTokensKey}"));
+        set => _document.SetInt32(Key($"{LlmProfilesSection.ContextWindowTokensKey}"), value);
     }
 
     /// <summary>Maximum response tokens (<c>Llm:MaxTokens</c>).</summary>
     public int? MaxTokens
     {
-        get => _document.GetInt32($"{SectionPath}:MaxTokens");
-        set => _document.SetInt32($"{SectionPath}:MaxTokens", value);
+        get => _document.GetInt32(Key("MaxTokens"));
+        set => _document.SetInt32(Key("MaxTokens"), value);
     }
 
     /// <summary>Request timeout in seconds (<c>Llm:TimeoutSeconds</c>).</summary>
     public int? TimeoutSeconds
     {
-        get => _document.GetInt32($"{SectionPath}:TimeoutSeconds");
-        set => _document.SetInt32($"{SectionPath}:TimeoutSeconds", value);
+        get => _document.GetInt32(Key("TimeoutSeconds"));
+        set => _document.SetInt32(Key("TimeoutSeconds"), value);
     }
 
     /// <summary>
@@ -110,15 +150,15 @@ public sealed partial class LlmSection
     /// </summary>
     public int? StreamIdleSeconds
     {
-        get => _document.GetInt32($"{SectionPath}:StreamIdleSeconds");
-        set => _document.SetInt32($"{SectionPath}:StreamIdleSeconds", value);
+        get => _document.GetInt32(Key("StreamIdleSeconds"));
+        set => _document.SetInt32(Key("StreamIdleSeconds"), value);
     }
 
     /// <summary>The call mode (<c>Llm:CallMode</c>).</summary>
     public string? CallMode
     {
-        get => _document.GetString($"{SectionPath}:CallMode");
-        set => _document.SetString($"{SectionPath}:CallMode", value);
+        get => _document.GetString(Key("CallMode"));
+        set => _document.SetString(Key("CallMode"), value);
     }
 
     /// <summary>
@@ -127,16 +167,29 @@ public sealed partial class LlmSection
     /// </summary>
     public bool? ThinkingEnabled
     {
-        get => _document.GetBoolean($"{SectionPath}:Thinking:Enabled");
-        set => _document.SetBoolean($"{SectionPath}:Thinking:Enabled", value);
+        get => _document.GetBoolean(Key("Thinking:Enabled"));
+        set => _document.SetBoolean(Key("Thinking:Enabled"), value);
     }
 
     /// <summary>Reasoning-effort hint (<c>Llm:Thinking:Effort</c>), for the models that take one.</summary>
     public string? ThinkingEffort
     {
-        get => _document.GetString($"{SectionPath}:Thinking:Effort");
-        set => _document.SetString($"{SectionPath}:Thinking:Effort", value);
+        get => _document.GetString(Key("Thinking:Effort"));
+        set => _document.SetString(Key("Thinking:Effort"), value);
     }
+
+    /// <summary>
+    /// The one sentence that refuses a context window of zero or less, which would leave the agent's
+    /// loop no room and the host refuses to start on; null when <paramref name="window"/> is above zero
+    /// or left out.
+    /// </summary>
+    /// <param name="sectionPath">The section of the <c>Llm</c> shape that states the window: <c>Llm</c>, or a profile's.</param>
+    /// <param name="window">The window as the section reads it.</param>
+    public static string? ContextWindowProblem(string sectionPath, int? window) => window is <= 0
+        ? string.Create(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"{sectionPath}:{LlmProfilesSection.ContextWindowTokensKey}: {window} is not a number of tokens above zero. Leave the key out for the model's documented window.")
+        : null;
 
     /// <summary>
     /// Whether <paramref name="apiKey"/> holds a variable reference — the Domain's recognition
@@ -198,11 +251,11 @@ public sealed partial class LlmSection
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        var before = _document.GetNode(SectionPath)?.ToJsonString();
+        var before = _document.GetNode(Section)?.ToJsonString();
         LlmProfilesSection.WriteEntry(_document, SectionPath, entry);
-        if (_document.GetNode(SectionPath) is JsonObject { Count: 0 })
-            _document.Remove(SectionPath);
-        return !string.Equals(before, _document.GetNode(SectionPath)?.ToJsonString(), StringComparison.Ordinal);
+        if (_document.GetNode(Section) is JsonObject { Count: 0 })
+            _document.Remove(Section);
+        return !string.Equals(before, _document.GetNode(Section)?.ToJsonString(), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -226,28 +279,30 @@ public sealed partial class LlmSection
     };
 
     /// <summary>
-    /// Removes the default provider — every key of the section but <c>Profiles</c> — which is
-    /// the WIN-01 state. The named profiles stay: choosing « no model » for the default says
-    /// nothing about them, and an entry written by hand is never Studio's to delete (STUDIO-48).
-    /// The section goes entirely only when no profile is left in it.
+    /// Removes the default provider — every key of the section but those that describe none
+    /// (<see cref="KeysBesideTheDefault"/>) — which is the WIN-01 state. The named profiles stay:
+    /// choosing « no model » for the default says nothing about them, and an entry written by hand is
+    /// never Studio's to delete (STUDIO-48); so do the capabilities declared per model, the replay and
+    /// the agent-cli module's section, host-wide settings the profiles read too. The section goes
+    /// entirely only when nothing is left in it.
     /// </summary>
     public void Remove()
     {
-        if (_document.GetNode(SectionPath) is not JsonObject section)
+        if (_document.GetNode(Section) is not JsonObject section)
         {
-            _document.Remove(SectionPath);
+            _document.Remove(Section);
             return;
         }
 
         foreach (var key in section
                      .Select(property => property.Key)
-                     .Where(key => !string.Equals(key, ConfigurationKeys.LlmProfiles, StringComparison.OrdinalIgnoreCase))
+                     .Where(key => !KeysBesideTheDefault.Contains(key, StringComparer.OrdinalIgnoreCase))
                      .ToList())
         {
             section.Remove(key);
         }
 
         if (section.Count == 0)
-            _document.Remove(SectionPath);
+            _document.Remove(Section);
     }
 }

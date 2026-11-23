@@ -5,8 +5,8 @@
 #
 # The drift tests of Orkeon.Studio.Core.Tests read files Orkeon ships but does not package
 # (example crews, the installer's sample settings, the tool inventory, the CLI sources):
-# the job clones the Orkeon tag v<OrkeonVersion> next to the checkout and points
-# ORKEON_SOURCE_ROOT at it.
+# the job clones the Orkeon tag v<OrkeonVersion> (or, while the dev-feed is in place, the
+# commit OrkeonSourceRef names) next to the checkout and points ORKEON_SOURCE_ROOT at it.
 name: CI
 
 on:
@@ -33,11 +33,17 @@ jobs:
         run: python3 scripts/check-comment-accents.py
       - name: Clone the Orkeon sources the drift tests read
         # The tag of the packages Studio builds against (OrkeonVersion), so the drift tests
-        # read the sources of those packages, not whatever main holds today.
+        # read the sources of those packages, not whatever main holds today. While the
+        # packages come from a temporary dev-feed/ (an untagged -local version),
+        # OrkeonSourceRef in Directory.Packages.props names the full SHA of the Orkeon
+        # commit they were packed from, and that commit is fetched instead.
         run: |
           version=$(sed -n 's|.*<OrkeonVersion>\(.*\)</OrkeonVersion>.*|\1|p' Directory.Packages.props)
+          ref=$(sed -n 's|.*<OrkeonSourceRef>\(.*\)</OrkeonSourceRef>.*|\1|p' Directory.Packages.props)
+          ref="${ref:-refs/tags/v$version}"
+          echo "Orkeon sources at $ref"
           git init -q "$ORKEON_SOURCE_ROOT"
-          git -C "$ORKEON_SOURCE_ROOT" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "refs/tags/v$version"
+          git -C "$ORKEON_SOURCE_ROOT" fetch -q --depth 1 --filter=blob:none https://github.com/Orkeon/orkeon "$ref"
           git -C "$ORKEON_SOURCE_ROOT" checkout -q FETCH_HEAD
       - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with: { global-json-file: global.json }
