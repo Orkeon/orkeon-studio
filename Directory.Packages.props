@@ -11,17 +11,12 @@
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
   </PropertyGroup>
-  <!-- The Orkeon packages Studio consumes, all at one published version (nuget.org; for
-       now dev-feed/, see TEMPORARY below). CI and the release pipeline clone the Orkeon
-       tag v$(OrkeonVersion) for the drift tests, or the commit OrkeonSourceRef names when
-       it is set: moving it moves both. -->
+  <!-- The Orkeon packages Studio consumes, all at one published version (nuget.org). CI
+       and the release pipeline clone the Orkeon tag v$(OrkeonVersion) for the drift tests,
+       or the commit OrkeonSourceRef names when it is set (only while a temporary feed of
+       untagged packs is in place, a tag being refused meanwhile): moving it moves both. -->
   <PropertyGroup>
-    <!-- TEMPORARY: packed from Orkeon main (cf521d326), served by dev-feed/ (see nuget.config).
-         OrkeonSourceRef is that commit: CI clones it for the drift tests, a -local version
-         having no tag, and the release pipeline refuses a tag while it is set. The closing
-         commit removes it with dev-feed/. -->
-    <OrkeonVersion>1.3.1-local.202611222149</OrkeonVersion>
-    <OrkeonSourceRef>cf521d326a31e31484f3f5bb67d67aaf2f37a3a7</OrkeonSourceRef>
+    <OrkeonVersion>1.4.0</OrkeonVersion>
   </PropertyGroup>
   <ItemGroup Label="Orkeon">
     <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />

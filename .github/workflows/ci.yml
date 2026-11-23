@@ -1,7 +1,7 @@
 # Build and test Orkeon Studio.
 #
 # Studio consumes Orkeon as NuGet packages from nuget.org, at the OrkeonVersion of
-# Directory.Packages.props (for now from the temporary dev-feed/ that nuget.config adds).
+# Directory.Packages.props.
 #
 # The drift tests of Orkeon.Studio.Core.Tests read files Orkeon ships but does not package
 # (example crews, the installer's sample settings, the tool inventory, the CLI sources):
