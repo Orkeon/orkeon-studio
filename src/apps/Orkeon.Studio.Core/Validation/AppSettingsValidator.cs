@@ -143,6 +143,7 @@ public sealed class AppSettingsValidator
         ValidateMcp(document, messages);
         ValidateEmail(document, messages);
         ValidateDrive(document, messages);
+        ValidateChat(document, messages);
         ValidateEngineSections(document, messages);
         ValidateSettingPlaceholders(document, messages);
 
@@ -331,12 +332,70 @@ public sealed class AppSettingsValidator
         }
     }
 
+    /// <summary>
+    /// The chat accounts, judged as the run will judge them, on the model of the drive ones: what the
+    /// section itself holds that the engine does not read, then each account, each finding a warning in the engine's own sentence (<see cref="ChatAccountRules"/>), the one
+    /// error a pair of names or of keys equal but for the case that set one same key.
+    /// </summary>
+    private static void ValidateChat(AppSettingsDocument document, List<ValidationMessage> messages)
+    {
+        var chat = document.Chat;
+        if (document.GetNode(document.PathAsWritten(ChatSection.SectionPath)) is JsonObject section)
+            messages.AddRange(ChatTwinKeys.Under(section, ChatSection.SectionPath, chat.AccountsNode));
+
+        messages.AddRange(ChatAccountRules.SectionProblems(document));
+
+        var names = chat.AccountNames;
+        if (chat.DefaultAccount?.Trim() is { Length: > 0 } named && !names.Contains(named, StringComparer.OrdinalIgnoreCase))
+        {
+            // The sentence a call that names no account gets from the engine's registry.
+            var configured = names.Count == 0 ? "none" : string.Join(", ", names.Order(StringComparer.OrdinalIgnoreCase));
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.ChatDefault,
+                $"Unknown chat account '{named}'. Configured: {configured}.",
+                $"{ChatSection.SectionPath}:{ChatSection.Keys.DefaultAccount}"));
+        }
+
+        var accounts = chat.AccountsNode;
+        var twins = names
+            .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var earlier = new Dictionary<string, (string First, TwinKeys.Reading Read)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in names)
+        {
+            if (!twins.Contains(name))
+            {
+                messages.AddRange(ChatAccountRules.Check(document, name));
+                continue;
+            }
+
+            var account = accounts?[name];
+            if (earlier.TryGetValue(name, out var twin))
+            {
+                messages.Add(DuplicateAccount(ChatFamily, twin.First, name, twin.Read.Next(account)));
+            }
+            else
+            {
+                var read = new TwinKeys.Reading();
+                read.Next(account);
+                earlier[name] = (name, read);
+            }
+
+            if (account is JsonObject keys)
+                messages.AddRange(ChatTwinKeys.Under(keys, $"{ChatSection.AccountsPath}:{name}"));
+        }
+    }
+
     /// <summary>What names an account family in the sentences of <see cref="DuplicateAccount"/>.</summary>
     private sealed record AccountFamily(string Label, string Code, string AccountsPath);
 
     private static readonly AccountFamily EmailFamily = new("E-mail", ValidationCodes.EmailDuplicate, EmailSection.AccountsPath);
 
     private static readonly AccountFamily DriveFamily = new("Drive", ValidationCodes.DriveDuplicate, DriveSection.AccountsPath);
+
+    private static readonly AccountFamily ChatFamily = new("Chat", ValidationCodes.ChatDuplicate, ChatSection.AccountsPath);
 
     /// <summary>
     /// What the configuration does of two account names equal but for the case: it refuses the

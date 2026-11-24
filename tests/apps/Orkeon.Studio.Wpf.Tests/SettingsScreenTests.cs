@@ -601,6 +601,7 @@ public sealed class SettingsScreenTests
         Assert.Equal("Empty", screen.MailsTabState);
         Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.SettingsTabAccountsEmpty], screen.MailsTabSubtitle);
         Assert.Equal("Empty", screen.DriveTabState);
+        Assert.Equal("Empty", screen.ChatTabState);
         Assert.Equal("Empty", screen.McpTabState);
         Assert.Equal(EnglishStudioStrings.Instance[StudioStringKeys.SettingsTabMcpEmpty], screen.McpTabSubtitle);
         Assert.Equal("Verified", screen.FileTabState);

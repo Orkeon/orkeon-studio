@@ -134,6 +134,12 @@ public sealed partial class SettingsScreenViewModel
     /// <summary>Done with an account, empty without.</summary>
     public string DriveTabState => Config.Drive.HasAccounts ? DoneState : EmptyState;
 
+    /// <summary>« 1 account », or none.</summary>
+    public string ChatTabSubtitle => AccountsSubtitle(Config.Chat.Accounts.Count);
+
+    /// <summary>Done with an account, empty without.</summary>
+    public string ChatTabState => Config.Chat.HasAccounts ? DoneState : EmptyState;
+
     /// <summary>« 2 servers », or none.</summary>
     public string McpTabSubtitle =>
         Config.Mcp.HasServers
@@ -204,6 +210,7 @@ public sealed partial class SettingsScreenViewModel
         Config.Mounts.ValidationMessages.CollectionChanged += collectionChanged;
         Config.Email.Accounts.CollectionChanged += collectionChanged;
         Config.Drive.Accounts.CollectionChanged += collectionChanged;
+        Config.Chat.Accounts.CollectionChanged += collectionChanged;
         Config.Mcp.Servers.CollectionChanged += collectionChanged;
         Profiles.PropertyChanged += (_, e) =>
         {
@@ -233,6 +240,7 @@ public sealed partial class SettingsScreenViewModel
             nameof(ToolsTabSubtitle), nameof(ToolKeysTabSubtitle), nameof(ToolKeysTabState), nameof(ShellTabSubtitle),
             nameof(MailsTabSubtitle), nameof(MailsTabState),
             nameof(DriveTabSubtitle), nameof(DriveTabState),
+            nameof(ChatTabSubtitle), nameof(ChatTabState),
             nameof(McpTabSubtitle), nameof(McpTabState),
             nameof(StudioTabSubtitle), nameof(LimitsTabSubtitle),
             nameof(FileTabSubtitle), nameof(FileTabState));

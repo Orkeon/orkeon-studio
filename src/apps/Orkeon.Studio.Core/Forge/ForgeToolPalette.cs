@@ -18,14 +18,16 @@ public sealed record ForgeToolPalette(IReadOnlyList<string> TeamTools, IReadOnly
 {
     /// <summary>
     /// The tools the engine never lets into a forged crew (<c>ForgeSandbox.DeniedTools</c>): the
-    /// shell and the interpreter escape the folder confinement, the drive tools would act on the
-    /// operator's actual drive. Copied from the engine and pinned there by a drift test.
+    /// shell and the interpreter escape the folder confinement, the drive and chat tools would
+    /// act on the operator's actual drive and conversations. Copied from the engine and pinned there by a drift test.
     /// </summary>
     public static IReadOnlySet<string> DeniedTools { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         "shell_command", "code_interpreter",
         "drive_accounts", "drive_create_folder", "drive_delete", "drive_download", "drive_info", "drive_list",
         "drive_move", "drive_read", "drive_search", "drive_share", "drive_upload",
+        "chat_accounts", "chat_delete", "chat_edit", "chat_list", "chat_meetings", "chat_members",
+        "chat_react", "chat_read", "chat_search", "chat_send",
     };
 
     /// <summary>

@@ -18,6 +18,7 @@ public static class ToolFamilyLabels
         ToolCatalog.DataFamily => StudioStringKeys.ToolFamilyData,
         ToolCatalog.EmailFamily => StudioStringKeys.ToolFamilyEmail,
         ToolCatalog.DriveFamily => StudioStringKeys.ToolFamilyDrive,
+        ToolCatalog.ChatFamily => StudioStringKeys.ToolFamilyChat,
         ToolCatalog.CodeFamily => StudioStringKeys.ToolFamilyCode,
         ToolCatalog.SessionFamily => StudioStringKeys.ToolFamilySession,
         ToolCatalog.EventsFamily => StudioStringKeys.ToolFamilyEvents,

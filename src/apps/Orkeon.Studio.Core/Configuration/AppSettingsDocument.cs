@@ -46,6 +46,7 @@ public sealed class AppSettingsDocument
         ShellTools = new ShellToolsSection(this);
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
+        Chat = new ChatSection(this);
         Decision = new DecisionSection(this);
         Guardian = new GuardianSection(this);
         Compaction = new CompactionSection(this);
@@ -87,6 +88,9 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the <c>Orkeon:Tools:Drive</c> section.</summary>
     public DriveSection Drive { get; }
+
+    /// <summary>Typed view over the <c>Orkeon:Tools:Chat</c> section.</summary>
+    public ChatSection Chat { get; }
 
     /// <summary>Typed view over the decision models: <c>Orkeon:Decision</c> and the provider sections.</summary>
     public DecisionSection Decision { get; }

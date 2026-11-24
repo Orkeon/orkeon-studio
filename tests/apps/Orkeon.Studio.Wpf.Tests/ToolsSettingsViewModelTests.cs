@@ -149,6 +149,25 @@ public sealed class ToolsSettingsViewModelTests
         });
     }
 
+    /// <summary>
+    /// Every chat tool's line names the tab the accounts are declared in.
+    /// </summary>
+    [Fact]
+    public void The_chat_family_says_each_tool_needs_an_account_declared_in_the_chat_tab()
+    {
+        var tools = new ToolsSettingsViewModel(new FakeApiKeyStore());
+
+        var chat = Assert.Single(tools.Families, f => f.Key == ToolCatalog.ChatFamily);
+        Assert.Equal("Microsoft Teams", chat.Label);
+        Assert.Equal(10, chat.Tools.Count);
+        Assert.Equal(10, chat.Requirements.Count);
+        Assert.All(chat.Requirements, r =>
+        {
+            Assert.Equal("needs a Teams account, declared in Settings › Microsoft Teams", r.Text);
+            Assert.False(r.IsKey);
+        });
+    }
+
     /// <summary>STUDIO-67 — the line names the tab the way each language's tab strip does.</summary>
     [Theory]
     [InlineData("fr")]
@@ -215,6 +234,27 @@ public sealed class ToolsSettingsViewModelTests
         Assert.Contains("memory: true", lines["memory_recall"], StringComparison.Ordinal);
         Assert.Contains(".ork.ts", lines["spawn_agent"], StringComparison.Ordinal);
         Assert.All(lines.Values, line => Assert.DoesNotContain("{0}", line, StringComparison.Ordinal));
+    }
+
+    /// <summary>The chat line names the Microsoft Teams tab the way each language's tab strip does.</summary>
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("es")]
+    [InlineData("zh-Hans")]
+    public void The_chat_line_names_the_tab_as_the_tab_strip_spells_it(string culture)
+    {
+        var strings = new FakeResxStudioStrings(culture);
+        var tools = new ToolsSettingsViewModel(new FakeApiKeyStore(), strings);
+
+        var chat = Assert.Single(tools.Families, f => f.Key == ToolCatalog.ChatFamily);
+
+        Assert.All(chat.Requirements, r =>
+        {
+            Assert.Contains(strings["Studio.Shell.MicrosoftTeams"], r.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("chat login", r.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain("{0}", r.Text, StringComparison.Ordinal);
+        });
     }
 
     /// <summary>The drive line names the Drive tab the way each language's tab strip does.</summary>

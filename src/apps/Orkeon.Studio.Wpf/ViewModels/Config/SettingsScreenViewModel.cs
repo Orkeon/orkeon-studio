@@ -6,10 +6,10 @@ using Orkeon.Studio.Wpf.ViewModels.Shell;
 namespace Orkeon.Studio.Wpf.ViewModels.Config;
 
 /// <summary>
-/// The unified Settings screen (design v3): one nav entry, eleven inner tabs in four groups
+/// The unified Settings screen (design v3): one nav entry, its inner tabs in four groups
 /// (refonte lot 11). Novice sees the ones that matter — the AI model, the API keys, the
 /// authorized folders, the tools (their keys and what each one needs, STUDIO-21), the e-mail
-/// and Drive accounts (STUDIO-67) and Studio itself (STUDIO-35); the RAG's model, the
+/// Drive and Microsoft Teams accounts (STUDIO-67) and Studio itself (STUDIO-35); the RAG's model, the
 /// limits-and-logs tab, the MCP servers and the raw-JSON tab are expert-only, and a switch back
 /// to novice while one of them is showing falls back to the model tab rather than leaving a
 /// blank screen.
@@ -55,6 +55,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>The e-mail accounts the mail tools use (STUDIO-67); both modes, the expert sees every field.</summary>
     public const string MailsTab = "mails";
 
+    /// <summary>The Microsoft Teams tab: the accounts the chat tools use.</summary>
+    public const string ChatTab = "chat";
+
     /// <summary>The Drive tab: the cloud drive accounts the drive tools use.</summary>
     public const string DriveTab = "drive";
 
@@ -95,6 +98,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         // The E-mail form is in both modes and shows more to the expert (STUDIO-67).
         Config.Email.IsExpert = _mode.IsExpert;
         Config.Drive.IsExpert = _mode.IsExpert;
+        Config.Chat.IsExpert = _mode.IsExpert;
 
         // Novice auto-save (audit 07/16): the novice screen shows no Save button, so every
         // edit saves the document. Listening to each edit rather than the dirty transition
@@ -116,6 +120,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
                 Config.Email.RefreshStatesSoon();
             else if (IsDriveTab)
                 Config.Drive.RefreshStatesSoon();
+            else if (IsChatTab)
+                Config.Chat.RefreshStatesSoon();
         };
 
         ShowModelCommand = new RelayCommand(() => ActiveTab = ModelTab);
@@ -141,6 +147,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         ShowStudioCommand = new RelayCommand(() => ActiveTab = StudioTab);
         ShowMailsCommand = new RelayCommand(() => ActiveTab = MailsTab);
         ShowDriveCommand = new RelayCommand(() => ActiveTab = DriveTab);
+        ShowChatCommand = new RelayCommand(() => ActiveTab = ChatTab);
 
         // Lot 5: leaving with unsaved edits asks first; the three answers end the question.
         SaveAndLeaveCommand = new AsyncRelayCommand(async () =>
@@ -240,17 +247,18 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         get => _activeTab;
         set
         {
-            var requested = value is RagTab or KeysTab or DecisionTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab ? value : ModelTab;
+            var requested = value is RagTab or KeysTab or DecisionTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab or ChatTab ? value : ModelTab;
             if (_mode.IsNovice && requested is RagTab or LimitsTab or JsonTab or McpTab or ShellTab)
                 requested = ModelTab;
 
             var wasMails = IsMailsTab;
             var wasDrive = IsDriveTab;
+            var wasChat = IsChatTab;
             if (SetProperty(ref _activeTab, requested))
             {
                 OnPropertiesChanged(
                     nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsDecisionTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
-                    nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab));
+                    nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab), nameof(IsChatTab));
                 // The classeur selects a tab through ActiveTab itself, not through its command.
                 if (IsFoldersTab)
                     TeamFolders.Refresh();
@@ -267,6 +275,12 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
                     _ = Config.Drive.RefreshStatesAsync();
                 else if (wasDrive)
                     Config.Drive.StopActivity();
+
+                // So does the Microsoft Teams tab.
+                if (IsChatTab)
+                    _ = Config.Chat.RefreshStatesAsync();
+                else if (wasChat)
+                    Config.Chat.StopActivity();
             }
         }
     }
@@ -313,6 +327,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>True while the Drive tab shows.</summary>
     public bool IsDriveTab => _activeTab == DriveTab;
 
+    /// <summary>True while the Microsoft Teams tab shows.</summary>
+    public bool IsChatTab => _activeTab == ChatTab;
+
     /// <summary>Shows the model tab.</summary>
     public RelayCommand ShowModelCommand { get; }
 
@@ -355,6 +372,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>Shows the Drive tab.</summary>
     public RelayCommand ShowDriveCommand { get; }
 
+    /// <summary>Shows the Microsoft Teams tab.</summary>
+    public RelayCommand ShowChatCommand { get; }
+
     /// <summary>
     /// The screen shows again — its sidebar entry was chosen: the e-mail tab, when it is the one
     /// showing, reads the states of its accounts again (STUDIO-69).
@@ -365,6 +385,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
             _ = Config.Email.RefreshStatesAsync();
         else if (IsDriveTab)
             _ = Config.Drive.RefreshStatesAsync();
+        else if (IsChatTab)
+            _ = Config.Chat.RefreshStatesAsync();
     }
 
     /// <summary>
@@ -375,6 +397,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     {
         Config.Email.StopActivity();
         Config.Drive.StopActivity();
+        Config.Chat.StopActivity();
     }
 
     private void OnModeChanged(object? sender, PropertyChangedEventArgs e)
@@ -384,6 +407,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
 
         Config.Email.IsExpert = _mode.IsExpert;
         Config.Drive.IsExpert = _mode.IsExpert;
+        Config.Chat.IsExpert = _mode.IsExpert;
         if (_mode.IsNovice && (IsRagTab || IsLimitsTab || IsJsonTab || IsMcpTab || IsShellTab))
             ActiveTab = ModelTab;
     }

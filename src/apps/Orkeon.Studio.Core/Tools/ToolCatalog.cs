@@ -41,6 +41,14 @@ public enum ToolRequirement
     DriveAccount,
 
     /// <summary>
+    /// A chat account (Microsoft Teams) declared in the settings file, under the section named in
+    /// <see cref="ToolInfo.Argument"/>. Like <see cref="DriveAccount"/>, the tool is registered with
+    /// or without one and, until an account is declared, refuses every call saying what to do. The
+    /// sentence sends to the Microsoft Teams tab; the section stays the argument.
+    /// </summary>
+    ChatAccount,
+
+    /// <summary>
     /// A RAG collection to search: one the crew's <c>rag:</c> block declares, which the run ingests
     /// as the crew loads, one <c>rag_ingest</c> filled, or one a store that outlives the run keeps
     /// (<c>Orkeon:Rag:Provider</c>, chosen in the expert RAG tab). The tool is registered by every
@@ -129,6 +137,9 @@ public static class ToolCatalog
     /// <summary>Where a drive account is declared: one entry per account, keyed by its name.</summary>
     public const string DriveAccounts = ConfigurationKeys.ToolsDrive + ":Accounts";
 
+    /// <summary>Where a chat account is declared: one entry per account, keyed by its name.</summary>
+    public const string ChatAccounts = ConfigurationKeys.ToolsChat + ":Accounts";
+
     /// <summary>Family keys, in display order.</summary>
     public const string WebFamily = "web";
     /// <summary>Search and knowledge.</summary>
@@ -141,6 +152,8 @@ public static class ToolCatalog
     public const string EmailFamily = "email";
     /// <summary>Drive: Google Drive and OneDrive.</summary>
     public const string DriveFamily = "drive";
+    /// <summary>Chat: Microsoft Teams.</summary>
+    public const string ChatFamily = "chat";
     /// <summary>Code.</summary>
     public const string CodeFamily = "code";
     /// <summary>Session and memory.</summary>
@@ -275,6 +288,19 @@ public static class ToolCatalog
             new("drive_move", ToolRequirement.DriveAccount, DriveAccounts),
             new("drive_delete", ToolRequirement.DriveAccount, DriveAccounts),
             new("drive_share", ToolRequirement.DriveAccount, DriveAccounts),
+        ]),
+        new(ChatFamily,
+        [
+            new("chat_accounts", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_list", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_read", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_search", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_members", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_meetings", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_send", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_edit", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_delete", ToolRequirement.ChatAccount, ChatAccounts),
+            new("chat_react", ToolRequirement.ChatAccount, ChatAccounts),
         ]),
         new(CodeFamily,
         [

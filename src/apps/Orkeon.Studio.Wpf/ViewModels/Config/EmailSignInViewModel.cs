@@ -45,8 +45,9 @@ public sealed record EmailSignInServices
 
 /// <summary>
 /// Runs the <c>login --events jsonl</c> verb of an account family and follows it: what
-/// <see cref="EmailCliClient.LoginAsync"/> and <see cref="Orkeon.Studio.Core.Drive.DriveCliClient.LoginAsync"/>
-/// both are — the two families speak the same sign-in protocol.
+/// <see cref="EmailCliClient.LoginAsync"/>, <see cref="Orkeon.Studio.Core.Drive.DriveCliClient.LoginAsync"/>
+/// and <see cref="Orkeon.Studio.Core.Chat.ChatCliClient.LoginAsync"/> are — the families speak the
+/// same sign-in protocol.
 /// </summary>
 internal delegate Task<EmailLoginStep> AccountLogin(
     string account,
@@ -56,7 +57,7 @@ internal delegate Task<EmailLoginStep> AccountLogin(
     CancellationToken cancellationToken);
 
 /// <summary>
-/// The section a sign-in panel belongs to (the E-mail tab, the Drive tab): what it says of a
+/// The section a sign-in panel belongs to (the E-mail, Drive or Microsoft Teams tab): what it says of a
 /// failure, and what it reads again once tokens are stored.
 /// </summary>
 internal interface IAccountSignInOwner
@@ -82,7 +83,7 @@ internal sealed record EmailSignInEnvironment(
 
 /// <summary>
 /// One sign-in of an OAuth account, from the click to its end (STUDIO-70): the panel under the
-/// account's row — of the E-mail tab, and of the Drive tab, whose <c>orkeon drive login</c> speaks
+/// account's row — of the E-mail tab, and of the Drive and Microsoft Teams tabs, whose verbs speak
 /// the same protocol. Studio runs no OAuth flow — <c>orkeon email login --events jsonl</c> does,
 /// and stores the tokens where every run looks for them; this shows what the person has to do
 /// meanwhile, and waits. A device sign-in (Microsoft) is a page and a code, counted down on the

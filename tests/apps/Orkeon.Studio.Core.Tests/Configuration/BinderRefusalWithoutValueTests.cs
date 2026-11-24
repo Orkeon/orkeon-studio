@@ -78,7 +78,7 @@ public sealed class BinderRefusalWithoutValueTests
     }
 
     /// <summary>
-    /// The e-mail and drive binders word an account's refusal through the engine's rewording, naming the
+    /// The e-mail, drive and chat binders word an account's refusal through the engine's rewording, naming the
     /// account's section (#469): Studio's rewording on that section says the same.
     /// </summary>
     [Theory]
@@ -95,6 +95,10 @@ public sealed class BinderRefusalWithoutValueTests
 
         Assert.Equal(emailSaid, Studio.WithoutValue(email, $"Orkeon:Tools:Email:Accounts:{account}"));
         Assert.Equal(driveSaid, Studio.WithoutValue(drive, $"Orkeon:Tools:Drive:Accounts:{account}"));
+        var chat = BinderRefusal($"Orkeon:Tools:Chat:Accounts:{account}:Send:{key}", Secret, new WholeNumberProbe());
+        var chatSaid = Orkeon.Tools.Chat.Configuration.ChatOptionsBinder.Refusal(account, chat);
+        Assert.Equal(chatSaid, Studio.WithoutValue(chat, $"Orkeon:Tools:Chat:Accounts:{account}"));
+        Assert.DoesNotContain(Secret, chatSaid, StringComparison.Ordinal);
         Assert.DoesNotContain(Secret, emailSaid, StringComparison.Ordinal);
         Assert.DoesNotContain(Secret, driveSaid, StringComparison.Ordinal);
     }

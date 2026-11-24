@@ -113,8 +113,9 @@ public sealed class CapturePlannerTests
         // UX lot 07: -2 stops (visite-etape4 and visite-etape5, the tour cut to three stops) = -4 shots.
         // Task editor: +1 stop (modale-editeur-tache, the task editor over the Composer, both modes,
         // both themes) = +4 shots.
-        Assert.Equal(76, CaptureCatalog.All.Count);
-        Assert.Equal(416, plan.Count);
+        // Microsoft Teams: +1 stop (reglages-teams-vide, both modes, both themes, language sweep) = +8 shots.
+        Assert.Equal(77, CaptureCatalog.All.Count);
+        Assert.Equal(424, plan.Count);
     }
 
     [Fact]
