@@ -188,9 +188,8 @@ public sealed class ChatValidationOracleTests
         const string Secret = "sk-ant-studio-oracle' at 'secret";
         var definitions = new[] { App with { ClientSecretEnvVar = Secret }, Webhook with { WebhookEnvVar = Secret }, User with { Provider = Secret } };
 
-        foreach (var definition in definitions)
+        foreach (var findings in definitions.Select(definition => ChatAccountRules.Check(Name, definition)))
         {
-            var findings = ChatAccountRules.Check(Name, definition);
             Assert.NotEmpty(findings);
             Assert.All(findings, finding => Assert.DoesNotContain("sk-ant", finding.Text, StringComparison.Ordinal));
         }

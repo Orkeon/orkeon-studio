@@ -231,14 +231,7 @@ public static class ChatAccountsParser
                 return false;
             }
 
-            var parsed = new List<ChatAccountState>();
-            foreach (var element in document.RootElement.EnumerateArray())
-            {
-                if (TryReadAccount(element, out var account))
-                    parsed.Add(account);
-            }
-
-            accounts = parsed;
+            accounts = [.. document.RootElement.EnumerateArray().Select(ReadAccount).OfType<ChatAccountState>()];
             error = null;
             return true;
         }
@@ -249,17 +242,16 @@ public static class ChatAccountsParser
         }
     }
 
-    private static bool TryReadAccount(JsonElement element, out ChatAccountState account)
+    private static ChatAccountState? ReadAccount(JsonElement element)
     {
-        account = default!;
         if (element.ValueKind != JsonValueKind.Object)
-            return false;
+            return null;
 
         var name = ReadString(element, "name");
         if (string.IsNullOrWhiteSpace(name))
-            return false;
+            return null;
 
-        account = new ChatAccountState
+        return new ChatAccountState
         {
             Name = name,
             Ready = ReadBoolean(element, "ready"),
@@ -269,7 +261,6 @@ public static class ChatAccountsParser
             IsApplication = ReadBoolean(element, "application"),
             IsDefault = ReadBoolean(element, "default"),
         };
-        return true;
     }
 
     private static string? ReadString(JsonElement element, string propertyName) =>

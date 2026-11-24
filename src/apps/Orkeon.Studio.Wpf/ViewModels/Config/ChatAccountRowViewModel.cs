@@ -558,12 +558,9 @@ public sealed class ChatAccountRowViewModel : ObservableObject
     /// The engine's sentence, in English, as printed: what the account reached on success, what was
     /// refused otherwise. Without a CLI, the sentence of the home screen.
     /// </summary>
-    public string? LastCheckDetail => _lastCheck switch
-    {
-        null => null,
-        { Kind: EmailCheckKind.Unavailable, ExitCode: null } => _owner.EngineMissingText,
-        var outcome => outcome.Sentence,
-    };
+    public string? LastCheckDetail => _lastCheck is { Kind: EmailCheckKind.Unavailable, ExitCode: null }
+        ? _owner.EngineMissingText
+        : _lastCheck?.Sentence;
 
     // ── signing in and out ──
 

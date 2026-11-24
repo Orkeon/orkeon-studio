@@ -15,9 +15,9 @@ namespace Orkeon.Studio.Core.Tests.Chat;
 /// </summary>
 public sealed class ChatCliClientTests
 {
-    private static readonly string InstallDirectory = Path.Combine("/", "opt", "orkeon");
-    private static readonly string BinaryPath = Path.Combine(InstallDirectory, "orkeon");
-    private static readonly string Settings = Path.Combine("/", "home", "me", "my settings", "appsettings.json");
+    private static readonly string InstallDirectory = Path.Join("/", "opt", "orkeon");
+    private static readonly string BinaryPath = Path.Join(InstallDirectory, "orkeon");
+    private static readonly string Settings = Path.Join(["/", "home", "me", "my settings", "appsettings.json"]);
 
     // What `chat accounts --json` prints: indented, one property per line, nulls written.
     private static readonly string[] TwoAccounts =
@@ -140,8 +140,9 @@ public sealed class ChatCliClientTests
         var result = await CreateClient(launcher).ListAsync(Settings, TestContext.Current.CancellationToken);
 
         Assert.Empty(result.Accounts);
-        Assert.Equal(EmailCliFailureKind.Unreadable, result.Failure?.Kind);
-        Assert.Contains("--json", result.Failure!.Reason, StringComparison.Ordinal);
+        Assert.NotNull(result.Failure);
+        Assert.Equal(EmailCliFailureKind.Unreadable, result.Failure.Kind);
+        Assert.Contains("--json", result.Failure.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -164,8 +165,9 @@ public sealed class ChatCliClientTests
 
         var result = await CreateClient(launcher).ListAsync(Settings, TestContext.Current.CancellationToken);
 
-        Assert.Equal(EmailCliFailureKind.Stopped, result.Failure?.Kind);
-        Assert.Equal("the settings file is not valid JSON.", result.Failure!.Reason);
+        Assert.NotNull(result.Failure);
+        Assert.Equal(EmailCliFailureKind.Stopped, result.Failure.Kind);
+        Assert.Equal("the settings file is not valid JSON.", result.Failure.Reason);
         Assert.Equal(1, result.Failure.ExitCode);
     }
 
@@ -325,14 +327,15 @@ public sealed class ChatCliClientTests
     [Fact]
     public async Task A_refusal_of_the_verb_ends_the_sign_in_with_its_code_and_its_message()
     {
-        const string Message = "Chat account 'perso' has no client secret: the environment variable DRIVE_PERSO_CLIENT_SECRET is not set.";
+        const string Message = "Chat account 'perso' has no client secret: the environment variable CHAT_PERSO_CLIENT_SECRET is not set.";
         var launcher = new FakeProcessLauncher { ExitCode = 1 }.WithStandardOutput(ErrorLine(1, EmailCheckCodes.CredentialMissing, Message));
 
         var ended = await CreateClient(launcher).LoginAsync("perso", Settings, _ => { }, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(EmailLoginStepKind.Failed, ended.Kind);
-        Assert.Equal(EmailCliFailureKind.Refused, ended.Failure?.Kind);
-        Assert.Equal(EmailCheckCodes.CredentialMissing, ended.Failure!.Code);
+        Assert.NotNull(ended.Failure);
+        Assert.Equal(EmailCliFailureKind.Refused, ended.Failure.Kind);
+        Assert.Equal(EmailCheckCodes.CredentialMissing, ended.Failure.Code);
         Assert.Equal(Message, ended.Failure.Reason);
         Assert.Equal(1, ended.Failure.ExitCode);
     }
@@ -344,8 +347,9 @@ public sealed class ChatCliClientTests
 
         var ended = await CreateClient(launcher).LoginAsync("perso", Settings, _ => { }, cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal(EmailCliFailureKind.Unreadable, ended.Failure?.Kind);
-        Assert.Contains(ChatEventKinds.LoginCompleted, ended.Failure!.Reason, StringComparison.Ordinal);
+        Assert.NotNull(ended.Failure);
+        Assert.Equal(EmailCliFailureKind.Unreadable, ended.Failure.Kind);
+        Assert.Contains(ChatEventKinds.LoginCompleted, ended.Failure.Reason, StringComparison.Ordinal);
         Assert.Contains("orkeon chat login", ended.Failure.Reason, StringComparison.Ordinal);
     }
 

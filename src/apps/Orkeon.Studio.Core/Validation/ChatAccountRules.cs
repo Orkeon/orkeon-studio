@@ -402,12 +402,15 @@ public static class ChatAccountRules
 
     private static void ResolveApplicationPlaces(ChatAccountDefinition definition, Findings findings)
     {
-        foreach (var entry in definition.ReadPlaces)
-        {
-            if (!TryParsePlace(entry, out var form, out var value))
-                continue;
+        foreach (var problem in definition.ReadPlaces.Select(ApplicationPlaceProblem).OfType<string>())
+            findings.Add(ValidationCodes.ChatPlaces, ReadPlacesKey, problem);
+    }
 
-            var problem = form switch
+    /// <summary>Why an application may not read a place; null when it may, or when the entry is no place.</summary>
+    private static string? ApplicationPlaceProblem(string entry) =>
+        !TryParsePlace(entry, out var form, out var value)
+            ? null
+            : form switch
             {
                 PlaceForm.Any => "Read:AllowedPlaces holds '*', which for Auth:Method ClientCredentials would be every conversation of the tenant: name the places",
                 PlaceForm.Person => $"Read:AllowedPlaces entry '{entry.Trim()}' names a person, and an application has no one-to-one chat of its own: name the chat by its id",
@@ -415,10 +418,6 @@ public static class ChatAccountRules
                     $"Read:AllowedPlaces entry '{entry.Trim()}' names a team by its name, which any team of the tenant can take, and an application reaches them all: write the team's id",
                 _ => null,
             };
-            if (problem is not null)
-                findings.Add(ValidationCodes.ChatPlaces, ReadPlacesKey, problem);
-        }
-    }
 
     private static void ResolveCap(ChatAccountDefinition definition, Findings findings)
     {

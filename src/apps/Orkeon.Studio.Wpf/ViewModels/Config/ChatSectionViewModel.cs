@@ -694,11 +694,8 @@ public sealed class ChatSectionViewModel : DocumentSectionViewModel, IAccountSig
         // The rows are rebuilt: a panel has no row to show under any more.
         StopSignIns();
         Accounts.Clear();
-        foreach (var name in Section.AccountNames.Where(name => !string.IsNullOrWhiteSpace(name)))
-        {
-            if (Section.GetAccount(name) is { } account)
-                Accounts.Add(new ChatAccountRowViewModel(account, this, _strings));
-        }
+        foreach (var account in Section.AccountNames.Where(name => !string.IsNullOrWhiteSpace(name)).Select(Section.GetAccount).OfType<ChatAccountDefinition>().ToList())
+            Accounts.Add(new ChatAccountRowViewModel(account, this, _strings));
 
         RefreshSecrets();
         ApplyStates();
