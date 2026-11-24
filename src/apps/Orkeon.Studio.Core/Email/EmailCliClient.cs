@@ -303,6 +303,9 @@ public static class EmailCheckCodes
 
     /// <summary>A named secret is not set: the password field of the Sign-in tab is the gesture.</summary>
     public const string CredentialMissing = "CredentialMissing";
+
+    /// <summary>A chat account has no usable token, as the engine's <c>ChatErrorCode</c> names it: the same gesture as <see cref="LoginRequired"/>.</summary>
+    public const string SignInRequired = "SignInRequired";
 }
 
 /// <summary>

@@ -354,4 +354,52 @@ public static class ValidationCodes
     /// every account aside until it is.
     /// </summary>
     public const string DriveScreening = "STUDIO-DRIVE-SCREENING";
+
+    /// <summary>A chat account name the engine refuses: the account is set aside.</summary>
+    public const string ChatName = "STUDIO-CHAT-NAME";
+
+    /// <summary>
+    /// Two chat account names equal but for the case: an error when both set one same key, which
+    /// the JSON configuration refuses; a warning when they share none, which the run reads as one.
+    /// </summary>
+    public const string ChatDuplicate = "STUDIO-CHAT-DUPLICATE";
+
+    /// <summary>Two keys equal but for the case in one object of <c>Orkeon:Tools:Chat</c>, as <see cref="EmailTwin"/>.</summary>
+    public const string ChatTwin = "STUDIO-CHAT-TWIN";
+
+    /// <summary>A key neither the chat section nor a chat account carries, or one value where several are expected.</summary>
+    public const string ChatKey = "STUDIO-CHAT-KEY";
+
+    /// <summary>A value of a chat account the engine cannot read (a misspelt right, a cap in words).</summary>
+    public const string ChatValue = "STUDIO-CHAT-VALUE";
+
+    /// <summary>A chat account that names no provider.</summary>
+    public const string ChatProvider = "STUDIO-CHAT-PROVIDER";
+
+    /// <summary>A chat account that grants no right, or one its provider or its sign-in does not allow.</summary>
+    public const string ChatRights = "STUDIO-CHAT-RIGHTS";
+
+    /// <summary>How a chat account signs in: client id, tenant, administrator's grants, an application's credential.</summary>
+    public const string ChatAuth = "STUDIO-CHAT-AUTH";
+
+    /// <summary>The webhook of a chat account: the variable of its address, or one set for an account that has none.</summary>
+    public const string ChatWebhook = "STUDIO-CHAT-WEBHOOK";
+
+    /// <summary>The cloud of a chat account, when the engine serves none of that name.</summary>
+    public const string ChatCloud = "STUDIO-CHAT-CLOUD";
+
+    /// <summary>The allowed places of a chat account: an entry that is no place, or one its identity cannot use.</summary>
+    public const string ChatPlaces = "STUDIO-CHAT-PLACES";
+
+    /// <summary>The hourly cap of a chat account.</summary>
+    public const string ChatLimits = "STUDIO-CHAT-LIMITS";
+
+    /// <summary><c>Orkeon:Tools:Chat:DefaultAccount</c> names no declared account.</summary>
+    public const string ChatDefault = "STUDIO-CHAT-DEFAULT";
+
+    /// <summary>
+    /// <c>Orkeon:Tools:Chat:Screening:WithholdRejected</c> is neither true nor false: the engine sets
+    /// every account aside until it is.
+    /// </summary>
+    public const string ChatScreening = "STUDIO-CHAT-SCREENING";
 }

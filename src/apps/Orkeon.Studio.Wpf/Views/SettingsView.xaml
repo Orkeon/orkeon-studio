@@ -652,6 +652,11 @@
         <!-- ══ DRIVE (both modes): the Google Drive and OneDrive accounts the drive tools use ══ -->
         <views:DriveView DataContext="{Binding Config.Drive}"/>
       </controls:StepTab>
+      <controls:StepTab Tag="chat" Header="{Binding [Studio.Shell.MicrosoftTeams], Source={x:Static services:I18n.Instance}}"
+                      Subtitle="{Binding ChatTabSubtitle}" State="{Binding ChatTabState}">
+        <!-- ══ MICROSOFT TEAMS (both modes): the accounts the chat tools use ══ -->
+        <views:ChatAccountsView DataContext="{Binding Config.Chat}"/>
+      </controls:StepTab>
       <controls:StepTab Tag="mcp" Header="{Binding [Studio.Shell.Mcp], Source={x:Static services:I18n.Instance}}"
                       Subtitle="{Binding McpTabSubtitle}" State="{Binding McpTabState}"
                       Visibility="{Binding Mode.IsExpert, Converter={StaticResource BooleanToVisibility}}">

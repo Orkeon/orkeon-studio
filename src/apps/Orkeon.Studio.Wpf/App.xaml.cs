@@ -170,6 +170,9 @@ public partial class App : System.Windows.Application
                 // The Drive tab keeps a timer and a beat of its own, for the same reasons.
                 DriveStatesDelay = new WpfDelay(Dispatcher),
                 DriveSignInTicker = new WpfTicker(Dispatcher),
+                // So does the Microsoft Teams tab.
+                ChatStatesDelay = new WpfDelay(Dispatcher),
+                ChatSignInTicker = new WpfTicker(Dispatcher),
             },
             new StudioUiPreferences
             {

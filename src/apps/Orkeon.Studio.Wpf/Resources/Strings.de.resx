@@ -1951,6 +1951,7 @@
   <data name="Studio.Settings.ToolFamilyDrive" xml:space="preserve">
     <value>Cloud-Speicher</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyChat" xml:space="preserve"><value>Microsoft Teams</value></data>
   <data name="Studio.Settings.ToolFamilyCode" xml:space="preserve">
     <value>Code</value>
   </data>
@@ -1993,6 +1994,7 @@
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>braucht ein Cloud-Speicher-Konto, deklariert unter Einstellungen › Cloud-Speicher</value>
   </data>
+  <data name="Studio.Settings.ToolNeedsChatAccount" xml:space="preserve"><value>braucht ein Teams-Konto, deklariert unter Einstellungen › Microsoft Teams</value></data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
     <value>durchsucht eine Sammlung, die der rag:-Block des Teams oder rag_ingest füllt oder die der unter Einstellungen › Dokumentsuche (RAG) gewählte Speicher behält (Expertenmodus)</value>
   </data>
@@ -3897,6 +3899,54 @@
   <data name="Studio.Settings.DriveAllowPublicLinksHint" xml:space="preserve">
     <value>Aus: Ein Agent teilt nur mit den erlaubten Empfängern.</value>
   </data>
+  <data name="Studio.Shell.MicrosoftTeams" xml:space="preserve"><value>Microsoft Teams</value></data>
+  <data name="Studio.Settings.ChatProviderTeams" xml:space="preserve"><value>Microsoft Teams — liest und schreibt über Microsoft Graph</value></data>
+  <data name="Studio.Settings.ChatProviderWebhook" xml:space="preserve"><value>Teams-Webhook — schreibt an einen einzigen Ort, über seine Workflows-Adresse</value></data>
+  <data name="Studio.Settings.ChatMethodUser" xml:space="preserve"><value>Eine Person meldet sich an, und die Agenten handeln in ihrem Namen</value></data>
+  <data name="Studio.Settings.ChatMethodApplication" xml:space="preserve"><value>Eine Anwendung meldet sich als sie selbst an, nur zum Lesen</value></data>
+  <data name="Studio.Settings.ChatCloudGlobal" xml:space="preserve"><value>Weltweit</value></data>
+  <data name="Studio.Settings.ChatCloudUsGov" xml:space="preserve"><value>US-Regierung (L4)</value></data>
+  <data name="Studio.Settings.ChatCloudUsGovDoD" xml:space="preserve"><value>US-Regierung, DoD (L5)</value></data>
+  <data name="Studio.Settings.ChatWebhookUrl" xml:space="preserve"><value>Webhook-Adresse</value></data>
+  <data name="Studio.Settings.ChatApplicationSecret" xml:space="preserve"><value>Client-Secret der Anwendung</value></data>
+  <data name="Studio.Settings.ChatTitle" xml:space="preserve"><value>Microsoft-Teams-Konten</value></data>
+  <data name="Studio.Settings.ChatIntro" xml:space="preserve"><value>Die Microsoft-Teams-Konten, die Ihre Agenten nutzen dürfen. Jedes Konto legt fest, was sie tun dürfen und in welchen Teams, Kanälen und Chats.</value></data>
+  <data name="Studio.Settings.ChatEmpty" xml:space="preserve"><value>Die Teams-Werkzeuge lehnen jeden Aufruf ab, bis ein Konto deklariert ist.</value></data>
+  <data name="Studio.Settings.ChatWithholdRejected" xml:space="preserve"><value>Den Text einer Nachricht zurückhalten, die die Prüfung auf Prompt-Injection ablehnt</value></data>
+  <data name="Studio.Settings.ChatWithholdRejectedHint" xml:space="preserve"><value>Aus: Der Agent liest die Nachricht mit einer Warnung; an: Er liest nur die Warnung.</value></data>
+  <data name="Studio.Settings.ChatSignInFailedHint" xml:space="preserve"><value>Nichts wurde gespeichert. Der Chat-Leitfaden (docs/guides/chat.md) erklärt jede Ablehnung.</value></data>
+  <data name="Studio.Settings.ChatRenameCost" xml:space="preserve"><value>Ein Konto, an dem sich eine Person anmeldet, muss sich unter dem neuen Namen erneut anmelden: Seine Token liegen unter dem alten. Ein Geheimnis bleibt in seiner Umgebungsvariablen, unter deren eigenem Namen.</value></data>
+  <data name="Studio.Settings.ChatRemoveCost" xml:space="preserve"><value>Die Umgebungsvariable mit dem Geheimnis und die Anmeldetoken bleiben auf diesem Rechner; in Teams wird nichts angetastet.</value></data>
+  <data name="Studio.Settings.ChatRightRead" xml:space="preserve"><value>Lesen — Orte auflisten, Nachrichten lesen und suchen, Mitglieder auflisten</value></data>
+  <data name="Studio.Settings.ChatRightSend" xml:space="preserve"><value>Senden — Nachrichten und Antworten schreiben, nur an den unten genannten Orten</value></data>
+  <data name="Studio.Settings.ChatRightSendWebhook" xml:space="preserve"><value>Senden — an den Ort des Webhooks schreiben, sein einziges Recht</value></data>
+  <data name="Studio.Settings.ChatRightEdit" xml:space="preserve"><value>Bearbeiten — vom Konto geschriebene Nachrichten ändern</value></data>
+  <data name="Studio.Settings.ChatRightDelete" xml:space="preserve"><value>Löschen — vom Konto geschriebene Nachrichten löschen</value></data>
+  <data name="Studio.Settings.ChatRightReact" xml:space="preserve"><value>Reagieren — Reaktionen hinzufügen und entfernen</value></data>
+  <data name="Studio.Settings.ChatRightMeetings" xml:space="preserve"><value>Besprechungen — Transkripte von Besprechungen lesen</value></data>
+  <data name="Studio.Settings.ChatReadPlaces" xml:space="preserve"><value>Orte, die die Agenten lesen dürfen</value></data>
+  <data name="Studio.Settings.ChatSendPlaces" xml:space="preserve"><value>Orte, an denen die Agenten schreiben dürfen</value></data>
+  <data name="Studio.Settings.ChatPlacesHint" xml:space="preserve"><value>Einer pro Zeile: team:Name, team:Name/channel:Name, chat:ID, user:Adresse, user:*@Domäne oder * für überall. Ein Name kann durch seine ID ersetzt werden.</value></data>
+  <data name="Studio.Settings.ChatPlaceAdd" xml:space="preserve"><value>Ort hinzufügen</value></data>
+  <data name="Studio.Settings.ChatPlaceInvalid" xml:space="preserve"><value>Kein Ort: team:, team:…/channel:…, chat:, user: oder *.</value></data>
+  <data name="Studio.Settings.ChatReadClosed" xml:space="preserve"><value>Noch kann nichts gelesen werden: Listen Sie die Orte auf.</value></data>
+  <data name="Studio.Settings.ChatSendClosed" xml:space="preserve"><value>Noch kann nirgends geschrieben werden: Listen Sie die Orte auf.</value></data>
+  <data name="Studio.Settings.ChatMaxPerHour" xml:space="preserve"><value>Höchstzahl an Schreibvorgängen pro Stunde</value></data>
+  <data name="Studio.Settings.ChatMaxPerHourHint" xml:space="preserve"><value>Beiträge, Änderungen, Löschungen und Reaktionen zusammen. Leer: keine Grenze.</value></data>
+  <data name="Studio.Settings.ChatClientIdHint" xml:space="preserve"><value>Die ID der Anwendung, die Sie in Microsoft Entra registriert haben.</value></data>
+  <data name="Studio.Settings.ChatTenantHint" xml:space="preserve"><value>Mandanten-ID oder Domäne Ihrer Organisation. Leer: jedes Geschäfts- oder Schulkonto; eine Anwendung muss sie angeben.</value></data>
+  <data name="Studio.Settings.ChatGrants" xml:space="preserve"><value>Von einem Administrator erteilte Berechtigungen</value></data>
+  <data name="Studio.Settings.ChatGrantsHint" xml:space="preserve"><value>Aktivieren Sie nur, wozu ein Administrator Ihres Mandanten zugestimmt hat: Die Anmeldung fragt es ab.</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMessages" xml:space="preserve"><value>Nachrichten von Kanälen lesen</value></data>
+  <data name="Studio.Settings.ChatGrantChannelEdit" xml:space="preserve"><value>In Kanälen bearbeiten und löschen (zusammen mit der vorigen)</value></data>
+  <data name="Studio.Settings.ChatGrantMeetings" xml:space="preserve"><value>Transkripte von Besprechungen lesen</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMembers" xml:space="preserve"><value>Mitglieder von Kanälen auflisten</value></data>
+  <data name="Studio.Settings.ChatTestWebhook" xml:space="preserve"><value>Eingerichtet; nichts wurde gesendet</value></data>
+  <data name="Studio.Settings.ChatCloud" xml:space="preserve"><value>Microsoft-Cloud</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlHint" xml:space="preserve"><value>Die Adresse, die Teams dem Workflow gibt. Sie ist ein Geheimnis: Wer sie besitzt, kann schreiben.</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlEnvVar" xml:space="preserve"><value>Name der Variablen mit der Webhook-Adresse</value></data>
+  <data name="Studio.Settings.ChatCertificateEnvVar" xml:space="preserve"><value>Name der Variablen mit dem Pfad des Zertifikats</value></data>
+  <data name="Studio.Settings.ChatFederatedTokenEnvVar" xml:space="preserve"><value>Name der Variablen mit dem Pfad der Verbundtoken-Datei</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-NAME" xml:space="preserve">
     <value>Ein Cloud-Speicher-Kontoname ist unbrauchbar: nur Buchstaben, Ziffern, '.', '_' und '-', höchstens 64 Zeichen. Die Engine stellt das Konto zurück.</value>
   </data>
@@ -3936,6 +3986,20 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-SCREENING" xml:space="preserve">
     <value>Der Prüfschalter des Cloud-Speicher-Abschnitts ist weder true noch false: Die Engine stellt alle Konten zurück, bis er es ist.</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-NAME" xml:space="preserve"><value>Ein Teams-Kontoname ist unbrauchbar: nur Buchstaben, Ziffern, '.', '_' und '-', höchstens 64 Zeichen. Die Engine stellt das Konto zurück.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DUPLICATE" xml:space="preserve"><value>Zwei Teams-Konten tragen bis auf die Groß-/Kleinschreibung denselben Namen: Die Engine liest sie als eines oder kann die Datei gar nicht mehr lesen. Benennen Sie eines um.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-TWIN" xml:space="preserve"><value>Zwei Schlüssel der Teams-Einstellungen tragen bis auf die Groß-/Kleinschreibung denselben Namen: Die Engine liest sie als einen oder kann die Datei gar nicht mehr lesen. Behalten Sie nur einen.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-KEY" xml:space="preserve"><value>Ein Teams-Konto enthält einen Schlüssel, den die Engine nicht kennt: Sie stellt das Konto zurück, bis er korrigiert oder entfernt ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-VALUE" xml:space="preserve"><value>Ein Teams-Konto enthält einen Wert, den die Engine nicht lesen kann: Sie stellt das Konto zurück, bis er korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PROVIDER" xml:space="preserve"><value>Ein Teams-Konto nennt keinen Dienst: Die Engine stellt es zurück, bis es Teams oder TeamsWebhook angibt.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-RIGHTS" xml:space="preserve"><value>Die Rechte eines Teams-Kontos fehlen oder passen nicht zu seiner Art: Die Engine stellt es zurück, bis sie korrigiert sind.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-AUTH" xml:space="preserve"><value>Die Anmeldung eines Teams-Kontos ist unvollständig oder passt nicht zu seiner Art: Das Konto ist unbrauchbar, bis sie korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-WEBHOOK" xml:space="preserve"><value>Der Webhook eines Teams-Kontos fehlt oder gehört zu einem Konto, das keiner ist: Die Engine stellt das Konto zurück, bis er korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-CLOUD" xml:space="preserve"><value>Ein Teams-Konto nennt eine Microsoft-Cloud, die die Engine nicht unterstützt: Sie stellt es zurück, bis es korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PLACES" xml:space="preserve"><value>Ein Ort eines Teams-Kontos ist nicht lesbar oder passt nicht zu seiner Art: Die Engine stellt das Konto zurück, bis er korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-LIMITS" xml:space="preserve"><value>Die Stundengrenze eines Teams-Kontos ist nicht positiv oder gilt nicht für es: Die Engine stellt das Konto zurück, bis sie korrigiert ist.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DEFAULT" xml:space="preserve"><value>Das Standard-Teams-Konto nennt kein deklariertes Konto: Ein Aufruf, der kein Konto nennt, schlägt fehl.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-SCREENING" xml:space="preserve"><value>Der Prüfschalter des Teams-Abschnitts ist weder true noch false: Die Engine stellt alle Konten zurück, bis er es ist.</value></data>
   <data name="Studio.Teams.LlmLine" xml:space="preserve"><value>Modell: {0}</value></data>
   <data name="Studio.Teams.LlmLabelDefault" xml:space="preserve"><value>Standard ({0})</value></data>
   <data name="Studio.Teams.LlmNoDefault" xml:space="preserve"><value>Kein Standard gewählt: Der Lauf nimmt den Abschnitt Llm der Einstellungsdatei</value></data>

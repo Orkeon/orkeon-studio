@@ -1,4 +1,5 @@
 using Orkeon.Constants.Protocol;
+using Orkeon.Studio.Core.Chat;
 using Orkeon.Studio.Core.Drive;
 using Orkeon.Studio.Core.Events;
 using Orkeon.Studio.Core.Process;
@@ -7,10 +8,10 @@ namespace Orkeon.Studio.Core.Email;
 
 /// <summary>
 /// The event kinds of one account family's <c>login</c> and <c>check</c> verbs, under its verb.
-/// The e-mail and the drive families speak the same protocol (<see cref="EmailEventKinds"/>,
-/// <see cref="DriveEventKinds"/>) under their own prefix; only the names differ.
+/// The e-mail, the drive and the chat families speak the same protocol (<see cref="EmailEventKinds"/>,
+/// <see cref="DriveEventKinds"/>, <see cref="ChatEventKinds"/>) under their own prefix; only the names differ.
 /// </summary>
-/// <param name="Verb">The CLI verb of the family: <c>email</c>, <c>drive</c>.</param>
+/// <param name="Verb">The CLI verb of the family: <c>email</c>, <c>drive</c>, <c>chat</c>.</param>
 /// <param name="LoginDeviceCode">The step that carries a device code.</param>
 /// <param name="LoginAuthorizationUrl">The step that carries the address of a browser sign-in.</param>
 /// <param name="LoginRedirectRejected">The step that says a pasted address was rejected.</param>
@@ -45,13 +46,23 @@ internal sealed record AccountCliProtocol(
         DriveEventKinds.LoginCompleted,
         DriveEventKinds.CheckCompleted,
         DriveEventKinds.Error);
+
+    /// <summary><c>orkeon chat</c>.</summary>
+    public static AccountCliProtocol Chat { get; } = new(
+        ChatArgumentsBuilder.Verb,
+        ChatEventKinds.LoginDeviceCode,
+        ChatEventKinds.LoginAuthorizationUrl,
+        ChatEventKinds.LoginRedirectRejected,
+        ChatEventKinds.LoginCompleted,
+        ChatEventKinds.CheckCompleted,
+        ChatEventKinds.Error);
 }
 
 /// <summary>
 /// How Studio follows the verbs an account family shares (STUDIO-69, STUDIO-70): a check read off
 /// its verdict event, a sign-in followed step by step with its standard input piped, a sign-out,
-/// and the failures typed rather than thrown. <see cref="EmailCliClient"/> and
-/// <see cref="DriveCliClient"/> each hand it their argv and read their own account list.
+/// and the failures typed rather than thrown. <see cref="EmailCliClient"/>,
+/// <see cref="DriveCliClient"/> and <see cref="ChatCliClient"/> each hand it their argv and read their own account list.
 /// </summary>
 internal sealed class AccountCli
 {
@@ -93,7 +104,10 @@ internal sealed class AccountCli
             }
         }
 
-        var refused = message is { Length: > 0 } ? message : Said(run, stderr, verb);
+        // A chat check that connected and found a right not ready fails with its verdict alone.
+        var refused = message is { Length: > 0 } ? message
+            : summary is { Length: > 0 } ? summary
+            : Said(run, stderr, verb);
         return run.Outcome switch
         {
             RunOutcome.NotStarted => new EmailCheckOutcome(EmailCheckKind.Unavailable, run.Description),

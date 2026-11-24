@@ -159,6 +159,8 @@ public sealed class ToolRequirementViewModel : ObservableObject
         ToolRequirement.EmailAccount => _strings[StudioStringKeys.ToolNeedsEmailAccount],
         // The sentence sends to the Drive tab, as the e-mail one does to the E-mail tab.
         ToolRequirement.DriveAccount => _strings[StudioStringKeys.ToolNeedsDriveAccount],
+        // And this one to the Microsoft Teams tab.
+        ToolRequirement.ChatAccount => _strings[StudioStringKeys.ToolNeedsChatAccount],
         // The tabs a novice cannot open are said to be expert ones; a setting no tab writes, to be
         // written by hand in the settings file.
         ToolRequirement.RagCollection => _strings[StudioStringKeys.ToolNeedsRagCollection],

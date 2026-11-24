@@ -1951,6 +1951,7 @@
   <data name="Studio.Settings.ToolFamilyDrive" xml:space="preserve">
     <value>Almacenamiento en la nube</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyChat" xml:space="preserve"><value>Microsoft Teams</value></data>
   <data name="Studio.Settings.ToolFamilyCode" xml:space="preserve">
     <value>Código</value>
   </data>
@@ -1993,6 +1994,7 @@
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>necesita una cuenta de almacenamiento en la nube, declarada en Ajustes › Almacenamiento en la nube</value>
   </data>
+  <data name="Studio.Settings.ToolNeedsChatAccount" xml:space="preserve"><value>necesita una cuenta de Teams, declarada en Ajustes › Microsoft Teams</value></data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
     <value>busca en una colección que llena el bloque rag: del equipo o rag_ingest, o que conserva el almacén elegido en Ajustes › Búsqueda documental (RAG) (modo experto)</value>
   </data>
@@ -3897,6 +3899,54 @@
   <data name="Studio.Settings.DriveAllowPublicLinksHint" xml:space="preserve">
     <value>Desactivado, un agente solo comparte con los destinatarios permitidos.</value>
   </data>
+  <data name="Studio.Shell.MicrosoftTeams" xml:space="preserve"><value>Microsoft Teams</value></data>
+  <data name="Studio.Settings.ChatProviderTeams" xml:space="preserve"><value>Microsoft Teams — lee y publica a través de Microsoft Graph</value></data>
+  <data name="Studio.Settings.ChatProviderWebhook" xml:space="preserve"><value>Webhook de Teams — publica en un solo lugar, mediante su dirección de Workflows</value></data>
+  <data name="Studio.Settings.ChatMethodUser" xml:space="preserve"><value>Una persona inicia sesión y los agentes actúan en su nombre</value></data>
+  <data name="Studio.Settings.ChatMethodApplication" xml:space="preserve"><value>Una aplicación inicia sesión como ella misma, solo para leer</value></data>
+  <data name="Studio.Settings.ChatCloudGlobal" xml:space="preserve"><value>Mundial</value></data>
+  <data name="Studio.Settings.ChatCloudUsGov" xml:space="preserve"><value>Gobierno de EE. UU. (L4)</value></data>
+  <data name="Studio.Settings.ChatCloudUsGovDoD" xml:space="preserve"><value>Gobierno de EE. UU., DoD (L5)</value></data>
+  <data name="Studio.Settings.ChatWebhookUrl" xml:space="preserve"><value>Dirección del webhook</value></data>
+  <data name="Studio.Settings.ChatApplicationSecret" xml:space="preserve"><value>Secreto de cliente de la aplicación</value></data>
+  <data name="Studio.Settings.ChatTitle" xml:space="preserve"><value>Cuentas de Microsoft Teams</value></data>
+  <data name="Studio.Settings.ChatIntro" xml:space="preserve"><value>Las cuentas de Microsoft Teams que pueden usar sus agentes. Cada cuenta dice lo que pueden hacer, y en qué equipos, canales y chats.</value></data>
+  <data name="Studio.Settings.ChatEmpty" xml:space="preserve"><value>Las herramientas de Teams rechazan toda llamada hasta que se declare una cuenta.</value></data>
+  <data name="Studio.Settings.ChatWithholdRejected" xml:space="preserve"><value>Retener el texto de un mensaje que el filtro de inyección de prompts rechaza</value></data>
+  <data name="Studio.Settings.ChatWithholdRejectedHint" xml:space="preserve"><value>Desactivado, el agente lee el mensaje con una advertencia; activado, solo lee la advertencia.</value></data>
+  <data name="Studio.Settings.ChatSignInFailedHint" xml:space="preserve"><value>No se guardó nada. La guía de chat (docs/guides/chat.md) explica cada rechazo.</value></data>
+  <data name="Studio.Settings.ChatRenameCost" xml:space="preserve"><value>Una cuenta en la que inicia sesión una persona deberá volver a iniciarla con su nuevo nombre: sus tokens están guardados con el antiguo. Un secreto sigue en su variable de entorno, con el nombre de la variable.</value></data>
+  <data name="Studio.Settings.ChatRemoveCost" xml:space="preserve"><value>La variable de entorno que guarda su secreto y sus tokens de inicio de sesión se quedan en este equipo; no se toca nada en Teams.</value></data>
+  <data name="Studio.Settings.ChatRightRead" xml:space="preserve"><value>Leer — listar los lugares, leer y buscar mensajes, listar los miembros</value></data>
+  <data name="Studio.Settings.ChatRightSend" xml:space="preserve"><value>Enviar — publicar mensajes y respuestas, solo en los lugares de abajo</value></data>
+  <data name="Studio.Settings.ChatRightSendWebhook" xml:space="preserve"><value>Enviar — publicar en el lugar del webhook, su único derecho</value></data>
+  <data name="Studio.Settings.ChatRightEdit" xml:space="preserve"><value>Editar — cambiar los mensajes que publicó la cuenta</value></data>
+  <data name="Studio.Settings.ChatRightDelete" xml:space="preserve"><value>Eliminar — eliminar los mensajes que publicó la cuenta</value></data>
+  <data name="Studio.Settings.ChatRightReact" xml:space="preserve"><value>Reaccionar — añadir y quitar reacciones</value></data>
+  <data name="Studio.Settings.ChatRightMeetings" xml:space="preserve"><value>Reuniones — leer las transcripciones de las reuniones</value></data>
+  <data name="Studio.Settings.ChatReadPlaces" xml:space="preserve"><value>Lugares que los agentes pueden leer</value></data>
+  <data name="Studio.Settings.ChatSendPlaces" xml:space="preserve"><value>Lugares en los que los agentes pueden escribir</value></data>
+  <data name="Studio.Settings.ChatPlacesHint" xml:space="preserve"><value>Uno por línea: team:Nombre, team:Nombre/channel:Nombre, chat:id, user:dirección, user:*@dominio, o * para cualquier lugar. Un nombre puede sustituirse por su id.</value></data>
+  <data name="Studio.Settings.ChatPlaceAdd" xml:space="preserve"><value>Añadir un lugar</value></data>
+  <data name="Studio.Settings.ChatPlaceInvalid" xml:space="preserve"><value>No es un lugar: team:, team:…/channel:…, chat:, user: o *.</value></data>
+  <data name="Studio.Settings.ChatReadClosed" xml:space="preserve"><value>Todavía no se puede leer nada: indique los lugares.</value></data>
+  <data name="Studio.Settings.ChatSendClosed" xml:space="preserve"><value>Todavía no se puede escribir en ningún lugar: indique los lugares.</value></data>
+  <data name="Studio.Settings.ChatMaxPerHour" xml:space="preserve"><value>Máximo de escrituras por hora</value></data>
+  <data name="Studio.Settings.ChatMaxPerHourHint" xml:space="preserve"><value>Publicaciones, ediciones, eliminaciones y reacciones en conjunto. Vacío: sin límite.</value></data>
+  <data name="Studio.Settings.ChatClientIdHint" xml:space="preserve"><value>El ID de la aplicación que registró en Microsoft Entra.</value></data>
+  <data name="Studio.Settings.ChatTenantHint" xml:space="preserve"><value>El ID o el dominio del inquilino de su organización. Vacío: cualquier cuenta profesional o educativa; una aplicación debe indicarlo.</value></data>
+  <data name="Studio.Settings.ChatGrants" xml:space="preserve"><value>Permisos concedidos por un administrador</value></data>
+  <data name="Studio.Settings.ChatGrantsHint" xml:space="preserve"><value>Active solo lo que un administrador de su inquilino haya consentido: el inicio de sesión lo solicitará.</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMessages" xml:space="preserve"><value>Leer los mensajes de los canales</value></data>
+  <data name="Studio.Settings.ChatGrantChannelEdit" xml:space="preserve"><value>Editar y eliminar en los canales (junto con el anterior)</value></data>
+  <data name="Studio.Settings.ChatGrantMeetings" xml:space="preserve"><value>Leer las transcripciones de las reuniones</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMembers" xml:space="preserve"><value>Listar los miembros de los canales</value></data>
+  <data name="Studio.Settings.ChatTestWebhook" xml:space="preserve"><value>Configurado; no se ha enviado nada</value></data>
+  <data name="Studio.Settings.ChatCloud" xml:space="preserve"><value>Nube de Microsoft</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlHint" xml:space="preserve"><value>La dirección que Teams da al flujo de trabajo. Es un secreto: quien la tenga puede publicar.</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlEnvVar" xml:space="preserve"><value>Nombre de la variable que contiene la dirección del webhook</value></data>
+  <data name="Studio.Settings.ChatCertificateEnvVar" xml:space="preserve"><value>Nombre de la variable que contiene la ruta del certificado</value></data>
+  <data name="Studio.Settings.ChatFederatedTokenEnvVar" xml:space="preserve"><value>Nombre de la variable que contiene la ruta del archivo de token federado</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-NAME" xml:space="preserve">
     <value>El nombre de una cuenta de almacenamiento en la nube no es utilizable: solo letras, dígitos, '.', '_' y '-', 64 caracteres como máximo. El motor aparta la cuenta.</value>
   </data>
@@ -3936,6 +3986,20 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-SCREENING" xml:space="preserve">
     <value>El interruptor de filtrado de la sección de almacenamiento en la nube no es ni true ni false: el motor aparta todas las cuentas hasta que lo sea.</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-NAME" xml:space="preserve"><value>El nombre de una cuenta de Teams no es utilizable: solo letras, dígitos, '.', '_' y '-', 64 caracteres como máximo. El motor aparta la cuenta.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DUPLICATE" xml:space="preserve"><value>Dos cuentas de Teams llevan el mismo nombre salvo por las mayúsculas: el motor las lee como una sola, o ya no puede leer el archivo. Cambie el nombre de una.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-TWIN" xml:space="preserve"><value>Dos claves de los ajustes de Teams llevan el mismo nombre salvo por las mayúsculas: el motor las lee como una sola, o ya no puede leer el archivo. Conserve solo una.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-KEY" xml:space="preserve"><value>Una cuenta de Teams lleva una clave que el motor no conoce: aparta la cuenta hasta que se corrija o se quite.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-VALUE" xml:space="preserve"><value>Una cuenta de Teams contiene un valor que el motor no sabe leer: aparta la cuenta hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PROVIDER" xml:space="preserve"><value>Una cuenta de Teams no nombra ningún servicio: el motor la aparta hasta que diga Teams o TeamsWebhook.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-RIGHTS" xml:space="preserve"><value>Los derechos de una cuenta de Teams faltan o no corresponden a su tipo: el motor la aparta hasta que se corrijan.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-AUTH" xml:space="preserve"><value>El inicio de sesión de una cuenta de Teams está incompleto o no corresponde a su tipo: la cuenta no se puede usar hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-WEBHOOK" xml:space="preserve"><value>El webhook de una cuenta de Teams falta, o figura en una cuenta que no es de ese tipo: el motor aparta la cuenta hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-CLOUD" xml:space="preserve"><value>Una cuenta de Teams nombra una nube de Microsoft que el motor no admite: la aparta hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PLACES" xml:space="preserve"><value>Un lugar de una cuenta de Teams no se puede leer o no corresponde a su tipo: el motor aparta la cuenta hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-LIMITS" xml:space="preserve"><value>El límite por hora de una cuenta de Teams no es positivo o no se le aplica: el motor aparta la cuenta hasta que se corrija.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DEFAULT" xml:space="preserve"><value>La cuenta de Teams predeterminada no nombra ninguna cuenta declarada: una llamada que no nombra cuenta falla.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-SCREENING" xml:space="preserve"><value>El interruptor de filtrado de la sección de Teams no es ni true ni false: el motor aparta todas las cuentas hasta que lo sea.</value></data>
   <data name="Studio.Teams.LlmLine" xml:space="preserve"><value>Modelo: {0}</value></data>
   <data name="Studio.Teams.LlmLabelDefault" xml:space="preserve"><value>Predeterminado ({0})</value></data>
   <data name="Studio.Teams.LlmNoDefault" xml:space="preserve"><value>Ningún predeterminado elegido: la ejecución toma la sección Llm del archivo de ajustes</value></data>

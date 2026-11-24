@@ -9,7 +9,7 @@ namespace Orkeon.Studio.Core.Validation;
 /// keys without regard to case and refuses a value under a key it already holds — no run reads the
 /// file, an error —, and reads as one two objects that set no same key — a warning, as Studio
 /// reads and edits one of them only. One instance per section: <see cref="EmailTwinKeys"/>,
-/// <see cref="DriveTwinKeys"/>.
+/// <see cref="DriveTwinKeys"/>, <see cref="ChatTwinKeys"/>.
 /// </summary>
 internal sealed class TwinKeys
 {

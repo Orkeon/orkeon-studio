@@ -1948,6 +1948,9 @@ public static class StudioStringKeys
     /// <summary>"Drive"</summary>
     public const string ToolFamilyDrive = "Studio.Settings.ToolFamilyDrive";
 
+    /// <summary>"Microsoft Teams"</summary>
+    public const string ToolFamilyChat = "Studio.Settings.ToolFamilyChat";
+
     /// <summary>"Code"</summary>
     public const string ToolFamilyCode = "Studio.Settings.ToolFamilyCode";
 
@@ -1990,6 +1993,9 @@ public static class StudioStringKeys
 
     /// <summary>"needs a drive account, declared in Settings › Drive"</summary>
     public const string ToolNeedsDriveAccount = "Studio.Settings.ToolNeedsDriveAccount";
+
+    /// <summary>"needs a Teams account, declared in Settings › Microsoft Teams"</summary>
+    public const string ToolNeedsChatAccount = "Studio.Settings.ToolNeedsChatAccount";
 
     /// <summary>"searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)"</summary>
     public const string ToolNeedsRagCollection = "Studio.Settings.ToolNeedsRagCollection";
@@ -2111,6 +2117,7 @@ public static class StudioStringKeys
     public const string MailTesting = "Studio.Settings.MailTesting";
 
     /// <summary>"Reachable" — the engine's sentence follows, with the number of folders.</summary>
+    public const string ChatTestWebhook = "Studio.Settings.ChatTestWebhook";
     public const string MailTestReachable = "Studio.Settings.MailTestReachable";
 
     /// <summary>"Could not connect" — the CLI gave no verdict on the account.</summary>
@@ -2215,6 +2222,38 @@ public static class StudioStringKeys
 
     /// <summary>"Type it on the Sign-in tab and save it; the test passes once it is stored."</summary>
     public const string DriveTestSecretFirstHint = "Studio.Settings.DriveTestSecretFirstHint";
+
+    // ── the Microsoft Teams tab: what the form says that a binding cannot ──
+
+    /// <summary>"Microsoft Teams"</summary>
+    public const string ShellMicrosoftTeams = "Studio.Shell.MicrosoftTeams";
+
+    /// <summary>"Microsoft Teams — reads and posts through Microsoft Graph"</summary>
+    public const string ChatProviderTeams = "Studio.Settings.ChatProviderTeams";
+
+    /// <summary>"Teams webhook — posts into one place, through its Workflows address"</summary>
+    public const string ChatProviderWebhook = "Studio.Settings.ChatProviderWebhook";
+
+    /// <summary>"A person signs in, and the agents act in their name"</summary>
+    public const string ChatMethodUser = "Studio.Settings.ChatMethodUser";
+
+    /// <summary>"An application signs in as itself, to read only"</summary>
+    public const string ChatMethodApplication = "Studio.Settings.ChatMethodApplication";
+
+    /// <summary>"Worldwide"</summary>
+    public const string ChatCloudGlobal = "Studio.Settings.ChatCloudGlobal";
+
+    /// <summary>"US Government (L4)"</summary>
+    public const string ChatCloudUsGov = "Studio.Settings.ChatCloudUsGov";
+
+    /// <summary>"US Government, DoD (L5)"</summary>
+    public const string ChatCloudUsGovDoD = "Studio.Settings.ChatCloudUsGovDoD";
+
+    /// <summary>"Webhook address"</summary>
+    public const string ChatWebhookUrl = "Studio.Settings.ChatWebhookUrl";
+
+    /// <summary>"Client secret of the application"</summary>
+    public const string ChatApplicationSecret = "Studio.Settings.ChatApplicationSecret";
 
     /// <summary>"No key yet?"</summary>
     public const string ProfileKeyNoKeyYet = "Studio.Settings.KeyNoKeyYet";
@@ -4038,6 +4077,20 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-DRIVE-LIMITS"] = "A limit of a drive account is out of range (the upload size, the timeout): the run sets the account aside until it is corrected.",
         ["Studio.Diagnostics.Code.STUDIO-DRIVE-DEFAULT"] = "The default drive account names no declared account: a call that names no account fails.",
         ["Studio.Diagnostics.Code.STUDIO-DRIVE-SCREENING"] = "The screening switch of the drive section is neither true nor false: the run sets every account aside until it is.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-NAME"] = "A Teams account name is unusable: letters, digits, '.', '_' and '-' only, 64 characters at most. The run sets the account aside.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-DUPLICATE"] = "Two Teams accounts carry the same name but for the case: the run reads them as one, or cannot read the file at all. Rename one.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-TWIN"] = "Two keys of the Teams settings carry the same name but for the case: the run reads them as one, or cannot read the file at all. Keep one.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-KEY"] = "A Teams account carries a key the engine does not know: the run sets the account aside until the key is corrected or removed.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-VALUE"] = "A Teams account holds a value the engine cannot read: the run sets the account aside until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-PROVIDER"] = "A Teams account names no service: the run sets it aside until it says Teams or TeamsWebhook.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-RIGHTS"] = "The rights of a Teams account are missing or do not fit its kind: the run sets it aside until they are corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-AUTH"] = "The sign-in of a Teams account is incomplete or does not fit its kind: the account cannot be used until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-WEBHOOK"] = "The webhook of a Teams account is missing, or belongs to an account that is none: the run sets the account aside until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-CLOUD"] = "A Teams account names a Microsoft cloud the engine does not support: the run sets it aside until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-PLACES"] = "A place of a Teams account cannot be read, or does not fit its kind: the run sets the account aside until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-LIMITS"] = "The hourly cap of a Teams account is not positive, or does not apply to it: the run sets the account aside until it is corrected.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-DEFAULT"] = "The default Teams account names no declared account: a call that names no account fails.",
+        ["Studio.Diagnostics.Code.STUDIO-CHAT-SCREENING"] = "The screening switch of the Teams section is neither true nor false: the run sets every account aside until it is.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-OPTION"] = "This option does not apply to the selected team.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-VERBOSE"] = "The verbosity level is not valid.",
         ["Studio.Diagnostics.Code.STUDIO-LAUNCH-VAR"] = "A variable is malformed (expected name=value).",
@@ -4402,6 +4455,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolFamilyData] = "Data",
         [StudioStringKeys.ToolFamilyEmail] = "E-mail",
         [StudioStringKeys.ToolFamilyDrive] = "Drive",
+        [StudioStringKeys.ToolFamilyChat] = "Microsoft Teams",
         [StudioStringKeys.ToolFamilyCode] = "Code",
         [StudioStringKeys.ToolFamilySession] = "Session and memory",
         [StudioStringKeys.ToolFamilyEvents] = "Events",
@@ -4416,6 +4470,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolExpertSetting] = "expert setting below: {0}",
         [StudioStringKeys.ToolNeedsEmailAccount] = "needs an e-mail account, declared in Settings › E-mail",
         [StudioStringKeys.ToolNeedsDriveAccount] = "needs a drive account, declared in Settings › Drive",
+        [StudioStringKeys.ToolNeedsChatAccount] = "needs a Teams account, declared in Settings › Microsoft Teams",
         [StudioStringKeys.ToolNeedsRagCollection] = "searches a collection the team's rag: block or rag_ingest fills, or one the store chosen in Settings › Document search (RAG) keeps (expert mode)",
         [StudioStringKeys.ToolOnlyWithMcpServer] = "present only while Settings › MCP (expert mode) is on and declares a server",
         [StudioStringKeys.ToolNeedsRagDataset] = "needs a golden dataset, a YAML file in an authorized folder; it fills the collection from the dataset's corpus itself",
@@ -4453,6 +4508,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.MailStateOfSavedFile] = "As of the saved file — save to check again",
         [StudioStringKeys.MailTest] = "Test the connection",
         [StudioStringKeys.MailTesting] = "Connecting…",
+        [StudioStringKeys.ChatTestWebhook] = "Set up; nothing was sent",
         [StudioStringKeys.MailTestReachable] = "Reachable",
         [StudioStringKeys.MailTestFailed] = "Could not connect",
         [StudioStringKeys.MailTestOperatorFixable] = "To fix on this machine",
@@ -4487,6 +4543,16 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.DriveProviderOneDrive] = "OneDrive — personal or work; you sign in with a code",
         [StudioStringKeys.DriveTestSecretFirst] = "Store the client secret first",
         [StudioStringKeys.DriveTestSecretFirstHint] = "Type it on the Sign-in tab and save it; the test passes once it is stored.",
+        [StudioStringKeys.ShellMicrosoftTeams] = "Microsoft Teams",
+        [StudioStringKeys.ChatProviderTeams] = "Microsoft Teams — reads and posts through Microsoft Graph",
+        [StudioStringKeys.ChatProviderWebhook] = "Teams webhook — posts into one place, through its Workflows address",
+        [StudioStringKeys.ChatMethodUser] = "A person signs in, and the agents act in their name",
+        [StudioStringKeys.ChatMethodApplication] = "An application signs in as itself, to read only",
+        [StudioStringKeys.ChatCloudGlobal] = "Worldwide",
+        [StudioStringKeys.ChatCloudUsGov] = "US Government (L4)",
+        [StudioStringKeys.ChatCloudUsGovDoD] = "US Government, DoD (L5)",
+        [StudioStringKeys.ChatWebhookUrl] = "Webhook address",
+        [StudioStringKeys.ChatApplicationSecret] = "Client secret of the application",
         [StudioStringKeys.ProfileKeyNoKeyYet] = "No key yet?",
         [StudioStringKeys.ProfileKeyOnVendorSite] = "on the provider's site",
         [StudioStringKeys.ProfileKeyExpertHint] = "setx ORKEON_Llm__ApiKey \"sk-…\" — read natively by the runtime, wins over any file",

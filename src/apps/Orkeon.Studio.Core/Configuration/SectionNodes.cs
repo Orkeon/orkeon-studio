@@ -4,7 +4,7 @@ namespace Orkeon.Studio.Core.Configuration;
 
 /// <summary>
 /// The in-place reads and writes the account sections share (<see cref="EmailSection"/>,
-/// <see cref="DriveSection"/>): every key looked up without regard to case, as the configuration
+/// <see cref="DriveSection"/>, <see cref="ChatSection"/>): every key looked up without regard to case, as the configuration
 /// reads it, the spelling found in the file kept, and nothing written as an empty string, an empty
 /// object or an empty list — the engine reads each of them as a value. A value that reads the same
 /// as the one in the file leaves the node alone.

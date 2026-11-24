@@ -4,7 +4,7 @@ using Orkeon.Studio.Wpf.ViewModels.Capture.Worlds;
 
 namespace Orkeon.Studio.Wpf.ViewModels.Capture.Catalog;
 
-/// <summary>Settings and its eleven tabs, in four groups (refonte lot 11).</summary>
+/// <summary>Settings and its tabs, in four groups (refonte lot 11).</summary>
 internal static class SettingsStops
 {
     /// <summary>The stops.</summary>
@@ -286,6 +286,20 @@ internal static class SettingsStops
                     + "with no form under it, the form of the selected account being gated on a "
                     + "selection as the E-mail tab's is.",
             CoversFalse = ["Config.Drive.HasAccounts", "Config.Drive.HasSelectedAccount", "Config.Drive.IsAdding"],
+            SweepsLanguages = true,
+        },
+
+        new()
+        {
+            Name = "reglages-teams-vide",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsChat,
+            World = CaptureWorldKind.Pristine,
+            Because = "No Teams account at all: the head of the Microsoft Teams tab alone — the file the accounts "
+                    + "would go to, the sentence that says none is declared, and « Add an account » — "
+                    + "with no form under it, the form of the selected account being gated on a "
+                    + "selection as the E-mail tab's is.",
+            CoversFalse = ["Config.Chat.HasAccounts", "Config.Chat.HasSelectedAccount", "Config.Chat.IsAdding"],
             SweepsLanguages = true,
         },
 

@@ -221,10 +221,12 @@ public sealed partial class I18nResourceParityTests
         // abbreviates minutes as English does, a real cognate (the same floor), measured, not above it.
         // #24: es raised by one for « {0}: {1} », a cause followed by the engine's sentence of it — a
         // pure format pattern, no words in it (the same floor), measured, not above it.
-        ["Strings.fr.resx"] = 65,
-        ["Strings.es.resx"] = 47,
-        ["Strings.de.resx"] = 52,
-        ["Strings.zh-Hans.resx"] = 37,
+        // Chat family: raised by two for the product name « Microsoft Teams », the tab and the family
+        // of tools, which no language rewrites (the same floor), measured, not above it.
+        ["Strings.fr.resx"] = 67,
+        ["Strings.es.resx"] = 49,
+        ["Strings.de.resx"] = 54,
+        ["Strings.zh-Hans.resx"] = 39,
     };
 
     [Theory]

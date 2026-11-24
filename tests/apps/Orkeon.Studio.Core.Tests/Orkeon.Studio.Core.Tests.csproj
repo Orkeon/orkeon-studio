@@ -50,7 +50,7 @@
 
   <ItemGroup>
     <!--
-      The Email and Drive oracle and drift tests bind Studio's settings through the engine's own
+      The Email, Drive and Chat oracle and drift tests bind Studio's settings through the engine's own
       option types, account registries and OAuth settings, which Orkeon keeps internal.
       Publicizer compiles this project against public copies of those assemblies and emits
       IgnoresAccessChecksTo for the runtime. The test project only: Studio itself never reaches
@@ -62,6 +62,7 @@
     </PackageReference>
     <Publicize Include="Orkeon.Tools.Email" />
     <Publicize Include="Orkeon.Tools.Drive" />
+    <Publicize Include="Orkeon.Tools.Chat" />
     <Publicize Include="Orkeon.Tools.Abstractions" />
   </ItemGroup>
 

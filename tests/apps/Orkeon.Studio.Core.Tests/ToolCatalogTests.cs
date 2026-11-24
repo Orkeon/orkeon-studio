@@ -6,6 +6,7 @@ using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Localization;
 using Orkeon.Studio.Core.Tools;
+using Orkeon.Tools.Chat.DependencyInjection;
 using Orkeon.Tools.Drive.DependencyInjection;
 using Orkeon.Tools.Email.DependencyInjection;
 using Orkeon.Studio.Tests.Shared;
@@ -28,7 +29,7 @@ public sealed partial class ToolCatalogTests
     /// Analysis 29, collaboration 4 (human_input, the two per-agent coworker tools, spawn_agent),
     /// system_one_decide, mcp_prompt_get, list_mounts.
     /// </summary>
-    private const int ToolsARunExposes = 119;
+    private const int ToolsARunExposes = 129;
 
     /// <summary>The one e-mail tool that works on a file rather than on an account.</summary>
     private const string EmailParser = "email_parser";
@@ -300,6 +301,32 @@ public sealed partial class ToolCatalogTests
     }
 
     /// <summary>
+    /// The chat family is pinned against the code the same way: exactly the tool
+    /// contracts the chat assembly declares, every one of them needing a chat account declared
+    /// in the section the runtime binds.
+    /// </summary>
+    [Fact]
+    public void The_chat_family_carries_every_tool_the_chat_assembly_declares_each_needing_an_account()
+    {
+        var chat = Assert.Single(ToolCatalog.Families, f => f.Key == ToolCatalog.ChatFamily);
+        var declared = typeof(ChatToolsServiceCollectionExtensions).Assembly.GetTypes()
+            .Select(type => type.GetCustomAttribute<ToolContractAttribute>()?.UniqueName)
+            .OfType<string>()
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(10, declared.Count);
+        Assert.Equal(declared, chat.Tools.Select(t => t.Name).Order(StringComparer.Ordinal));
+        Assert.All(chat.Tools, t =>
+        {
+            Assert.Equal(ToolRequirement.ChatAccount, t.Requirement);
+            Assert.Equal(ToolCatalog.ChatAccounts, t.Argument);
+        });
+        Assert.Equal("Orkeon:Tools:Chat:Accounts", ToolCatalog.ChatAccounts);
+        Assert.Equal(10, ToolCatalog.All.Count(t => t.Requirement == ToolRequirement.ChatAccount));
+    }
+
+    /// <summary>
     /// Without an account the twelve mailbox tools are still registered and refuse every call,
     /// so what they need is neither a key nor a call parameter: an account declared in the
     /// section the runtime binds. The parser reads an .eml file and needs nothing.
@@ -345,6 +372,21 @@ public sealed partial class ToolCatalogTests
 
         Assert.Equal("needs a drive account, declared in Settings › Drive", sentence);
         Assert.Contains(EnglishStudioStrings.Instance[StudioStringKeys.ShellDrive], sentence, StringComparison.Ordinal);
+        Assert.DoesNotContain("{0}", sentence, StringComparison.Ordinal);
+        Assert.DoesNotContain("login", sentence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The chat accounts have their form too, so the sentence of the requirement sends to
+    /// Settings › Microsoft Teams: it names neither the section of the file nor the sign-in verb.
+    /// </summary>
+    [Fact]
+    public void The_chat_account_requirement_reads_as_a_pointer_to_the_chat_settings_tab()
+    {
+        var sentence = EnglishStudioStrings.Instance[StudioStringKeys.ToolNeedsChatAccount];
+
+        Assert.Equal("needs a Teams account, declared in Settings › Microsoft Teams", sentence);
+        Assert.Contains(EnglishStudioStrings.Instance[StudioStringKeys.ShellMicrosoftTeams], sentence, StringComparison.Ordinal);
         Assert.DoesNotContain("{0}", sentence, StringComparison.Ordinal);
         Assert.DoesNotContain("login", sentence, StringComparison.Ordinal);
     }

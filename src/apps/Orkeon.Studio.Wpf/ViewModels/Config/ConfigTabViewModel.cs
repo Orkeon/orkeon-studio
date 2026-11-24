@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Orkeon.Studio.Core.Configuration;
+using Orkeon.Studio.Core.Chat;
 using Orkeon.Studio.Core.Drive;
 using Orkeon.Studio.Core.Email;
 using Orkeon.Studio.Core.FileSystem;
@@ -118,6 +119,24 @@ public sealed class ConfigTabViewModel : ObservableObject
                 },
                 StatesDelay = seams.DriveStatesDelay,
             });
+        // The Microsoft Teams tab, likewise: its secrets go to the same store,
+        // its states and sign-ins to `orkeon chat` over the same runner, on timers of its own.
+        Chat = new ChatSectionViewModel(
+            () => _document, MarkDirty, _strings, () => Location.EffectivePath, Picker, seams.KeyStore,
+            new ChatCliSeams
+            {
+                Cli = seams.ChatCli ?? (seams.ProcessRunner is { } chatRunner ? new ChatCliClient(chatRunner) : null),
+                IsDirty = () => _isDirty,
+                Dispatcher = seams.Dispatcher,
+                SignIn = new EmailSignInServices
+                {
+                    Browser = seams.BrowserOpener,
+                    Clipboard = seams.Clipboard,
+                    Ticker = seams.ChatSignInTicker,
+                    Clock = seams.Clock,
+                },
+                StatesDelay = seams.ChatStatesDelay,
+            });
         Diagnostic = new DiagnosticViewModel(
             seams.ProcessRunner ?? OrkeonProcessRunner.ForCurrentMachine(),
             seams.Dispatcher,
@@ -143,6 +162,7 @@ public sealed class ConfigTabViewModel : ObservableObject
             {
                 Email.RefreshSettingsFile();
                 Drive.RefreshSettingsFile();
+                Chat.RefreshSettingsFile();
             }
         };
         // The explicit Validate lands its verdict in the status line (audit 07/16): the
@@ -239,6 +259,9 @@ public sealed class ConfigTabViewModel : ObservableObject
     /// <summary>The <c>Orkeon:Tools:Drive</c> form of the Drive tab.</summary>
     public DriveSectionViewModel Drive { get; }
 
+    /// <summary>The <c>Orkeon:Tools:Chat</c> form of the Microsoft Teams tab.</summary>
+    public ChatSectionViewModel Chat { get; }
+
     /// <summary>The <c>Orkeon:FileSystem:Mounts</c> editor (spec §4.5).</summary>
     public MountsEditorViewModel Mounts { get; }
 
@@ -284,6 +307,7 @@ public sealed class ConfigTabViewModel : ObservableObject
             {
                 Email.RefreshSavedFile();
                 Drive.RefreshSavedFile();
+                Chat.RefreshSavedFile();
             }
         }
     }
@@ -384,6 +408,7 @@ public sealed class ConfigTabViewModel : ObservableObject
         Decision.Refresh();
         Email.Refresh();
         Drive.Refresh();
+        Chat.Refresh();
         Mounts.Load(_document.Mounts.RawEntries);
 
         IsDirty = false;

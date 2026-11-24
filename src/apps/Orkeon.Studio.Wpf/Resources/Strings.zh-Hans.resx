@@ -1951,6 +1951,7 @@
   <data name="Studio.Settings.ToolFamilyDrive" xml:space="preserve">
     <value>云盘</value>
   </data>
+  <data name="Studio.Settings.ToolFamilyChat" xml:space="preserve"><value>Microsoft Teams</value></data>
   <data name="Studio.Settings.ToolFamilyCode" xml:space="preserve">
     <value>代码</value>
   </data>
@@ -1993,6 +1994,7 @@
   <data name="Studio.Settings.ToolNeedsDriveAccount" xml:space="preserve">
     <value>需要一个云盘账户，在“设置 › 云盘”中声明</value>
   </data>
+  <data name="Studio.Settings.ToolNeedsChatAccount" xml:space="preserve"><value>需要一个 Teams 账户，在“设置 › Microsoft Teams”中声明</value></data>
   <data name="Studio.Settings.ToolNeedsRagCollection" xml:space="preserve">
     <value>在由团队的 rag: 块或 rag_ingest 填充的集合中检索，或在“设置 › 文档检索 (RAG)”（专家模式）所选存储保留的集合中检索</value>
   </data>
@@ -3897,6 +3899,54 @@
   <data name="Studio.Settings.DriveAllowPublicLinksHint" xml:space="preserve">
     <value>关闭时，智能体只与允许的收件人共享。</value>
   </data>
+  <data name="Studio.Shell.MicrosoftTeams" xml:space="preserve"><value>Microsoft Teams</value></data>
+  <data name="Studio.Settings.ChatProviderTeams" xml:space="preserve"><value>Microsoft Teams — 通过 Microsoft Graph 读取和发布</value></data>
+  <data name="Studio.Settings.ChatProviderWebhook" xml:space="preserve"><value>Teams Webhook — 通过其 Workflows 地址发布到一个位置</value></data>
+  <data name="Studio.Settings.ChatMethodUser" xml:space="preserve"><value>由一个人登录，智能体以其名义操作</value></data>
+  <data name="Studio.Settings.ChatMethodApplication" xml:space="preserve"><value>由应用程序以自身身份登录，仅供读取</value></data>
+  <data name="Studio.Settings.ChatCloudGlobal" xml:space="preserve"><value>全球</value></data>
+  <data name="Studio.Settings.ChatCloudUsGov" xml:space="preserve"><value>美国政府 (L4)</value></data>
+  <data name="Studio.Settings.ChatCloudUsGovDoD" xml:space="preserve"><value>美国政府，国防部 (L5)</value></data>
+  <data name="Studio.Settings.ChatWebhookUrl" xml:space="preserve"><value>Webhook 地址</value></data>
+  <data name="Studio.Settings.ChatApplicationSecret" xml:space="preserve"><value>应用程序的客户端密钥</value></data>
+  <data name="Studio.Settings.ChatTitle" xml:space="preserve"><value>Microsoft Teams 账户</value></data>
+  <data name="Studio.Settings.ChatIntro" xml:space="preserve"><value>您的智能体可以使用的 Microsoft Teams 账户。每个账户规定它们可以做什么，以及在哪些团队、频道和聊天中。</value></data>
+  <data name="Studio.Settings.ChatEmpty" xml:space="preserve"><value>在声明账户之前，Teams 工具会拒绝所有调用。</value></data>
+  <data name="Studio.Settings.ChatWithholdRejected" xml:space="preserve"><value>扣留提示注入筛查拒绝的消息的文本</value></data>
+  <data name="Studio.Settings.ChatWithholdRejectedHint" xml:space="preserve"><value>关闭时，智能体读取消息并附带警告；开启时，只读取警告。</value></data>
+  <data name="Studio.Settings.ChatSignInFailedHint" xml:space="preserve"><value>未保存任何内容。聊天指南（docs/guides/chat.md）说明了每种拒绝的含义。</value></data>
+  <data name="Studio.Settings.ChatRenameCost" xml:space="preserve"><value>由个人登录的账户需要以新名称重新登录：它的令牌保存在旧名称下。密钥仍留在其环境变量中，变量名不变。</value></data>
+  <data name="Studio.Settings.ChatRemoveCost" xml:space="preserve"><value>保存其密钥的环境变量和登录令牌仍会留在这台计算机上；Teams 中的内容不受影响。</value></data>
+  <data name="Studio.Settings.ChatRightRead" xml:space="preserve"><value>读取 — 列出位置、读取和搜索消息、列出成员</value></data>
+  <data name="Studio.Settings.ChatRightSend" xml:space="preserve"><value>发送 — 发布消息和回复，仅限下列位置</value></data>
+  <data name="Studio.Settings.ChatRightSendWebhook" xml:space="preserve"><value>发送 — 发布到该 Webhook 的位置，这是它唯一的权限</value></data>
+  <data name="Studio.Settings.ChatRightEdit" xml:space="preserve"><value>编辑 — 修改该账户发布的消息</value></data>
+  <data name="Studio.Settings.ChatRightDelete" xml:space="preserve"><value>删除 — 删除该账户发布的消息</value></data>
+  <data name="Studio.Settings.ChatRightReact" xml:space="preserve"><value>回应 — 添加和移除表情回应</value></data>
+  <data name="Studio.Settings.ChatRightMeetings" xml:space="preserve"><value>会议 — 读取会议转录</value></data>
+  <data name="Studio.Settings.ChatReadPlaces" xml:space="preserve"><value>智能体可以读取的位置</value></data>
+  <data name="Studio.Settings.ChatSendPlaces" xml:space="preserve"><value>智能体可以写入的位置</value></data>
+  <data name="Studio.Settings.ChatPlacesHint" xml:space="preserve"><value>每行一个：team:名称、team:名称/channel:名称、chat:ID、user:地址、user:*@域名，或 * 表示任意位置。名称可以用其 ID 代替。</value></data>
+  <data name="Studio.Settings.ChatPlaceAdd" xml:space="preserve"><value>添加位置</value></data>
+  <data name="Studio.Settings.ChatPlaceInvalid" xml:space="preserve"><value>不是有效位置：team:、team:…/channel:…、chat:、user: 或 *。</value></data>
+  <data name="Studio.Settings.ChatReadClosed" xml:space="preserve"><value>目前还不能读取任何内容：请列出位置。</value></data>
+  <data name="Studio.Settings.ChatSendClosed" xml:space="preserve"><value>目前还不能在任何位置写入：请列出位置。</value></data>
+  <data name="Studio.Settings.ChatMaxPerHour" xml:space="preserve"><value>每小时最多写入次数</value></data>
+  <data name="Studio.Settings.ChatMaxPerHourHint" xml:space="preserve"><value>包括发布、编辑、删除和回应。留空：不限。</value></data>
+  <data name="Studio.Settings.ChatClientIdHint" xml:space="preserve"><value>您在 Microsoft Entra 中注册的应用程序的 ID。</value></data>
+  <data name="Studio.Settings.ChatTenantHint" xml:space="preserve"><value>您组织的租户 ID 或域名。留空：任何工作或学校账户；应用程序必须指定。</value></data>
+  <data name="Studio.Settings.ChatGrants" xml:space="preserve"><value>管理员已授予的权限</value></data>
+  <data name="Studio.Settings.ChatGrantsHint" xml:space="preserve"><value>仅启用租户管理员已同意的权限：登录时会请求这些权限。</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMessages" xml:space="preserve"><value>读取频道消息</value></data>
+  <data name="Studio.Settings.ChatGrantChannelEdit" xml:space="preserve"><value>在频道中编辑和删除（需同时启用上一项）</value></data>
+  <data name="Studio.Settings.ChatGrantMeetings" xml:space="preserve"><value>读取会议转录</value></data>
+  <data name="Studio.Settings.ChatGrantChannelMembers" xml:space="preserve"><value>列出频道成员</value></data>
+  <data name="Studio.Settings.ChatTestWebhook" xml:space="preserve"><value>已配置；未发送任何内容</value></data>
+  <data name="Studio.Settings.ChatCloud" xml:space="preserve"><value>Microsoft 云</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlHint" xml:space="preserve"><value>Teams 为工作流提供的地址。它是机密：任何持有者都可以发布。</value></data>
+  <data name="Studio.Settings.ChatWebhookUrlEnvVar" xml:space="preserve"><value>保存 Webhook 地址的变量名</value></data>
+  <data name="Studio.Settings.ChatCertificateEnvVar" xml:space="preserve"><value>保存证书路径的变量名</value></data>
+  <data name="Studio.Settings.ChatFederatedTokenEnvVar" xml:space="preserve"><value>保存联合令牌文件路径的变量名</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-NAME" xml:space="preserve">
     <value>某个云盘账户的名称不可用：只能包含字母、数字、“.”、“_”和“-”，最多 64 个字符。引擎会搁置该账户。</value>
   </data>
@@ -3936,6 +3986,20 @@
   <data name="Studio.Diagnostics.Code.STUDIO-DRIVE-SCREENING" xml:space="preserve">
     <value>云盘部分的筛查开关既不是 true 也不是 false：在更正之前，引擎会搁置所有账户。</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-NAME" xml:space="preserve"><value>某个 Teams 账户的名称不可用：只能包含字母、数字、“.”、“_”和“-”，最多 64 个字符。引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DUPLICATE" xml:space="preserve"><value>两个 Teams 账户的名称仅大小写不同：引擎会把它们读成同一个账户，或者根本无法读取该文件。请重命名其中一个。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-TWIN" xml:space="preserve"><value>Teams 设置中有两个键的名称仅大小写不同：引擎会把它们读成同一个键，或者根本无法读取该文件。请只保留其中一个。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-KEY" xml:space="preserve"><value>某个 Teams 账户含有引擎不认识的键：在更正或删除该键之前，引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-VALUE" xml:space="preserve"><value>某个 Teams 账户含有引擎无法读取的值：在更正之前，引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PROVIDER" xml:space="preserve"><value>某个 Teams 账户没有指定服务：在它注明 Teams 或 TeamsWebhook 之前，引擎会搁置它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-RIGHTS" xml:space="preserve"><value>某个 Teams 账户的权限缺失或与其类型不符：在更正之前，引擎会搁置它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-AUTH" xml:space="preserve"><value>某个 Teams 账户的登录方式不完整或与其类型不符：在更正之前，该账户无法使用。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-WEBHOOK" xml:space="preserve"><value>某个 Teams 账户的 Webhook 缺失，或出现在非 Webhook 账户上：在更正之前，引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-CLOUD" xml:space="preserve"><value>某个 Teams 账户指定了引擎不支持的 Microsoft 云：在更正之前，引擎会搁置它。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-PLACES" xml:space="preserve"><value>某个 Teams 账户的位置无法读取或与其类型不符：在更正之前，引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-LIMITS" xml:space="preserve"><value>某个 Teams 账户的每小时上限不是正数或不适用于它：在更正之前，引擎会搁置该账户。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-DEFAULT" xml:space="preserve"><value>默认 Teams 账户没有指向任何已声明的账户：未指定账户的调用将失败。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-CHAT-SCREENING" xml:space="preserve"><value>Teams 部分的筛查开关既不是 true 也不是 false：在更正之前，引擎会搁置所有账户。</value></data>
   <data name="Studio.Teams.LlmLine" xml:space="preserve"><value>模型：{0}</value></data>
   <data name="Studio.Teams.LlmLabelDefault" xml:space="preserve"><value>默认（{0}）</value></data>
   <data name="Studio.Teams.LlmNoDefault" xml:space="preserve"><value>未选择默认：运行采用设置文件的 Llm 部分</value></data>
