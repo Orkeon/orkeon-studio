@@ -820,9 +820,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
 
     /// <summary>True when an Ollama card holds an address a run reads as another provider: nothing is probed.</summary>
     private bool OllamaReadElsewhere =>
-        _selectedProvider?.Name == LlmPresets.Ollama
-        && StudioEndpointReading.Of(BaseUrl) is { Notice: not LlmEndpointNotice.Refused } reading
-        && reading.ProviderKey != LlmPresets.Ollama;
+        ModelTest.IsOllamaReadElsewhere(_selectedProvider?.Name, BaseUrl);
 
     /// <summary>"No key needed — the model runs on your machine."</summary>
     public bool ShowLocalNote => _selectedProvider?.Kind == LlmPresetKind.Local && !OllamaReadElsewhere;

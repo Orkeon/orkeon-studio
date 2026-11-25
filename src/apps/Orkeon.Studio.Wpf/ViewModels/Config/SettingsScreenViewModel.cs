@@ -25,6 +25,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>The API keys the model settings resolve, kept in the user environment (refonte lot 11).</summary>
     public const string KeysTab = "keys";
 
+    /// <summary>The tests of the models and of the decision provider.</summary>
+    public const string SandboxTab = "sandbox";
+
     /// <summary>The decision models (System One): the switch, the provider and its key.</summary>
     public const string DecisionTab = "decision";
 
@@ -80,7 +83,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         TeamFoldersViewModel? teamFolders = null,
         ToolsSettingsViewModel? tools = null,
         StudioSettingsViewModel? studio = null,
-        IStudioStrings? strings = null)
+        IStudioStrings? strings = null,
+        ModelTestSeams? tests = null)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(profiles);
@@ -94,6 +98,11 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         _mode = mode;
         _mode.PropertyChanged += OnModeChanged;
         _strings = strings ?? EnglishStudioStrings.Instance;
+        Sandbox = new SandboxViewModel(
+            profiles,
+            config.Decision,
+            (tests ?? new ModelTestSeams()) with { Strings = _strings },
+            () => ActiveTab = DecisionTab);
         InitializeTabStates();
         // The E-mail form is in both modes and shows more to the expert (STUDIO-67).
         Config.Email.IsExpert = _mode.IsExpert;
@@ -127,6 +136,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         ShowModelCommand = new RelayCommand(() => ActiveTab = ModelTab);
         ShowRagCommand = new RelayCommand(() => ActiveTab = RagTab);
         ShowKeysCommand = new RelayCommand(() => ActiveTab = KeysTab);
+        ShowSandboxCommand = new RelayCommand(() => ActiveTab = SandboxTab);
         ShowDecisionCommand = new RelayCommand(() => ActiveTab = DecisionTab);
         // The folders tab re-reads the teams' own folders on arrival (ActiveTab): the section is
         // a view over the sidecars, and a team adopted or deleted since the last visit must show.
@@ -247,17 +257,18 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         get => _activeTab;
         set
         {
-            var requested = value is RagTab or KeysTab or DecisionTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab or ChatTab ? value : ModelTab;
+            var requested = value is RagTab or KeysTab or DecisionTab or SandboxTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab or ChatTab ? value : ModelTab;
             if (_mode.IsNovice && requested is RagTab or LimitsTab or JsonTab or McpTab or ShellTab)
                 requested = ModelTab;
 
             var wasMails = IsMailsTab;
             var wasDrive = IsDriveTab;
             var wasChat = IsChatTab;
+            var wasSandbox = IsSandboxTab;
             if (SetProperty(ref _activeTab, requested))
             {
                 OnPropertiesChanged(
-                    nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsDecisionTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
+                    nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsDecisionTab), nameof(IsSandboxTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
                     nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab), nameof(IsChatTab));
                 // The classeur selects a tab through ActiveTab itself, not through its command.
                 if (IsFoldersTab)
@@ -281,6 +292,10 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
                     _ = Config.Chat.RefreshStatesAsync();
                 else if (wasChat)
                     Config.Chat.StopActivity();
+
+                // A test never outlives its tab either: it costs tokens nobody is looking at.
+                if (wasSandbox)
+                    Sandbox.StopActivity();
             }
         }
     }
@@ -293,6 +308,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
 
     /// <summary>True while the API-keys tab shows.</summary>
     public bool IsKeysTab => _activeTab == KeysTab;
+
+    /// <summary>Whether the « Test » tab shows.</summary>
+    public bool IsSandboxTab => _activeTab == SandboxTab;
 
     /// <summary>True while the decision models tab shows.</summary>
     public bool IsDecisionTab => _activeTab == DecisionTab;
@@ -338,6 +356,12 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
 
     /// <summary>Shows the API-keys tab.</summary>
     public RelayCommand ShowKeysCommand { get; }
+
+    /// <summary>Shows the « Test » tab.</summary>
+    public RelayCommand ShowSandboxCommand { get; }
+
+    /// <summary>The tests of the models and of the decision provider.</summary>
+    public SandboxViewModel Sandbox { get; }
 
     /// <summary>Shows the decision models tab: what a launch's decision alert points at.</summary>
     public RelayCommand ShowDecisionCommand { get; }
@@ -398,6 +422,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         Config.Email.StopActivity();
         Config.Drive.StopActivity();
         Config.Chat.StopActivity();
+        Sandbox.StopActivity();
     }
 
     private void OnModeChanged(object? sender, PropertyChangedEventArgs e)

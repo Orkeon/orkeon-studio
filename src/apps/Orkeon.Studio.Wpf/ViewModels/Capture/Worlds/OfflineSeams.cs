@@ -1,5 +1,6 @@
 using Orkeon.Constants.Llm;
 using Orkeon.Studio.Core.Configuration;
+using Orkeon.Studio.Core.Decision;
 using Orkeon.Studio.Core.Llm;
 using Orkeon.Studio.Core.Presets;
 
@@ -21,6 +22,23 @@ internal sealed class OfflineLlmProbe : ILlmEndpointProbe
     /// <inheritdoc />
     public Task<LlmProbeResult> ProbeAsync(LlmProbeRequest request, CancellationToken cancellationToken = default) =>
         Task.FromResult(Result);
+}
+
+/// <summary>A decision probe that answers without a network: the three questions, as expected.</summary>
+internal sealed class OfflineDecisionProbe : IDecisionProbe
+{
+    /// <inheritdoc />
+    public Task<DecisionProbeResult> ProbeAsync(DecisionProbeRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return Task.FromResult(new DecisionProbeResult
+        {
+            Provider = request.Provider,
+            Elapsed = TimeSpan.FromSeconds(1),
+            Checks = [new DecisionProbeCheck("yes_no", true, "yes (0.98)")],
+        });
+    }
 }
 
 /// <summary>

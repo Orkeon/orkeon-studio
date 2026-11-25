@@ -2363,6 +2363,46 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Désactivés</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>Aucun fournisseur</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>À corriger</value></data>
+  <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>Tester</value></data>
+  <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>Teste chaque modèle déclaré, et le fournisseur de décision s'il est paramétré.</value></data>
+  <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>Chaque test coûte quelques jetons. Rien n'est envoyé sans un clic.</value></data>
+  <data name="Studio.Settings.SandboxTestAll" xml:space="preserve"><value>Tout tester</value></data>
+  <data name="Studio.Settings.SandboxStop" xml:space="preserve"><value>Arrêter</value></data>
+  <data name="Studio.Settings.SandboxTest" xml:space="preserve"><value>Tester</value></data>
+  <data name="Studio.Settings.SandboxOpen" xml:space="preserve"><value>Ouvrir le réglage</value></data>
+  <data name="Studio.Settings.SandboxEmpty" xml:space="preserve"><value>Aucun modèle n'est encore déclaré.</value></data>
+  <data name="Studio.Settings.SandboxNoDecision" xml:space="preserve"><value>Aucun fournisseur de décision n'est paramétré : seuls les modèles sont testés.</value></data>
+  <data name="Studio.Settings.SandboxIdle" xml:space="preserve"><value>Non testé</value></data>
+  <data name="Studio.Settings.SandboxQueued" xml:space="preserve"><value>En attente</value></data>
+  <data name="Studio.Settings.SandboxRunning" xml:space="preserve"><value>Test en cours…</value></data>
+  <data name="Studio.Settings.SandboxStopped" xml:space="preserve"><value>Arrêté</value></data>
+  <data name="Studio.Settings.SandboxNoModel" xml:space="preserve"><value>Ce réglage ne nomme aucun modèle : rien à tester.</value></data>
+  <data name="Studio.Settings.SandboxKeyMissing" xml:space="preserve"><value>Aucune clé dans {0} : rien n'a été envoyé.</value></data>
+  <data name="Studio.Settings.SandboxSummary" xml:space="preserve"><value>Réussis {0}, échecs {1}, non envoyés {2}</value></data>
+  <data name="Studio.Settings.SandboxDecisionPassed" xml:space="preserve"><value>Les trois questions ont reçu la réponse attendue ({0} s).</value></data>
+  <data name="Studio.Settings.SandboxDecisionWrong" xml:space="preserve"><value>Il répond, mais pas comme attendu : {0}</value></data>
+  <data name="Studio.Settings.SandboxDecisionAddress" xml:space="preserve"><value>L'adresse de ce fournisseur de décision n'est pas valide.</value></data>
+  <data name="Studio.Settings.SandboxNothingAsked" xml:space="preserve"><value>Écrivez une question, ou au moins deux options.</value></data>
+  <data name="Studio.Settings.SandboxTryTitle" xml:space="preserve"><value>Essayer un message</value></data>
+  <data name="Studio.Settings.SandboxTryIntro" xml:space="preserve"><value>Choisissez un modèle et l'un des textes en anglais, ou écrivez le vôtre, et lisez la réponse.</value></data>
+  <data name="Studio.Settings.SandboxTarget" xml:space="preserve"><value>Modèle</value></data>
+  <data name="Studio.Settings.SandboxSample" xml:space="preserve"><value>Texte de test</value></data>
+  <data name="Studio.Settings.SandboxMessage" xml:space="preserve"><value>Votre message</value></data>
+  <data name="Studio.Settings.SandboxSend" xml:space="preserve"><value>Envoyer</value></data>
+  <data name="Studio.Settings.SandboxReply" xml:space="preserve"><value>Réponse</value></data>
+  <data name="Studio.Settings.SandboxEmptyReply" xml:space="preserve"><value>Le modèle a répondu par un texte vide.</value></data>
+  <data name="Studio.Settings.SandboxReplyTime" xml:space="preserve"><value>en {0} s</value></data>
+  <data name="Studio.Settings.SandboxReplyUsage" xml:space="preserve"><value>{0} s, jetons : {1} en entrée, {2} en sortie</value></data>
+  <data name="Studio.Settings.SandboxCaseState" xml:space="preserve"><value>Texte sur lequel décider</value></data>
+  <data name="Studio.Settings.SandboxCaseQuestion" xml:space="preserve"><value>Question oui ou non</value></data>
+  <data name="Studio.Settings.SandboxCaseOptions" xml:space="preserve"><value>Options à départager, une par ligne</value></data>
+  <data name="Studio.Settings.SandboxJournal" xml:space="preserve"><value>Journal des tests</value></data>
+  <data name="Studio.Settings.SandboxJournalEmpty" xml:space="preserve"><value>Rien n'a encore été testé.</value></data>
+  <data name="Studio.Settings.SandboxJournalCopy" xml:space="preserve"><value>Copier</value></data>
+  <data name="Studio.Settings.SandboxJournalCopied" xml:space="preserve"><value>Copié !</value></data>
+  <data name="Studio.Settings.SandboxJournalSave" xml:space="preserve"><value>Enregistrer…</value></data>
+  <data name="Studio.Settings.SandboxJournalClear" xml:space="preserve"><value>Effacer</value></data>
+  <data name="Studio.Settings.SandboxSaveFailed" xml:space="preserve"><value>Le journal n'a pas été enregistré : {0}</value></data>
   <data name="Studio.Settings.DecisionTitle" xml:space="preserve"><value>Modèles de décision (System One)</value></data>
   <data name="Studio.Settings.DecisionIntro" xml:space="preserve"><value>Un modèle de décision répond à des questions typées avec des probabilités : un choix entre des options, un oui ou un non, une note. Une équipe s'en sert par ses tâches de décision, ou par l'outil system_one_decide. Les profils de décision écrits à la main sont conservés tels quels.</value></data>
   <data name="Studio.Settings.DecisionEnabled" xml:space="preserve"><value>Utiliser les modèles de décision</value></data>

@@ -58,6 +58,16 @@ internal static class SettingsStops
 
         new()
         {
+            Name = "reglages-tester",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsSandbox,
+            Because = "The Test section of the Models group: one row per declared model, the message to "
+                    + "try with its English text, and an empty log — nothing is sent without a click.",
+            SweepsLanguages = true,
+        },
+
+        new()
+        {
             Name = "reglages-dossiers",
             Category = CaptureCategory.Settings,
             Screen = CaptureScreen.SettingsFolders,

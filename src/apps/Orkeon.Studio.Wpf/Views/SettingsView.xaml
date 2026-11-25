@@ -449,6 +449,11 @@
         <!-- ══ MODELES DE DECISION (System One): the switch, the provider, its key ══ -->
         <views:DecisionView DataContext="{Binding Config.Decision}"/>
       </controls:StepTab>
+      <controls:StepTab Tag="sandbox" Header="{Binding [Studio.Settings.SandboxTab], Source={x:Static services:I18n.Instance}}"
+                      Subtitle="{Binding SandboxTabSubtitle}" State="{Binding SandboxTabState}">
+        <!-- The tests of every model and of the decision provider, a free message, the journal. -->
+        <views:SandboxView DataContext="{Binding Sandbox}"/>
+      </controls:StepTab>
       <controls:StepTab Tag="folders" Header="{Binding [Studio.Shell.Folders], Source={x:Static services:I18n.Instance}}"
                       Subtitle="{Binding FoldersTabSubtitle}" State="{Binding FoldersTabState}"
                       Group="{Binding [Studio.Settings.GroupAccess], Source={x:Static services:I18n.Instance}}">
