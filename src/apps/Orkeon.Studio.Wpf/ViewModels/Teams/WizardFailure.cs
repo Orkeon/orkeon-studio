@@ -46,6 +46,7 @@ public enum WizardFailureKind
 /// <param name="ExitCode">The child's exit code; null when it never started.</param>
 /// <param name="Stderr">The WHOLE stderr (D-04), not the last line; empty when nothing was printed.</param>
 /// <param name="EngineError">The engine's own <c>error</c> event, when it emitted one.</param>
+/// <param name="EngineWentOn">Whether the engine carried on after it: the report then claims no exit.</param>
 /// <param name="Journal">Everything the run printed, in order — the technical journal as the expert sees it.</param>
 public sealed record WizardFailure(
     WizardFailureKind Kind,
@@ -55,7 +56,8 @@ public sealed record WizardFailure(
     int? ExitCode,
     string Stderr,
     ForgeErrorInfo? EngineError,
-    string Journal = "")
+    string Journal = "",
+    bool EngineWentOn = false)
 {
     /// <summary>Whether the raw detail zone has anything to show.</summary>
     public bool HasDetail => Detail.Length > 0;
@@ -74,7 +76,9 @@ public sealed record WizardFailure(
                 : CommandLineDisplay.Format([ForgeArgumentsBuilder.ForgeVerb]),
             ExitCode is { } exitCode
                 ? string.Create(CultureInfo.InvariantCulture, $"exit {exitCode}")
-                : "exit: none — the engine never started",
+                : EngineWentOn
+                    ? "exit: none — the engine carried on"
+                    : "exit: none — the engine never started",
         };
 
         if (EngineError is { } error)

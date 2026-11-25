@@ -149,20 +149,31 @@ public partial class CreateTeamView : UserControl
     private void OnCopyFailureReport(object sender, RoutedEventArgs e)
     {
         if (DataContext is CreateTeamViewModel { CanCopyFailureReport: true } wizard)
-        {
-            try
-            {
-                Clipboard.SetDataObject(wizard.BuildFailureReport(), copy: false);
+            CopyReport(wizard.BuildFailureReport(), copied => wizard.FailureReportCopied = copied);
+    }
 
-                wizard.FailureReportCopied = true;
-                var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
-                timer.Tick += (_, _) => { wizard.FailureReportCopied = false; timer.Stop(); };
-                timer.Start();
-            }
-            catch (System.Runtime.InteropServices.ExternalException)
-            {
-                // The clipboard stayed busy: nothing to surface, the button can be pressed again.
-            }
+    /// <summary>The same for the status line: the report of the engine's words it shows.</summary>
+    private void OnCopyStatusReport(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is CreateTeamViewModel { HasStatusReport: true } wizard)
+            CopyReport(wizard.StatusReport, copied => wizard.StatusReportCopied = copied);
+    }
+
+    /// <summary>Copies <paramref name="report"/>, then shows "Copied!" for ~1.6 s.</summary>
+    private static void CopyReport(string report, Action<bool> showCopied)
+    {
+        try
+        {
+            Clipboard.SetDataObject(report, copy: false);
+
+            showCopied(true);
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.6) };
+            timer.Tick += (_, _) => { showCopied(false); timer.Stop(); };
+            timer.Start();
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // The clipboard stayed busy: nothing to surface, the button can be pressed again.
         }
     }
 

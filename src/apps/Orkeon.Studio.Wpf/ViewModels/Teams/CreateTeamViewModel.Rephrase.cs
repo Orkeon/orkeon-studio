@@ -79,7 +79,7 @@ public sealed partial class CreateTeamViewModel
             }
             else
             {
-                StatusMessage = _strings.Format(StudioStringKeys.WizardRephraseFailed, result.Error);
+                ReportEngineStatus(_strings.Format(StudioStringKeys.WizardRephraseFailed, result.Error));
             }
 
             RefreshRephrase();

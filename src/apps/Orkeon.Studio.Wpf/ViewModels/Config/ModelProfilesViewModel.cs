@@ -1866,6 +1866,23 @@ public sealed class ModelProfilesViewModel : ObservableObject
 
     internal void CancelEdit() => Editor = null;
 
+    /// <summary>
+    /// <paramref name="text"/> without the keys in place: the ones the settings name, the decision
+    /// providers' and the runtime's own. What is copied out of Studio goes through it.
+    /// </summary>
+    internal string MaskKeys(string text) => SecretMasker.Apply(
+        text,
+        _set.Profiles.Select(profile => profile.KeyEnvName)
+            .Concat(Orkeon.Infrastructure.Decision.SystemOne.DecisionProviderDescriptor.All.Select(d => d.DefaultApiKeyVariable))
+            .Append(LlmApiKeyVariable)
+            .OfType<string>()
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.Ordinal)
+            .Select(_keyStore.Peek));
+
+    /// <summary>The variable of the runtime's own key.</summary>
+    private const string LlmApiKeyVariable = DecisionSection.EnvironmentPrefix + "Llm__ApiKey";
+
     private void RefreshBalances()
     {
         foreach (var row in Profiles)

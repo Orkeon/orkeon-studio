@@ -394,17 +394,41 @@
                Visibility="{Binding AssistantDecisionLine, Converter={StaticResource StringPresentToVisibility}}"/>
     <!-- §F.5: «Votre solution est prête.» and friends as a faint line, not raw mono. C03: while
          the failure banner is up it says the failure itself — the line would only repeat it. -->
-    <TextBlock Margin="0,6,0,0" Text="{Binding StatusMessage}">
-      <TextBlock.Style>
-        <Style TargetType="TextBlock" BasedOn="{StaticResource MetaText}">
+    <TextBox Margin="0,6,0,0" Text="{Binding StatusMessage, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="False"
+             BorderThickness="0" Background="Transparent" Padding="0" TextWrapping="Wrap" IsTabStop="{Binding HasStatusReport}"
+             FontFamily="{StaticResource TextFont}" FontSize="13" Foreground="{DynamicResource InkFaintBrush}">
+      <TextBox.Style>
+        <Style TargetType="TextBox">
           <Style.Triggers>
             <DataTrigger Binding="{Binding HasFailure}" Value="True">
               <Setter Property="Visibility" Value="Collapsed"/>
             </DataTrigger>
+            <DataTrigger Binding="{Binding StatusMessage}" Value="">
+              <Setter Property="Visibility" Value="Collapsed"/>
+            </DataTrigger>
           </Style.Triggers>
         </Style>
-      </TextBlock.Style>
-    </TextBlock>
+      </TextBox.Style>
+    </TextBox>
+    <!-- The engine's own words on that line come with their report, as the failure card's do: an
+         error the engine carries on after raises no card and was neither copyable nor explained. -->
+    <StackPanel Margin="0,6,0,0" Visibility="{Binding HasStatusReport, Converter={StaticResource BooleanToVisibility}}">
+      <Button HorizontalAlignment="Left" controls:ButtonSize.Height="32" Click="OnCopyStatusReport" controls:ButtonIcon.Kind="copy">
+        <Button.Style>
+          <Style TargetType="Button" BasedOn="{StaticResource BtnSecondary}">
+            <Setter Property="Content" Value="{Binding [Studio.Create.FailureCopyReport], Source={x:Static services:I18n.Instance}}"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding StatusReportCopied}" Value="True">
+                <Setter Property="Content" Value="{Binding [Studio.Create.FailureCopied], Source={x:Static services:I18n.Instance}}"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Button.Style>
+      </Button>
+      <controls:Disclosure Margin="0,6,0,0" Header="{Binding [Studio.Common.TechnicalDetails], Source={x:Static services:I18n.Instance}}">
+        <controls:TechBlock Margin="0,6,0,0" Text="{Binding StatusReport}"/>
+      </controls:Disclosure>
+    </StackPanel>
 
     <!-- STUDIO-27 (D-05): an adopted team that is scheduled runs only once the user agrees —
          « Install » asks the engine, which installs it with the system's own scheduler; « Later »
