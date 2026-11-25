@@ -592,11 +592,8 @@ public sealed class GuidedSetupViewModel : ObservableObject
 
     private void PrepareTests()
     {
-        foreach (var key in new[] { _apiKeyInput.Trim(), _decisionKeyInput.Trim() })
-        {
-            if (key.Length > 0)
-                _testedKeys.Add(key);
-        }
+        foreach (var key in new[] { _apiKeyInput.Trim(), _decisionKeyInput.Trim() }.Where(key => key.Length > 0))
+            _testedKeys.Add(key);
 
         List<ModelTestRowViewModel> rows =
             [.. BuildConnection().Flatten().Select(profile => new ModelTestRowViewModel(Tests, profile, KeyOf))];
@@ -611,8 +608,6 @@ public sealed class GuidedSetupViewModel : ObservableObject
         Tests.SetRows(rows);
     }
 
-    [SuppressMessage("Design", "CA1031",
-        Justification = "The check must never fault its command: an unexpected failure is the line under the button.")]
     private async Task VerifyAsync()
     {
         if (_provider is not { } provider || _verifying is not null)
@@ -655,7 +650,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
         {
             // Closed, or a field the answer was about changed: whoever did it says what shows.
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !source.IsCancellationRequested)
         {
             var cause = SecretMasker.Apply(ex.Message, [key]);
             ShowVerification(() => cause, []);
@@ -701,8 +696,6 @@ public sealed class GuidedSetupViewModel : ObservableObject
         OnModelsChanged();
     }
 
-    [SuppressMessage("Design", "CA1031",
-        Justification = "Whatever the writes throw belongs on the dialog: part of them may be in place already.")]
     private async Task FinishAsync()
     {
         if (Problem is not null || _isFinishing)
@@ -729,13 +722,10 @@ public sealed class GuidedSetupViewModel : ObservableObject
             if (elected is not null)
                 _profiles.SetDefault(elected);
             WriteDecision();
-            if (saves)
-            {
-                if (!await _config.SaveAsync().ConfigureAwait(true))
-                    FailFinish(() => _config.StatusMessage ?? "");
-            }
+            if (saves && !await _config.SaveAsync().ConfigureAwait(true))
+                FailFinish(() => _config.StatusMessage ?? "");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var cause = MaskKeys(ex.Message);
             FailFinish(() => cause);
@@ -790,9 +780,6 @@ public sealed class GuidedSetupViewModel : ObservableObject
         section.RefreshVerdict();
     }
 
-    [SuppressMessage("Design", "CA1031",
-        Justification = "The keys are in place for the session: whatever the user scope throws belongs on the " +
-                        "profile list, not in the command's fault handler.")]
     private async Task ReportKeysAsync(IReadOnlyList<Task> kept)
     {
         foreach (var key in kept)
@@ -801,7 +788,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
             {
                 await key.ConfigureAwait(true);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _profiles.ReportKeyStoreError(ex.Message);
             }

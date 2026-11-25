@@ -53,7 +53,7 @@ public sealed class TestJournal(TimeProvider? time = null)
         Line("elapsed", Seconds(result.Elapsed));
         Line("state", request.Case?.State ?? SystemOneDecisionProbe.SampleState);
         foreach (var check in result.Checks)
-            Line(check.Name, check.Answer + (check.Passed switch { true => " - right", false => " - WRONG", null => "" }));
+            Line(check.Name, check.Answer + Judgement(check.Passed));
         Line("tokens", result.InputTokens is { } tokens ? Tokens(tokens, null) : null);
         Line("detail", result.Detail);
     }
@@ -61,6 +61,13 @@ public sealed class TestJournal(TimeProvider? time = null)
     /// <summary>Writes <paramref name="text"/> to the file the user picked.</summary>
     [SuppressVfsCompliance("EXCEPTION-BOOTSTRAP: a file the user picked in a save dialog, outside any workspace.")]
     public static Task SaveAsync(string path, string text) => File.WriteAllTextAsync(path, text);
+
+    private static string Judgement(bool? passed)
+    {
+        if (passed is not { } right)
+            return "";
+        return right ? " - right" : " - WRONG";
+    }
 
     private void Entry(string name, string verdict)
     {

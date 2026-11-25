@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Orkeon.Domain.SharedKernel.ValueObjects;
 using Orkeon.Studio.Core.Decision;
@@ -340,8 +339,6 @@ public sealed class ModelTestRunner : ObservableObject
     }
 
     /// <summary>Asks a model, and journals the answer.</summary>
-    [SuppressMessage("Design", "CA1031",
-        Justification = "A test must never fault its command: an unexpected failure is the verdict.")]
     internal async Task<LlmProbeResult> AskAsync(string name, LlmProbeRequest request, CancellationToken token)
     {
         LlmProbeResult result;
@@ -349,11 +346,7 @@ public sealed class ModelTestRunner : ObservableObject
         {
             result = await _probe.ProbeAsync(request, token).ConfigureAwait(true);
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
         {
             result = LlmProbeResult.Unreachable(SecretMasker.Apply(ex.Message, [request.ApiKey]));
         }
@@ -364,8 +357,6 @@ public sealed class ModelTestRunner : ObservableObject
     }
 
     /// <summary>Asks the decision provider, and journals the answers.</summary>
-    [SuppressMessage("Design", "CA1031",
-        Justification = "A test must never fault its command: an unexpected failure is the verdict.")]
     internal async Task<DecisionProbeResult> AskAsync(string name, DecisionProbeRequest request, CancellationToken token)
     {
         DecisionProbeResult result;
@@ -373,11 +364,7 @@ public sealed class ModelTestRunner : ObservableObject
         {
             result = await _decisionProbe.ProbeAsync(request, token).ConfigureAwait(true);
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
         {
             result = new DecisionProbeResult
             {
@@ -455,8 +442,6 @@ public sealed class ModelTestRunner : ObservableObject
         IsJournalCopied = true;
     }
 
-    [SuppressMessage("Design", "CA1031",
-        Justification = "Whatever the write throws belongs on the line under the journal.")]
     private async Task SaveJournalAsync()
     {
         var path = (_seams.Picker ?? NullPathPicker.Instance).PickSaveFile(
@@ -469,7 +454,7 @@ public sealed class ModelTestRunner : ObservableObject
             await (_seams.SaveText ?? TestJournal.SaveAsync)(path, JournalText).ConfigureAwait(true);
             _saveFailure = null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _saveFailure = ex.Message;
         }

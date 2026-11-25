@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -52,8 +51,6 @@ public sealed class SystemOneDecisionProbe : IDecisionProbe, IDisposable
     public static SystemOneDecisionProbe ForCurrentMachine() => new(new HttpClient(), ownsClient: true, time: null);
 
     /// <inheritdoc />
-    [SuppressMessage("Design", "CA1031",
-        Justification = "The probe's contract is a typed result: whatever the client throws is the verdict of a test.")]
     public async Task<DecisionProbeResult> ProbeAsync(DecisionProbeRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -113,11 +110,7 @@ public sealed class SystemOneDecisionProbe : IDecisionProbe, IDisposable
                     .Select(name => Check(name, response, judged: request.Case is null))],
             };
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return result with
             {
@@ -169,7 +162,7 @@ public sealed class SystemOneDecisionProbe : IDecisionProbe, IDisposable
         var options = own.Options.Select(option => option.Trim()).Where(option => option.Length > 0)
             .Distinct(StringComparer.Ordinal).ToList();
         if (options.Count >= 2)
-            questions.Add(ChoiceName, Choice([.. options.Select(option => (option, (string?)null))]));
+            questions.Add(ChoiceName, Choice([.. options.Select(option => (option, default(string)))]));
 
         return questions.ToImmutable();
     }

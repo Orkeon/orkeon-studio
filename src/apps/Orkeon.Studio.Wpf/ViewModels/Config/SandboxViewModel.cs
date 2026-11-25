@@ -196,7 +196,7 @@ public sealed class SandboxViewModel : ObservableObject
         var picked = _target;
         Tests.SetRows(rows);
         _target = rows.Find(row => row == picked)
-            ?? rows.Find(row => row.Name == picked?.Name && row.IsDecision == picked.IsDecision)
+            ?? rows.Find(row => picked is not null && row.Name == picked.Name && row.IsDecision == picked.IsDecision)
             ?? rows.FirstOrDefault();
         // The reply shown is the one of the target it was asked of.
         if (picked is not null && _target != picked && !Tests.IsRunning)
