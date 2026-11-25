@@ -76,6 +76,17 @@ public sealed partial class SettingsScreenViewModel
     /// <summary>Warning on a choice the engine refuses, done while a provider answers, empty otherwise.</summary>
     public string DecisionTabState => Config.Decision.TabState;
 
+    /// <summary>What the last tests said.</summary>
+    public string SandboxTabSubtitle => Sandbox.TabSubtitle;
+
+    /// <summary>Warning once a test failed, verified once every row passed, empty otherwise.</summary>
+    public string SandboxTabState => Sandbox.Tests.Rows switch
+    {
+        var rows when rows.Any(row => row.State == ModelTestState.Failed) => WarningState,
+        { Count: > 0 } rows when rows.All(row => row.State == ModelTestState.Passed) => VerifiedState,
+        _ => EmptyState,
+    };
+
     /// <summary>The fiches whose row carries a finding of the validation.</summary>
     private int FolderProblemCount => Config.Mounts.Mounts.Count(mount => mount.HasRowProblem);
 
@@ -227,6 +238,11 @@ public sealed partial class SettingsScreenViewModel
             if (e.PropertyName is nameof(DecisionSectionViewModel.TabSubtitle) or nameof(DecisionSectionViewModel.TabState) or "" or null)
                 OnPropertiesChanged(nameof(DecisionTabSubtitle), nameof(DecisionTabState));
         };
+        Sandbox.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(SandboxViewModel.TabSubtitle))
+                OnPropertiesChanged(nameof(SandboxTabSubtitle), nameof(SandboxTabState));
+        };
         _strings.CultureChanged += (_, _) => RefreshTabStates();
     }
 
@@ -236,6 +252,7 @@ public sealed partial class SettingsScreenViewModel
             nameof(RagTabSubtitle), nameof(RagTabState),
             nameof(KeysTabSubtitle), nameof(KeysTabState),
             nameof(DecisionTabSubtitle), nameof(DecisionTabState),
+            nameof(SandboxTabSubtitle), nameof(SandboxTabState),
             nameof(FoldersTabSubtitle), nameof(FoldersTabState),
             nameof(ToolsTabSubtitle), nameof(ToolKeysTabSubtitle), nameof(ToolKeysTabState), nameof(ShellTabSubtitle),
             nameof(MailsTabSubtitle), nameof(MailsTabState),

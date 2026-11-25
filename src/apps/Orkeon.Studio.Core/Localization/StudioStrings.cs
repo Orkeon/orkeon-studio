@@ -2916,6 +2916,99 @@ public static class StudioStringKeys
     /// <summary>The decision tab's subtitle while the engine refuses the provider's choice.</summary>
     public const string SettingsTabDecisionRefused = "Studio.Settings.TabDecisionRefused";
 
+    /// <summary>The guided setup: what Finish could not write.</summary>
+    public const string GuidedFinishFailed = "Studio.Settings.GuidedFinishFailed";
+
+    /// <summary>The guided setup: step 0 of 1.</summary>
+    public const string GuidedStep = "Studio.Settings.GuidedStep";
+
+    /// <summary>The guided setup: the provider and its key.</summary>
+    public const string GuidedStepProvider = "Studio.Settings.GuidedStepProvider";
+
+    /// <summary>The guided setup: the models.</summary>
+    public const string GuidedStepModels = "Studio.Settings.GuidedStepModels";
+
+    /// <summary>The guided setup: the decision model, optional.</summary>
+    public const string GuidedStepDecision = "Studio.Settings.GuidedStepDecision";
+
+    /// <summary>The guided setup: test and finish.</summary>
+    public const string GuidedStepTest = "Studio.Settings.GuidedStepTest";
+
+    /// <summary>The guided setup: no key is in place for it.</summary>
+    public const string GuidedKeyNone = "Studio.Settings.GuidedKeyNone";
+
+    /// <summary>The guided setup: a key is in place.</summary>
+    public const string GuidedKeyInPlace = "Studio.Settings.GuidedKeyInPlace";
+
+    /// <summary>The guided setup: later, change nothing.</summary>
+    public const string GuidedDecisionLater = "Studio.Settings.GuidedDecisionLater";
+
+    /// <summary>The guided setup: pick a provider.</summary>
+    public const string GuidedPickProvider = "Studio.Settings.GuidedPickProvider";
+
+    /// <summary>The guided setup: write an address that starts with http.</summary>
+    public const string GuidedAddressInvalid = "Studio.Settings.GuidedAddressInvalid";
+
+    /// <summary>The guided setup: give the setting a name.</summary>
+    public const string GuidedNameMissing = "Studio.Settings.GuidedNameMissing";
+
+    /// <summary>The guided setup: name at least one model, and leave no row empty.</summary>
+    public const string GuidedModelMissing = "Studio.Settings.GuidedModelMissing";
+
+    /// <summary>The guided setup: a name is missing or used twice.</summary>
+    public const string GuidedNameTaken = "Studio.Settings.GuidedNameTaken";
+
+    /// <summary>The decision provider is not in the tests.</summary>
+    public const string SandboxNoDecision = "Studio.Settings.SandboxNoDecision";
+
+    /// <summary>Not tested.</summary>
+    public const string SandboxIdle = "Studio.Settings.SandboxIdle";
+
+    /// <summary>Waiting for its turn.</summary>
+    public const string SandboxQueued = "Studio.Settings.SandboxQueued";
+
+    /// <summary>In flight.</summary>
+    public const string SandboxRunning = "Studio.Settings.SandboxRunning";
+
+    /// <summary>Stopped by the user.</summary>
+    public const string SandboxStopped = "Studio.Settings.SandboxStopped";
+
+    /// <summary>An echo setting.</summary>
+    public const string SandboxNoModel = "Studio.Settings.SandboxNoModel";
+
+    /// <summary>The key variable is empty; {0} names it.</summary>
+    public const string SandboxKeyMissing = "Studio.Settings.SandboxKeyMissing";
+
+    /// <summary>Counts of the tests: passed, failed, not sent.</summary>
+    public const string SandboxSummary = "Studio.Settings.SandboxSummary";
+
+    /// <summary>The decision provider answered right; {0} the seconds.</summary>
+    public const string SandboxDecisionPassed = "Studio.Settings.SandboxDecisionPassed";
+
+    /// <summary>It answered wrong; {0} the answers.</summary>
+    public const string SandboxDecisionWrong = "Studio.Settings.SandboxDecisionWrong";
+
+    /// <summary>Its address is not a URL.</summary>
+    public const string SandboxDecisionAddress = "Studio.Settings.SandboxDecisionAddress";
+
+    /// <summary>The case asks nothing.</summary>
+    public const string SandboxNothingAsked = "Studio.Settings.SandboxNothingAsked";
+
+    /// <summary>The reply is empty.</summary>
+    public const string SandboxEmptyReply = "Studio.Settings.SandboxEmptyReply";
+
+    /// <summary>The seconds of a reply.</summary>
+    public const string SandboxReplyTime = "Studio.Settings.SandboxReplyTime";
+
+    /// <summary>The seconds and the tokens of a reply.</summary>
+    public const string SandboxReplyUsage = "Studio.Settings.SandboxReplyUsage";
+
+    /// <summary>The log of the tests.</summary>
+    public const string SandboxJournal = "Studio.Settings.SandboxJournal";
+
+    /// <summary>The log was not written; {0} the cause.</summary>
+    public const string SandboxSaveFailed = "Studio.Settings.SandboxSaveFailed";
+
     /// <summary>The title of the decision models card.</summary>
     public const string SettingsDecisionTitle = "Studio.Settings.DecisionTitle";
 
@@ -4814,6 +4907,37 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsTabDecisionOff] = "Off",
         [StudioStringKeys.SettingsTabDecisionNone] = "No provider",
         [StudioStringKeys.SettingsTabDecisionRefused] = "To fix",
+        [StudioStringKeys.GuidedFinishFailed] = "Not everything was written: {0}",
+        [StudioStringKeys.GuidedStep] = "Step {0} of {1}: {2}",
+        [StudioStringKeys.GuidedStepProvider] = "the provider and its key",
+        [StudioStringKeys.GuidedStepModels] = "the models",
+        [StudioStringKeys.GuidedStepDecision] = "the decision model, optional",
+        [StudioStringKeys.GuidedStepTest] = "test and finish",
+        [StudioStringKeys.GuidedKeyNone] = "No key is in place for it.",
+        [StudioStringKeys.GuidedKeyInPlace] = "A key is in place: leave the field empty to keep it.",
+        [StudioStringKeys.GuidedDecisionLater] = "Later, change nothing",
+        [StudioStringKeys.GuidedPickProvider] = "Pick a provider.",
+        [StudioStringKeys.GuidedAddressInvalid] = "Write an address that starts with http:// or https://.",
+        [StudioStringKeys.GuidedNameMissing] = "Give the setting a name.",
+        [StudioStringKeys.GuidedModelMissing] = "Name at least one model, and leave no row empty.",
+        [StudioStringKeys.GuidedNameTaken] = "A name is missing or used twice: each model needs its own.",
+        [StudioStringKeys.SandboxNoDecision] = "No decision provider is set up: only the models are tested.",
+        [StudioStringKeys.SandboxIdle] = "Not tested",
+        [StudioStringKeys.SandboxQueued] = "Waiting",
+        [StudioStringKeys.SandboxRunning] = "Testing…",
+        [StudioStringKeys.SandboxStopped] = "Stopped",
+        [StudioStringKeys.SandboxNoModel] = "This setting names no model: nothing to test.",
+        [StudioStringKeys.SandboxKeyMissing] = "No key in {0}: nothing was sent.",
+        [StudioStringKeys.SandboxSummary] = "{0} passed, {1} failed, {2} not sent",
+        [StudioStringKeys.SandboxDecisionPassed] = "The three questions got the expected answers ({0} s).",
+        [StudioStringKeys.SandboxDecisionWrong] = "It answers, but not as expected: {0}",
+        [StudioStringKeys.SandboxDecisionAddress] = "The address of this decision provider is not valid.",
+        [StudioStringKeys.SandboxNothingAsked] = "Write a question, or at least two options.",
+        [StudioStringKeys.SandboxEmptyReply] = "The model answered with an empty text.",
+        [StudioStringKeys.SandboxReplyTime] = "in {0} s",
+        [StudioStringKeys.SandboxReplyUsage] = "{0} s, tokens: {1} in, {2} out",
+        [StudioStringKeys.SandboxJournal] = "Test log",
+        [StudioStringKeys.SandboxSaveFailed] = "The log was not saved: {0}",
         [StudioStringKeys.SettingsDecisionTitle] = "Decision models (System One)",
         [StudioStringKeys.SettingsDecisionIntro] = "A decision model answers typed questions with probabilities: a choice among options, a yes or no, a score. A team uses it through its decision tasks, or through the system_one_decide tool. The decision profiles written by hand are kept as they are.",
         [StudioStringKeys.SettingsDecisionEnabled] = "Use the decision models",

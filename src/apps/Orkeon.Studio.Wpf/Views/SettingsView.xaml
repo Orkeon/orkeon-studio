@@ -94,10 +94,14 @@
           <!-- lot 9: the model Studio itself uses (wizard, verdicts), distinct from the teams'
                models: a property row and its list. The tab's subtitle says when it is missing. -->
           <!-- UX lot 04 (043): with no model yet, the tab starts with the one useful action, not an empty list. -->
-          <Button Style="{StaticResource BtnPrimary}" HorizontalAlignment="Left" Margin="0,0,0,18"
-                  Command="{Binding Profiles.NewProfileCommand}" controls:ButtonIcon.Kind="plus"
-                  Visibility="{Binding Profiles.IsEmpty, Converter={StaticResource BooleanToVisibility}}"
-                  Content="{Binding [Studio.Settings.ChooseModelCta], Source={x:Static services:I18n.Instance}}"/>
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,18"
+                      Visibility="{Binding Profiles.IsEmpty, Converter={StaticResource BooleanToVisibility}}">
+            <Button Style="{StaticResource BtnPrimary}" Command="{Binding Guided.StartCommand}" controls:ButtonIcon.Kind="sparkles"
+                    Content="{Binding [Studio.Settings.GuidedTitle], Source={x:Static services:I18n.Instance}}"/>
+            <Button Style="{StaticResource BtnSecondary}" Margin="8,0,0,0"
+                    Command="{Binding Profiles.NewProfileCommand}" controls:ButtonIcon.Kind="plus"
+                    Content="{Binding [Studio.Settings.ChooseModelCta], Source={x:Static services:I18n.Instance}}"/>
+          </StackPanel>
           <StackPanel Margin="0,0,0,18"
                       Visibility="{Binding Profiles.IsEmpty, Converter={StaticResource InverseBooleanToVisibility}}">
             <controls:PropertyRow Label="{Binding [Studio.Settings.AssistantRow], Source={x:Static services:I18n.Instance}}">
@@ -127,6 +131,10 @@
                 <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top"
                         Command="{Binding Profiles.NewProfileCommand}" controls:ButtonIcon.Kind="plus"
                         Content="{Binding [Studio.Settings.New], Source={x:Static services:I18n.Instance}}"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top" Margin="0,0,8,0"
+                        Command="{Binding Guided.StartCommand}" controls:ButtonIcon.Kind="sparkles"
+                        Visibility="{Binding Profiles.IsEmpty, Converter={StaticResource InverseBooleanToVisibility}}"
+                        Content="{Binding [Studio.Settings.GuidedTitle], Source={x:Static services:I18n.Instance}}"/>
                 <StackPanel Margin="0,0,14,0">
                   <StackPanel Orientation="Horizontal">
                     <controls:LucideIcon Kind="sparkles" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
@@ -448,6 +456,11 @@
                       Subtitle="{Binding DecisionTabSubtitle}" State="{Binding DecisionTabState}">
         <!-- ══ MODELES DE DECISION (System One): the switch, the provider, its key ══ -->
         <views:DecisionView DataContext="{Binding Config.Decision}"/>
+      </controls:StepTab>
+      <controls:StepTab Tag="sandbox" Header="{Binding [Studio.Settings.SandboxTab], Source={x:Static services:I18n.Instance}}"
+                      Subtitle="{Binding SandboxTabSubtitle}" State="{Binding SandboxTabState}">
+        <!-- The tests of every model and of the decision provider, a free message, the journal. -->
+        <views:SandboxView DataContext="{Binding Sandbox}"/>
       </controls:StepTab>
       <controls:StepTab Tag="folders" Header="{Binding [Studio.Shell.Folders], Source={x:Static services:I18n.Instance}}"
                       Subtitle="{Binding FoldersTabSubtitle}" State="{Binding FoldersTabState}"

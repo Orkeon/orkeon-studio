@@ -2363,6 +2363,73 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Off</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>No provider</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>To fix</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>Not everything was written: {0}</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Guided setup</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Step {0} of {1}: {2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>the provider and its key</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>the models</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>the decision model, optional</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>test and finish</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>API key</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>No key is in place for it.</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>A key is in place: leave the field empty to keep it.</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>It is kept in your session at the end, never in a file.</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>Verify</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>Models found: click one to add it</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>One or several models of the same provider. With several, each one has a short name.</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>Model of the assistant</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>Default model of the teams</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One answers typed questions: a choice, a yes or no, a score. You can set it up later.</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>Later, change nothing</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>Let it pick among these models</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>Cheapest first. It replaces the ladder already in the settings; only a team that asks for the auto profile uses it.</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>Test what you entered, or finish now: nothing is saved before Finish, and a failed test does not prevent it.</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>Finish</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>Pick a provider.</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>Write an address that starts with http:// or https://.</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>Give the setting a name.</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>Name at least one model, and leave no row empty.</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>A name is missing or used twice: each model needs its own.</value></data>
+  <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>Test</value></data>
+  <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>Tests every model you declared, and the decision provider if one is set up.</value></data>
+  <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>Each test costs a few tokens. Nothing is sent without a click.</value></data>
+  <data name="Studio.Settings.SandboxTestAll" xml:space="preserve"><value>Test all</value></data>
+  <data name="Studio.Settings.SandboxStop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Studio.Settings.SandboxTest" xml:space="preserve"><value>Test</value></data>
+  <data name="Studio.Settings.SandboxOpen" xml:space="preserve"><value>Open the setting</value></data>
+  <data name="Studio.Settings.SandboxEmpty" xml:space="preserve"><value>No model is declared yet.</value></data>
+  <data name="Studio.Settings.SandboxNoDecision" xml:space="preserve"><value>No decision provider is set up: only the models are tested.</value></data>
+  <data name="Studio.Settings.SandboxIdle" xml:space="preserve"><value>Not tested</value></data>
+  <data name="Studio.Settings.SandboxQueued" xml:space="preserve"><value>Waiting</value></data>
+  <data name="Studio.Settings.SandboxRunning" xml:space="preserve"><value>Testing…</value></data>
+  <data name="Studio.Settings.SandboxStopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="Studio.Settings.SandboxNoModel" xml:space="preserve"><value>This setting names no model: nothing to test.</value></data>
+  <data name="Studio.Settings.SandboxKeyMissing" xml:space="preserve"><value>No key in {0}: nothing was sent.</value></data>
+  <data name="Studio.Settings.SandboxSummary" xml:space="preserve"><value>{0} passed, {1} failed, {2} not sent</value></data>
+  <data name="Studio.Settings.SandboxDecisionPassed" xml:space="preserve"><value>The three questions got the expected answers ({0} s).</value></data>
+  <data name="Studio.Settings.SandboxDecisionWrong" xml:space="preserve"><value>It answers, but not as expected: {0}</value></data>
+  <data name="Studio.Settings.SandboxDecisionAddress" xml:space="preserve"><value>The address of this decision provider is not valid.</value></data>
+  <data name="Studio.Settings.SandboxNothingAsked" xml:space="preserve"><value>Write a question, or at least two options.</value></data>
+  <data name="Studio.Settings.SandboxTryTitle" xml:space="preserve"><value>Try a message</value></data>
+  <data name="Studio.Settings.SandboxTryIntro" xml:space="preserve"><value>Pick a model and one of the English texts, or write your own, and read the reply.</value></data>
+  <data name="Studio.Settings.SandboxTarget" xml:space="preserve"><value>Model</value></data>
+  <data name="Studio.Settings.SandboxSample" xml:space="preserve"><value>Test text</value></data>
+  <data name="Studio.Settings.SandboxMessage" xml:space="preserve"><value>Message</value></data>
+  <data name="Studio.Settings.SandboxSend" xml:space="preserve"><value>Send</value></data>
+  <data name="Studio.Settings.SandboxReply" xml:space="preserve"><value>Reply</value></data>
+  <data name="Studio.Settings.SandboxEmptyReply" xml:space="preserve"><value>The model answered with an empty text.</value></data>
+  <data name="Studio.Settings.SandboxReplyTime" xml:space="preserve"><value>in {0} s</value></data>
+  <data name="Studio.Settings.SandboxReplyUsage" xml:space="preserve"><value>{0} s, tokens: {1} in, {2} out</value></data>
+  <data name="Studio.Settings.SandboxCaseState" xml:space="preserve"><value>Text to decide on</value></data>
+  <data name="Studio.Settings.SandboxCaseQuestion" xml:space="preserve"><value>Yes or no question</value></data>
+  <data name="Studio.Settings.SandboxCaseOptions" xml:space="preserve"><value>Options to choose among, one per line</value></data>
+  <data name="Studio.Settings.SandboxJournal" xml:space="preserve"><value>Test log</value></data>
+  <data name="Studio.Settings.SandboxJournalEmpty" xml:space="preserve"><value>Nothing was tested yet.</value></data>
+  <data name="Studio.Settings.SandboxJournalCopy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Studio.Settings.SandboxJournalCopied" xml:space="preserve"><value>Copied!</value></data>
+  <data name="Studio.Settings.SandboxJournalSave" xml:space="preserve"><value>Save…</value></data>
+  <data name="Studio.Settings.SandboxJournalClear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Studio.Settings.SandboxSaveFailed" xml:space="preserve"><value>The log was not saved: {0}</value></data>
   <data name="Studio.Settings.DecisionTitle" xml:space="preserve"><value>Decision models (System One)</value></data>
   <data name="Studio.Settings.DecisionIntro" xml:space="preserve"><value>A decision model answers typed questions with probabilities: a choice among options, a yes or no, a score. A team uses it through its decision tasks, or through the system_one_decide tool. The decision profiles written by hand are kept as they are.</value></data>
   <data name="Studio.Settings.DecisionEnabled" xml:space="preserve"><value>Use the decision models</value></data>

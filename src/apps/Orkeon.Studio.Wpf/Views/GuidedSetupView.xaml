@@ -1,0 +1,221 @@
+<!-- The guided setup (modal): the provider and its key, its models, the decision provider, the tests.
+     Nothing is written before « Finish ». DataContext: GuidedSetupViewModel (bound as Settings.Guided). -->
+<UserControl x:Class="Orkeon.Studio.Wpf.Views.GuidedSetupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Orkeon.Studio.Wpf.Controls"
+             xmlns:views="clr-namespace:Orkeon.Studio.Wpf.Views"
+             xmlns:services="clr-namespace:Orkeon.Studio.Wpf.Services">
+  <UserControl.Resources>
+    <views:IsEqualConverter x:Key="IsEqual"/>
+    <views:ModalBodyHeightConverter x:Key="ModalBodyHeight"/>
+    <!-- One provider card, as in the profile editor: the picked one wears the accent. -->
+    <DataTemplate x:Key="ProviderCard">
+      <RadioButton GroupName="GuidedProvider" Margin="0,0,7,7" Cursor="Hand" CommandParameter="{Binding}"
+                   Command="{Binding DataContext.SelectProviderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+        <RadioButton.IsChecked>
+          <MultiBinding Converter="{StaticResource IsEqual}" Mode="OneWay">
+            <Binding Path="Name"/>
+            <Binding Path="DataContext.Provider.Name" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+          </MultiBinding>
+        </RadioButton.IsChecked>
+        <RadioButton.Template>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Card" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineStrongBrush}"
+                    BorderThickness="1" CornerRadius="10" Padding="11,8">
+              <StackPanel>
+                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource InkBrush}"
+                           TextTrimming="CharacterEllipsis" Text="{Binding Title}" ToolTip="{Binding Title}"/>
+                <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" Margin="0,1,0,0"
+                           TextTrimming="CharacterEllipsis" Text="{Binding Description}" ToolTip="{Binding Description}"/>
+              </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Card" Property="Background" Value="{DynamicResource AccentWeakBrush}"/>
+                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </RadioButton.Template>
+      </RadioButton>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Border Width="680" HorizontalAlignment="Center" VerticalAlignment="Center"
+          Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineStrongBrush}" BorderThickness="1"
+          CornerRadius="20" Effect="{DynamicResource ShadowLg}">
+    <StackPanel>
+      <StackPanel Margin="22,20,22,0">
+        <TextBlock Style="{StaticResource ModalTitle}" Text="{Binding [Studio.Settings.GuidedTitle], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock FontSize="13" Foreground="{DynamicResource InkMutedBrush}" TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding StepText}"/>
+      </StackPanel>
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,16,6,0"
+                    MaxHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ModalBodyHeight}}">
+        <StackPanel Margin="22,0,16,0">
+
+          <!-- 1: the provider and its key -->
+          <StackPanel Visibility="{Binding IsProviderStep, Converter={StaticResource BooleanToVisibility}}">
+            <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="13" FontWeight="Medium"
+                       Foreground="{DynamicResource InkFaintBrush}" Margin="0,0,0,6" Text="{Binding [Studio.Settings.GroupLocal], Source={x:Static services:I18n.Instance}}"/>
+            <ItemsControl ItemsSource="{Binding LocalProviders}" ItemTemplate="{StaticResource ProviderCard}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="13" FontWeight="Medium"
+                       Foreground="{DynamicResource InkFaintBrush}" Margin="0,12,0,6" Text="{Binding [Studio.Settings.GroupCloud], Source={x:Static services:I18n.Instance}}"/>
+            <ItemsControl ItemsSource="{Binding CloudProviders}" ItemTemplate="{StaticResource ProviderCard}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="13" FontWeight="Medium"
+                       Foreground="{DynamicResource InkFaintBrush}" Margin="0,12,0,6" Text="{Binding [Studio.Settings.GroupOthers], Source={x:Static services:I18n.Instance}}"/>
+            <ItemsControl ItemsSource="{Binding OtherProviders}" ItemTemplate="{StaticResource ProviderCard}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding AsksAddress, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.BaseUrl], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMono}" Text="{Binding BaseUrl, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding RequiresApiKey, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.GuidedKey], Source={x:Static services:I18n.Instance}}"/>
+              <PasswordBox Style="{StaticResource InputPassword}" ToolTip="{Binding [Studio.Settings.KeyPlaceholder], Source={x:Static services:I18n.Instance}}"
+                           views:PasswordBinding.Text="{Binding ApiKeyInput}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding KeyStatusText}"/>
+              <TextBlock FontFamily="{StaticResource MonoFont}" FontSize="13" Foreground="{DynamicResource AccentBrush}" Margin="0,5,0,0"
+                         Text="{Binding KeyConsoleUrl}" Visibility="{Binding KeyConsoleUrl, Converter={StaticResource StringPresentToVisibility}}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedKeyKept], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowWorkspace, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblWorkspace], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMono}" Text="{Binding WorkspaceId, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                         Text="{Binding [Studio.Settings.ProfileWorkspaceHint], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+              <Button Style="{StaticResource BtnSecondary}" Command="{Binding VerifyCommand}" controls:ButtonIcon.Kind="plug-zap" Content="{Binding [Studio.Settings.GuidedVerify], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0" MaxWidth="460" TextWrapping="Wrap"
+                         Text="{Binding VerifyText}" Visibility="{Binding VerifyText, Converter={StaticResource StringPresentToVisibility}}"/>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 2: the models -->
+          <StackPanel Visibility="{Binding IsModelsStep, Converter={StaticResource BooleanToVisibility}}">
+            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.NameLabel], Source={x:Static services:I18n.Instance}}"/>
+            <TextBox Style="{StaticResource Input}" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5" Text="{Binding [Studio.Settings.ModelsSection], Source={x:Static services:I18n.Instance}}"/>
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedModelsHint], Source={x:Static services:I18n.Instance}}"/>
+            <ItemsControl ItemsSource="{Binding Models}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel Margin="0,0,0,8">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource IconBtnGhost}" Margin="8,0,0,0" VerticalAlignment="Bottom"
+                            Command="{Binding RemoveCommand}" controls:ButtonIcon.Kind="x"
+                            ToolTip="{Binding [Studio.Settings.RemoveModel], Source={x:Static services:I18n.Instance}}" AutomationProperties.Name="{Binding [Studio.Settings.RemoveModel], Source={x:Static services:I18n.Instance}}"/>
+                    <StackPanel DockPanel.Dock="Right" Width="200" Margin="10,0,0,0"
+                                Visibility="{Binding DataContext.HasSeveralModels, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibility}}">
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.AliasLabel], Source={x:Static services:I18n.Instance}}"/>
+                      <TextBox Style="{StaticResource InputMono}" Text="{Binding Alias, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <StackPanel>
+                      <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Common.Model], Source={x:Static services:I18n.Instance}}"/>
+                      <TextBox Style="{StaticResource InputMono}" Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Style="{StaticResource BtnSecondary}" HorizontalAlignment="Left" controls:ButtonSize.Height="32" controls:ButtonIcon.Kind="plus"
+                    Command="{Binding AddModelCommand}" Content="{Binding [Studio.Settings.AddModel], Source={x:Static services:I18n.Instance}}"/>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding HasFoundModels, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.GuidedFound], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource Input}" Text="{Binding ModelFilter, UpdateSourceTrigger=PropertyChanged}"
+                       ToolTip="{Binding [Studio.Settings.ModelsFilter], Source={x:Static services:I18n.Instance}}" AutomationProperties.Name="{Binding [Studio.Settings.ModelsFilter], Source={x:Static services:I18n.Instance}}"/>
+              <ListBox ItemsSource="{Binding FoundModels}" MaxHeight="180" Margin="0,6,0,0" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Button Style="{StaticResource BtnSecondary}" HorizontalContentAlignment="Left" Content="{Binding}" CommandParameter="{Binding}"
+                            Command="{Binding DataContext.PickModelCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5" Text="{Binding [Studio.Settings.GuidedAssistant], Source={x:Static services:I18n.Instance}}"/>
+            <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                      ItemsSource="{Binding ElectionChoices}" SelectedItem="{Binding Assistant}"/>
+            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5" Text="{Binding [Studio.Settings.GuidedDefault], Source={x:Static services:I18n.Instance}}"/>
+            <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                      ItemsSource="{Binding ElectionChoices}" SelectedItem="{Binding Default}"/>
+          </StackPanel>
+
+          <!-- 3: the decision provider, optional -->
+          <StackPanel Visibility="{Binding IsDecisionStep, Converter={StaticResource BooleanToVisibility}}">
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedDecisionIntro], Source={x:Static services:I18n.Instance}}"/>
+            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.DecisionProvider], Source={x:Static services:I18n.Instance}}"/>
+            <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                      ItemsSource="{Binding DecisionChoices}" SelectedItem="{Binding SelectedDecision}" DisplayMemberPath="Label"/>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding DecisionKeyRequired, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.GuidedKey], Source={x:Static services:I18n.Instance}}"/>
+              <PasswordBox Style="{StaticResource InputPassword}" ToolTip="{Binding [Studio.Settings.KeyPlaceholder], Source={x:Static services:I18n.Instance}}"
+                           views:PasswordBinding.Text="{Binding DecisionKeyInput}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding DecisionKeyStatusText}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedKeyKept], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding OffersLadder, Converter={StaticResource BooleanToVisibility}}">
+              <CheckBox IsChecked="{Binding UsesLadder}" Content="{Binding [Studio.Settings.GuidedLadder], Source={x:Static services:I18n.Instance}}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,8" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedLadderHint], Source={x:Static services:I18n.Instance}}"/>
+              <ItemsControl ItemsSource="{Binding Rungs}" Visibility="{Binding UsesLadder, Converter={StaticResource BooleanToVisibility}}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <DockPanel Margin="0,0,0,4">
+                      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button Style="{StaticResource IconBtnGhost}" controls:ButtonIcon.Kind="arrow-up" Command="{Binding MoveUpCommand}"
+                                ToolTip="{Binding [Studio.Settings.DecisionRungUp], Source={x:Static services:I18n.Instance}}" AutomationProperties.Name="{Binding [Studio.Settings.DecisionRungUp], Source={x:Static services:I18n.Instance}}"/>
+                        <Button Style="{StaticResource IconBtnGhost}" controls:ButtonIcon.Kind="arrow-down" Command="{Binding MoveDownCommand}"
+                                ToolTip="{Binding [Studio.Settings.DecisionRungDown], Source={x:Static services:I18n.Instance}}" AutomationProperties.Name="{Binding [Studio.Settings.DecisionRungDown], Source={x:Static services:I18n.Instance}}"/>
+                      </StackPanel>
+                      <TextBlock FontSize="13" Foreground="{DynamicResource InkBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                 Text="{Binding Name}" ToolTip="{Binding Name}"/>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+
+          <!-- 4: the tests; « Finish » is there even when one fails -->
+          <StackPanel Visibility="{Binding IsTestStep, Converter={StaticResource BooleanToVisibility}}">
+            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedTestIntro], Source={x:Static services:I18n.Instance}}"/>
+            <views:ModelTestsView DataContext="{Binding Tests}"/>
+          </StackPanel>
+
+          <TextBlock FontSize="13" Foreground="{DynamicResource WarningInkBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Text="{Binding Problem}"
+                     Visibility="{Binding Problem, Converter={StaticResource StringPresentToVisibility}}"/>
+          <TextBlock FontSize="13" Foreground="{DynamicResource WarningInkBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Text="{Binding FinishFailure}"
+                     Visibility="{Binding FinishFailure, Converter={StaticResource StringPresentToVisibility}}"/>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Border Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource LineFaintBrush}"
+              BorderThickness="0,1,0,0" CornerRadius="0,0,19,19" Padding="22,18" Margin="0,18,0,0">
+        <DockPanel LastChildFill="False">
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" Command="{Binding FinishCommand}" controls:ButtonIcon.Kind="check"
+                  Visibility="{Binding IsTestStep, Converter={StaticResource BooleanToVisibility}}" Content="{Binding [Studio.Settings.GuidedFinish], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" Command="{Binding NextCommand}"
+                  Visibility="{Binding IsTestStep, Converter={StaticResource InverseBooleanToVisibility}}" Content="{Binding [Studio.Shell.Next], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" Margin="0,0,10,0" Command="{Binding BackCommand}" Content="{Binding [Studio.Shell.Back], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Left" Style="{StaticResource BtnGhost}" Command="{Binding CancelCommand}"
+                  Visibility="{Binding HasFinishFailure, Converter={StaticResource InverseBooleanToVisibility}}"
+                  Content="{Binding [Studio.Common.Cancel], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Left" Style="{StaticResource BtnSecondary}" Command="{Binding CancelCommand}"
+                  Visibility="{Binding HasFinishFailure, Converter={StaticResource BooleanToVisibility}}"
+                  Content="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"/>
+        </DockPanel>
+      </Border>
+    </StackPanel>
+  </Border>
+</UserControl>

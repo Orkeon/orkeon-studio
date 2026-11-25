@@ -58,6 +58,16 @@ internal static class SettingsStops
 
         new()
         {
+            Name = "reglages-tester",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsSandbox,
+            Because = "The Test section of the Models group: one row per declared model, the message to "
+                    + "try with its English text, and an empty log — nothing is sent without a click.",
+            SweepsLanguages = true,
+        },
+
+        new()
+        {
             Name = "reglages-dossiers",
             Category = CaptureCategory.Settings,
             Screen = CaptureScreen.SettingsFolders,
@@ -326,6 +336,23 @@ internal static class SettingsStops
                     + "the status bar below.",
             Covers = ["Settings.Studio.Thresholds", "StatusBar.Balance.HasBalance"],
             SweepsLanguages = true,
+        },
+
+        new()
+        {
+            Name = "reglage-guide",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsModel,
+            Modes = CaptureModes.Either,
+            Because = "The guided setup on its first step, over its scrim: the provider cards, the key and Verify.",
+            Covers = ["Settings.Guided.IsOpen"],
+            Arrange = CaptureAction.Sync(static c =>
+            {
+                var guided = c.Shell.Settings.Guided;
+                guided.StartCommand.Execute(null);
+                guided.Provider = guided.CloudProviders.FirstOrDefault(p => p.Name == LlmPresets.DeepSeek);
+            }),
+            Teardown = CaptureAction.Sync(static c => c.Shell.Settings.Guided.CancelCommand.Execute(null)),
         },
 
         new()

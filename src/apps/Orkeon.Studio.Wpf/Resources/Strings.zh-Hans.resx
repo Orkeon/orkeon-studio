@@ -4076,6 +4076,73 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>已关闭</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>无提供方</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>待修正</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>并未全部写入：{0}</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>引导式设置</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>第 {0} 步，共 {1} 步：{2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>提供商及其密钥</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>模型</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>决策模型（可选）</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>测试并完成</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>API 密钥</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>尚无可用密钥。</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>已有密钥：留空即可保留。</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>密钥最终保存在您的会话中，绝不写入文件。</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>验证</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>找到的模型：点击即可添加</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>同一提供商的一个或多个模型。若有多个，每个模型都有一个简称。</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>助手使用的模型</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>团队的默认模型</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One 回答类型化的问题：选择、是非或评分。您可以稍后再配置。</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>稍后，不作更改</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>让其在这些模型中选择</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>最便宜的在前。将替换设置中现有的阶梯；仅请求 auto 配置的团队会使用。</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>测试您输入的内容，或立即完成：点击完成之前不会保存任何内容，测试失败也不影响完成。</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>完成</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>请选择提供商。</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>请输入以 http:// 或 https:// 开头的地址。</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>请为该设置命名。</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>请至少指定一个模型，且不要留空行。</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>名称缺失或重复：每个模型都需要自己的名称。</value></data>
+  <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>测试</value></data>
+  <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>测试您声明的每个模型，以及已配置的决策提供商。</value></data>
+  <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>每次测试会消耗少量令牌。未点击时不会发送任何内容。</value></data>
+  <data name="Studio.Settings.SandboxTestAll" xml:space="preserve"><value>全部测试</value></data>
+  <data name="Studio.Settings.SandboxStop" xml:space="preserve"><value>停止</value></data>
+  <data name="Studio.Settings.SandboxTest" xml:space="preserve"><value>测试</value></data>
+  <data name="Studio.Settings.SandboxOpen" xml:space="preserve"><value>打开设置</value></data>
+  <data name="Studio.Settings.SandboxEmpty" xml:space="preserve"><value>尚未声明任何模型。</value></data>
+  <data name="Studio.Settings.SandboxNoDecision" xml:space="preserve"><value>未配置决策提供商：仅测试模型。</value></data>
+  <data name="Studio.Settings.SandboxIdle" xml:space="preserve"><value>未测试</value></data>
+  <data name="Studio.Settings.SandboxQueued" xml:space="preserve"><value>等待中</value></data>
+  <data name="Studio.Settings.SandboxRunning" xml:space="preserve"><value>测试中…</value></data>
+  <data name="Studio.Settings.SandboxStopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="Studio.Settings.SandboxNoModel" xml:space="preserve"><value>此设置未指定模型：无需测试。</value></data>
+  <data name="Studio.Settings.SandboxKeyMissing" xml:space="preserve"><value>{0} 中没有密钥：未发送任何内容。</value></data>
+  <data name="Studio.Settings.SandboxSummary" xml:space="preserve"><value>通过 {0}，失败 {1}，未发送 {2}</value></data>
+  <data name="Studio.Settings.SandboxDecisionPassed" xml:space="preserve"><value>三个问题均得到预期答案（{0} 秒）。</value></data>
+  <data name="Studio.Settings.SandboxDecisionWrong" xml:space="preserve"><value>有应答，但不符合预期：{0}</value></data>
+  <data name="Studio.Settings.SandboxDecisionAddress" xml:space="preserve"><value>该决策提供商的地址无效。</value></data>
+  <data name="Studio.Settings.SandboxNothingAsked" xml:space="preserve"><value>请填写一个问题，或至少两个选项。</value></data>
+  <data name="Studio.Settings.SandboxTryTitle" xml:space="preserve"><value>试发消息</value></data>
+  <data name="Studio.Settings.SandboxTryIntro" xml:space="preserve"><value>选择一个模型和一段英文文本，或自行编写，然后查看回复。</value></data>
+  <data name="Studio.Settings.SandboxTarget" xml:space="preserve"><value>模型</value></data>
+  <data name="Studio.Settings.SandboxSample" xml:space="preserve"><value>测试文本</value></data>
+  <data name="Studio.Settings.SandboxMessage" xml:space="preserve"><value>消息</value></data>
+  <data name="Studio.Settings.SandboxSend" xml:space="preserve"><value>发送</value></data>
+  <data name="Studio.Settings.SandboxReply" xml:space="preserve"><value>回复</value></data>
+  <data name="Studio.Settings.SandboxEmptyReply" xml:space="preserve"><value>模型返回了空文本。</value></data>
+  <data name="Studio.Settings.SandboxReplyTime" xml:space="preserve"><value>{0} 秒</value></data>
+  <data name="Studio.Settings.SandboxReplyUsage" xml:space="preserve"><value>{0} 秒，令牌：输入 {1}，输出 {2}</value></data>
+  <data name="Studio.Settings.SandboxCaseState" xml:space="preserve"><value>待判断的文本</value></data>
+  <data name="Studio.Settings.SandboxCaseQuestion" xml:space="preserve"><value>是非问题</value></data>
+  <data name="Studio.Settings.SandboxCaseOptions" xml:space="preserve"><value>可选项，每行一个</value></data>
+  <data name="Studio.Settings.SandboxJournal" xml:space="preserve"><value>测试日志</value></data>
+  <data name="Studio.Settings.SandboxJournalEmpty" xml:space="preserve"><value>尚未进行测试。</value></data>
+  <data name="Studio.Settings.SandboxJournalCopy" xml:space="preserve"><value>复制</value></data>
+  <data name="Studio.Settings.SandboxJournalCopied" xml:space="preserve"><value>已复制！</value></data>
+  <data name="Studio.Settings.SandboxJournalSave" xml:space="preserve"><value>保存…</value></data>
+  <data name="Studio.Settings.SandboxJournalClear" xml:space="preserve"><value>清空</value></data>
+  <data name="Studio.Settings.SandboxSaveFailed" xml:space="preserve"><value>日志未保存：{0}</value></data>
   <data name="Studio.Settings.DecisionTitle" xml:space="preserve"><value>决策模型（System One）</value></data>
   <data name="Studio.Settings.DecisionIntro" xml:space="preserve"><value>决策模型以概率回答类型化问题：在选项中选择、是或否、评分。团队通过其决策任务或 system_one_decide 工具使用它。手写的决策配置文件保持原样。</value></data>
   <data name="Studio.Settings.DecisionEnabled" xml:space="preserve"><value>使用决策模型</value></data>

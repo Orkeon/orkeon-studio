@@ -1,0 +1,88 @@
+<!-- The « Test » settings tab: every model and the decision provider under test with the log, then a
+     message of the user's own and its reply. DataContext: SandboxViewModel (bound as Settings.Sandbox). -->
+<UserControl x:Class="Orkeon.Studio.Wpf.Views.SandboxView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:config="clr-namespace:Orkeon.Studio.Wpf.ViewModels.Config"
+             xmlns:controls="clr-namespace:Orkeon.Studio.Wpf.Controls"
+             xmlns:views="clr-namespace:Orkeon.Studio.Wpf.Views"
+             xmlns:services="clr-namespace:Orkeon.Studio.Wpf.Services">
+  <StackPanel>
+    <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+          <controls:LucideIcon Kind="plug-zap" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+          <TextBlock Style="{StaticResource CardTitle}" Text="{Binding [Studio.Settings.SandboxTab], Source={x:Static services:I18n.Instance}}"/>
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.SandboxIntro], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" TextWrapping="Wrap" Text="{Binding DecisionNote}"
+                   Visibility="{Binding DecisionNote, Converter={StaticResource StringPresentToVisibility}}"/>
+        <views:ModelTestsView DataContext="{Binding Tests}"/>
+      </StackPanel>
+    </Border>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,16" Visibility="{Binding Tests.HasRows, Converter={StaticResource BooleanToVisibility}}">
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+          <controls:LucideIcon Kind="message-circle" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+          <TextBlock Style="{StaticResource CardTitle}" Text="{Binding [Studio.Settings.SandboxTryTitle], Source={x:Static services:I18n.Instance}}"/>
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.SandboxTryIntro], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                   Text="{Binding [Studio.Settings.SandboxTarget], Source={x:Static services:I18n.Instance}}"/>
+        <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                  ItemsSource="{Binding Tests.Rows}" SelectedItem="{Binding Target}" DisplayMemberPath="Name"/>
+
+        <StackPanel Visibility="{Binding IsModelTarget, Converter={StaticResource BooleanToVisibility}}">
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxSample], Source={x:Static services:I18n.Instance}}"/>
+          <ComboBox Style="{StaticResource ComboS}" HorizontalAlignment="Left" MinWidth="220"
+                    ItemsSource="{x:Static config:SandboxViewModel.Samples}" SelectedItem="{Binding Sample}" DisplayMemberPath="Title"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxMessage], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMultiline}" MinHeight="80" Text="{Binding Message, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Visibility="{Binding IsDecisionTarget, Converter={StaticResource BooleanToVisibility}}">
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxCaseState], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMultiline}" MinHeight="80" Text="{Binding CaseState, UpdateSourceTrigger=PropertyChanged}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxCaseQuestion], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource Input}" Text="{Binding CaseQuestion, UpdateSourceTrigger=PropertyChanged}"/>
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxCaseOptions], Source={x:Static services:I18n.Instance}}"/>
+          <TextBox Style="{StaticResource InputMultiline}" MinHeight="80" Text="{Binding CaseOptions, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+          <Button Style="{StaticResource BtnPrimary}" Command="{Binding SendCommand}" controls:ButtonIcon.Kind="send"
+                  Content="{Binding [Studio.Settings.SandboxSend], Source={x:Static services:I18n.Instance}}"/>
+          <Button Style="{StaticResource BtnGhost}" Margin="8,0,0,0" Command="{Binding Tests.StopCommand}" controls:ButtonIcon.Kind="square"
+                  Content="{Binding [Studio.Settings.SandboxStop], Source={x:Static services:I18n.Instance}}"
+                  Visibility="{Binding Tests.IsRunning, Converter={StaticResource BooleanToVisibility}}"/>
+        </StackPanel>
+        <controls:Alert Margin="0,14,0,0" Message="{Binding ReplyNote}"
+                        Visibility="{Binding ReplyNote, Converter={StaticResource StringPresentToVisibility}}">
+          <controls:Alert.Style>
+            <Style TargetType="controls:Alert" BasedOn="{StaticResource {x:Type controls:Alert}}">
+              <Setter Property="Tone" Value="Info"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding HasReplyFailed}" Value="True">
+                  <Setter Property="Tone" Value="Danger"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </controls:Alert.Style>
+        </controls:Alert>
+        <StackPanel Visibility="{Binding HasReply, Converter={StaticResource BooleanToVisibility}}">
+          <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                     Text="{Binding [Studio.Settings.SandboxReply], Source={x:Static services:I18n.Instance}}"/>
+          <controls:TechBlock MaxHeight="320" Text="{Binding Reply, Mode=OneWay}"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -33,6 +33,9 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
     /// <summary>How much of an error body is quoted back to the user.</summary>
     private const int MaxQuotedBodyLength = 200;
 
+    /// <summary>How much of an error body <see cref="LlmProbeResult.FullDetail"/> keeps.</summary>
+    private const int MaxKeptBodyLength = 8000;
+
     /// <summary>What stands in the result wherever the key would have appeared.</summary>
     private const string RedactedKey = "***";
 
@@ -62,8 +65,9 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         _time = time ?? TimeProvider.System;
     }
 
-    /// <summary>Probes over the real network, through a client this probe owns.</summary>
-    public static HttpLlmEndpointProbe ForCurrentMachine() => new(new HttpClient(), ownsClient: true, time: null);
+    /// <summary>Probes over the real network, through a client this probe owns; the deadline is each request's.</summary>
+    public static HttpLlmEndpointProbe ForCurrentMachine() =>
+        new(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }, ownsClient: true, time: null);
 
     /// <inheritdoc />
     public async Task<LlmProbeResult> ProbeAsync(
@@ -105,6 +109,10 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, deadline.Token);
         var context = new StepContext(request, started);
 
+        // A message of the user's own asks for its reply, not for the catalogue.
+        if (request.Prompt is not null && !string.IsNullOrWhiteSpace(request.Model))
+            return await CompleteAsync([], provider, baseUri, context, linked.Token, cancellationToken).ConfigureAwait(false);
+
         var catalogue = await RunStepAsync(
             LlmProbeStage.Models, () => BuildRequest(reading, baseUri, request.ApiKey, request.WorkspaceId), context, linked.Token, cancellationToken)
             .ConfigureAwait(false);
@@ -122,20 +130,34 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
             };
         }
 
-        var model = request.Model.Trim();
+        return await CompleteAsync(modelNames, provider, baseUri, context, linked.Token, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The completion step: the test "ping", or the request's own message.</summary>
+    private async Task<LlmProbeResult> CompleteAsync(
+        ImmutableArray<string>? modelNames, string provider, Uri baseUri, StepContext context,
+        CancellationToken token, CancellationToken callerToken)
+    {
+        var request = context.Request;
+        var model = request.Model!.Trim();
         var completion = await RunStepAsync(
             LlmProbeStage.Completion,
             () => LlmProbeDialect.BuildCompletion(
-                provider, baseUri, request.ApiKey, model, request.ThinkingEnabled, request.ModelThinkingOverrides, request.WorkspaceId),
-            context, linked.Token, cancellationToken).ConfigureAwait(false);
+                provider, baseUri, request.ApiKey, model, request.ThinkingEnabled, request.ModelThinkingOverrides, request.WorkspaceId,
+                request.Prompt ?? LlmProbeDialect.CompletionPrompt,
+                request.Prompt is null ? LlmProbeDialect.CompletionMaxTokens : request.MaxTokens),
+            context, token, callerToken).ConfigureAwait(false);
         if (!completion.Succeeded)
             return completion.Result!;
 
+        var (text, usage) = LlmProbeDialect.ReadReply(provider, completion.Body!);
         return LlmProbeResult.Reachable(modelNames) with
         {
             Stage = LlmProbeStage.Completion,
+            ReplyText = text is null ? null : Redact(text, request.ApiKey),
+            Usage = usage,
             Url = completion.Url,
-            Elapsed = _time.GetElapsedTime(started),
+            Elapsed = _time.GetElapsedTime(context.Started),
             Timeout = request.Timeout,
             Model = model,
         };
@@ -169,12 +191,14 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
             if (response.IsSuccessStatusCode)
                 return new StepOutcome(true, url, body, null);
 
-            var detail = Shorten(Redact(body, context.Request.ApiKey));
+            var full = Redact(body, context.Request.ApiKey);
+            var detail = Shorten(full);
             return new StepOutcome(false, url, null,
                 Failure(stage, url, context, LlmProbeFailure.HttpStatus, detail) with
                 {
                     StatusCode = (int)response.StatusCode,
-                    ReasonPhrase = response.ReasonPhrase,
+                    ReasonPhrase = response.ReasonPhrase is { } reason ? Redact(reason, context.Request.ApiKey) : null,
+                    FullDetail = full.Length == 0 ? null : Shorten(full, MaxKeptBodyLength),
                 });
         }
         catch (OperationCanceledException) when (callerToken.IsCancellationRequested)
@@ -312,15 +336,15 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
     }
 
     /// <summary>Trims an error body to something that fits on a status line.</summary>
-    private static string Shorten(string body)
+    private static string Shorten(string body, int length = MaxQuotedBodyLength)
     {
         var text = body.Trim();
         if (text.Length == 0)
             return "";
 
-        return text.Length <= MaxQuotedBodyLength
+        return text.Length <= length
             ? text
-            : string.Concat(text.AsSpan(0, MaxQuotedBodyLength), "…");
+            : string.Concat(text.AsSpan(0, length), "…");
     }
 
     /// <summary>Provider key <see cref="LlmEndpointReading"/> reports for the Anthropic host.</summary>

@@ -26,6 +26,9 @@ public sealed class LlmSectionViewModel : DocumentSectionViewModel
     /// <inheritdoc />
     public override bool Exists => Document.Llm.Exists;
 
+    /// <summary>The secrets the settings file leads to, wherever it names or holds them.</summary>
+    internal IReadOnlyList<string> Secrets(Func<string, string?> read) => SettingsSecrets.Of(Document, read);
+
     // ── the host LLM profiles (STUDIO-48): Llm:Profiles, and the one the RAG calls ──
 
     /// <summary>

@@ -1816,7 +1816,78 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     public string StatusMessage
     {
         get => _statusMessage;
-        private set => SetProperty(ref _statusMessage, value);
+        private set
+        {
+            if (!SetProperty(ref _statusMessage, value))
+                return;
+
+            // Another sentence took the line: the engine's words do not come back with a later one.
+            if (_engineStatus is { } status && !value.Contains(status.Said, StringComparison.Ordinal))
+                _engineStatus = null;
+            RaiseStatusReportChanged();
+        }
+    }
+
+    /// <summary>
+    /// The sentence the line last took from the engine (an error it carries on after, a warning, a
+    /// line of stderr, a refused rephrase); the line offers its report while it still says it.
+    /// </summary>
+    private EngineStatus? _engineStatus;
+
+    /// <summary>The engine's words on the line, and how their report says the engine ended.</summary>
+    private sealed record EngineStatus(string Said, int? ExitCode, string ExitNote, bool IsOfRephrase);
+
+    private bool _statusReportCopied;
+
+    /// <summary>
+    /// Whether the status line holds something to report: the engine's own words, with no failure
+    /// card beside it - the card has its report.
+    /// </summary>
+    public bool HasStatusReport =>
+        _engineStatus is { Said.Length: > 0 } status
+        && StatusMessage.Contains(status.Said, StringComparison.Ordinal)
+        && _failure is null;
+
+    /// <summary>
+    /// The copyable report of the status line: the command line, the engine's error, the line itself
+    /// and the journal, without the keys in place. Empty while the line has nothing to report.
+    /// </summary>
+    public string StatusReport => !HasStatusReport || _engineStatus is not { } status
+        ? ""
+        : Profiles.MaskKeys(new WizardFailure(
+            WizardFailureKind.Unknown,
+            StatusMessage,
+            !status.IsOfRephrase && string.Equals(_model.LastError?.Headline, StatusMessage, StringComparison.Ordinal) ? "" : StatusMessage,
+            status.IsOfRephrase ? RephraseCommandLine : EngineCommandLine,
+            status.ExitCode,
+            status.IsOfRephrase ? "" : StderrText(),
+            _statusHoldsError && !status.IsOfRephrase ? _model.LastError : null,
+            // A rephrase runs beside the session: its journal is not this one's.
+            status.IsOfRephrase ? "" : RawLog.BuildText(),
+            status.ExitNote).BuildReport());
+
+    private const string RephraseCommandLine = "orkeon forge rephrase";
+
+    /// <summary>The "copied!" feedback of the status line's copy button; the view resets it.</summary>
+    public bool StatusReportCopied
+    {
+        get => _statusReportCopied;
+        set => SetProperty(ref _statusReportCopied, value);
+    }
+
+    /// <summary>Puts the engine's own words on the status line, with their report.</summary>
+    private void ReportEngineStatus(
+        string message, int? exitCode = null, string exitNote = WizardFailure.CarriedOn, bool isOfRephrase = false)
+    {
+        _engineStatus = new EngineStatus(message, exitCode, exitNote, isOfRephrase);
+        StatusMessage = message;
+        RaiseStatusReportChanged();
+    }
+
+    private void RaiseStatusReportChanged()
+    {
+        StatusReportCopied = false;
+        OnPropertiesChanged(nameof(HasStatusReport), nameof(StatusReport));
     }
 
     /// <summary>The shell's way in: a resume failure must land on this screen's status line.</summary>
@@ -3615,7 +3686,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         // Not gated on FinishedStatus being null any more: a session that reported «failed»
         // still leaves its reason on stderr, and that reason outranks the generic sentence.
         if (result.ExitCode != 0 && _lastStderr is { } stderr)
-            StatusMessage = stderr;
+            ReportEngineStatus(stderr, result.ExitCode);
 
         // "Stop" is the user's own gesture, not a failure: the stepper says « Paused · Resume ».
         var cancelled = result.WasCancelled || result.Outcome == RunOutcome.Cancelled;
@@ -3705,7 +3776,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                 && warning.Code is not (ForgeWarningCodes.SessionNotRenamed or ForgeWarningCodes.LauncherTooLong))
             {
                 _runWarning = warning.Message is { Length: > 0 } ? $"{warning.Code}: {warning.Message}" : warning.Code;
-                StatusMessage = _runWarning;
+                ReportEngineStatus(_runWarning);
             }
         }
 
@@ -3717,7 +3788,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         {
             _surfacedError = error;
             _statusHoldsError = true;
-            StatusMessage = error.Headline;
+            ReportEngineStatus(error.Headline);
             // STUDIO-13: an unrecoverable one is the end of the run, and the card says so with
             // the code and the message; FinishRun adds the exit code and the whole stderr. One the
             // engine says it carries on after (terminal false, Orkeon #453: a brief asked again, a
@@ -4201,7 +4272,8 @@ public sealed partial class CreateTeamViewModel : ObservableObject
                 nameof(HasFailure), nameof(CanCopyFailureReport), nameof(FailureRetryCommand),
                 nameof(FailureOffersRetry), nameof(FailureOffersDiagnostic), nameof(FailureOffersSettings),
                 nameof(IsEngineMissing), nameof(FailureOffersDiagnosticSecondary),
-                nameof(CanCompose), nameof(ComposeTip), nameof(HasComposeTip));
+                nameof(CanCompose), nameof(ComposeTip), nameof(HasComposeTip),
+                nameof(HasStatusReport), nameof(StatusReport));
             RaiseCrewDecisionChanged();
             ComposeCommand.RaiseCanExecuteChanged();
             RetryComposeCommand.RaiseCanExecuteChanged();
@@ -4266,7 +4338,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// engine's error, the detail the card shows and the whole journal (D-03). Empty while
     /// nothing failed.
     /// </summary>
-    public string BuildFailureReport() => _failure?.BuildReport() ?? "";
+    public string BuildFailureReport() => _failure is { } failure ? Profiles.MaskKeys(failure.BuildReport()) : "";
 
     /// <summary>The whole stderr of the current run, oldest line first (D-04) — never the last line alone.</summary>
     private string StderrText() =>

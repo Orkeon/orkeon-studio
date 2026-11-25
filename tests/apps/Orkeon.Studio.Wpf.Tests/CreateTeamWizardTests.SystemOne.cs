@@ -604,6 +604,12 @@ public partial class CreateTeamWizardTests
         await Compose(vm);
 
         Assert.Equal("FORGE-BLUEPRINT-INVALID: the plan names no agent", vm.StatusMessage);
+        // No card for an error the engine carries on after: the line itself has the report.
+        Assert.False(vm.HasFailure);
+        Assert.True(vm.HasStatusReport);
+        Assert.Contains("FORGE-BLUEPRINT-INVALID: the plan names no agent", vm.StatusReport, StringComparison.Ordinal);
+        Assert.Contains("--- journal ---", vm.StatusReport, StringComparison.Ordinal);
+        Assert.Contains("the engine carried on", vm.StatusReport, StringComparison.Ordinal);
 
         // The next run starts clean: its warning is said.
         processes.OutputToEmit.RemoveAt(1);

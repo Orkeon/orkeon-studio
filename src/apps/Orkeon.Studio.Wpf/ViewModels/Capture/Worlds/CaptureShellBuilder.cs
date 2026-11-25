@@ -49,6 +49,7 @@ internal static class CaptureShellBuilder
                 // photographs it, and its teardown answers it. One timer per shell, never shared.
                 UndoDelay = new CaptureUiDelay { Hold = true },
                 LlmProbe = world.LlmProbe,
+                DecisionProbe = new OfflineDecisionProbe(),
                 KeyStore = world.KeyStore,
                 // STUDIO-35: the balance is read at startup — offline, so the shot has one.
                 BalanceProbe = world.BalanceProbe,

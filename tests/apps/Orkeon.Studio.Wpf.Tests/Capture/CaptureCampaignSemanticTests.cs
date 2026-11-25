@@ -107,6 +107,7 @@ public sealed class CaptureCampaignSemanticTests : IAsyncLifetime
         string[] modals =
         [
             "Settings.Profiles.IsEditorOpen",
+            "Settings.Guided.IsOpen",
             "TeamMounts.IsOpen",
             "CreateTeam.AgentEditor.IsOpen",
             "CreateTeam.Gallery.IsOpen",

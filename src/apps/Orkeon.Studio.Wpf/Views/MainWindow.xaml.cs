@@ -152,6 +152,13 @@ public partial class MainWindow : Window
         // Escape to leave.
         PreviewKeyDown += (_, e) =>
         {
+            // An open drop-down takes its own Escape: the dialog under it stays.
+            if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.ComboBoxItem
+                or System.Windows.Controls.ComboBox { IsDropDownOpen: true })
+            {
+                return;
+            }
+
             if (e.Key != System.Windows.Input.Key.Escape || !CloseTopmostOverlay(shell))
                 return;
 
@@ -167,6 +174,8 @@ public partial class MainWindow : Window
         else if (shell.CreateTeam.Gallery.IsOpen)
             shell.CreateTeam.Gallery.CloseCommand.Execute(null);
         // Lot 11 (072): the four modals close on Escape like their cross and Cancel do.
+        else if (shell.Settings.Guided.IsOpen)
+            shell.Settings.Guided.CancelCommand.Execute(null);
         else if (shell.TeamMounts.IsOpen)
             shell.TeamMounts.CancelCommand.Execute(null);
         else if (shell.CreateTeam.AgentEditor.IsOpen)

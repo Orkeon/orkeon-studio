@@ -150,6 +150,9 @@ public sealed record StudioServices
     /// <summary>Probes an LLM endpoint for the "Test connection" command.</summary>
     public ILlmEndpointProbe? LlmProbe { get; init; }
 
+    /// <summary>Asks the decision provider its test questions.</summary>
+    public Orkeon.Studio.Core.Decision.IDecisionProbe? DecisionProbe { get; init; }
+
     /// <summary>
     /// Reads what a provider account has left (STUDIO-35). Unlike the connection test, it is
     /// called without a click — at startup, at the end of an activity — so a window built

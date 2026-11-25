@@ -674,7 +674,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     }
 
     /// <summary>The alias a picked identifier suggests: its last segment, « deepseek-v4-flash » for « deepseek/deepseek-v4-flash ».</summary>
-    private static string? AliasFor(string? model)
+    internal static string? AliasFor(string? model)
     {
         var name = model?.Trim();
         if (string.IsNullOrEmpty(name))
@@ -820,9 +820,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
 
     /// <summary>True when an Ollama card holds an address a run reads as another provider: nothing is probed.</summary>
     private bool OllamaReadElsewhere =>
-        _selectedProvider?.Name == LlmPresets.Ollama
-        && StudioEndpointReading.Of(BaseUrl) is { Notice: not LlmEndpointNotice.Refused } reading
-        && reading.ProviderKey != LlmPresets.Ollama;
+        ModelTest.IsOllamaReadElsewhere(_selectedProvider?.Name, BaseUrl);
 
     /// <summary>"No key needed — the model runs on your machine."</summary>
     public bool ShowLocalNote => _selectedProvider?.Kind == LlmPresetKind.Local && !OllamaReadElsewhere;
@@ -1865,6 +1863,24 @@ public sealed class ModelProfilesViewModel : ObservableObject
     }
 
     internal void CancelEdit() => Editor = null;
+
+    /// <summary>
+    /// <paramref name="text"/> without the keys in place: the ones the model settings and the settings
+    /// file name or hold, the decision providers' and the runtime's own. What is copied out of Studio goes through it.
+    /// </summary>
+    internal string MaskKeys(string text) => SecretMasker.Apply(
+        text,
+        _set.Profiles.Select(profile => profile.KeyEnvName)
+            .Concat(Orkeon.Infrastructure.Decision.SystemOne.DecisionProviderDescriptor.All.Select(d => d.DefaultApiKeyVariable))
+            .Append(LlmApiKeyVariable)
+            .OfType<string>()
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.Ordinal)
+            .Select(_keyStore.Peek)
+            .Concat(_llm.Secrets(_keyStore.Peek)));
+
+    /// <summary>The variable of the runtime's own key.</summary>
+    private const string LlmApiKeyVariable = DecisionSection.EnvironmentPrefix + "Llm__ApiKey";
 
     private void RefreshBalances()
     {

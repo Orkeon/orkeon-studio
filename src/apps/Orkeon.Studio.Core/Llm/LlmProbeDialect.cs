@@ -246,10 +246,11 @@ public static class LlmProbeDialect
     /// </summary>
     internal static HttpRequestMessage BuildCompletion(
         string provider, Uri baseUri, string? apiKey, string model, bool? thinkingEnabled,
-        IReadOnlyDictionary<string, ThinkingSupport?>? overrides, string? workspaceId = null)
+        IReadOnlyDictionary<string, ThinkingSupport?>? overrides, string? workspaceId = null,
+        string prompt = CompletionPrompt, int maxTokens = CompletionMaxTokens)
     {
         var baseUrl = baseUri.AbsoluteUri.TrimEnd('/');
-        var messages = new object[] { new Dictionary<string, object> { ["role"] = "user", ["content"] = CompletionPrompt } };
+        var messages = new object[] { new Dictionary<string, object> { ["role"] = "user", ["content"] = prompt } };
         var payload = new Dictionary<string, object> { ["model"] = model, ["messages"] = messages };
         string url;
 
@@ -258,7 +259,7 @@ public static class LlmProbeDialect
             // Ollama's native chat hangs off the server root, like its catalogue.
             url = $"{LlmEndpointReading.NativeOllamaRoot(baseUri.AbsoluteUri)}/api/chat";
             payload["stream"] = false;
-            payload["options"] = new Dictionary<string, object> { ["num_predict"] = CompletionMaxTokens };
+            payload["options"] = new Dictionary<string, object> { ["num_predict"] = maxTokens };
             // A model that always reasons gets no switch, as the runtime sends it none.
             if (thinkingEnabled is { } think && ThinkingSupportOf(provider, model, overrides) >= ThinkingSupport.Toggle)
                 payload["think"] = think;
@@ -269,7 +270,7 @@ public static class LlmProbeDialect
         if (string.Equals(provider, LlmProviderKeys.Anthropic, StringComparison.Ordinal))
         {
             url = $"{baseUrl}/v1/messages";
-            payload["max_tokens"] = CompletionMaxTokens;
+            payload["max_tokens"] = maxTokens;
             if (thinkingEnabled is { } enabled && AnthropicThinking(model, enabled, overrides) is { } block)
                 payload["thinking"] = block;
 
@@ -284,7 +285,7 @@ public static class LlmProbeDialect
         url = $"{baseUrl}/chat/completions";
         payload[string.Equals(provider, LlmProviderKeys.OpenAI, StringComparison.Ordinal)
             ? "max_completion_tokens"   // OpenAI retired max_tokens on its current chat models
-            : "max_tokens"] = CompletionMaxTokens;
+            : "max_tokens"] = maxTokens;
         if (thinkingEnabled is { } on)
             WriteThinkingSwitch(provider, model, payload, on, overrides);
 
@@ -294,6 +295,72 @@ public static class LlmProbeDialect
 
         return message;
     }
+
+    /// <summary>
+    /// What a completion answered, in the dialect of <paramref name="provider"/>: its text - empty when
+    /// the model wrote none, null when the body is in no known shape - and its tokens.
+    /// </summary>
+    internal static (string? Text, LlmProbeUsage? Usage) ReadReply(string provider, string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return (null, null);
+
+            if (string.Equals(provider, LlmProviderKeys.Ollama, StringComparison.Ordinal))
+            {
+                return (Member(root, "message") is { } said ? ReadContent(said) : null,
+                    UsageOf(root, "prompt_eval_count", "eval_count"));
+            }
+
+            if (string.Equals(provider, LlmProviderKeys.Anthropic, StringComparison.Ordinal))
+                return (ReadContent(root), Member(root, "usage") is { } spent ? UsageOf(spent, "input_tokens", "output_tokens") : null);
+
+            var usage = Member(root, "usage") is { } counted ? UsageOf(counted, "prompt_tokens", "completion_tokens") : null;
+            return Member(root, "choices") is { ValueKind: JsonValueKind.Array } choices
+                && choices.GetArrayLength() > 0
+                && Member(choices[0], "message") is { } message
+                    ? (ReadContent(message), usage)
+                    : (null, usage);
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
+        {
+            // InvalidOperationException: a string that is no text, such as a lone surrogate.
+            return (null, null);
+        }
+    }
+
+    /// <summary>The <c>content</c> of a message: a string, or the text of its parts.</summary>
+    private static string? ReadContent(JsonElement message)
+    {
+        switch (Member(message, "content"))
+        {
+            case { ValueKind: JsonValueKind.String } text:
+                return text.GetString();
+            case { ValueKind: JsonValueKind.Array } parts:
+                return string.Concat(parts.EnumerateArray()
+                    .Where(part => Member(part, "text") is { ValueKind: JsonValueKind.String })
+                    .Select(part => part.GetProperty("text").GetString()));
+            case { ValueKind: JsonValueKind.Null }:
+                return "";
+            default:
+                return null;
+        }
+    }
+
+    private static LlmProbeUsage? UsageOf(JsonElement counts, string input, string output)
+    {
+        var usage = new LlmProbeUsage(Count(counts, input), Count(counts, output));
+        return usage is { InputTokens: null, OutputTokens: null } ? null : usage;
+    }
+
+    private static int? Count(JsonElement counts, string name) =>
+        Member(counts, name) is { ValueKind: JsonValueKind.Number } number && number.TryGetInt32(out var value) ? value : null;
+
+    private static JsonElement? Member(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) ? value : null;
 
     /// <summary>
     /// The on/off switch, bounded by the declared level exactly as the runtime bounds it: an

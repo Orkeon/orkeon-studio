@@ -4076,6 +4076,73 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Aus</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>Kein Anbieter</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>Zu beheben</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>Nicht alles wurde geschrieben: {0}</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Geführte Einrichtung</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Schritt {0} von {1}: {2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>der Anbieter und sein Schlüssel</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>die Modelle</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>das Entscheidungsmodell, optional</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>testen und abschließen</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>API-Schlüssel</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>Dafür ist kein Schlüssel hinterlegt.</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>Ein Schlüssel ist hinterlegt: Feld leer lassen, um ihn zu behalten.</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>Er wird am Ende in Ihrer Sitzung gespeichert, nie in einer Datei.</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>Prüfen</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>Gefundene Modelle: zum Hinzufügen klicken</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>Ein oder mehrere Modelle desselben Anbieters. Bei mehreren hat jedes einen Kurznamen.</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>Modell des Assistenten</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>Standardmodell der Teams</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One beantwortet typisierte Fragen: eine Auswahl, ja oder nein, eine Bewertung. Sie können es später einrichten.</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>Später, nichts ändern</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>Unter diesen Modellen auswählen lassen</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>Das günstigste zuerst. Ersetzt die vorhandene Leiter der Einstellungen; nur Teams mit dem Profil auto nutzen sie.</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>Testen Sie Ihre Eingaben oder schließen Sie jetzt ab: Vor dem Abschließen wird nichts gespeichert, und ein fehlgeschlagener Test verhindert es nicht.</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>Abschließen</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>Wählen Sie einen Anbieter.</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>Geben Sie eine Adresse ein, die mit http:// oder https:// beginnt.</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>Geben Sie der Einstellung einen Namen.</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>Nennen Sie mindestens ein Modell und lassen Sie keine Zeile leer.</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>Ein Name fehlt oder ist doppelt: jedes Modell braucht einen eigenen.</value></data>
+  <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>Testen</value></data>
+  <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>Testet jedes eingerichtete Modell und den Entscheidungsanbieter, sofern einer eingerichtet ist.</value></data>
+  <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>Jeder Test kostet einige Token. Ohne Klick wird nichts gesendet.</value></data>
+  <data name="Studio.Settings.SandboxTestAll" xml:space="preserve"><value>Alle testen</value></data>
+  <data name="Studio.Settings.SandboxStop" xml:space="preserve"><value>Anhalten</value></data>
+  <data name="Studio.Settings.SandboxTest" xml:space="preserve"><value>Testen</value></data>
+  <data name="Studio.Settings.SandboxOpen" xml:space="preserve"><value>Einstellung öffnen</value></data>
+  <data name="Studio.Settings.SandboxEmpty" xml:space="preserve"><value>Noch ist kein Modell eingerichtet.</value></data>
+  <data name="Studio.Settings.SandboxNoDecision" xml:space="preserve"><value>Kein Entscheidungsanbieter ist eingerichtet: nur die Modelle werden getestet.</value></data>
+  <data name="Studio.Settings.SandboxIdle" xml:space="preserve"><value>Nicht getestet</value></data>
+  <data name="Studio.Settings.SandboxQueued" xml:space="preserve"><value>Wartet</value></data>
+  <data name="Studio.Settings.SandboxRunning" xml:space="preserve"><value>Wird getestet…</value></data>
+  <data name="Studio.Settings.SandboxStopped" xml:space="preserve"><value>Angehalten</value></data>
+  <data name="Studio.Settings.SandboxNoModel" xml:space="preserve"><value>Diese Einstellung nennt kein Modell: nichts zu testen.</value></data>
+  <data name="Studio.Settings.SandboxKeyMissing" xml:space="preserve"><value>Kein Schlüssel in {0}: nichts wurde gesendet.</value></data>
+  <data name="Studio.Settings.SandboxSummary" xml:space="preserve"><value>{0} bestanden, {1} fehlgeschlagen, {2} nicht gesendet</value></data>
+  <data name="Studio.Settings.SandboxDecisionPassed" xml:space="preserve"><value>Die drei Fragen erhielten die erwarteten Antworten ({0} s).</value></data>
+  <data name="Studio.Settings.SandboxDecisionWrong" xml:space="preserve"><value>Er antwortet, aber nicht wie erwartet: {0}</value></data>
+  <data name="Studio.Settings.SandboxDecisionAddress" xml:space="preserve"><value>Die Adresse dieses Entscheidungsanbieters ist ungültig.</value></data>
+  <data name="Studio.Settings.SandboxNothingAsked" xml:space="preserve"><value>Schreiben Sie eine Frage oder mindestens zwei Optionen.</value></data>
+  <data name="Studio.Settings.SandboxTryTitle" xml:space="preserve"><value>Nachricht ausprobieren</value></data>
+  <data name="Studio.Settings.SandboxTryIntro" xml:space="preserve"><value>Wählen Sie ein Modell und einen der englischen Texte oder schreiben Sie einen eigenen und lesen Sie die Antwort.</value></data>
+  <data name="Studio.Settings.SandboxTarget" xml:space="preserve"><value>Modell</value></data>
+  <data name="Studio.Settings.SandboxSample" xml:space="preserve"><value>Testtext</value></data>
+  <data name="Studio.Settings.SandboxMessage" xml:space="preserve"><value>Nachricht</value></data>
+  <data name="Studio.Settings.SandboxSend" xml:space="preserve"><value>Senden</value></data>
+  <data name="Studio.Settings.SandboxReply" xml:space="preserve"><value>Antwort</value></data>
+  <data name="Studio.Settings.SandboxEmptyReply" xml:space="preserve"><value>Das Modell antwortete mit einem leeren Text.</value></data>
+  <data name="Studio.Settings.SandboxReplyTime" xml:space="preserve"><value>nach {0} s</value></data>
+  <data name="Studio.Settings.SandboxReplyUsage" xml:space="preserve"><value>{0} s, Token: {1} ein, {2} aus</value></data>
+  <data name="Studio.Settings.SandboxCaseState" xml:space="preserve"><value>Zu beurteilender Text</value></data>
+  <data name="Studio.Settings.SandboxCaseQuestion" xml:space="preserve"><value>Ja-oder-Nein-Frage</value></data>
+  <data name="Studio.Settings.SandboxCaseOptions" xml:space="preserve"><value>Optionen zur Auswahl, eine pro Zeile</value></data>
+  <data name="Studio.Settings.SandboxJournal" xml:space="preserve"><value>Testprotokoll</value></data>
+  <data name="Studio.Settings.SandboxJournalEmpty" xml:space="preserve"><value>Noch wurde nichts getestet.</value></data>
+  <data name="Studio.Settings.SandboxJournalCopy" xml:space="preserve"><value>Kopieren</value></data>
+  <data name="Studio.Settings.SandboxJournalCopied" xml:space="preserve"><value>Kopiert!</value></data>
+  <data name="Studio.Settings.SandboxJournalSave" xml:space="preserve"><value>Speichern…</value></data>
+  <data name="Studio.Settings.SandboxJournalClear" xml:space="preserve"><value>Leeren</value></data>
+  <data name="Studio.Settings.SandboxSaveFailed" xml:space="preserve"><value>Das Protokoll wurde nicht gespeichert: {0}</value></data>
   <data name="Studio.Settings.DecisionTitle" xml:space="preserve"><value>Entscheidungsmodelle (System One)</value></data>
   <data name="Studio.Settings.DecisionIntro" xml:space="preserve"><value>Ein Entscheidungsmodell beantwortet typisierte Fragen mit Wahrscheinlichkeiten: eine Wahl zwischen Optionen, ein Ja oder Nein, eine Bewertung. Ein Team nutzt es über seine Entscheidungsaufgaben oder über das Werkzeug system_one_decide. Von Hand geschriebene Entscheidungsprofile bleiben unverändert.</value></data>
   <data name="Studio.Settings.DecisionEnabled" xml:space="preserve"><value>Die Entscheidungsmodelle verwenden</value></data>

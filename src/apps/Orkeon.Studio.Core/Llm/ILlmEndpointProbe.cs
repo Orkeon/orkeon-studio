@@ -69,6 +69,21 @@ public sealed record LlmProbeRequest
     public bool CheckCompletion { get; init; }
 
     /// <summary>
+    /// A message of the user's own for the completion, whose reply is wanted: the completion then runs
+    /// alone, without the catalogue, under <see cref="MaxTokens"/>. Null sends the test "ping".
+    /// </summary>
+    public string? Prompt { get; init; }
+
+    /// <summary>
+    /// The output cap of a <see cref="Prompt"/>: high enough that a model that reasons first still has
+    /// room to answer.
+    /// </summary>
+    public int MaxTokens { get; init; } = PromptMaxTokens;
+
+    /// <summary>The default of <see cref="MaxTokens"/>.</summary>
+    public const int PromptMaxTokens = 4096;
+
+    /// <summary>
     /// The deadline for a profile whose own timeout is <paramref name="profileTimeoutSeconds"/>:
     /// <see cref="DefaultTimeout"/>, or the profile's when it is shorter.
     /// </summary>
@@ -178,6 +193,18 @@ public sealed record LlmProbeResult
     /// <summary>The model the test completion ran on; null when no completion ran.</summary>
     public string? Model { get; init; }
 
+    /// <summary>The text the completion answered; null when none ran, empty when the model wrote nothing.</summary>
+    public string? ReplyText { get; init; }
+
+    /// <summary>The tokens the completion read and wrote, as the endpoint counts them; null when it does not say.</summary>
+    public LlmProbeUsage? Usage { get; init; }
+
+    /// <summary>
+    /// The whole error body, without the key and bounded: <see cref="Detail"/> quotes its start, this is
+    /// what a journal keeps. Null when no body came.
+    /// </summary>
+    public string? FullDetail { get; init; }
+
     /// <summary>One English line, ready to show next to the button that ran the probe.</summary>
     public string Message => LlmProbeText.Describe(this, EnglishStudioStrings.Instance, CultureInfo.InvariantCulture);
 
@@ -208,6 +235,11 @@ public sealed record LlmProbeResult
         Detail = reason,
     };
 }
+
+/// <summary>The tokens of one completion.</summary>
+/// <param name="InputTokens">Read; null when not said.</param>
+/// <param name="OutputTokens">Written; null when not said.</param>
+public sealed record LlmProbeUsage(int? InputTokens, int? OutputTokens);
 
 /// <summary>
 /// Checks that a configured LLM endpoint answers — the Studio equivalent of the connectivity

@@ -101,7 +101,7 @@ public sealed class SecretRowViewModel : ObservableObject
     /// The language switched (STUDIO-56): called by the tab that owns the row — a row never
     /// subscribes to the port itself (STUDIO-11).
     /// </summary>
-    public void RefreshTexts() => OnPropertiesChanged(nameof(UsedBy), nameof(StatusText), nameof(StoreError));
+    public void RefreshTexts() => OnPropertiesChanged(nameof(UsedBy), nameof(HasKey), nameof(StatusText), nameof(StoreError));
 
     private void ShowStoreFailure(string? cause)
     {

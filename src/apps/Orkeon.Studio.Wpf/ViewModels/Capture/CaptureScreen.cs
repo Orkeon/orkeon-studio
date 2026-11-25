@@ -60,6 +60,9 @@ internal enum CaptureScreen
     /// <summary>Settings, on the Microsoft Teams tab: both modes, the expert sees every field.</summary>
     SettingsChat,
 
+    /// <summary>Settings, on the « Test » tab: both modes.</summary>
+    SettingsSandbox,
+
     /// <summary>Settings, on the MCP tab — expert only (STUDIO-21).</summary>
     SettingsMcp,
 
