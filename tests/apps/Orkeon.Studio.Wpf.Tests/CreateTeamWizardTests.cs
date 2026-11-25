@@ -2284,6 +2284,10 @@ public partial class CreateTeamWizardTests
         await vm.RephraseNeedCommand.ExecuteAsync();
         Assert.Equal("deux dossiers de pdf, envoyer des mails", vm.Need);
         Assert.Equal("The request could not be rewritten: no LLM is configured", vm.StatusMessage);
+        // Its report is the rephrase's own, not the session's.
+        Assert.True(vm.HasStatusReport);
+        Assert.Contains("orkeon forge rephrase", vm.StatusReport, StringComparison.Ordinal);
+        Assert.DoesNotContain("carried on", vm.StatusReport, StringComparison.Ordinal);
 
         vm.Need = "";
         Assert.False(vm.RephraseNeedCommand.CanExecute(null));

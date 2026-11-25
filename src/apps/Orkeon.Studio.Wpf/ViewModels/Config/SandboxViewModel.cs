@@ -183,16 +183,24 @@ public sealed class SandboxViewModel : ObservableObject
             .ToList();
         if (_decision.Status is { Refusal: null, Provider: { } provider })
         {
-            rows.Add(new ModelTestRowViewModel(
+            rows.Add(known.Find(row => row.IsDecision && row.Name == provider.DisplayName) ?? new ModelTestRowViewModel(
                 Tests,
                 provider.DisplayName,
                 () => DecisionProbeRequest.For(_decision.DocumentForCards.Decision, provider, _keyStore.Peek),
                 _openDecision));
         }
 
-        var picked = _target?.Name;
+        foreach (var row in rows)
+            row.ForgetStaleVerdict();
+
+        var picked = _target;
         Tests.SetRows(rows);
-        _target = rows.FirstOrDefault(row => row.Name == picked) ?? rows.FirstOrDefault();
+        _target = rows.Find(row => row == picked)
+            ?? rows.Find(row => row.Name == picked?.Name && row.IsDecision == picked.IsDecision)
+            ?? rows.FirstOrDefault();
+        // The reply shown is the one of the target it was asked of.
+        if (picked is not null && _target != picked && !Tests.IsRunning)
+            ShowReply("", null, failed: false);
         OnPropertiesChanged(nameof(Target), nameof(IsDecisionTarget), nameof(IsModelTarget), nameof(DecisionNote), nameof(TabSubtitle));
         SendCommand.RaiseCanExecuteChanged();
     }

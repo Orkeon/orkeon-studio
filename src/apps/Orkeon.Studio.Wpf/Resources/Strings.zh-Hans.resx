@@ -4076,6 +4076,7 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>已关闭</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>无提供方</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>待修正</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>并未全部写入：{0}</value></data>
   <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>引导式设置</value></data>
   <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>第 {0} 步，共 {1} 步：{2}</value></data>
   <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>提供商及其密钥</value></data>

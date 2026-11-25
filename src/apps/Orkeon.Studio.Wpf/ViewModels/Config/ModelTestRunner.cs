@@ -78,6 +78,7 @@ public sealed class ModelTestRowViewModel : ObservableObject
     private readonly Func<DecisionProbeRequest>? _decision;
     private ModelTestState _state;
     private Func<string>? _message;
+    private object? _asked;
 
     internal ModelTestRowViewModel(ModelTestRunner runner, ModelProfile profile, Func<string, string?> key, Action? open = null)
         : this(runner, profile.Name, open)
@@ -148,6 +149,22 @@ public sealed class ModelTestRowViewModel : ObservableObject
 
     internal ModelTest Prepare(string? prompt = null) => ModelTest.Of(
         Profile!, _key, _runner.ThinkingOverrides, prompt);
+
+    /// <summary>What a verdict depends on beyond the setting itself: the key, or the decision settings.</summary>
+    private object Subject() => _decision is { } decision ? decision() : (object?)Prepare().Request?.ApiKey ?? "";
+
+    /// <summary>Notes what is about to be judged.</summary>
+    internal void NoteSubject() => _asked = Subject();
+
+    /// <summary>Forgets a verdict about a key or decision settings that changed since.</summary>
+    internal void ForgetStaleVerdict()
+    {
+        if (IsBusy || _asked is not { } asked || asked.Equals(Subject()))
+            return;
+
+        _asked = null;
+        Show(ModelTestState.Idle);
+    }
 
     internal DecisionProbeRequest PrepareDecision() => _decision!();
 
@@ -282,6 +299,10 @@ public sealed class ModelTestRunner : ObservableObject
             foreach (var row in rows)
             {
                 token.ThrowIfCancellationRequested();
+                // Removed or edited since the run began: it is not asked for a setting that is gone.
+                if (!Rows.Contains(row))
+                    continue;
+                row.NoteSubject();
                 row.Show(ModelTestState.Running);
                 await TestAsync(row, token).ConfigureAwait(true);
                 OnPropertyChanged(nameof(Summary));

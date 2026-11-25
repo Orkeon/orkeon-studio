@@ -65,8 +65,9 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
         _time = time ?? TimeProvider.System;
     }
 
-    /// <summary>Probes over the real network, through a client this probe owns.</summary>
-    public static HttpLlmEndpointProbe ForCurrentMachine() => new(new HttpClient(), ownsClient: true, time: null);
+    /// <summary>Probes over the real network, through a client this probe owns; the deadline is each request's.</summary>
+    public static HttpLlmEndpointProbe ForCurrentMachine() =>
+        new(new HttpClient { Timeout = Timeout.InfiniteTimeSpan }, ownsClient: true, time: null);
 
     /// <inheritdoc />
     public async Task<LlmProbeResult> ProbeAsync(
@@ -196,7 +197,7 @@ public sealed class HttpLlmEndpointProbe : ILlmEndpointProbe, IDisposable
                 Failure(stage, url, context, LlmProbeFailure.HttpStatus, detail) with
                 {
                     StatusCode = (int)response.StatusCode,
-                    ReasonPhrase = response.ReasonPhrase,
+                    ReasonPhrase = response.ReasonPhrase is { } reason ? Redact(reason, context.Request.ApiKey) : null,
                     FullDetail = full.Length == 0 ? null : Shorten(full, MaxKeptBodyLength),
                 });
         }

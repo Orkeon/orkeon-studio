@@ -4076,6 +4076,7 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Aus</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>Kein Anbieter</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>Zu beheben</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>Nicht alles wurde geschrieben: {0}</value></data>
   <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Geführte Einrichtung</value></data>
   <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Schritt {0} von {1}: {2}</value></data>
   <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>der Anbieter und sein Schlüssel</value></data>

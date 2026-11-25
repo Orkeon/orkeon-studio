@@ -90,6 +90,12 @@
                          Text="{Binding KeyConsoleUrl}" Visibility="{Binding KeyConsoleUrl, Converter={StaticResource StringPresentToVisibility}}"/>
               <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap" Text="{Binding [Studio.Settings.GuidedKeyKept], Source={x:Static services:I18n.Instance}}"/>
             </StackPanel>
+            <StackPanel Margin="0,14,0,0" Visibility="{Binding ShowWorkspace, Converter={StaticResource BooleanToVisibility}}">
+              <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding [Studio.Settings.ProfileLblWorkspace], Source={x:Static services:I18n.Instance}}"/>
+              <TextBox Style="{StaticResource InputMono}" Text="{Binding WorkspaceId, UpdateSourceTrigger=PropertyChanged}"/>
+              <TextBlock Style="{StaticResource Hint}" Margin="0,5,0,0" TextWrapping="Wrap"
+                         Text="{Binding [Studio.Settings.ProfileWorkspaceHint], Source={x:Static services:I18n.Instance}}"/>
+            </StackPanel>
             <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
               <Button Style="{StaticResource BtnSecondary}" Command="{Binding VerifyCommand}" controls:ButtonIcon.Kind="plug-zap" Content="{Binding [Studio.Settings.GuidedVerify], Source={x:Static services:I18n.Instance}}"/>
               <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="12,0,0,0" MaxWidth="460" TextWrapping="Wrap"
@@ -189,6 +195,8 @@
 
           <TextBlock FontSize="13" Foreground="{DynamicResource WarningInkBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Text="{Binding Problem}"
                      Visibility="{Binding Problem, Converter={StaticResource StringPresentToVisibility}}"/>
+          <TextBlock FontSize="13" Foreground="{DynamicResource WarningInkBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Text="{Binding FinishFailure}"
+                     Visibility="{Binding FinishFailure, Converter={StaticResource StringPresentToVisibility}}"/>
         </StackPanel>
       </ScrollViewer>
 
@@ -200,7 +208,12 @@
           <Button DockPanel.Dock="Right" Style="{StaticResource BtnPrimary}" Command="{Binding NextCommand}"
                   Visibility="{Binding IsTestStep, Converter={StaticResource InverseBooleanToVisibility}}" Content="{Binding [Studio.Shell.Next], Source={x:Static services:I18n.Instance}}"/>
           <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" Margin="0,0,10,0" Command="{Binding BackCommand}" Content="{Binding [Studio.Shell.Back], Source={x:Static services:I18n.Instance}}"/>
-          <Button DockPanel.Dock="Left" Style="{StaticResource BtnGhost}" Command="{Binding CancelCommand}" Content="{Binding [Studio.Common.Cancel], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Left" Style="{StaticResource BtnGhost}" Command="{Binding CancelCommand}"
+                  Visibility="{Binding HasFinishFailure, Converter={StaticResource InverseBooleanToVisibility}}"
+                  Content="{Binding [Studio.Common.Cancel], Source={x:Static services:I18n.Instance}}"/>
+          <Button DockPanel.Dock="Left" Style="{StaticResource BtnSecondary}" Command="{Binding CancelCommand}"
+                  Visibility="{Binding HasFinishFailure, Converter={StaticResource BooleanToVisibility}}"
+                  Content="{Binding [Studio.Shell.Close], Source={x:Static services:I18n.Instance}}"/>
         </DockPanel>
       </Border>
     </StackPanel>

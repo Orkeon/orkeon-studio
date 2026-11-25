@@ -11,7 +11,7 @@ Built against Orkeon `main` at `29c7a9bd8` (untagged), from packs of that commit
 - **Microsoft Teams accounts** (Orkeon [#446](https://github.com/Orkeon/orkeon/issues/446)): the settings gain a Microsoft Teams tab for `Orkeon:Tools:Chat` (accounts, rights, places, sign-in, test), over `orkeon chat`; the ten `chat_*` tools join the tool catalogue; the accounts are validated before a save (`STUDIO-CHAT-*`) as the engine judges them. It needs a CLI that has `orkeon chat`. The Teams channel of `orkeon-host` is not edited by Studio.
 - **Guided setup**: a four-step dialog declares a provider and its key, one or several models, the assistant's and the default model, and System One, tests them, and writes everything at « Finish ».
 - **Test tab**: Settings tests every declared model and System One, sends a free message and shows its reply, and keeps a journal that can be copied or saved.
-- **The wizard's recoverable engine errors can be copied**, with their report and log.
+- **What the engine says on the wizard's grey line can be copied** (an error it carries on after, a warning, a refused rephrase), with its report and log.
 
 ## [1.4.0] - 2026-11-23
 

@@ -4076,6 +4076,7 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Desactivados</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>Sin proveedor</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>Por corregir</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>No se ha escrito todo: {0}</value></data>
   <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Configuración guiada</value></data>
   <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Paso {0} de {1}: {2}</value></data>
   <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>el proveedor y su clave</value></data>

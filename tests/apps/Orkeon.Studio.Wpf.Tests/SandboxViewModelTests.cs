@@ -98,6 +98,31 @@ public sealed class SandboxViewModelTests
     }
 
     [Fact]
+    public async Task A_rebuilt_list_keeps_the_decision_verdict_until_its_key_changes()
+    {
+        var world = new World(WithDecision, Local("one"));
+        await world.Sandbox.Tests.TestAllCommand.ExecuteAsync();
+
+        world.Profiles.CommitEdit(Local("two"), null);
+        Assert.Equal(ModelTestState.Passed, world.Sandbox.Tests.Rows.Single(row => row.IsDecision).State);
+
+        world.Keys.Stage(world.Decision.Requests[0].KeyVariable!, "ts-changed-0123456789");
+        world.Screen.ShowSandboxCommand.Execute(null);
+        Assert.Equal(ModelTestState.Idle, world.Sandbox.Tests.Rows.Single(row => row.IsDecision).State);
+    }
+
+    [Fact]
+    public void A_key_named_or_held_by_the_settings_file_is_masked()
+    {
+        var world = new World("""{"Orkeon":{"TypeSafe":{"ApiKeyEnvVar":"MY_TS"},"Other":{"ApiKey":"held-in-file-0123"}}}""");
+        world.Keys.Stage("MY_TS", Secret);
+
+        var text = world.Profiles.MaskKeys($"a {Secret} b held-in-file-0123");
+
+        Assert.Equal("a *** b ***", text);
+    }
+
+    [Fact]
     public void Nothing_is_sent_before_a_click()
     {
         var world = new World(WithDecision, Local("one"));

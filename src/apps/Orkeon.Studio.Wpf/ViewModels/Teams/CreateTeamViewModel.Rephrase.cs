@@ -79,7 +79,10 @@ public sealed partial class CreateTeamViewModel
             }
             else
             {
-                ReportEngineStatus(_strings.Format(StudioStringKeys.WizardRephraseFailed, result.Error));
+                ReportEngineStatus(
+                    _strings.Format(StudioStringKeys.WizardRephraseFailed, result.Error),
+                    exitNote: WizardFailure.NotRecorded,
+                    isOfRephrase: true);
             }
 
             RefreshRephrase();

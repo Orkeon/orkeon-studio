@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using Orkeon.Constants.Llm;
 using Orkeon.Infrastructure.Decision.SystemOne;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Decision;
@@ -36,8 +37,10 @@ public sealed class GuidedSetupViewModel : ObservableObject
     private string _apiKeyInput = "";
     private string _name = "";
     private string _modelFilter = "";
-    private string? _assistant;
-    private string? _default;
+    private object? _assistant;
+    private object? _default;
+    private string _workspaceId = "";
+    private Func<string>? _finishFailure;
     private DecisionProviderChoiceItem? _decision;
     private string _decisionKeyInput = "";
     private bool _usesLadder;
@@ -75,9 +78,9 @@ public sealed class GuidedSetupViewModel : ObservableObject
         };
         StartCommand = new RelayCommand(Start);
         CancelCommand = new RelayCommand(Close, () => !_isFinishing);
-        BackCommand = new RelayCommand(() => GoTo(_step - 1), () => _step > 1 && !_isFinishing);
+        BackCommand = new RelayCommand(() => GoTo(_step - 1), () => _step > 1 && !_isFinishing && !HasFinishFailure);
         NextCommand = new RelayCommand(() => GoTo(_step + 1), () => _step < StepCount && Problem is null);
-        FinishCommand = new AsyncRelayCommand(FinishAsync, () => _step == StepCount && Problem is null && !_isFinishing);
+        FinishCommand = new AsyncRelayCommand(FinishAsync, () => _step == StepCount && Problem is null && !_isFinishing && !HasFinishFailure);
         VerifyCommand = new AsyncRelayCommand(VerifyAsync, () => _provider is not null && _verifying is null && AddressProblem is null);
         SelectProviderCommand = new RelayCommand(p => Provider = p as LlmPresetInfo);
         PickModelCommand = new RelayCommand(p => { if (p is string model) PickModel(model); });
@@ -181,7 +184,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
 
             _provider = value;
             _baseUrl = value.DefaultBaseUrl ?? "";
-            _apiKeyInput = "";
+            _apiKeyInput = _workspaceId = "";
             _name = FreeName(value.Title);
             Models.Clear();
             if (!string.IsNullOrWhiteSpace(value.DefaultModel))
@@ -189,6 +192,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
             ForgetVerification();
             OnPropertiesChanged(
                 nameof(Provider), nameof(BaseUrl), nameof(ApiKeyInput), nameof(Name), nameof(RequiresApiKey), nameof(AsksAddress),
+                nameof(ShowWorkspace), nameof(WorkspaceId),
                 nameof(KeyStatusText), nameof(KeyConsoleUrl));
             OnModelsChanged();
         }
@@ -211,9 +215,26 @@ public sealed class GuidedSetupViewModel : ObservableObject
             if (!SetProperty(ref _baseUrl, value ?? ""))
                 return;
             ForgetVerification();
+            OnPropertyChanged(nameof(ShowWorkspace));
             OnModelsChanged();
         }
     }
+
+    /// <summary>Whether the Anthropic workspace is asked: an identity-linked key answers in none without it.</summary>
+    public bool ShowWorkspace => StudioEndpointReading.ProviderOf(_baseUrl) == LlmProviderKeys.Anthropic;
+
+    /// <summary>The Anthropic workspace the key acts in.</summary>
+    public string WorkspaceId
+    {
+        get => _workspaceId;
+        set
+        {
+            if (SetProperty(ref _workspaceId, value ?? ""))
+                ForgetVerification();
+        }
+    }
+
+    private string? Workspace => ShowWorkspace && _workspaceId.Trim() is { Length: > 0 } id ? id : null;
 
     /// <summary>Whether the provider needs a key.</summary>
     public bool RequiresApiKey => _provider?.RequiresApiKey == true;
@@ -292,8 +313,10 @@ public sealed class GuidedSetupViewModel : ObservableObject
         set
         {
             // A null comes from the list rebuilt under its selection, never from a pick.
-            if (value is not null && SetProperty(ref _assistant, value))
-                OnPropertyChanged(nameof(Assistant));
+            if (value is null || value == Assistant)
+                return;
+            _assistant = PickOf(value);
+            OnPropertyChanged();
         }
     }
 
@@ -303,8 +326,10 @@ public sealed class GuidedSetupViewModel : ObservableObject
         get => ElectionOf(_default, _profiles.DefaultProfileName);
         set
         {
-            if (value is not null && SetProperty(ref _default, value))
-                OnPropertyChanged(nameof(Default));
+            if (value is null || value == Default)
+                return;
+            _default = PickOf(value);
+            OnPropertyChanged();
         }
     }
 
@@ -453,19 +478,30 @@ public sealed class GuidedSetupViewModel : ObservableObject
     /// <summary>Stops what is in flight: the window closes or another screen is shown.</summary>
     public void StopActivity()
     {
-        _verifying?.Cancel();
+        if (_verifying is not null)
+            ForgetVerification();
         Tests.Stop();
     }
 
     private IReadOnlyList<string> NewNames =>
         _name.Trim().Length == 0 ? [] : [.. BuildConnection().PairNames];
 
-    private string? ElectionOf(string? picked, string? current)
+    /// <summary>A pick among the models being made is the row itself: it follows its name.</summary>
+    private object PickOf(string name)
+    {
+        var index = NewNames.ToList().IndexOf(name);
+        return index >= 0 && index < Models.Count ? Models[index] : name;
+    }
+
+    private string? ElectionOf(object? pick, string? current)
     {
         var choices = ElectionChoices;
+        var names = NewNames;
+        var row = pick is GuidedModelViewModel model ? Models.IndexOf(model) : -1;
+        var picked = row >= 0 && row < names.Count ? names[row] : pick as string;
         if (picked is not null && choices.Contains(picked, StringComparer.Ordinal))
             return picked;
-        return current is not null && choices.Contains(current, StringComparer.Ordinal) ? current : NewNames.Count > 0 ? NewNames[0] : null;
+        return current is not null && choices.Contains(current, StringComparer.Ordinal) ? current : names.Count > 0 ? names[0] : null;
     }
 
     private ModelConnection BuildConnection() => new()
@@ -474,6 +510,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
         Provider = _provider?.Name,
         BaseUrl = _baseUrl.Trim() is { Length: > 0 } address ? address : null,
         KeyEnvName = RequiresApiKey ? KeyVariable : null,
+        WorkspaceId = Workspace,
         TimeoutSeconds = _provider?.RecommendedTimeoutSeconds,
         Models = Models.Count == 1
             ? [new ConnectionModel { Model = Models[0].Model.Trim() }]
@@ -510,7 +547,8 @@ public sealed class GuidedSetupViewModel : ObservableObject
     {
         _step = 1;
         _provider = null;
-        _baseUrl = _apiKeyInput = _name = _decisionKeyInput = _modelFilter = "";
+        _finishFailure = null;
+        _baseUrl = _apiKeyInput = _workspaceId = _name = _decisionKeyInput = _modelFilter = "";
         _assistant = _default = null;
         _decision = null;
         _ladder = [];
@@ -541,7 +579,8 @@ public sealed class GuidedSetupViewModel : ObservableObject
         if (step is < 1 or > StepCount)
             return;
 
-        StopActivity();
+        // A check of the key goes on: its model list is for the next step.
+        Tests.Stop();
         _step = step;
         if (IsTestStep)
             PrepareTests();
@@ -586,6 +625,13 @@ public sealed class GuidedSetupViewModel : ObservableObject
             return;
         }
 
+        if (ModelTest.IsOllamaReadElsewhere(provider.Name, _baseUrl))
+        {
+            var elsewhere = StudioEndpointReading.Of(_baseUrl)?.ProviderKey ?? "";
+            ShowVerification(() => _strings.Format(StudioStringKeys.ProfileOllamaReadElsewhere, elsewhere), []);
+            return;
+        }
+
         using var source = new CancellationTokenSource();
         _verifying = source;
         ShowVerification(() => _strings[StudioStringKeys.SandboxRunning], []);
@@ -597,6 +643,7 @@ public sealed class GuidedSetupViewModel : ObservableObject
                 {
                     BaseUrl = _baseUrl.Trim(),
                     ApiKey = key,
+                    WorkspaceId = Workspace,
                     CheckCompletion = false,
                     Timeout = LlmProbeRequest.TimeoutFor(null),
                 },
@@ -654,6 +701,8 @@ public sealed class GuidedSetupViewModel : ObservableObject
         OnModelsChanged();
     }
 
+    [SuppressMessage("Design", "CA1031",
+        Justification = "Whatever the writes throw belongs on the dialog: part of them may be in place already.")]
     private async Task FinishAsync()
     {
         if (Problem is not null || _isFinishing)
@@ -662,13 +711,13 @@ public sealed class GuidedSetupViewModel : ObservableObject
         StopActivity();
         _isFinishing = true;
         RaiseCommands();
+        var kept = new List<Task>();
         try
         {
             // The expert who has unsaved edits saves them all with the bar, these included.
             var saves = _savesAtOnce() || !_config.HasPendingChanges;
             var (assistant, elected) = (Assistant, Default);
             _profiles.ReportKeyStoreError(null);
-            var kept = new List<Task>();
             if (RequiresApiKey && _apiKeyInput.Trim() is { Length: > 0 } key)
                 kept.Add(_keyStore.SaveAsync(KeyVariable, key));
             if (DecisionKeyRequired && _decisionKeyInput.Trim() is { Length: > 0 } decisionKey)
@@ -681,16 +730,42 @@ public sealed class GuidedSetupViewModel : ObservableObject
                 _profiles.SetDefault(elected);
             WriteDecision();
             if (saves)
-                await _config.SaveAsync().ConfigureAwait(true);
-            await ReportKeysAsync(kept).ConfigureAwait(true);
+            {
+                if (!await _config.SaveAsync().ConfigureAwait(true))
+                    FailFinish(() => _config.StatusMessage ?? "");
+            }
+        }
+        catch (Exception ex)
+        {
+            var cause = MaskKeys(ex.Message);
+            FailFinish(() => cause);
         }
         finally
         {
+            await ReportKeysAsync(kept).ConfigureAwait(true);
             _isFinishing = false;
             RaiseCommands();
         }
 
-        Close();
+        if (!HasFinishFailure)
+            Close();
+    }
+
+    /// <summary>
+    /// What kept Finish from writing everything. Part of it may be in place by then, so Finish is not run
+    /// again: the dialog stays to say it, with its closing as the one way on.
+    /// </summary>
+    public string? FinishFailure => _finishFailure is { } cause
+        ? _strings.Format(StudioStringKeys.GuidedFinishFailed, cause())
+        : null;
+
+    /// <summary>Whether Finish left something unwritten.</summary>
+    public bool HasFinishFailure => _finishFailure is not null;
+
+    private void FailFinish(Func<string> cause)
+    {
+        _finishFailure = cause;
+        OnPropertiesChanged(nameof(FinishFailure), nameof(HasFinishFailure));
     }
 
     private void WriteDecision()
@@ -701,7 +776,10 @@ public sealed class GuidedSetupViewModel : ObservableObject
             section.SelectedProvider = section.ProviderChoices.First(choice => choice.Key == descriptor.Key);
             section.Enabled = true;
             foreach (var card in section.Providers)
+            {
                 card.Refresh();
+                card.RefreshTexts();
+            }
 
             var rungs = _ladder.Select(_profiles.OfferedHostId).OfType<string>().ToList();
             if (OffersLadder && _usesLadder && rungs.Count > 1)

@@ -1865,8 +1865,8 @@ public sealed class ModelProfilesViewModel : ObservableObject
     internal void CancelEdit() => Editor = null;
 
     /// <summary>
-    /// <paramref name="text"/> without the keys in place: the ones the settings name, the decision
-    /// providers' and the runtime's own. What is copied out of Studio goes through it.
+    /// <paramref name="text"/> without the keys in place: the ones the model settings and the settings
+    /// file name or hold, the decision providers' and the runtime's own. What is copied out of Studio goes through it.
     /// </summary>
     internal string MaskKeys(string text) => SecretMasker.Apply(
         text,
@@ -1876,7 +1876,8 @@ public sealed class ModelProfilesViewModel : ObservableObject
             .OfType<string>()
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Distinct(StringComparer.Ordinal)
-            .Select(_keyStore.Peek));
+            .Select(_keyStore.Peek)
+            .Concat(_llm.Secrets(_keyStore.Peek)));
 
     /// <summary>The variable of the runtime's own key.</summary>
     private const string LlmApiKeyVariable = DecisionSection.EnvironmentPrefix + "Llm__ApiKey";

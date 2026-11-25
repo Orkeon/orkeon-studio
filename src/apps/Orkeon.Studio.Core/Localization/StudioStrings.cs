@@ -2916,6 +2916,9 @@ public static class StudioStringKeys
     /// <summary>The decision tab's subtitle while the engine refuses the provider's choice.</summary>
     public const string SettingsTabDecisionRefused = "Studio.Settings.TabDecisionRefused";
 
+    /// <summary>The guided setup: what Finish could not write.</summary>
+    public const string GuidedFinishFailed = "Studio.Settings.GuidedFinishFailed";
+
     /// <summary>The guided setup: step 0 of 1.</summary>
     public const string GuidedStep = "Studio.Settings.GuidedStep";
 
@@ -4904,6 +4907,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsTabDecisionOff] = "Off",
         [StudioStringKeys.SettingsTabDecisionNone] = "No provider",
         [StudioStringKeys.SettingsTabDecisionRefused] = "To fix",
+        [StudioStringKeys.GuidedFinishFailed] = "Not everything was written: {0}",
         [StudioStringKeys.GuidedStep] = "Step {0} of {1}: {2}",
         [StudioStringKeys.GuidedStepProvider] = "the provider and its key",
         [StudioStringKeys.GuidedStepModels] = "the models",

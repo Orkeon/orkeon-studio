@@ -325,8 +325,9 @@ public static class LlmProbeDialect
                     ? (ReadContent(message), usage)
                     : (null, usage);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
+            // InvalidOperationException: a string that is no text, such as a lone surrogate.
             return (null, null);
         }
     }

@@ -152,6 +152,13 @@ public partial class MainWindow : Window
         // Escape to leave.
         PreviewKeyDown += (_, e) =>
         {
+            // An open drop-down takes its own Escape: the dialog under it stays.
+            if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.ComboBoxItem
+                or System.Windows.Controls.ComboBox { IsDropDownOpen: true })
+            {
+                return;
+            }
+
             if (e.Key != System.Windows.Input.Key.Escape || !CloseTopmostOverlay(shell))
                 return;
 

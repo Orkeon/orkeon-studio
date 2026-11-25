@@ -302,6 +302,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
                 // A test never outlives its tab either: it costs tokens nobody is looking at.
                 if (wasSandbox)
                     Sandbox.StopActivity();
+                else if (IsSandboxTab)
+                    Sandbox.Refresh();
             }
         }
     }

@@ -1818,8 +1818,13 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         get => _statusMessage;
         private set
         {
-            if (SetProperty(ref _statusMessage, value))
-                RaiseStatusReportChanged();
+            if (!SetProperty(ref _statusMessage, value))
+                return;
+
+            // Another sentence took the line: the engine's words do not come back with a later one.
+            if (_engineStatus is { } status && !value.Contains(status.Said, StringComparison.Ordinal))
+                _engineStatus = null;
+            RaiseStatusReportChanged();
         }
     }
 
@@ -1827,7 +1832,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// The sentence the line last took from the engine (an error it carries on after, a warning, a
     /// line of stderr, a refused rephrase); the line offers its report while it still says it.
     /// </summary>
-    private string? _engineStatus;
+    private EngineStatus? _engineStatus;
+
+    /// <summary>The engine's words on the line, and how their report says the engine ended.</summary>
+    private sealed record EngineStatus(string Said, int? ExitCode, string ExitNote, bool IsOfRephrase);
 
     private bool _statusReportCopied;
 
@@ -1836,26 +1844,29 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     /// card beside it - the card has its report.
     /// </summary>
     public bool HasStatusReport =>
-        _engineStatus is { Length: > 0 } said
-        && StatusMessage.Contains(said, StringComparison.Ordinal)
+        _engineStatus is { Said.Length: > 0 } status
+        && StatusMessage.Contains(status.Said, StringComparison.Ordinal)
         && _failure is null;
 
     /// <summary>
     /// The copyable report of the status line: the command line, the engine's error, the line itself
     /// and the journal, without the keys in place. Empty while the line has nothing to report.
     /// </summary>
-    public string StatusReport => !HasStatusReport
+    public string StatusReport => !HasStatusReport || _engineStatus is not { } status
         ? ""
         : Profiles.MaskKeys(new WizardFailure(
             WizardFailureKind.Unknown,
             StatusMessage,
-            string.Equals(_model.LastError?.Headline, StatusMessage, StringComparison.Ordinal) ? "" : StatusMessage,
-            EngineCommandLine,
-            ExitCode: null,
-            StderrText(),
-            _statusHoldsError ? _model.LastError : null,
-            RawLog.BuildText(),
-            EngineWentOn: true).BuildReport());
+            !status.IsOfRephrase && string.Equals(_model.LastError?.Headline, StatusMessage, StringComparison.Ordinal) ? "" : StatusMessage,
+            status.IsOfRephrase ? RephraseCommandLine : EngineCommandLine,
+            status.ExitCode,
+            status.IsOfRephrase ? "" : StderrText(),
+            _statusHoldsError && !status.IsOfRephrase ? _model.LastError : null,
+            // A rephrase runs beside the session: its journal is not this one's.
+            status.IsOfRephrase ? "" : RawLog.BuildText(),
+            status.ExitNote).BuildReport());
+
+    private const string RephraseCommandLine = "orkeon forge rephrase";
 
     /// <summary>The "copied!" feedback of the status line's copy button; the view resets it.</summary>
     public bool StatusReportCopied
@@ -1865,9 +1876,10 @@ public sealed partial class CreateTeamViewModel : ObservableObject
     }
 
     /// <summary>Puts the engine's own words on the status line, with their report.</summary>
-    private void ReportEngineStatus(string message)
+    private void ReportEngineStatus(
+        string message, int? exitCode = null, string exitNote = WizardFailure.CarriedOn, bool isOfRephrase = false)
     {
-        _engineStatus = message;
+        _engineStatus = new EngineStatus(message, exitCode, exitNote, isOfRephrase);
         StatusMessage = message;
         RaiseStatusReportChanged();
     }
@@ -3674,7 +3686,7 @@ public sealed partial class CreateTeamViewModel : ObservableObject
         // Not gated on FinishedStatus being null any more: a session that reported «failed»
         // still leaves its reason on stderr, and that reason outranks the generic sentence.
         if (result.ExitCode != 0 && _lastStderr is { } stderr)
-            ReportEngineStatus(stderr);
+            ReportEngineStatus(stderr, result.ExitCode);
 
         // "Stop" is the user's own gesture, not a failure: the stepper says « Paused · Resume ».
         var cancelled = result.WasCancelled || result.Outcome == RunOutcome.Cancelled;

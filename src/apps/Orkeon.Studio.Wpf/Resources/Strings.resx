@@ -2363,6 +2363,7 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Off</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>No provider</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>To fix</value></data>
+  <data name="Studio.Settings.GuidedFinishFailed" xml:space="preserve"><value>Not everything was written: {0}</value></data>
   <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Guided setup</value></data>
   <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Step {0} of {1}: {2}</value></data>
   <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>the provider and its key</value></data>

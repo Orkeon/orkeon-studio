@@ -43,6 +43,7 @@ public sealed class LlmProbePromptTests
     [InlineData("""{"choices":[{"message":{"content":null}}]}""", "")]
     [InlineData("""{"choices":[]}""", null)]
     [InlineData("not json", null)]
+    [InlineData("""{"choices":[{"message":{"content":"\ud800"}}]}""", null)]
     public async Task An_empty_reply_is_told_from_an_unreadable_one(string answer, string? expected)
     {
         using var handler = new StubHttpMessageHandler { Body = answer };
