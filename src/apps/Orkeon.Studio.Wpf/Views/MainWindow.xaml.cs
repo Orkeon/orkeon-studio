@@ -167,6 +167,8 @@ public partial class MainWindow : Window
         else if (shell.CreateTeam.Gallery.IsOpen)
             shell.CreateTeam.Gallery.CloseCommand.Execute(null);
         // Lot 11 (072): the four modals close on Escape like their cross and Cancel do.
+        else if (shell.Settings.Guided.IsOpen)
+            shell.Settings.Guided.CancelCommand.Execute(null);
         else if (shell.TeamMounts.IsOpen)
             shell.TeamMounts.CancelCommand.Execute(null);
         else if (shell.CreateTeam.AgentEditor.IsOpen)

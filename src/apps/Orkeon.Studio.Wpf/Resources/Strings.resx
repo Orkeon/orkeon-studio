@@ -2363,6 +2363,32 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Off</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>No provider</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>To fix</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Guided setup</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Step {0} of {1}: {2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>the provider and its key</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>the models</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>the decision model, optional</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>test and finish</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>API key</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>No key is in place for it.</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>A key is in place: leave the field empty to keep it.</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>It is kept in your session at the end, never in a file.</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>Verify</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>Models found: click one to add it</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>One or several models of the same provider. With several, each one has a short name.</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>Model of the assistant</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>Default model of the teams</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One answers typed questions: a choice, a yes or no, a score. You can set it up later.</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>Later, change nothing</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>Let it pick among these models</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>Cheapest first. It replaces the ladder already in the settings; only a team that asks for the auto profile uses it.</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>Test what you entered, or finish now: nothing is saved before Finish, and a failed test does not prevent it.</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>Finish</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>Pick a provider.</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>Write an address that starts with http:// or https://.</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>Give the setting a name.</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>Name at least one model, and leave no row empty.</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>A name is missing or used twice: each model needs its own.</value></data>
   <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>Test</value></data>
   <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>Tests every model you declared, and the decision provider if one is set up.</value></data>
   <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>Each test costs a few tokens. Nothing is sent without a click.</value></data>

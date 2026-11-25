@@ -115,8 +115,9 @@ public sealed class CapturePlannerTests
         // both themes) = +4 shots.
         // Microsoft Teams: +1 stop (reglages-teams-vide, both modes, both themes, language sweep) = +8 shots.
         // Test tab: +1 stop (reglages-tester, both modes, both themes, language sweep) = +8 shots.
-        Assert.Equal(78, CaptureCatalog.All.Count);
-        Assert.Equal(432, plan.Count);
+        // Guided setup: +1 stop (reglage-guide, the dialog's first step, one mode, both themes) = +2 shots.
+        Assert.Equal(79, CaptureCatalog.All.Count);
+        Assert.Equal(434, plan.Count);
     }
 
     [Fact]

@@ -98,6 +98,11 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         _mode = mode;
         _mode.PropertyChanged += OnModeChanged;
         _strings = strings ?? EnglishStudioStrings.Instance;
+        Guided = new GuidedSetupViewModel(
+            config,
+            profiles,
+            (tests ?? new ModelTestSeams()) with { Strings = _strings },
+            () => _mode.IsNovice);
         Sandbox = new SandboxViewModel(
             profiles,
             config.Decision,
@@ -115,7 +120,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         // still try again. The expert keeps the explicit cycle.
         Config.DocumentEdited += (_, _) =>
         {
-            if (_mode.IsNovice && Config.SaveCommand.CanExecute(null))
+            // The guided setup writes several edits and saves them once.
+            if (_mode.IsNovice && !Guided.IsFinishing && Config.SaveCommand.CanExecute(null))
                 Config.SaveCommand.Execute(null);
         };
 
@@ -360,6 +366,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>Shows the « Test » tab.</summary>
     public RelayCommand ShowSandboxCommand { get; }
 
+    /// <summary>The guided setup of a provider, its models and a decision provider.</summary>
+    public GuidedSetupViewModel Guided { get; }
+
     /// <summary>The tests of the models and of the decision provider.</summary>
     public SandboxViewModel Sandbox { get; }
 
@@ -423,6 +432,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         Config.Drive.StopActivity();
         Config.Chat.StopActivity();
         Sandbox.StopActivity();
+        Guided.StopActivity();
     }
 
     private void OnModeChanged(object? sender, PropertyChangedEventArgs e)

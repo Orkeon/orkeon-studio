@@ -2916,6 +2916,45 @@ public static class StudioStringKeys
     /// <summary>The decision tab's subtitle while the engine refuses the provider's choice.</summary>
     public const string SettingsTabDecisionRefused = "Studio.Settings.TabDecisionRefused";
 
+    /// <summary>The guided setup: step 0 of 1.</summary>
+    public const string GuidedStep = "Studio.Settings.GuidedStep";
+
+    /// <summary>The guided setup: the provider and its key.</summary>
+    public const string GuidedStepProvider = "Studio.Settings.GuidedStepProvider";
+
+    /// <summary>The guided setup: the models.</summary>
+    public const string GuidedStepModels = "Studio.Settings.GuidedStepModels";
+
+    /// <summary>The guided setup: the decision model, optional.</summary>
+    public const string GuidedStepDecision = "Studio.Settings.GuidedStepDecision";
+
+    /// <summary>The guided setup: test and finish.</summary>
+    public const string GuidedStepTest = "Studio.Settings.GuidedStepTest";
+
+    /// <summary>The guided setup: no key is in place for it.</summary>
+    public const string GuidedKeyNone = "Studio.Settings.GuidedKeyNone";
+
+    /// <summary>The guided setup: a key is in place.</summary>
+    public const string GuidedKeyInPlace = "Studio.Settings.GuidedKeyInPlace";
+
+    /// <summary>The guided setup: later, change nothing.</summary>
+    public const string GuidedDecisionLater = "Studio.Settings.GuidedDecisionLater";
+
+    /// <summary>The guided setup: pick a provider.</summary>
+    public const string GuidedPickProvider = "Studio.Settings.GuidedPickProvider";
+
+    /// <summary>The guided setup: write an address that starts with http.</summary>
+    public const string GuidedAddressInvalid = "Studio.Settings.GuidedAddressInvalid";
+
+    /// <summary>The guided setup: give the setting a name.</summary>
+    public const string GuidedNameMissing = "Studio.Settings.GuidedNameMissing";
+
+    /// <summary>The guided setup: name at least one model, and leave no row empty.</summary>
+    public const string GuidedModelMissing = "Studio.Settings.GuidedModelMissing";
+
+    /// <summary>The guided setup: a name is missing or used twice.</summary>
+    public const string GuidedNameTaken = "Studio.Settings.GuidedNameTaken";
+
     /// <summary>The decision provider is not in the tests.</summary>
     public const string SandboxNoDecision = "Studio.Settings.SandboxNoDecision";
 
@@ -4865,6 +4904,19 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsTabDecisionOff] = "Off",
         [StudioStringKeys.SettingsTabDecisionNone] = "No provider",
         [StudioStringKeys.SettingsTabDecisionRefused] = "To fix",
+        [StudioStringKeys.GuidedStep] = "Step {0} of {1}: {2}",
+        [StudioStringKeys.GuidedStepProvider] = "the provider and its key",
+        [StudioStringKeys.GuidedStepModels] = "the models",
+        [StudioStringKeys.GuidedStepDecision] = "the decision model, optional",
+        [StudioStringKeys.GuidedStepTest] = "test and finish",
+        [StudioStringKeys.GuidedKeyNone] = "No key is in place for it.",
+        [StudioStringKeys.GuidedKeyInPlace] = "A key is in place: leave the field empty to keep it.",
+        [StudioStringKeys.GuidedDecisionLater] = "Later, change nothing",
+        [StudioStringKeys.GuidedPickProvider] = "Pick a provider.",
+        [StudioStringKeys.GuidedAddressInvalid] = "Write an address that starts with http:// or https://.",
+        [StudioStringKeys.GuidedNameMissing] = "Give the setting a name.",
+        [StudioStringKeys.GuidedModelMissing] = "Name at least one model, and leave no row empty.",
+        [StudioStringKeys.GuidedNameTaken] = "A name is missing or used twice: each model needs its own.",
         [StudioStringKeys.SandboxNoDecision] = "No decision provider is set up: only the models are tested.",
         [StudioStringKeys.SandboxIdle] = "Not tested",
         [StudioStringKeys.SandboxQueued] = "Waiting",

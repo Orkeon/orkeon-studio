@@ -340,6 +340,23 @@ internal static class SettingsStops
 
         new()
         {
+            Name = "reglage-guide",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsModel,
+            Modes = CaptureModes.Either,
+            Because = "The guided setup on its first step, over its scrim: the provider cards, the key and Verify.",
+            Covers = ["Settings.Guided.IsOpen"],
+            Arrange = CaptureAction.Sync(static c =>
+            {
+                var guided = c.Shell.Settings.Guided;
+                guided.StartCommand.Execute(null);
+                guided.Provider = guided.CloudProviders.FirstOrDefault(p => p.Name == LlmPresets.DeepSeek);
+            }),
+            Teardown = CaptureAction.Sync(static c => c.Shell.Settings.Guided.CancelCommand.Execute(null)),
+        },
+
+        new()
+        {
             Name = "reglage-editeur",
             Category = CaptureCategory.Settings,
             Screen = CaptureScreen.SettingsModel,

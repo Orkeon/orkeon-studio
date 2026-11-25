@@ -4076,6 +4076,32 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>已关闭</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>无提供方</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>待修正</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>引导式设置</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>第 {0} 步，共 {1} 步：{2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>提供商及其密钥</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>模型</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>决策模型（可选）</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>测试并完成</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>API 密钥</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>尚无可用密钥。</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>已有密钥：留空即可保留。</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>密钥最终保存在您的会话中，绝不写入文件。</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>验证</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>找到的模型：点击即可添加</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>同一提供商的一个或多个模型。若有多个，每个模型都有一个简称。</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>助手使用的模型</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>团队的默认模型</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One 回答类型化的问题：选择、是非或评分。您可以稍后再配置。</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>稍后，不作更改</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>让其在这些模型中选择</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>最便宜的在前。将替换设置中现有的阶梯；仅请求 auto 配置的团队会使用。</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>测试您输入的内容，或立即完成：点击完成之前不会保存任何内容，测试失败也不影响完成。</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>完成</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>请选择提供商。</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>请输入以 http:// 或 https:// 开头的地址。</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>请为该设置命名。</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>请至少指定一个模型，且不要留空行。</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>名称缺失或重复：每个模型都需要自己的名称。</value></data>
   <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>测试</value></data>
   <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>测试您声明的每个模型，以及已配置的决策提供商。</value></data>
   <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>每次测试会消耗少量令牌。未点击时不会发送任何内容。</value></data>

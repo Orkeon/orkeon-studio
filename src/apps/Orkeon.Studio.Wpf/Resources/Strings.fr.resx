@@ -2363,6 +2363,32 @@
   <data name="Studio.Settings.TabDecisionOff" xml:space="preserve"><value>Désactivés</value></data>
   <data name="Studio.Settings.TabDecisionNone" xml:space="preserve"><value>Aucun fournisseur</value></data>
   <data name="Studio.Settings.TabDecisionRefused" xml:space="preserve"><value>À corriger</value></data>
+  <data name="Studio.Settings.GuidedTitle" xml:space="preserve"><value>Configuration guidée</value></data>
+  <data name="Studio.Settings.GuidedStep" xml:space="preserve"><value>Étape {0} sur {1} : {2}</value></data>
+  <data name="Studio.Settings.GuidedStepProvider" xml:space="preserve"><value>le fournisseur et sa clé</value></data>
+  <data name="Studio.Settings.GuidedStepModels" xml:space="preserve"><value>les modèles</value></data>
+  <data name="Studio.Settings.GuidedStepDecision" xml:space="preserve"><value>le modèle de décision, facultatif</value></data>
+  <data name="Studio.Settings.GuidedStepTest" xml:space="preserve"><value>tester et terminer</value></data>
+  <data name="Studio.Settings.GuidedKey" xml:space="preserve"><value>Clé d'API</value></data>
+  <data name="Studio.Settings.GuidedKeyNone" xml:space="preserve"><value>Aucune clé n'est en place.</value></data>
+  <data name="Studio.Settings.GuidedKeyInPlace" xml:space="preserve"><value>Une clé est en place : laissez le champ vide pour la garder.</value></data>
+  <data name="Studio.Settings.GuidedKeyKept" xml:space="preserve"><value>Elle est gardée dans votre session à la fin, jamais dans un fichier.</value></data>
+  <data name="Studio.Settings.GuidedVerify" xml:space="preserve"><value>Vérifier</value></data>
+  <data name="Studio.Settings.GuidedFound" xml:space="preserve"><value>Modèles trouvés : cliquez pour ajouter</value></data>
+  <data name="Studio.Settings.GuidedModelsHint" xml:space="preserve"><value>Un ou plusieurs modèles du même fournisseur. À plusieurs, chacun a un nom court.</value></data>
+  <data name="Studio.Settings.GuidedAssistant" xml:space="preserve"><value>Modèle de l'assistant</value></data>
+  <data name="Studio.Settings.GuidedDefault" xml:space="preserve"><value>Modèle par défaut des équipes</value></data>
+  <data name="Studio.Settings.GuidedDecisionIntro" xml:space="preserve"><value>System One répond à des questions typées : un choix, un oui ou non, un score. Vous pouvez le paramétrer plus tard.</value></data>
+  <data name="Studio.Settings.GuidedDecisionLater" xml:space="preserve"><value>Plus tard, ne rien changer</value></data>
+  <data name="Studio.Settings.GuidedLadder" xml:space="preserve"><value>Le laisser choisir parmi ces modèles</value></data>
+  <data name="Studio.Settings.GuidedLadderHint" xml:space="preserve"><value>Le moins cher d'abord. Remplace l'échelle déjà en place dans les réglages. Seule une équipe qui demande le profil auto l'utilise.</value></data>
+  <data name="Studio.Settings.GuidedTestIntro" xml:space="preserve"><value>Testez ce que vous avez saisi, ou terminez tout de suite : rien n'est enregistré avant Terminer, et un test en échec ne l'empêche pas.</value></data>
+  <data name="Studio.Settings.GuidedFinish" xml:space="preserve"><value>Terminer</value></data>
+  <data name="Studio.Settings.GuidedPickProvider" xml:space="preserve"><value>Choisissez un fournisseur.</value></data>
+  <data name="Studio.Settings.GuidedAddressInvalid" xml:space="preserve"><value>Écrivez une adresse qui commence par http:// ou https://.</value></data>
+  <data name="Studio.Settings.GuidedNameMissing" xml:space="preserve"><value>Donnez un nom au réglage.</value></data>
+  <data name="Studio.Settings.GuidedModelMissing" xml:space="preserve"><value>Nommez au moins un modèle, sans ligne vide.</value></data>
+  <data name="Studio.Settings.GuidedNameTaken" xml:space="preserve"><value>Un nom manque ou sert deux fois : chaque modèle a besoin du sien.</value></data>
   <data name="Studio.Settings.SandboxTab" xml:space="preserve"><value>Tester</value></data>
   <data name="Studio.Settings.SandboxIntro" xml:space="preserve"><value>Teste chaque modèle déclaré, et le fournisseur de décision s'il est paramétré.</value></data>
   <data name="Studio.Settings.SandboxCost" xml:space="preserve"><value>Chaque test coûte quelques jetons. Rien n'est envoyé sans un clic.</value></data>

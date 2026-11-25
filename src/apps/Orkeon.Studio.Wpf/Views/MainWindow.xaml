@@ -1301,6 +1301,13 @@
       </Border>
     </Grid>
 
+    <!-- ══════════ CONFIGURATION GUIDÉE (overlay) ══════════ -->
+    <!-- No click on the scrim closes it: four steps of typing would go with a stray click. -->
+    <Grid Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource ScrimBrush}"
+          Visibility="{Binding Settings.Guided.IsOpen, Converter={StaticResource BooleanToVisibility}}">
+      <views:GuidedSetupView DataContext="{Binding Settings.Guided}"/>
+    </Grid>
+
     <!-- ══════════ DOSSIERS DE L'ÉQUIPE (overlay, F-03) ══════════ -->
     <Grid Grid.Row="0" Grid.RowSpan="3" Background="{DynamicResource ScrimBrush}" MouseLeftButtonDown="OnTeamMountsBackdropClick"
           Visibility="{Binding TeamMounts.IsOpen, Converter={StaticResource BooleanToVisibility}}">

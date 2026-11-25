@@ -674,7 +674,7 @@ public sealed class ModelProfileEditorViewModel : ObservableObject
     }
 
     /// <summary>The alias a picked identifier suggests: its last segment, « deepseek-v4-flash » for « deepseek/deepseek-v4-flash ».</summary>
-    private static string? AliasFor(string? model)
+    internal static string? AliasFor(string? model)
     {
         var name = model?.Trim();
         if (string.IsNullOrEmpty(name))

@@ -521,8 +521,14 @@
                     Message="{Binding [Studio.Create.GateTitle], Source={x:Static services:I18n.Instance}}"
                     Visibility="{Binding ShowsAssistantGate, Converter={StaticResource BooleanToVisibility}}">
       <controls:Alert.Actions>
+        <WrapPanel>
+        <Button Style="{StaticResource BtnPrimary}" controls:ButtonSize.Height="32" Margin="0,0,8,0" controls:ButtonIcon.Kind="sparkles"
+                Command="{Binding DataContext.Settings.Guided.StartCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                Visibility="{Binding Profiles.IsEmpty, Converter={StaticResource BooleanToVisibility}}"
+                Content="{Binding [Studio.Settings.GuidedTitle], Source={x:Static services:I18n.Instance}}"/>
         <Button Style="{StaticResource BtnSecondary}" controls:ButtonSize.Height="32" Command="{Binding OpenSettingsCommand}"
         Content="{Binding [Studio.Create.ChooseModel], Source={x:Static services:I18n.Instance}}" controls:ButtonIcon.Kind="sliders-horizontal"/>
+        </WrapPanel>
       </controls:Alert.Actions>
       <StackPanel>
         <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,0,0,10"
