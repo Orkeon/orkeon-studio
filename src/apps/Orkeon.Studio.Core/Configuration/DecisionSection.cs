@@ -926,6 +926,9 @@ public sealed class DecisionProviderSettings
     public string EffectiveApiKeyEnvVar =>
         ApiKeyEnvVar is { } written && !string.IsNullOrWhiteSpace(written) ? written.Trim() : Descriptor.DefaultApiKeyVariable;
 
+    /// <summary>The key written in the file, which the engine reads before the variable; null when none is.</summary>
+    internal string? ApiKeyInFile => _document.GetString(Field("ApiKey")) is { Length: > 0 } key ? key.Trim() : null;
+
     /// <summary>Whether a key is written in the file itself (<c>ApiKey</c>): Studio never writes one.</summary>
     public bool HasApiKeyInFile => !string.IsNullOrEmpty(_document.GetString(Field("ApiKey")));
 
