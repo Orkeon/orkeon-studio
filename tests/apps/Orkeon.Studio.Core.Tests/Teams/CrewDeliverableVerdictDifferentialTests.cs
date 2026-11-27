@@ -443,9 +443,12 @@ public sealed class CrewDeliverableVerdictDifferentialTests(CrewDeliverableVerdi
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var catalogue = Orkeon.Studio.Core.Tools.ToolCatalog.All.Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.Empty(registered.Except(catalogue, StringComparer.OrdinalIgnoreCase));
+        // A deprecated second name (firefox, of browser) is registered too: Studio knows it without showing it.
+        Assert.All(Orkeon.Studio.Core.Tools.ToolCatalog.DeprecatedNames, name => Assert.Contains(name, registered));
+        Assert.Empty(registered.Except(catalogue, StringComparer.OrdinalIgnoreCase)
+            .Except(Orkeon.Studio.Core.Tools.ToolCatalog.DeprecatedNames, StringComparer.OrdinalIgnoreCase));
         Assert.Equal(
-            ["ask_question_to_coworker", "brave_search", "delegate_work_to_coworker", "human_input", "semantic_search", "spawn_agent"],
+            ["ask_question_to_coworker", "brave_search", "chat_attach", "delegate_work_to_coworker", "human_input", "semantic_search", "spawn_agent"],
             catalogue.Except(registered, StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal));
     }
 

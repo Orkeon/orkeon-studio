@@ -128,6 +128,12 @@ public sealed partial class SettingsScreenViewModel
             ? _strings[StudioStringKeys.SettingsTabShellReplaced]
             : ShellExtraSubtitle(Config.ShellTools.ExtraCommandCount);
 
+    /// <summary>The browser section: the engine the run drives, and « headless » when it shows no window.</summary>
+    public string BrowserTabSubtitle =>
+        Config.BrowserTools.Headless && Config.BrowserTools.CanRunHeadless
+            ? _strings.Format(StudioStringKeys.SettingsTabBrowserHeadless, BrowserToolsSectionViewModel.EngineLabel(Config.BrowserTools.Engine))
+            : BrowserToolsSectionViewModel.EngineLabel(Config.BrowserTools.Engine);
+
     private string ShellExtraSubtitle(int extra) =>
         extra > 0
             ? _strings.Format(StudioStringKeys.SettingsTabShellExtra, extra)
@@ -216,6 +222,7 @@ public sealed partial class SettingsScreenViewModel
         foreach (var row in Tools.Secrets)
             row.Stored += keyStored;
         Config.ShellTools.PropertyChanged += (_, _) => RefreshTabStates();
+        Config.BrowserTools.PropertyChanged += (_, _) => RefreshTabStates();
         Config.Mounts.Mounts.CollectionChanged += collectionChanged;
         Config.ValidationMessages.CollectionChanged += collectionChanged;
         Config.Mounts.ValidationMessages.CollectionChanged += collectionChanged;
@@ -254,7 +261,7 @@ public sealed partial class SettingsScreenViewModel
             nameof(DecisionTabSubtitle), nameof(DecisionTabState),
             nameof(SandboxTabSubtitle), nameof(SandboxTabState),
             nameof(FoldersTabSubtitle), nameof(FoldersTabState),
-            nameof(ToolsTabSubtitle), nameof(ToolKeysTabSubtitle), nameof(ToolKeysTabState), nameof(ShellTabSubtitle),
+            nameof(ToolsTabSubtitle), nameof(ToolKeysTabSubtitle), nameof(ToolKeysTabState), nameof(ShellTabSubtitle), nameof(BrowserTabSubtitle),
             nameof(MailsTabSubtitle), nameof(MailsTabState),
             nameof(DriveTabSubtitle), nameof(DriveTabState),
             nameof(ChatTabSubtitle), nameof(ChatTabState),

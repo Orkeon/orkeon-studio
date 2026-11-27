@@ -92,6 +92,13 @@ public enum ToolRequirement
     /// <c>ctx.llm.act</c> of a <c>.ork.ts</c> agent, so a YAML agent that lists it fails to load.
     /// </summary>
     ScriptOnly,
+
+    /// <summary>
+    /// The tool is registered by every run of a YAML crew (not by a script run nor by the forge), but each call fails outside a chat conversation: only
+    /// <c>orkeon-host</c> gives a run one (Discord, Microsoft Teams), so a crew Studio launches with
+    /// <c>orkeon run</c> holds it for nothing. It sends files of the conversation's <c>/outbox</c>.
+    /// </summary>
+    OnlyInAConversation,
 }
 
 /// <summary>One tool of the catalogue: its registry name and what it needs.</summary>
@@ -209,7 +216,7 @@ public static class ToolCatalog
             new("scrape_element"),
             new("github"),
             new("image_generation", ToolRequirement.StoredKey, OpenAiImageKeyEnv),
-            new("firefox"),
+            new("browser", ToolRequirement.ExpertSetting, BrowserToolsSection.SectionPath),
         ]),
         new(SearchFamily,
         [
@@ -366,6 +373,8 @@ public static class ToolCatalog
             new("delegate_work_to_coworker"),
             // The script host's tool: offered in a .ork.ts agent's act, never in a YAML crew's registry.
             new("spawn_agent", ToolRequirement.ScriptOnly),
+            // Registered by every run (Orkeon #485); a call fails unless orkeon-host gave the run a conversation.
+            new("chat_attach", ToolRequirement.OnlyInAConversation),
         ]),
         new(DecisionFamily,
         [
@@ -381,6 +390,13 @@ public static class ToolCatalog
             new("list_mounts"),
         ]),
     ];
+
+    /// <summary>
+    /// The former names the engine still registers as a second name of a tool of the catalogue,
+    /// deprecated and kept out of the families: <c>firefox</c>, the <c>browser</c> tool's name before
+    /// Orkeon #440. A crew that lists one holds an Orkeon tool, not one of an MCP server or a plugin.
+    /// </summary>
+    public static IReadOnlyList<string> DeprecatedNames { get; } = ["firefox"];
 
     /// <summary>Every tool of every family.</summary>
     public static IEnumerable<ToolInfo> All => Families.SelectMany(family => family.Tools);

@@ -604,6 +604,10 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-TRANSPORT" xml:space="preserve"><value>Un serveur MCP nomme un transport inconnu du moteur.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-COMMAND" xml:space="preserve"><value>Un serveur MCP stdio ne nomme aucune commande à lancer.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-URL" xml:space="preserve"><value>Un serveur MCP HTTP n'a pas d'URL http(s) absolue.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-ENGINE" xml:space="preserve"><value>La section du navigateur nomme un moteur que l'exécution ne connaît pas : firefox, chrome, edge, brave ou safari.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari n'a pas de mode sans fenêtre : l'exécution refuse Headless avec lui.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>Le fichier contient à la fois Orkeon:Tools:Browser et son ancien nom Orkeon:Tools:Firefox : l'exécution refuse les deux ensemble.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>La section du navigateur porte encore son ancien nom, Orkeon:Tools:Firefox : lue aujourd'hui, à renommer Orkeon:Tools:Browser.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve"><value>L'environnement d'un serveur MCP porte un secret en clair ; posez-le plutôt dans votre environnement utilisateur.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-NAME" xml:space="preserve"><value>Un nom de compte e-mail est inutilisable : lettres, chiffres, '.', '_' et '-' seulement, 64 caractères au plus. Le moteur met le compte de côté.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-DUPLICATE" xml:space="preserve"><value>Deux comptes e-mail portent le même nom à la casse près : le moteur les lit comme un seul, ou ne peut plus lire le fichier du tout. Renommez-en un.</value></data>
@@ -759,6 +763,17 @@
   <data name="Studio.Settings.ShellAllowInterpretersHint" xml:space="preserve"><value>Pour les agents, c'est de l'exécution de code à distance : laissez-le désactivé sauf si une équipe en a besoin.</value></data>
   <data name="Studio.Settings.ShellExtra" xml:space="preserve"><value>Commandes ajoutées aux commandes par défaut, une par ligne</value></data>
   <data name="Studio.Settings.ShellReplace" xml:space="preserve"><value>Remplacement complet de la liste par défaut, une commande par ligne (vide : les commandes par défaut s'appliquent)</value></data>
+  <data name="Studio.Settings.ToolOnlyInAConversation" xml:space="preserve"><value>enregistré par chaque exécution d'une équipe YAML, mais un appel ne marche que dans une conversation d'orkeon-host (Discord, Microsoft Teams) : une équipe lancée par Studio le détient pour rien</value></data>
+  <data name="Studio.Settings.TabBrowserHeadless" xml:space="preserve"><value>{0}, sans fenêtre</value></data>
+  <data name="Studio.Settings.BrowserTitle" xml:space="preserve"><value>Navigateur</value></data>
+  <data name="Studio.Settings.BrowserIntro" xml:space="preserve"><value>Le navigateur que pilote l'outil browser. Il doit être installé sur la machine qui exécute l'équipe : Studio ne le fournit pas. Chrome, Edge et Brave n'ont besoin d'aucun pilote ; Safari ne tourne que sous macOS, une fois sudo safaridriver --enable exécuté, et toujours avec une fenêtre.</value></data>
+  <data name="Studio.Settings.BrowserEngineLabel" xml:space="preserve"><value>Moteur</value></data>
+  <data name="Studio.Settings.BrowserHeadless" xml:space="preserve"><value>Sans fenêtre (headless)</value></data>
+  <data name="Studio.Settings.BrowserHeadlessSafari" xml:space="preserve"><value>Safari montre toujours sa fenêtre.</value></data>
+  <data name="Studio.Settings.BrowserLegacy" xml:space="preserve"><value>Ce fichier nomme encore la section Orkeon:Tools:Firefox, son ancien nom. L'exécution la lit ; un Orkeon ultérieur ne la lira plus.</value></data>
+  <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Renommer la section</value></data>
+  <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>Ce fichier écrit la section sous ses deux noms, Orkeon:Tools:Browser et son ancien nom Orkeon:Tools:Firefox : l'exécution refuse les deux ensemble. C'est Orkeon:Tools:Browser qu'elle doit lire.</value></data>
+  <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Retirer l'ancienne section</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve"><value>Serveurs MCP</value></data>
   <data name="Studio.Settings.McpIntro" xml:space="preserve"><value>Les serveurs qu'une exécution connecte avant le démarrage de l'équipe ; leurs outils rejoignent le catalogue sous leur propre nom. Expérimental : les serveurs sont lancés à chaque exécution.</value></data>
   <data name="Studio.Settings.McpEnabled" xml:space="preserve"><value>Connecter les serveurs déclarés</value></data>

@@ -1,0 +1,59 @@
+<!-- The "Browser" section of Settings › Access (expert only): the engine the browser tool drives and
+     whether it shows a window (Orkeon:Tools:Browser). DataContext: SettingsScreenViewModel (inherited
+     from SettingsView); the fields bind Config.BrowserTools. -->
+<UserControl x:Class="Orkeon.Studio.Wpf.Views.BrowserToolsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Orkeon.Studio.Wpf.Controls"
+             xmlns:services="clr-namespace:Orkeon.Studio.Wpf.Services">
+  <StackPanel>
+
+    <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+          <controls:LucideIcon Kind="compass" Size="15" Foreground="{DynamicResource AccentBrush}" Margin="0,0,8,0"/>
+          <TextBlock Style="{StaticResource CardTitle}" ToolTip="Orkeon:Tools:Browser"
+                     Text="{Binding [Studio.Settings.BrowserTitle], Source={x:Static services:I18n.Instance}}"/>
+        </StackPanel>
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                   Text="{Binding [Studio.Settings.BrowserIntro], Source={x:Static services:I18n.Instance}}"/>
+
+        <!-- A file that still names the section by its former name: read by the run, renamed on demand. -->
+        <DockPanel Margin="0,14,0,0"
+                   Visibility="{Binding Config.BrowserTools.UsesLegacySection, Converter={StaticResource BooleanToVisibility}}">
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top" Margin="12,0,0,0"
+                  Command="{Binding Config.BrowserTools.MoveLegacySectionCommand}"
+                  Content="{Binding [Studio.Settings.BrowserLegacyMove], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Foreground="{DynamicResource WarningInkBrush}"
+                     Text="{Binding [Studio.Settings.BrowserLegacy], Source={x:Static services:I18n.Instance}}"/>
+        </DockPanel>
+
+        <!-- Both names set, which the run refuses: the run is to read the new one, so the former goes. -->
+        <DockPanel Margin="0,14,0,0"
+                   Visibility="{Binding Config.BrowserTools.HasBothSections, Converter={StaticResource BooleanToVisibility}}">
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top" Margin="12,0,0,0"
+                  Command="{Binding Config.BrowserTools.RemoveLegacySectionCommand}"
+                  Content="{Binding [Studio.Settings.BrowserBothRemove], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}"
+                     Text="{Binding [Studio.Settings.BrowserBoth], Source={x:Static services:I18n.Instance}}"/>
+        </DockPanel>
+
+        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,14,0,5"
+                   Text="{Binding [Studio.Settings.BrowserEngineLabel], Source={x:Static services:I18n.Instance}}"/>
+        <ComboBox Style="{StaticResource ComboS}" ToolTip="Orkeon:Tools:Browser:Engine"
+                  ItemsSource="{Binding Config.BrowserTools.EngineChoices}"
+                  DisplayMemberPath="Label" SelectedValuePath="Id"
+                  SelectedValue="{Binding Config.BrowserTools.Engine}"/>
+
+        <CheckBox Margin="0,14,0,0" ToolTip="Orkeon:Tools:Browser:Headless"
+                  IsChecked="{Binding Config.BrowserTools.Headless}"
+                  IsEnabled="{Binding Config.BrowserTools.CanToggleHeadless}"
+                  Content="{Binding [Studio.Settings.BrowserHeadless], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource SwitchHint}"
+                   Visibility="{Binding Config.BrowserTools.IsSafari, Converter={StaticResource BooleanToVisibility}}"
+                   Text="{Binding [Studio.Settings.BrowserHeadlessSafari], Source={x:Static services:I18n.Instance}}"/>
+      </StackPanel>
+    </Border>
+
+  </StackPanel>
+</UserControl>

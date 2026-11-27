@@ -1543,6 +1543,10 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-URL" xml:space="preserve">
     <value>Ein HTTP-MCP-Server hat keine absolute http(s)-URL.</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-ENGINE" xml:space="preserve"><value>Der Browser-Abschnitt nennt eine Engine, die die Laufzeit nicht kennt: firefox, chrome, edge, brave oder safari.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari hat keinen Headless-Modus: der Lauf lehnt Headless mit Safari ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>Die Datei enthält sowohl Orkeon:Tools:Browser als auch den früheren Namen Orkeon:Tools:Firefox: der Lauf lehnt beide zusammen ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>Der Browser-Abschnitt trägt noch seinen früheren Namen Orkeon:Tools:Firefox: heute gelesen, in Orkeon:Tools:Browser umzubenennen.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve">
     <value>Die Umgebung eines MCP-Servers enthält ein Geheimnis im Klartext; setzen Sie es stattdessen in Ihrer Benutzerumgebung.</value>
   </data>
@@ -1894,6 +1898,17 @@
   <data name="Studio.Settings.ShellReplace" xml:space="preserve">
     <value>Vollständiger Ersatz der Standardliste, einer pro Zeile (leer: die Standardwerte gelten)</value>
   </data>
+  <data name="Studio.Settings.ToolOnlyInAConversation" xml:space="preserve"><value>von jedem Lauf eines YAML-Teams registriert, doch ein Aufruf gelingt nur in einer Unterhaltung von orkeon-host (Discord, Microsoft Teams): ein von Studio gestartetes Team hat es vergebens</value></data>
+  <data name="Studio.Settings.TabBrowserHeadless" xml:space="preserve"><value>{0}, ohne Fenster</value></data>
+  <data name="Studio.Settings.BrowserTitle" xml:space="preserve"><value>Browser</value></data>
+  <data name="Studio.Settings.BrowserIntro" xml:space="preserve"><value>Der Browser, den das Werkzeug browser steuert. Er muss auf dem Rechner installiert sein, der das Team ausführt: Studio liefert ihn nicht mit. Chrome, Edge und Brave brauchen keinen Treiber; Safari läuft nur unter macOS, nachdem sudo safaridriver --enable ausgeführt wurde, und immer mit Fenster.</value></data>
+  <data name="Studio.Settings.BrowserEngineLabel" xml:space="preserve"><value>Engine</value></data>
+  <data name="Studio.Settings.BrowserHeadless" xml:space="preserve"><value>Ohne Fenster (headless)</value></data>
+  <data name="Studio.Settings.BrowserHeadlessSafari" xml:space="preserve"><value>Safari zeigt immer sein Fenster.</value></data>
+  <data name="Studio.Settings.BrowserLegacy" xml:space="preserve"><value>Diese Datei nennt den Abschnitt noch Orkeon:Tools:Firefox, seinen früheren Namen. Der Lauf liest ihn; ein späteres Orkeon nicht mehr.</value></data>
+  <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Abschnitt umbenennen</value></data>
+  <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>Diese Datei setzt den Abschnitt unter beiden Namen, Orkeon:Tools:Browser und dem früheren Namen Orkeon:Tools:Firefox: der Lauf lehnt beide zusammen ab. Gelesen werden soll Orkeon:Tools:Browser.</value></data>
+  <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Früheren Abschnitt entfernen</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve">
     <value>MCP-Server</value>
   </data>

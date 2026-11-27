@@ -464,6 +464,35 @@ public sealed class SettingsScreenTests
     // ── the tab gating ──
 
     /// <summary>
+    /// Orkeon #440 — the browser tab is the expert's, and its subtitle names the engine, with or without
+    /// a window.
+    /// </summary>
+    [Fact]
+    public void The_browser_tab_is_the_experts_and_its_subtitle_names_the_engine()
+    {
+        var novice = Screen(new UiModeViewModel());
+        novice.ShowBrowserCommand.Execute(null);
+        Assert.True(novice.IsModelTab);
+
+        var mode = new UiModeViewModel("expert");
+        var expert = Screen(mode);
+        expert.ShowBrowserCommand.Execute(null);
+        Assert.True(expert.IsBrowserTab);
+        Assert.Equal("Firefox", expert.BrowserTabSubtitle);
+
+        var raised = new List<string?>();
+        expert.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        expert.Config.BrowserTools.Engine = "edge";
+        expert.Config.BrowserTools.Headless = true;
+
+        Assert.Equal(EnglishStudioStrings.Instance.Format(StudioStringKeys.SettingsTabBrowserHeadless, "Edge"), expert.BrowserTabSubtitle);
+        Assert.Contains(nameof(SettingsScreenViewModel.BrowserTabSubtitle), raised);
+
+        mode.SetNoviceCommand.Execute(null);
+        Assert.True(expert.IsModelTab);
+    }
+
+    /// <summary>
     /// The Access group splits the tools in three: the keys and the catalogue are for everyone,
     /// the shell allow-list is the expert's, and its subtitle says what the file does to the list.
     /// </summary>

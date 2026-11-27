@@ -16,12 +16,12 @@
        tag v$(OrkeonVersion) for the drift tests, or the commit OrkeonSourceRef names when
        it is set: moving it moves both. -->
   <PropertyGroup>
-    <!-- TEMPORARY: packed from Orkeon main (29c7a9bd8), served by dev-feed/ (see nuget.config).
+    <!-- TEMPORARY: packed from Orkeon main (9ca8530fd), served by dev-feed/ (see nuget.config).
          OrkeonSourceRef is that commit: CI clones it for the drift tests, a -local version
          having no tag, and the release pipeline refuses a tag while it is set. The closing
          commit removes it with dev-feed/. -->
-    <OrkeonVersion>1.4.1-local.202611241000</OrkeonVersion>
-    <OrkeonSourceRef>29c7a9bd8cfd78d5401c4a96dc4d0673ebd78928</OrkeonSourceRef>
+    <OrkeonVersion>1.4.1-local.202611271000</OrkeonVersion>
+    <OrkeonSourceRef>9ca8530fd90b13c896d8eabb4efca9b96c90dc8d</OrkeonSourceRef>
   </PropertyGroup>
   <ItemGroup Label="Orkeon">
     <PackageVersion Include="Orkeon" Version="$(OrkeonVersion)" />

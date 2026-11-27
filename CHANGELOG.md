@@ -4,7 +4,12 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
-Built against Orkeon `main` at `29c7a9bd8` (untagged), from packs of that commit in `dev-feed/`.
+Built against Orkeon `main` at `9ca8530fd` (untagged), from packs of that commit in `dev-feed/`.
+
+### Changed
+
+- **The `firefox` tool is now `browser`** (Orkeon [#440](https://github.com/Orkeon/orkeon/issues/440)): the catalogue shows `browser`, in the Web family, with its expert setting; `firefox`, its deprecated name that Orkeon still registers, stays a known tool (a `.png` writer for the deliverable check) but is no longer listed.
+- **`chat_attach` joins the catalogue** (Orkeon [#485](https://github.com/Orkeon/orkeon/issues/485)) under Collaboration, said to work only in a conversation of `orkeon-host`: every run of a YAML team registers it, but a team Studio launches cannot use it, and the forge does not offer it.
 
 ### Added
 
@@ -12,6 +17,7 @@ Built against Orkeon `main` at `29c7a9bd8` (untagged), from packs of that commit
 - **Guided setup**: a four-step dialog declares a provider and its key, one or several models, the assistant's and the default model, and System One, tests them, and writes everything at « Finish ».
 - **Test tab**: Settings tests every declared model and System One, sends a free message and shows its reply, and keeps a journal that can be copied or saved.
 - **What the engine says on the wizard's grey line can be copied** (an error it carries on after, a warning, a refused rephrase), with its report and log.
+- **Browser tab** (expert; Orkeon [#440](https://github.com/Orkeon/orkeon/issues/440)): Settings and the terminal editor pick the engine of the `browser` tool (`Orkeon:Tools:Browser:Engine`: firefox, chrome, edge, brave, safari) and its window (`Headless`, refused with Safari). The settings check refuses an unknown engine, Safari with `Headless` and both `Orkeon:Tools:Browser` and `Orkeon:Tools:Firefox` (`STUDIO-BROWSER-*`), and warns on the former section alone, which Settings and the terminal editor rename (its `Engine`, which the run ignores there, left behind), and on a `Headless` the run cannot read.
 
 ## [1.4.0] - 2026-11-23
 

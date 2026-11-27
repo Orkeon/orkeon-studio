@@ -654,6 +654,12 @@
         <!-- ══ COMMANDES SHELL (expert, STUDIO-21): the shell allow-list ══ -->
         <views:ShellToolsView/>
       </controls:StepTab>
+      <controls:StepTab Tag="browser" Header="{Binding [Studio.Settings.BrowserTitle], Source={x:Static services:I18n.Instance}}"
+                      Subtitle="{Binding BrowserTabSubtitle}"
+                      Visibility="{Binding Mode.IsExpert, Converter={StaticResource BooleanToVisibility}}">
+        <!-- ══ NAVIGATEUR (expert, Orkeon #440): the engine of the browser tool ══ -->
+        <views:BrowserToolsView/>
+      </controls:StepTab>
       <controls:StepTab Tag="mails" Header="{Binding [Studio.Shell.Mails], Source={x:Static services:I18n.Instance}}"
                       Subtitle="{Binding MailsTabSubtitle}" State="{Binding MailsTabState}"
                       Group="{Binding [Studio.Settings.GroupConnections], Source={x:Static services:I18n.Instance}}">

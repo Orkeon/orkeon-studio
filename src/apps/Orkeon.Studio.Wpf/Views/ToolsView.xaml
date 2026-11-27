@@ -1,6 +1,6 @@
 <!-- The "Tool catalogue" section of Settings › Access: every tool a run exposes, by family, with
      what each one needs. The keys the tools need and the shell allow-list are sections of their
-     own (ToolKeysView, ShellToolsView). DataContext: SettingsScreenViewModel (inherited from SettingsView). -->
+     own (ToolKeysView, ShellToolsView, BrowserToolsView). DataContext: SettingsScreenViewModel (inherited from SettingsView). -->
 <UserControl x:Class="Orkeon.Studio.Wpf.Views.ToolsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

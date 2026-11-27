@@ -36,13 +36,14 @@ public sealed record ForgeToolPalette(IReadOnlyList<string> TeamTools, IReadOnly
     /// <c>FORGE-TOOL-UNKNOWN</c>: <c>human_input</c>, which <c>AddOrkeonHumanInput</c> registers
     /// (<c>RunnerExecution</c> calls it, the forge's <c>RunnerHost.Build</c> does not);
     /// <c>semantic_search</c>, which <c>AddSemanticSearchTool</c> registers (<c>orkeon run</c> calls
-    /// it, the forge does not); and the two coworker tools, never registered at all but built per
+    /// it, the forge does not); <c>chat_attach</c>, which <c>AddOrkeonChatAttach</c> registers (<c>RunnerExecution</c>
+    /// calls it, the forge does not, and a forge trial has no conversation to send to); and the two coworker tools, never registered at all but built per
     /// agent from its <c>allowDelegation</c> by <c>AgentDelegationToolsProvider</c>. Pinned on the
     /// engine's composition by a drift test, so a registration the forge gains or loses fails there.
     /// </summary>
     public static IReadOnlySet<string> OutsideTheForgeHost { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "human_input", "semantic_search", "ask_question_to_coworker", "delegate_work_to_coworker",
+        "human_input", "semantic_search", "chat_attach", "ask_question_to_coworker", "delegate_work_to_coworker",
     };
 
     /// <summary>
@@ -84,7 +85,8 @@ public sealed record ForgeToolPalette(IReadOnlyList<string> TeamTools, IReadOnly
             or ToolRequirement.OnlyWithStoredKey
             or ToolRequirement.OnlyWithMcpServer
             or ToolRequirement.OnlyWithDecisionProvider
-            or ToolRequirement.OnlyWithCognitiveMemory);
+            or ToolRequirement.OnlyWithCognitiveMemory
+            or ToolRequirement.OnlyInAConversation);
     }
 
     private static List<string> TeamToolsOf(string? blueprintJson)

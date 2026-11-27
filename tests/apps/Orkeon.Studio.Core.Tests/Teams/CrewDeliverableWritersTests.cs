@@ -638,11 +638,12 @@ public sealed class CrewDeliverableWritersTests : IDisposable
     {
         Assert.Equal("file_write", DeliverableToolCheck.FileWriteToolName);
         Assert.Equal(
-            ["docx_writer", "xlsx_writer", "image_generation", "firefox", "file_write"],
+            ["docx_writer", "xlsx_writer", "image_generation", "browser", "firefox", "file_write"],
             DeliverableToolCheck.FileWriterToolNames);
 
-        // A writer missing from Studio's catalogue would count as an opaque tool, which writes anything.
-        var known = ToolCatalog.All.Select(tool => tool.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // A writer missing from Studio's catalogue would count as an opaque tool, which writes anything;
+        // a deprecated name (firefox, the former name of browser) is known without being shown.
+        var known = ToolCatalog.All.Select(tool => tool.Name).Concat(ToolCatalog.DeprecatedNames).ToHashSet(StringComparer.OrdinalIgnoreCase);
         Assert.All(DeliverableToolCheck.FileWriterToolNames, writer => Assert.Contains(writer, known));
 
         // A new kind of finding is one the launchers do not word yet.

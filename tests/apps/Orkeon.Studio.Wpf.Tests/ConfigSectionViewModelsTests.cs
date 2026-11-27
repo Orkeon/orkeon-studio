@@ -396,3 +396,127 @@ public sealed class LimitsDefaultsTests
             "A nullable boolean behind a check box costs the user two clicks: " + string.Join(", ", offenders));
     }
 }
+
+/// <summary>Orkeon #440 — the browser form writes the engine and the window only when they differ from the defaults.</summary>
+public sealed class BrowserToolsSectionViewModelTests
+{
+    private static (BrowserToolsSectionViewModel Section, AppSettingsDocument Document, Func<int> Changes) Build(string json = "{}")
+    {
+        var document = AppSettingsDocument.Parse(json);
+        var changes = 0;
+        var section = new BrowserToolsSectionViewModel(() => document, () => changes++);
+        return (section, document, () => changes);
+    }
+
+    [Fact]
+    public void The_engine_and_the_window_are_written_only_away_from_the_defaults()
+    {
+        var (section, document, changes) = Build();
+        Assert.Equal("firefox", section.Engine);
+        Assert.False(section.Exists);
+
+        section.Engine = "chrome";
+        section.Headless = true;
+
+        Assert.Equal("chrome", document.GetString("Orkeon:Tools:Browser:Engine"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:Headless"));
+        Assert.Equal(2, changes());
+
+        section.Engine = "firefox";
+        section.Headless = false;
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser"));
+    }
+
+    [Fact]
+    public void Safari_cannot_run_headless_and_a_written_engine_shows_in_its_runtime_spelling()
+    {
+        var (section, _, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "Safari" } } } }""");
+
+        Assert.Equal("safari", section.Engine);
+        Assert.True(section.IsSafari);
+        Assert.False(section.CanRunHeadless);
+        Assert.Equal("Safari", BrowserToolsSectionViewModel.EngineLabel(section.Engine));
+        Assert.Equal(["firefox", "chrome", "edge", "brave", "safari"], BrowserToolsSectionViewModel.Engines);
+    }
+
+    [Fact]
+    public void A_former_section_is_said_and_renamed_on_demand()
+    {
+        var (section, document, changes) = Build("""{ "Orkeon": { "Tools": { "Firefox": { "Headless": true } } } }""");
+        Assert.True(section.UsesLegacySection);
+        Assert.True(section.Headless);
+
+        section.MoveLegacySectionCommand.Execute(null);
+
+        Assert.False(section.UsesLegacySection);
+        Assert.Null(document.GetNode("Orkeon:Tools:Firefox"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:Headless"));
+        Assert.Equal(1, changes());
+    }
+
+    [Fact]
+    public void Picking_safari_turns_the_headless_switch_off_and_says_so()
+    {
+        var (section, document, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "edge", "Headless": true } } } }""");
+        var raised = new List<string?>();
+        section.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        section.Engine = "safari";
+
+        Assert.False(section.Headless);
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser:Headless"));
+        Assert.Contains(nameof(BrowserToolsSectionViewModel.Headless), raised);
+        Assert.False(section.CanToggleHeadless);
+    }
+
+    [Fact]
+    public void A_file_with_safari_and_headless_keeps_the_switch_usable_to_undo_it()
+    {
+        var (section, _, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "safari", "Headless": true } } } }""");
+
+        Assert.False(section.CanRunHeadless);
+        Assert.True(section.CanToggleHeadless);
+
+        section.Headless = false;
+        Assert.False(section.CanToggleHeadless);
+    }
+
+    [Fact]
+    public void An_unknown_engine_is_among_the_choices_and_the_choices_carry_product_names()
+    {
+        var (section, _, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "opera" } } } }""");
+
+        Assert.Equal("opera", section.Engine);
+        Assert.Equal(["firefox", "chrome", "edge", "brave", "safari", "opera"], section.EngineChoices.Select(c => c.Id));
+        Assert.Equal("Firefox", section.EngineChoices[0].Label);
+        Assert.Equal("opera", section.EngineChoices[^1].Label);
+    }
+
+    [Fact]
+    public void Renaming_without_a_former_section_changes_nothing()
+    {
+        var (section, document, changes) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "edge" } } } }""");
+        var before = document.ToJson();
+
+        section.MoveLegacySectionCommand.Execute(null);
+        section.RemoveLegacySectionCommand.Execute(null);
+
+        Assert.Equal(before, document.ToJson());
+        Assert.Equal(0, changes());
+    }
+
+    [Fact]
+    public void Both_sections_are_said_and_the_former_one_removed_on_demand()
+    {
+        var (section, document, changes) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "edge" }, "Firefox": { "Headless": true } } } }""");
+        Assert.True(section.HasBothSections);
+        Assert.False(section.UsesLegacySection);
+
+        section.RemoveLegacySectionCommand.Execute(null);
+
+        Assert.False(section.HasBothSections);
+        Assert.Null(document.GetNode("Orkeon:Tools:Firefox"));
+        Assert.Equal("edge", document.GetString("Orkeon:Tools:Browser:Engine"));
+        Assert.Equal(1, changes());
+    }
+}
