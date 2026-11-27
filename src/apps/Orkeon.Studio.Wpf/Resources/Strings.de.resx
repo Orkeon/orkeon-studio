@@ -1547,6 +1547,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari hat keinen Headless-Modus: der Lauf lehnt Headless mit Safari ab.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>Die Datei enthält sowohl Orkeon:Tools:Browser als auch den früheren Namen Orkeon:Tools:Firefox: der Lauf lehnt beide zusammen ab.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>Der Browser-Abschnitt trägt noch seinen früheren Namen Orkeon:Tools:Firefox: heute gelesen, in Orkeon:Tools:Browser umzubenennen.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LIFETIME" xml:space="preserve"><value>Der Browser-Abschnitt nennt eine andere Lebensdauer als Run oder Host: der Lauf lehnt sie ab.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-PROFILE" xml:space="preserve"><value>Das Standardprofil des Browsers wird abgelehnt, sobald ein Agent handelt: von DeniedProfiles verboten, unter Chrome, Edge und Brave nicht der vollständige Pfad eines vorhandenen Ordners, unter Safari jedes benannte Profil.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve">
     <value>Die Umgebung eines MCP-Servers enthält ein Geheimnis im Klartext; setzen Sie es stattdessen in Ihrer Benutzerumgebung.</value>
   </data>
@@ -1909,6 +1911,14 @@
   <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Abschnitt umbenennen</value></data>
   <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>Diese Datei setzt den Abschnitt unter beiden Namen, Orkeon:Tools:Browser und dem früheren Namen Orkeon:Tools:Firefox: der Lauf lehnt beide zusammen ab. Gelesen werden soll Orkeon:Tools:Browser.</value></data>
   <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Früheren Abschnitt entfernen</value></data>
+  <data name="Studio.Settings.BrowserProfileLabel" xml:space="preserve"><value>Profil</value></data>
+  <data name="Studio.Settings.BrowserProfileHint" xml:space="preserve"><value>Leer: ein frisches Profil, das beim Schließen des Browsers gelöscht wird. Ein benanntes Profil wird an Ort und Stelle genutzt und behält Cookies und Anmeldungen von einem Start zum nächsten: geben Sie den Agenten ein eigenes, nie Ihr eigenes. Zwei Browser können es nicht gleichzeitig öffnen: für gleichzeitig arbeitende Agenten den Browser offen halten oder teilen. Firefox nimmt einen Profilnamen (about:profiles) oder einen Ordnerpfad, Chrome, Edge und Brave nur den vollständigen Pfad eines vorhandenen Ordners, Safari keinen.</value></data>
+  <data name="Studio.Settings.BrowserKeepOpen" xml:space="preserve"><value>Browser von einer Aufgabe zur nächsten offen halten (Lifetime = Host)</value></data>
+  <data name="Studio.Settings.BrowserKeepOpenHint" xml:space="preserve"><value>Standardmäßig schließt der Browser am Ende jeder Aufgabe. Offen gehalten, bleibt er mit seinen Tabs geöffnet, bis der Start endet, ein Agent ihn schließt oder Sie sein Fenster schließen; gleichzeitig arbeitende Agenten nutzen ihn dann abwechselnd.</value></data>
+  <data name="Studio.Settings.BrowserShared" xml:space="preserve"><value>Gleichzeitig arbeitende Agenten teilen sich einen Browser (SharedInstance)</value></data>
+  <data name="Studio.Settings.BrowserSharedHint" xml:space="preserve"><value>Ein Browser pro Profil, jeder Agent in eigenen Tabs. Ohne diese Option startet jede Aufgabe einen eigenen Browser oder nutzt abwechselnd den offen gehaltenen.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeUnknown" xml:space="preserve"><value>Diese Datei nennt eine Lebensdauer, die der Lauf ablehnt: er kennt nur Run und Host.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeRemove" xml:space="preserve"><value>Wert entfernen</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve">
     <value>MCP-Server</value>
   </data>

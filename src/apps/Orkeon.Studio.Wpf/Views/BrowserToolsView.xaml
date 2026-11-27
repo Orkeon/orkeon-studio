@@ -1,5 +1,6 @@
-<!-- The "Browser" section of Settings › Access (expert only): the engine the browser tool drives and
-     whether it shows a window (Orkeon:Tools:Browser). DataContext: SettingsScreenViewModel (inherited
+<!-- The "Browser" section of Settings › Access (expert only): the engine the browser tool drives,
+     whether it shows a window, the profile it starts on, whether it stays open from one task to the
+     next and whether agents working at once share it (Orkeon:Tools:Browser). DataContext: SettingsScreenViewModel (inherited
      from SettingsView); the fields bind Config.BrowserTools. -->
 <UserControl x:Class="Orkeon.Studio.Wpf.Views.BrowserToolsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -52,6 +53,36 @@
         <TextBlock Style="{StaticResource SwitchHint}"
                    Visibility="{Binding Config.BrowserTools.IsSafari, Converter={StaticResource BooleanToVisibility}}"
                    Text="{Binding [Studio.Settings.BrowserHeadlessSafari], Source={x:Static services:I18n.Instance}}"/>
+
+        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,18,0,5"
+                   Text="{Binding [Studio.Settings.BrowserProfileLabel], Source={x:Static services:I18n.Instance}}"/>
+        <TextBox Style="{StaticResource InputMono}" ToolTip="Orkeon:Tools:Browser:Profile"
+                 IsEnabled="{Binding Config.BrowserTools.CanEditProfile}"
+                 Text="{Binding Config.BrowserTools.Profile, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,4,0,0"
+                   Text="{Binding [Studio.Settings.BrowserProfileHint], Source={x:Static services:I18n.Instance}}"/>
+
+        <CheckBox Margin="0,14,0,0" ToolTip="Orkeon:Tools:Browser:Lifetime"
+                  IsChecked="{Binding Config.BrowserTools.KeepsBrowserOpen}"
+                  Content="{Binding [Studio.Settings.BrowserKeepOpen], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource SwitchHint}"
+                   Text="{Binding [Studio.Settings.BrowserKeepOpenHint], Source={x:Static services:I18n.Instance}}"/>
+
+        <!-- A lifetime the run refuses: the switch reads as off; the value goes on demand. -->
+        <DockPanel Margin="44,6,0,0"
+                   Visibility="{Binding Config.BrowserTools.HasUnknownLifetime, Converter={StaticResource BooleanToVisibility}}">
+          <Button DockPanel.Dock="Right" Style="{StaticResource BtnSecondary}" VerticalAlignment="Top" Margin="12,0,0,0"
+                  Command="{Binding Config.BrowserTools.RemoveLifetimeCommand}"
+                  Content="{Binding [Studio.Settings.BrowserLifetimeRemove], Source={x:Static services:I18n.Instance}}"/>
+          <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}"
+                     Text="{Binding [Studio.Settings.BrowserLifetimeUnknown], Source={x:Static services:I18n.Instance}}"/>
+        </DockPanel>
+
+        <CheckBox Margin="0,14,0,0" ToolTip="Orkeon:Tools:Browser:SharedInstance"
+                  IsChecked="{Binding Config.BrowserTools.SharedInstance}"
+                  Content="{Binding [Studio.Settings.BrowserShared], Source={x:Static services:I18n.Instance}}"/>
+        <TextBlock Style="{StaticResource SwitchHint}"
+                   Text="{Binding [Studio.Settings.BrowserSharedHint], Source={x:Static services:I18n.Instance}}"/>
       </StackPanel>
     </Border>
 

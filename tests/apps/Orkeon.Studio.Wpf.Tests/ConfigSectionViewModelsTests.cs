@@ -519,4 +519,124 @@ public sealed class BrowserToolsSectionViewModelTests
         Assert.Equal("edge", document.GetString("Orkeon:Tools:Browser:Engine"));
         Assert.Equal(1, changes());
     }
+
+    [Fact]
+    public void The_profile_the_lifetime_and_the_sharing_are_written_away_from_the_defaults()
+    {
+        var (section, document, changes) = Build();
+
+        section.Profile = "agents ";
+        section.KeepsBrowserOpen = true;
+        section.SharedInstance = true;
+
+        Assert.Equal("agents ", section.Profile);
+        Assert.Equal("agents", document.GetString("Orkeon:Tools:Browser:Profile"));
+        Assert.Equal("Host", document.GetString("Orkeon:Tools:Browser:Lifetime"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:SharedInstance"));
+        Assert.Equal(3, changes());
+
+        // A blank typed after the name changes nothing in the file.
+        section.Profile = "agents  ";
+        Assert.Equal(3, changes());
+
+        section.Profile = "";
+        section.KeepsBrowserOpen = false;
+        section.SharedInstance = false;
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser"));
+        Assert.Equal(6, changes());
+    }
+
+    [Fact]
+    public void Typing_disposable_writes_no_key_and_keeps_the_text()
+    {
+        var (section, document, changes) = Build();
+
+        section.Profile = "disposable";
+
+        Assert.Equal("disposable", section.Profile);
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser"));
+        Assert.Equal(0, changes());
+    }
+
+    [Fact]
+    public void A_profile_changed_in_the_document_replaces_the_text_typed()
+    {
+        var (section, document, _) = Build();
+        section.Profile = "agents ";
+        Assert.Equal("agents ", section.Profile);
+
+        document.BrowserTools.Profile = "other";
+        section.Refresh();
+
+        Assert.Equal("other", section.Profile);
+    }
+
+    [Fact]
+    public void Typing_a_profile_renames_a_lone_former_section_and_leaves_its_engine_behind()
+    {
+        var (section, document, changes) = Build("""{ "Orkeon": { "Tools": { "Firefox": { "Engine": "chrome", "Headless": true } } } }""");
+
+        section.Profile = "agents";
+
+        Assert.Null(document.GetNode("Orkeon:Tools:Firefox"));
+        Assert.Equal("agents", document.GetString("Orkeon:Tools:Browser:Profile"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:Headless"));
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser:Engine"));
+        Assert.Equal(1, changes());
+    }
+
+    [Fact]
+    public void An_unknown_lifetime_is_kept_while_other_fields_change_and_goes_on_demand()
+    {
+        var (section, document, changes) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "forever" } } } }""");
+        Assert.True(section.HasUnknownLifetime);
+        Assert.False(section.KeepsBrowserOpen);
+
+        section.SharedInstance = true;
+        Assert.Equal("forever", document.GetString("Orkeon:Tools:Browser:Lifetime"));
+
+        var raised = new List<string?>();
+        section.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        section.RemoveLifetimeCommand.Execute(null);
+
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser:Lifetime"));
+        Assert.False(section.HasUnknownLifetime);
+        Assert.Contains(nameof(BrowserToolsSectionViewModel.HasUnknownLifetime), raised);
+        Assert.Contains(nameof(BrowserToolsSectionViewModel.KeepsBrowserOpen), raised);
+        Assert.Equal(2, changes());
+    }
+
+    [Fact]
+    public void An_unreadable_sharing_reads_as_off_and_stays_until_ticked()
+    {
+        var (section, document, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "SharedInstance": "yes" } } } }""");
+        Assert.False(section.SharedInstance);
+
+        section.KeepsBrowserOpen = true;
+        Assert.Equal("yes", document.GetString("Orkeon:Tools:Browser:SharedInstance"));
+
+        section.SharedInstance = true;
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:SharedInstance"));
+    }
+
+    [Fact]
+    public void Under_safari_the_profile_is_editable_only_to_clear_one_written()
+    {
+        var (section, _, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "safari" } } } }""");
+        Assert.False(section.CanEditProfile);
+
+        var (named, _, _) = Build("""{ "Orkeon": { "Tools": { "Browser": { "Engine": "safari", "Profile": "agents" } } } }""");
+        Assert.True(named.CanEditProfile);
+        named.Profile = "";
+        Assert.False(named.CanEditProfile);
+    }
+
+    [Fact]
+    public void A_written_lifetime_reads_whatever_its_case_and_an_unknown_one_reads_as_closing()
+    {
+        Assert.True(Build("""{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "host" } } } }""").Section.KeepsBrowserOpen);
+        Assert.False(Build("""{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "forever" } } } }""").Section.KeepsBrowserOpen);
+
+        Assert.Equal("agents", Build("""{ "Orkeon": { "Tools": { "Browser": { "Profile": " agents " } } } }""").Section.Profile);
+    }
 }

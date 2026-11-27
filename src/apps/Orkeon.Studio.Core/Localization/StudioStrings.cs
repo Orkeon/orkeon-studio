@@ -4152,6 +4152,8 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS"] = "Safari has no headless mode: the run refuses Headless with it.",
         ["Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS"] = "The file holds both Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together.",
         ["Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY"] = "The browser section still has its former name, Orkeon:Tools:Firefox: read today, to be renamed Orkeon:Tools:Browser.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-LIFETIME"] = "The browser section names a lifetime other than Run or Host: the run refuses it.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-PROFILE"] = "The browser's default profile is one it refuses when an agent acts: forbidden by DeniedProfiles, not the full path of an existing folder under Chrome, Edge and Brave, or any named profile under Safari.",
         ["Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET"] = "An MCP server's environment carries a secret in clear text; set it in your user environment instead.",
         ["Studio.Diagnostics.Code.STUDIO-MAIL-NAME"] = "An e-mail account name is unusable: letters, digits, '.', '_' and '-' only, 64 characters at most. The run sets the account aside.",
         ["Studio.Diagnostics.Code.STUDIO-MAIL-DUPLICATE"] = "Two e-mail accounts carry the same name but for the case: the run reads them as one, or cannot read the file at all. Rename one.",

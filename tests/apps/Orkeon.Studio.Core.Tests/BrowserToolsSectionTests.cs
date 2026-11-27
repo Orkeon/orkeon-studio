@@ -82,12 +82,26 @@ public sealed class BrowserToolsSectionTests
         Assert.Equal(FirefoxToolOptions.SectionName, BrowserToolsSection.LegacySectionPath);
         Assert.NotNull(typeof(FirefoxToolOptions).GetProperty("Engine"));
         Assert.NotNull(typeof(FirefoxToolOptions).GetProperty("Headless"));
+        Assert.Equal(typeof(string), typeof(FirefoxToolOptions).GetProperty("Profile")?.PropertyType);
+        Assert.Equal(typeof(FirefoxBrowserLifetime), typeof(FirefoxToolOptions).GetProperty("Lifetime")?.PropertyType);
+        Assert.Equal(typeof(bool), typeof(FirefoxToolOptions).GetProperty("SharedInstance")?.PropertyType);
+        Assert.NotNull(typeof(FirefoxToolOptions).GetProperty("DeniedProfiles"));
         Assert.Equal(BrowserToolsSection.DefaultEngine, new FirefoxToolOptions().Engine);
 
         var reference = File.ReadAllLines(Path.Combine(OrkeonSources.Root(), "docs", "reference", "configuration.md"));
         var rows = reference.Where(line => line.StartsWith("| `Engine` | string | `\"firefox\"`", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(rows);
         Assert.All(rows, row => Assert.All(BrowserToolsSection.Engines, engine => Assert.Contains($"`{engine}`", row, StringComparison.Ordinal)));
+
+        // The three keys the tab edits, as the reference documents them: the lifetimes and their
+        // default, a profile disposable by default, a sharing switch off by default.
+        var lifetimes = reference.Where(line => line.StartsWith("| `Lifetime` | enum | `\"Run\"` |", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(lifetimes);
+        Assert.All(lifetimes, row => Assert.Contains(string.Join(", ", BrowserToolsSection.Lifetimes.Select(l => $"`{l}`")), row, StringComparison.Ordinal));
+        var profiles = reference.Where(line => line.StartsWith("| `Profile` | string | — |  | The profile a browser starts with", StringComparison.Ordinal)).ToList();
+        Assert.NotEmpty(profiles);
+        Assert.All(profiles, row => Assert.Contains($"`{BrowserToolsSection.DisposableProfile}` (the default", row, StringComparison.Ordinal));
+        Assert.Contains(reference, line => line.StartsWith("| `SharedInstance` | boolean | `false` |", StringComparison.Ordinal));
     }
 }
 
@@ -300,5 +314,205 @@ public sealed class BrowserToolsRuntimeOracleTests
         var after = Read(document);
         Assert.Equal(before.Engine, after.Engine);
         Assert.Equal(before.Headless, after.Headless);
+    }
+}
+
+/// <summary>
+/// The profile a browser starts on, how long it lives and whether the runs of a host share it: the
+/// runtime's defaults written as no key, under the section the run reads, and judged as the run judges them.
+/// </summary>
+public sealed class BrowserToolsProfileLifetimeTests
+{
+    private static IReadOnlyList<ValidationMessage> Validate(string json) =>
+        new AppSettingsValidator(new FakeDirectoryProbe()).Validate(AppSettingsDocument.Parse(json));
+
+    [Fact]
+    public void The_three_keys_round_trip_and_their_defaults_are_written_as_no_key()
+    {
+        var document = AppSettingsDocument.CreateEmpty();
+        var browser = document.BrowserTools;
+
+        browser.Profile = "  agents  ";
+        browser.Lifetime = "Host";
+        browser.SharedInstance = true;
+
+        Assert.Equal("agents", document.GetString("Orkeon:Tools:Browser:Profile"));
+        Assert.Equal("Host", document.GetString("Orkeon:Tools:Browser:Lifetime"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:SharedInstance"));
+        Assert.Equal("Host", browser.EffectiveLifetime);
+
+        browser.Profile = "Disposable";
+        browser.Lifetime = "run";
+        browser.SharedInstance = false;
+
+        Assert.Null(document.GetNode("Orkeon:Tools:Browser"));
+        Assert.Null(browser.Profile);
+        Assert.Equal("Run", browser.EffectiveLifetime);
+    }
+
+    [Fact]
+    public void Under_a_lone_former_section_the_keys_are_read_there_and_a_write_renames_it()
+    {
+        var document = AppSettingsDocument.Parse("""{ "Orkeon": { "Tools": { "Firefox": { "Profile": "agents", "Lifetime": "host" } } } }""");
+        var browser = document.BrowserTools;
+
+        Assert.Equal("Orkeon:Tools:Firefox:Lifetime", browser.KeyPath("Lifetime"));
+        Assert.Equal("agents", browser.Profile);
+        Assert.Equal("host", browser.Lifetime);
+
+        browser.SharedInstance = true;
+
+        Assert.Null(document.GetNode("Orkeon:Tools:Firefox"));
+        Assert.Equal("agents", document.GetString("Orkeon:Tools:Browser:Profile"));
+        Assert.Equal("host", document.GetString("Orkeon:Tools:Browser:Lifetime"));
+        Assert.True(document.GetBoolean("Orkeon:Tools:Browser:SharedInstance"));
+    }
+
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "1" } } } }""", "Orkeon:Tools:Browser:Lifetime")]
+    [InlineData("""{ "Orkeon": { "Tools": { "Firefox": { "Lifetime": "forever" } } } }""", "Orkeon:Tools:Firefox:Lifetime")]
+    public void An_unknown_lifetime_is_an_error_under_either_section(string json, string path)
+    {
+        var message = Assert.Single(Validate(json), m => m.Code == ValidationCodes.BrowserLifetimeUnknown);
+
+        Assert.Equal(ValidationSeverity.Error, message.Severity);
+        Assert.Equal(path, message.Path);
+        Assert.DoesNotContain(Validate("""{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "HOST" } } } }"""),
+            m => m.Code == ValidationCodes.BrowserLifetimeUnknown);
+    }
+
+    [Fact]
+    public void A_shared_switch_that_reads_as_no_boolean_is_a_warning()
+    {
+        var message = Assert.Single(Validate("""{ "Orkeon": { "Tools": { "Browser": { "SharedInstance": "yes" } } } }"""),
+            m => m.Path == "Orkeon:Tools:Browser:SharedInstance");
+
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(ValidationSeverity.Warning, message.Severity);
+    }
+
+    [Theory]
+    [InlineData("chrome", "agents", true)]
+    [InlineData("edge", "relative/folder", true)]
+    [InlineData("chrome", "~/agents", true)]
+    [InlineData("safari", "agents", true)]
+    [InlineData("safari", "DISPOSABLE", false)]
+    [InlineData("firefox", "agents", false)]
+    [InlineData("brave", "disposable", false)]
+    [InlineData("opera", "agents", false)]
+    public void A_profile_the_engine_refuses_is_a_warning_on_the_profile(string engine, string profile, bool refused)
+    {
+        var json = $$"""{ "Orkeon": { "Tools": { "Browser": { "Engine": "{{engine}}", "Profile": "{{profile}}" } } } }""";
+        var messages = Validate(json).Where(m => m.Code == ValidationCodes.BrowserProfileRefused).ToList();
+
+        if (!refused)
+        {
+            Assert.Empty(messages);
+            return;
+        }
+
+        var message = Assert.Single(messages);
+        Assert.Equal(ValidationSeverity.Warning, message.Severity);
+        Assert.Equal("Orkeon:Tools:Browser:Profile", message.Path);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void A_full_folder_path_is_a_chromium_profile_when_the_folder_exists(bool exists, bool refused)
+    {
+        var folder = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "agents-profile"));
+        var json = $$"""{ "Orkeon": { "Tools": { "Browser": { "Engine": "chrome", "Profile": "{{folder.Replace("\\", "\\\\", StringComparison.Ordinal)}}" } } } }""";
+        var probe = exists ? new FakeDirectoryProbe(folder) : new FakeDirectoryProbe();
+
+        var messages = new AppSettingsValidator(probe).Validate(AppSettingsDocument.Parse(json))
+            .Where(m => m.Code == ValidationCodes.BrowserProfileRefused).ToList();
+
+        Assert.Equal(refused, messages.Count == 1);
+        if (refused)
+            Assert.Contains("does not exist", messages[0].Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Profile": "Work", "DeniedProfiles": [ "work" ] } } } }""", true)]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Profile": "work", "DeniedProfiles": "home; work " } } } }""", true)]
+    [InlineData("""{ "Orkeon": { "Tools": { "Firefox": { "Profile": "work", "DeniedProfiles": "work" } } } }""", true)]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Profile": "work", "DeniedProfiles": [ "home" ] } } } }""", false)]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "DeniedProfiles": [ "disposable" ] } } } }""", false)]
+    public void A_default_profile_the_host_forbids_is_a_warning_whatever_the_engine(string json, bool refused)
+    {
+        var messages = Validate(json).Where(m => m.Code == ValidationCodes.BrowserProfileRefused).ToList();
+
+        Assert.Equal(refused, messages.Count == 1);
+        if (refused)
+            Assert.Contains("DeniedProfiles", messages[0].Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Profile": { "Name": "x" } } } } }""")]
+    [InlineData("""{ "Orkeon": { "Tools": { "Browser": { "Profile": [ "x" ] } } } }""")]
+    public void A_profile_that_is_no_text_is_a_warning_since_the_run_starts_on_a_disposable_one(string json)
+    {
+        var message = Assert.Single(Validate(json), m => m.Path == "Orkeon:Tools:Browser:Profile");
+
+        Assert.Equal(ValidationCodes.InvalidFieldType, message.Code);
+        Assert.Equal(ValidationSeverity.Warning, message.Severity);
+        Assert.Null(AppSettingsDocument.Parse(json).BrowserTools.Profile);
+    }
+
+    [Fact]
+    public void The_lifetimes_are_the_runtimes()
+    {
+        Assert.Equal(Enum.GetNames<FirefoxBrowserLifetime>(), BrowserToolsSection.Lifetimes);
+        Assert.Equal(BrowserToolsSection.DefaultLifetime, nameof(FirefoxBrowserLifetime.Run));
+        Assert.Equal(BrowserToolsSection.DefaultLifetime, new FirefoxToolOptions().Lifetime.ToString());
+    }
+
+    public static TheoryData<string> Files => new()
+    {
+        """{ "Orkeon": { "Tools": { "Browser": { "Profile": " agents ", "Lifetime": "host", "SharedInstance": true } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Profile": "", "Lifetime": " ", "SharedInstance": "yes" } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "1" } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "bogus" } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "RUN", "SharedInstance": "False" } } } }""",
+        """{ "Orkeon": { "Tools": { "Firefox": { "Profile": "/p", "Lifetime": "Host", "SharedInstance": "true" } } } }""",
+        """{ "Orkeon": { "Tools": { "Firefox": { "Lifetime": "x" } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Profile": "DISPOSABLE", "Lifetime": true, "SharedInstance": 1 } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Lifetime": 0 } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Profile": {}, "Lifetime": {}, "SharedInstance": {} } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Profile": [ "p" ], "Lifetime": [ "Host" ], "SharedInstance": [ true ] } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "DeniedProfiles": "a, b;c" } } } }""",
+        """{ "Orkeon": { "Tools": { "Browser": { "Lifetime": "Host" }, "Firefox": { "Lifetime": "Run" } } } }""",
+    };
+
+    /// <summary>What the run reads, and refuses, is what Studio reads and calls an error.</summary>
+    [Theory]
+    [MemberData(nameof(Files))]
+    public void Studio_reads_the_profile_the_lifetime_and_the_sharing_the_run_reads(string json)
+    {
+        var document = AppSettingsDocument.Parse(json);
+        var browser = document.BrowserTools;
+        FirefoxToolOptions? read;
+        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(document.ToJson())))
+        {
+            try
+            {
+                read = FirefoxToolOptions.From(new ConfigurationBuilder().AddJsonStream(stream).Build());
+            }
+            catch (InvalidOperationException)
+            {
+                read = null;
+            }
+        }
+
+        var studioRefuses = Validate(json).Any(m => m.Code is ValidationCodes.BrowserLifetimeUnknown or ValidationCodes.BrowserSectionsBoth);
+        Assert.True((read is null) == studioRefuses, $"run refuses: {read is null}, Studio: {studioRefuses}, file: {json}");
+        if (read is null)
+            return;
+
+        Assert.Equal(read.Profile, browser.Profile);
+        Assert.Equal(read.Lifetime.ToString(), browser.EffectiveLifetime, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(read.SharedInstance, browser.SharedInstance ?? false);
+        Assert.Equal(read.DeniedProfiles.Order(StringComparer.Ordinal), browser.DeniedProfiles.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal));
     }
 }

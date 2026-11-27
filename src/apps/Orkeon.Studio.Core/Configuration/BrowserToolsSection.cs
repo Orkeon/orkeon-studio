@@ -4,8 +4,9 @@ namespace Orkeon.Studio.Core.Configuration;
 
 /// <summary>
 /// Typed view over <c>Orkeon:Tools:Browser</c>, the section of the <c>browser</c> tool (Orkeon #440):
-/// which browser the run drives (<see cref="Engine"/>) and whether it shows a window
-/// (<see cref="Headless"/>). Read by <c>AddOrkeonWebTools</c> in <c>Orkeon.Tools.Web</c>
+/// which browser the run drives (<see cref="Engine"/>), whether it shows a window
+/// (<see cref="Headless"/>), the profile it starts on (<see cref="Profile"/>), how long it lives
+/// (<see cref="Lifetime"/>) and whether the runs of a host share it (<see cref="SharedInstance"/>). Read by <c>AddOrkeonWebTools</c> in <c>Orkeon.Tools.Web</c>
 /// (<c>FirefoxToolOptions.BrowserSectionName</c>), which Studio does not reference, so the path is
 /// spelt here and pinned by a drift test.
 /// <para>
@@ -15,7 +16,7 @@ namespace Orkeon.Studio.Core.Configuration;
 /// keys and all, and the file never holds the two.
 /// </para>
 /// <para>
-/// The keys this view does not model (profiles, timeouts, lifetime...) are kept as written.
+/// The keys this view does not model (the allowed and denied profiles, the timeouts...) are kept as written.
 /// </para>
 /// </summary>
 public sealed class BrowserToolsSection
@@ -34,6 +35,21 @@ public sealed class BrowserToolsSection
 
     /// <summary>The engines the runtime knows, in the spelling it documents (it ignores the case).</summary>
     public static IReadOnlyList<string> Engines { get; } = [DefaultEngine, "chrome", "edge", "brave", SafariEngine];
+
+    /// <summary>The engines built on Chromium, which take a profile by the path of its folder alone.</summary>
+    public static IReadOnlyList<string> ChromiumEngines { get; } = ["chrome", "edge", "brave"];
+
+    /// <summary>The profile a browser starts on when none is named: a fresh folder, removed when it closes.</summary>
+    public const string DisposableProfile = "disposable";
+
+    /// <summary>The lifetime the runtime gives a browser when none is set: it closes with the run.</summary>
+    public const string DefaultLifetime = "Run";
+
+    /// <summary>The lifetime that keeps the browser open from one run of a host to the next.</summary>
+    public const string HostLifetime = "Host";
+
+    /// <summary>The lifetimes the runtime knows, in its spelling (it ignores the case and refuses any other).</summary>
+    public static IReadOnlyList<string> Lifetimes { get; } = [DefaultLifetime, HostLifetime];
 
     private readonly AppSettingsDocument _document;
 
@@ -75,7 +91,82 @@ public sealed class BrowserToolsSection
     /// The path of <c>Headless</c> the run reads: under <see cref="SectionPath"/>, or under a lone
     /// <see cref="LegacySectionPath"/>, whose keys but <c>Engine</c> the runtime still reads.
     /// </summary>
-    public string HeadlessPath => _document.PathAsWritten($"{(!Exists && LegacyExists ? LegacySectionPath : SectionPath)}:Headless");
+    public string HeadlessPath => KeyPath("Headless");
+
+    /// <summary>
+    /// The path of <paramref name="key"/> the run reads: under <see cref="SectionPath"/>, or under a
+    /// lone <see cref="LegacySectionPath"/>, whose keys but <c>Engine</c> the runtime still reads.
+    /// </summary>
+    public string KeyPath(string key) =>
+        _document.PathAsWritten($"{(!Exists && LegacyExists ? LegacySectionPath : SectionPath)}:{key}");
+
+    /// <summary>
+    /// The profile a browser starts on when the agent names none, as the run reads it, trimmed; null
+    /// when the key is absent or blank (<see cref="DisposableProfile"/>). Writing blank or
+    /// <see cref="DisposableProfile"/> removes the key.
+    /// </summary>
+    public string? Profile
+    {
+        get => _document.GetString(KeyPath("Profile")) is { } text && !string.IsNullOrWhiteSpace(text) ? text.Trim() : null;
+        set
+        {
+            var profile = NormalizeProfile(value);
+            if (!string.Equals(profile, Profile, StringComparison.Ordinal))
+                Write("Profile", profile is null ? null : JsonValue.Create(profile));
+        }
+    }
+
+    /// <summary>The profile <paramref name="text"/> writes: null for blank or <see cref="DisposableProfile"/>, else trimmed.</summary>
+    public static string? NormalizeProfile(string? text) =>
+        string.IsNullOrWhiteSpace(text) || string.Equals(text.Trim(), DisposableProfile, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : text.Trim();
+
+    /// <summary>
+    /// The lifetime as written, trimmed; null when the key is absent or blank, which the runtime reads
+    /// as <see cref="DefaultLifetime"/>. Writing blank or the default removes the key.
+    /// </summary>
+    public string? Lifetime
+    {
+        get => _document.GetString(KeyPath("Lifetime")) is { } text && !string.IsNullOrWhiteSpace(text) ? text.Trim() : null;
+        set
+        {
+            var lifetime = string.IsNullOrWhiteSpace(value) || string.Equals(value.Trim(), DefaultLifetime, StringComparison.OrdinalIgnoreCase)
+                ? null
+                : value.Trim();
+            if (!string.Equals(lifetime, Lifetime, StringComparison.Ordinal))
+                Write("Lifetime", lifetime is null ? null : JsonValue.Create(lifetime));
+        }
+    }
+
+    /// <summary>
+    /// The profiles no browser may start with (<c>DeniedProfiles</c>), as the run reads them: a list,
+    /// or one text holding names separated by commas or semicolons, each trimmed, blanks left out.
+    /// Read only: Studio does not edit the list.
+    /// </summary>
+    public IReadOnlyList<string> DeniedProfiles =>
+        _document.GetNode(KeyPath("DeniedProfiles")) switch
+        {
+            JsonArray array => [.. array.Select(AppSettingsDocument.ReadString).OfType<string>()
+                .Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim())],
+            JsonValue value when AppSettingsDocument.ReadString(value) is { } text =>
+                [.. text.Split([',', ';']).Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim())],
+            _ => [],
+        };
+
+    /// <summary>The lifetime the run gives the browser: <see cref="Lifetime"/>, else <see cref="DefaultLifetime"/>.</summary>
+    public string EffectiveLifetime => Lifetime ?? DefaultLifetime;
+
+    /// <summary>
+    /// Whether the runs of a host share one browser per profile, as the run reads it; null when the
+    /// key is absent or reads as no boolean, which the run takes as false. Writing false removes the
+    /// key, the runtime's default.
+    /// </summary>
+    public bool? SharedInstance
+    {
+        get => _document.GetBoolean(KeyPath("SharedInstance"));
+        set => Write("SharedInstance", value is true ? JsonValue.Create(true) : null);
+    }
 
     /// <summary>
     /// Whether the browser starts without a window, as the run reads it (<see cref="HeadlessPath"/>);

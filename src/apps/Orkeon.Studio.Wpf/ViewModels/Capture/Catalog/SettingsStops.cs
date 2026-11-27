@@ -154,8 +154,8 @@ internal static class SettingsStops
             Category = CaptureCategory.Settings,
             Screen = CaptureScreen.SettingsBrowser,
             Modes = CaptureModes.Expert,
-            Because = "The Browser section (expert, Orkeon #440): the engine picker and the headless "
-                    + "switch, as the seeded file leaves them.",
+            Because = "The Browser section (expert, Orkeon #440): the engine picker, the headless "
+                    + "switch, the profile and the keep-open and sharing switches, as the seeded file leaves them.",
         },
 
         new()
