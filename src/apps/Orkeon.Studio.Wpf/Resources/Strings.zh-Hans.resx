@@ -1543,6 +1543,10 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-URL" xml:space="preserve">
     <value>某个 HTTP MCP 服务器没有绝对的 http(s) URL。</value>
   </data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-ENGINE" xml:space="preserve"><value>浏览器节指定了运行时不认识的引擎：firefox、chrome、edge、brave 或 safari。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari 没有无窗口模式：运行会拒绝与之同时设置 Headless。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>文件同时包含 Orkeon:Tools:Browser 和其旧名称 Orkeon:Tools:Firefox：运行会拒绝两者同时存在。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>浏览器节仍使用旧名称 Orkeon:Tools:Firefox：目前仍会读取，应重命名为 Orkeon:Tools:Browser。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve">
     <value>某个 MCP 服务器的环境中含有明文机密；请改为在您的用户环境中设置。</value>
   </data>
@@ -1894,6 +1898,17 @@
   <data name="Studio.Settings.ShellReplace" xml:space="preserve">
     <value>完整替换默认列表，每行一条（留空则沿用默认）</value>
   </data>
+  <data name="Studio.Settings.ToolOnlyInAConversation" xml:space="preserve"><value>每次运行 YAML 团队都会注册，但只有在 orkeon-host 的对话（Discord、Microsoft Teams）中调用才有效：Studio 启动的团队持有它也无用</value></data>
+  <data name="Studio.Settings.TabBrowserHeadless" xml:space="preserve"><value>{0}，无窗口</value></data>
+  <data name="Studio.Settings.BrowserTitle" xml:space="preserve"><value>浏览器</value></data>
+  <data name="Studio.Settings.BrowserIntro" xml:space="preserve"><value>browser 工具所驱动的浏览器。它必须安装在运行团队的机器上：Studio 不附带浏览器。Chrome、Edge 和 Brave 无需驱动；Safari 仅在 macOS 上运行，需先执行 sudo safaridriver --enable，且始终带窗口。</value></data>
+  <data name="Studio.Settings.BrowserEngineLabel" xml:space="preserve"><value>引擎</value></data>
+  <data name="Studio.Settings.BrowserHeadless" xml:space="preserve"><value>无窗口（headless）</value></data>
+  <data name="Studio.Settings.BrowserHeadlessSafari" xml:space="preserve"><value>Safari 总是显示窗口。</value></data>
+  <data name="Studio.Settings.BrowserLegacy" xml:space="preserve"><value>此文件仍使用该节的旧名称 Orkeon:Tools:Firefox。运行仍会读取它；以后的 Orkeon 将不再读取。</value></data>
+  <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>重命名该节</value></data>
+  <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>此文件以两个名称设置了该节：Orkeon:Tools:Browser 及其旧名称 Orkeon:Tools:Firefox：运行会拒绝两者同时存在。运行应读取 Orkeon:Tools:Browser。</value></data>
+  <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>删除旧节</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve">
     <value>MCP 服务器</value>
   </data>

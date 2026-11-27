@@ -44,6 +44,7 @@ public sealed class AppSettingsDocument
         LlmLogging = new LlmLoggingSection(this);
         Mcp = new McpSection(this);
         ShellTools = new ShellToolsSection(this);
+        BrowserTools = new BrowserToolsSection(this);
         Email = new EmailSection(this);
         Drive = new DriveSection(this);
         Chat = new ChatSection(this);
@@ -82,6 +83,9 @@ public sealed class AppSettingsDocument
 
     /// <summary>Typed view over the <c>Orkeon:Tools:Shell</c> section (STUDIO-21).</summary>
     public ShellToolsSection ShellTools { get; }
+
+    /// <summary>Typed view over the <c>Orkeon:Tools:Browser</c> section (Orkeon #440).</summary>
+    public BrowserToolsSection BrowserTools { get; }
 
     /// <summary>Typed view over the <c>Orkeon:Tools:Email</c> section (STUDIO-65).</summary>
     public EmailSection Email { get; }

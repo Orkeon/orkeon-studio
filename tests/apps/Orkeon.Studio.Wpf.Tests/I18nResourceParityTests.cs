@@ -223,9 +223,11 @@ public sealed partial class I18nResourceParityTests
         // pure format pattern, no words in it (the same floor), measured, not above it.
         // Chat family: raised by two for the product name « Microsoft Teams », the tab and the family
         // of tools, which no language rewrites (the same floor), measured, not above it.
+        // Orkeon #440: de raised by two for the browser tab, « Browser » and « Engine », real German
+        // words (the same floor as « Engine » above), measured, not above it.
         ["Strings.fr.resx"] = 67,
         ["Strings.es.resx"] = 49,
-        ["Strings.de.resx"] = 54,
+        ["Strings.de.resx"] = 56,
         ["Strings.zh-Hans.resx"] = 39,
     };
 

@@ -64,7 +64,9 @@ public sealed class ToolsSettingsViewModelTests
             Assert.Single(search.Requirements, r => r.Name == "rag_eval").Text);
 
         var web = Assert.Single(tools.Families, f => f.Key == ToolCatalog.WebFamily);
-        var imageGeneration = Assert.Single(web.Requirements);
+        Assert.Equal(["image_generation", "browser"], web.Requirements.Select(r => r.Name));
+        Assert.Equal("expert setting below: Orkeon:Tools:Browser", Assert.Single(web.Requirements, r => r.Name == "browser").Text);
+        var imageGeneration = web.Requirements[0];
         Assert.Equal("image_generation", imageGeneration.Name);
         Assert.Equal($"needs the key {ToolCatalog.OpenAiImageKeyEnv}, above", imageGeneration.Text);
         Assert.True(imageGeneration.IsKey);
@@ -97,7 +99,11 @@ public sealed class ToolsSettingsViewModelTests
         var collaboration = Assert.Single(tools.Families, f => f.Key == ToolCatalog.CollaborationFamily);
         Assert.Equal(
             "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
-            Assert.Single(collaboration.Requirements).Text);
+            Assert.Single(collaboration.Requirements, r => r.Name == "spawn_agent").Text);
+        Assert.Equal(
+            "registered by every run of a YAML team, but a call works only in a conversation of orkeon-host (Discord, Microsoft Teams): a team Studio launches holds it for nothing",
+            Assert.Single(collaboration.Requirements, r => r.Name == "chat_attach").Text);
+        Assert.Equal(2, collaboration.Requirements.Count);
 
         var events = Assert.Single(tools.Families, f => f.Key == ToolCatalog.EventsFamily);
         Assert.False(events.HasRequirements);

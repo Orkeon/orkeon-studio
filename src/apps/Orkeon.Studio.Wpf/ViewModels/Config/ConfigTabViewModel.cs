@@ -69,6 +69,7 @@ public sealed class ConfigTabViewModel : ObservableObject
         Compaction = new CompactionSectionViewModel(() => _document, MarkDirty);
         Skills = new SkillsSectionViewModel(() => _document, MarkDirty);
         ShellTools = new ShellToolsSectionViewModel(() => _document, MarkDirty);
+        BrowserTools = new BrowserToolsSectionViewModel(() => _document, MarkDirty);
         Mcp = new McpSectionViewModel(() => _document, MarkDirty, _strings);
         // The decision models: their keys go to the store of the model keys, never to the document.
         Decision = new DecisionSectionViewModel(() => _document, MarkDirty, _strings, seams.KeyStore);
@@ -247,6 +248,9 @@ public sealed class ConfigTabViewModel : ObservableObject
     /// <summary>The <c>Orkeon:Tools:Shell</c> form of the Tools tab (STUDIO-21).</summary>
     public ShellToolsSectionViewModel ShellTools { get; }
 
+    /// <summary>The <c>Orkeon:Tools:Browser</c> form of the Browser tab (Orkeon #440).</summary>
+    public BrowserToolsSectionViewModel BrowserTools { get; }
+
     /// <summary>The <c>MCP</c> form of the MCP tab (STUDIO-21).</summary>
     public McpSectionViewModel Mcp { get; }
 
@@ -404,6 +408,7 @@ public sealed class ConfigTabViewModel : ObservableObject
         ToolBridge.Refresh();
         BridgeServer.Refresh();
         ShellTools.Refresh();
+        BrowserTools.Refresh();
         Mcp.Refresh();
         Decision.Refresh();
         Email.Refresh();

@@ -51,6 +51,9 @@ internal enum CaptureScreen
     /// <summary>Settings, the shell commands section of the Access group (expert).</summary>
     SettingsShell,
 
+    /// <summary>Settings, the browser section of the Access group (expert).</summary>
+    SettingsBrowser,
+
     /// <summary>Settings, on the e-mail tab (STUDIO-67): both modes, the expert sees every field.</summary>
     SettingsEmail,
 
@@ -155,6 +158,6 @@ internal static class CaptureReachability
 {
     /// <summary>True when <paramref name="screen"/> can be reached in <paramref name="mode"/>.</summary>
     public static bool IsReachableIn(CaptureScreen screen, CaptureModes mode) =>
-        screen is not (CaptureScreen.Test or CaptureScreen.SettingsRag or CaptureScreen.SettingsLimits or CaptureScreen.SettingsJson or CaptureScreen.SettingsMcp or CaptureScreen.SettingsShell)
+        screen is not (CaptureScreen.Test or CaptureScreen.SettingsRag or CaptureScreen.SettingsLimits or CaptureScreen.SettingsJson or CaptureScreen.SettingsMcp or CaptureScreen.SettingsShell or CaptureScreen.SettingsBrowser)
         || mode == CaptureModes.Expert;
 }

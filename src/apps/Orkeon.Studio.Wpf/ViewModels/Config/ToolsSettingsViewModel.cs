@@ -170,6 +170,7 @@ public sealed class ToolRequirementViewModel : ObservableObject
         ToolRequirement.OnlyWithDecisionProvider => _strings[StudioStringKeys.ToolOnlyWithDecisionProvider],
         ToolRequirement.OnlyWithCognitiveMemory => Format(StudioStringKeys.ToolOnlyWithCognitiveMemory),
         ToolRequirement.ScriptOnly => _strings[StudioStringKeys.ToolScriptOnly],
+        ToolRequirement.OnlyInAConversation => _strings[StudioStringKeys.ToolOnlyInAConversation],
         _ => "",
     };
 

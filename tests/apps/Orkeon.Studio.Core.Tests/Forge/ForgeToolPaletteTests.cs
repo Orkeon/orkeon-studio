@@ -42,7 +42,18 @@ public sealed partial class ForgeToolPaletteTests
         Assert.DoesNotContain("semantic_search", offered);
         Assert.DoesNotContain("ask_question_to_coworker", offered);
         Assert.DoesNotContain("delegate_work_to_coworker", offered);
+        Assert.DoesNotContain("chat_attach", offered);
         Assert.Equal(offered.Count, offered.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void A_tool_that_works_only_in_a_conversation_is_never_offered()
+    {
+        var offered = ForgeToolPalette.For(Blueprint).Families.SelectMany(family => family.Tools).ToHashSet(StringComparer.Ordinal);
+        var conversational = ToolCatalog.All.Where(t => t.Requirement == ToolRequirement.OnlyInAConversation).Select(t => t.Name).ToList();
+
+        Assert.NotEmpty(conversational);
+        Assert.All(conversational, name => Assert.DoesNotContain(name, offered));
     }
 
     [Fact]
@@ -69,7 +80,8 @@ public sealed partial class ForgeToolPaletteTests
     /// The tools outside the forge's host are the engine's facts: the extensions <c>orkeon run</c>
     /// composes its host with and the forge's host leaves out (<c>RunnerHost.Build</c>, then
     /// <c>ForgeCommand.AddEngineServices</c> and <c>RunCommand.AddCliRagServices</c>) are exactly
-    /// <c>AddOrkeonHumanInput</c> and <c>AddSemanticSearchTool</c>, each registering one tool, and the
+    /// <c>AddOrkeonChatAttach</c>, <c>AddOrkeonHumanInput</c> and <c>AddSemanticSearchTool</c>, each
+    /// registering one tool, and the
     /// coworker tools are built per agent, never registered. A registration either host gains or
     /// loses fails here rather than be offered and refused, or withheld for nothing.
     /// </summary>
@@ -95,17 +107,20 @@ public sealed partial class ForgeToolPaletteTests
         Assert.Contains("AddCliRagServices(services)", forgeSources[2], StringComparison.Ordinal);
 
         var runOnly = Extensions(runSources).Except(Extensions(forgeSources), StringComparer.Ordinal).Order(StringComparer.Ordinal);
-        Assert.Equal(["AddOrkeonHumanInput", "AddSemanticSearchTool"], runOnly);
+        Assert.Equal(["AddOrkeonChatAttach", "AddOrkeonHumanInput", "AddSemanticSearchTool"], runOnly);
         Assert.All(runSources, source => Assert.DoesNotMatch(DirectToolRegistration(), source));
 
         var humanInput = File.ReadAllText(Path.Combine(infrastructure, "DependencyInjection", "HumanInputExtensions.cs"));
         var semanticSearch = File.ReadAllText(Path.Combine(hosting, "SemanticSearchToolExtensions.cs"));
+        var chatAttach = File.ReadAllText(Path.Combine(hosting, "Conversations", "ChatAttachTool.cs"));
         Assert.Equal(["HumanInputTool"], RegisteredTools(humanInput).Distinct(StringComparer.Ordinal));
         Assert.Equal(["SearchTool"], RegisteredTools(semanticSearch));
+        Assert.Equal(["ChatAttachTool"], RegisteredTools(chatAttach));
         var registered = new[]
         {
             ContractName(Path.Combine(infrastructure, "Tools", "HumanInput", "HumanInputTool.cs")),
             ContractName(Path.Combine(infrastructure, "Tools", "Search", "SearchTool.cs")),
+            ContractName(Path.Combine(hosting, "Conversations", "ChatAttachTool.cs")),
         };
 
         var delegation = File.ReadAllText(Path.Combine(infrastructure, "Agent", "AgentDelegationToolsProvider.cs"));

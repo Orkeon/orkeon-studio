@@ -71,7 +71,7 @@ public sealed record CrewDeliverableWithoutWriter(string Task, IReadOnlyList<str
 /// Studio's catalogue does not carry (an MCP server's, a plugin's, a script's: it may write, for all
 /// Studio can tell), or a built-in tool that writes that file (<c>DeliverableToolCheck.CanWrite</c>, read
 /// from the engine, not copied): the tool of the file's format (<c>docx_writer</c> a <c>.docx</c>,
-/// <c>xlsx_writer</c> a <c>.xlsx</c>, <c>image_generation</c> an image, <c>firefox</c> a <c>.png</c>), and
+/// <c>xlsx_writer</c> a <c>.xlsx</c>, <c>image_generation</c> an image, <c>browser</c> - or its former name <c>firefox</c> - a <c>.png</c>), and
 /// <c>file_write</c> for a text file only. The editors (<c>edit_file</c>, <c>edit_batch</c>,
 /// <c>structural_rewrite</c>), the downloaders and <c>shell_command</c> do not count. The engine judges a
 /// tool by its assembly, which the YAML does not tell: a plugin whose assembly is named <c>Orkeon.*</c>
@@ -95,7 +95,7 @@ public static class CrewDeliverableWriters
     /// them may write a file for all Studio can tell.
     /// </summary>
     private static readonly HashSet<string> KnownTools =
-        new(Tools.ToolCatalog.All.Select(tool => tool.Name), StringComparer.OrdinalIgnoreCase);
+        new(Tools.ToolCatalog.All.Select(tool => tool.Name).Concat(Tools.ToolCatalog.DeprecatedNames), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The tasks of the crew <paramref name="target"/> runs whose deliverable may not be written, in the

@@ -252,6 +252,21 @@ public static class ValidationCodes
     /// <summary>An MCP server names a transport the runtime does not know.</summary>
     public const string McpTransportUnknown = "STUDIO-MCP-TRANSPORT";
 
+    /// <summary>The browser tool names an engine the runtime does not know (Orkeon #440): the run refuses to start.</summary>
+    public const string BrowserEngineUnknown = "STUDIO-BROWSER-ENGINE";
+
+    /// <summary>The browser tool asks Safari to run headless, which it cannot (Orkeon #444): the run refuses to start.</summary>
+    public const string BrowserSafariHeadless = "STUDIO-BROWSER-SAFARI-HEADLESS";
+
+    /// <summary>
+    /// The browser tool's settings are under both <c>Orkeon:Tools:Browser</c> and the former
+    /// <c>Orkeon:Tools:Firefox</c>: the run refuses to start.
+    /// </summary>
+    public const string BrowserSectionsBoth = "STUDIO-BROWSER-SECTIONS";
+
+    /// <summary>The browser tool's settings are under the former <c>Orkeon:Tools:Firefox</c> alone: read, but deprecated.</summary>
+    public const string BrowserSectionLegacy = "STUDIO-BROWSER-LEGACY";
+
     /// <summary>A stdio MCP server has no command to launch.</summary>
     public const string McpCommandMissing = "STUDIO-MCP-COMMAND";
 

@@ -20,10 +20,11 @@ public sealed class SectionScreenLayoutTests
     private const int Decision = 3;
     private const int Context = 4;
     private const int Bridge = 5;
-    private const int Mounts = 6;
-    private const int Logging = 7;
-    private const int LlmLogging = 8;
-    private const int SectionCount = 10;
+    private const int Browser = 6;
+    private const int Mounts = 7;
+    private const int Logging = 8;
+    private const int LlmLogging = 9;
+    private const int SectionCount = 11;
 
     // Where each widget sits. A text that wraps keeps the height of the pass before a resize (Terminal.Gui
     // sizes it against the width it had), so its height says nothing of the screen's layout: left out.
@@ -182,7 +183,7 @@ public sealed class SectionScreenLayoutTests
 
     /// <summary>
     /// On every screen that is a form (the LLM, the rate limiting, the RAG, the decision models, the
-    /// context, the bridge, the LLM logging), in a terminal of 80 columns as in a wider one: no widget
+    /// context, the bridge, the browser, the LLM logging), in a terminal of 80 columns as in a wider one: no widget
     /// lies over another (a note that wraps, or a caption wider than its column, would lie over a
     /// field), and no line of one row is cut, nor an item of a list, nor the caption of a switch.
     /// </summary>
@@ -201,6 +202,8 @@ public sealed class SectionScreenLayoutTests
     [InlineData(Decision, 100, 30)]
     [InlineData(Context, 100, 30)]
     [InlineData(Bridge, 100, 30)]
+    [InlineData(Browser, 80, 24)]
+    [InlineData(Browser, 100, 30)]
     public void No_text_runs_into_another_row_and_no_line_is_cut(int section, int columns, int rows)
     {
         using var editor = new HeadlessEditor(columns, rows, section);

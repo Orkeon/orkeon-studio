@@ -604,6 +604,10 @@
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-TRANSPORT" xml:space="preserve"><value>An MCP server names a transport the runtime does not know.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-COMMAND" xml:space="preserve"><value>A stdio MCP server names no command to launch.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-URL" xml:space="preserve"><value>An HTTP MCP server has no absolute http(s) URL.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-ENGINE" xml:space="preserve"><value>The browser section names an engine the runtime does not know: firefox, chrome, edge, brave or safari.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari has no headless mode: the run refuses Headless with it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>The file holds both Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>The browser section still has its former name, Orkeon:Tools:Firefox: read today, to be renamed Orkeon:Tools:Browser.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve"><value>An MCP server's environment carries a secret in clear text; set it in your user environment instead.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-NAME" xml:space="preserve"><value>An e-mail account name is unusable: letters, digits, '.', '_' and '-' only, 64 characters at most. The run sets the account aside.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-DUPLICATE" xml:space="preserve"><value>Two e-mail accounts carry the same name but for the case: the run reads them as one, or cannot read the file at all. Rename one.</value></data>
@@ -759,6 +763,17 @@
   <data name="Studio.Settings.ShellAllowInterpretersHint" xml:space="preserve"><value>For the agents this is remote code execution: leave it off unless a team needs it.</value></data>
   <data name="Studio.Settings.ShellExtra" xml:space="preserve"><value>Commands added to the defaults, one per line</value></data>
   <data name="Studio.Settings.ShellReplace" xml:space="preserve"><value>Full replacement of the default list, one per line (empty: the defaults apply)</value></data>
+  <data name="Studio.Settings.ToolOnlyInAConversation" xml:space="preserve"><value>registered by every run of a YAML team, but a call works only in a conversation of orkeon-host (Discord, Microsoft Teams): a team Studio launches holds it for nothing</value></data>
+  <data name="Studio.Settings.TabBrowserHeadless" xml:space="preserve"><value>{0}, without a window</value></data>
+  <data name="Studio.Settings.BrowserTitle" xml:space="preserve"><value>Browser</value></data>
+  <data name="Studio.Settings.BrowserIntro" xml:space="preserve"><value>The browser the browser tool drives. It must be installed on the machine that runs the team: Studio does not ship it. Chrome, Edge and Brave need no driver; Safari runs on macOS alone, once sudo safaridriver --enable has been run, and always with a window.</value></data>
+  <data name="Studio.Settings.BrowserEngineLabel" xml:space="preserve"><value>Engine</value></data>
+  <data name="Studio.Settings.BrowserHeadless" xml:space="preserve"><value>Without a window (headless)</value></data>
+  <data name="Studio.Settings.BrowserHeadlessSafari" xml:space="preserve"><value>Safari always shows its window.</value></data>
+  <data name="Studio.Settings.BrowserLegacy" xml:space="preserve"><value>This file still names the section Orkeon:Tools:Firefox, its former name. The run reads it; a later Orkeon will not.</value></data>
+  <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Rename the section</value></data>
+  <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>This file sets the section under both names, Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together. The run is to read Orkeon:Tools:Browser.</value></data>
+  <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Remove the former section</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve"><value>MCP servers</value></data>
   <data name="Studio.Settings.McpIntro" xml:space="preserve"><value>The servers a run connects before the team starts; their tools join the catalogue under their own names. Experimental: the servers are launched at every run.</value></data>
   <data name="Studio.Settings.McpEnabled" xml:space="preserve"><value>Connect the declared servers</value></data>

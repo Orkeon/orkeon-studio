@@ -90,6 +90,9 @@ internal sealed class ConfigEditorModel
     /// <summary>The tool bridge form: <c>Orkeon:Tools:Bridge</c> and <c>Orkeon:Bridge</c>.</summary>
     public BridgeForm Bridge { get; } = new();
 
+    /// <summary>The <c>Orkeon:Tools:Browser</c> form: the engine of the browser tool.</summary>
+    public BrowserForm Browser { get; } = new();
+
     /// <summary>The <c>Logging:LogLevel</c> form.</summary>
     public LoggingForm Logging { get; } = new();
 
@@ -106,7 +109,7 @@ internal sealed class ConfigEditorModel
     public ILlmEndpointProbe LlmProbe => _llmProbe;
 
     /// <summary>The section forms, in navigation order.</summary>
-    public IReadOnlyList<ISettingsForm> Forms => [Llm, RateLimiting, Rag, Decision, Context, Bridge, Logging, LlmLogging];
+    public IReadOnlyList<ISettingsForm> Forms => [Llm, RateLimiting, Rag, Decision, Context, Bridge, Browser, Logging, LlmLogging];
 
     /// <summary>The document as it would be written — the raw, read-only view.</summary>
     public string RawJson => Document.ToJson();

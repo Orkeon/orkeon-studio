@@ -49,6 +49,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>The shell allow-list, expert only, a section of the Access group of its own.</summary>
     public const string ShellTab = "shell";
 
+    /// <summary>The browser the <c>browser</c> tool drives (expert, Orkeon #440), a section of the Access group of its own.</summary>
+    public const string BrowserTab = "browser";
+
     /// <summary>The MCP servers a run connects (expert, STUDIO-21).</summary>
     public const string McpTab = "mcp";
 
@@ -159,6 +162,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         ShowToolsCommand = new RelayCommand(() => ActiveTab = ToolsTab);
         ShowToolKeysCommand = new RelayCommand(() => ActiveTab = ToolKeysTab);
         ShowShellCommand = new RelayCommand(() => ActiveTab = ShellTab);
+        ShowBrowserCommand = new RelayCommand(() => ActiveTab = BrowserTab);
         ShowMcpCommand = new RelayCommand(() => ActiveTab = McpTab);
         ShowStudioCommand = new RelayCommand(() => ActiveTab = StudioTab);
         ShowMailsCommand = new RelayCommand(() => ActiveTab = MailsTab);
@@ -263,8 +267,8 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         get => _activeTab;
         set
         {
-            var requested = value is RagTab or KeysTab or DecisionTab or SandboxTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or McpTab or StudioTab or MailsTab or DriveTab or ChatTab ? value : ModelTab;
-            if (_mode.IsNovice && requested is RagTab or LimitsTab or JsonTab or McpTab or ShellTab)
+            var requested = value is RagTab or KeysTab or DecisionTab or SandboxTab or FoldersTab or LimitsTab or JsonTab or ToolsTab or ToolKeysTab or ShellTab or BrowserTab or McpTab or StudioTab or MailsTab or DriveTab or ChatTab ? value : ModelTab;
+            if (_mode.IsNovice && requested is RagTab or LimitsTab or JsonTab or McpTab or ShellTab or BrowserTab)
                 requested = ModelTab;
 
             var wasMails = IsMailsTab;
@@ -275,7 +279,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
             {
                 OnPropertiesChanged(
                     nameof(IsModelTab), nameof(IsRagTab), nameof(IsKeysTab), nameof(IsDecisionTab), nameof(IsSandboxTab), nameof(IsFoldersTab), nameof(IsLimitsTab), nameof(IsJsonTab),
-                    nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab), nameof(IsChatTab));
+                    nameof(IsToolsTab), nameof(IsToolKeysTab), nameof(IsShellTab), nameof(IsBrowserTab), nameof(IsMcpTab), nameof(IsStudioTab), nameof(IsMailsTab), nameof(IsDriveTab), nameof(IsChatTab));
                 // The classeur selects a tab through ActiveTab itself, not through its command.
                 if (IsFoldersTab)
                     TeamFolders.Refresh();
@@ -341,6 +345,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>Whether the shell commands section is the one shown.</summary>
     public bool IsShellTab => _activeTab == ShellTab;
 
+    /// <summary>Whether the browser section is the one shown.</summary>
+    public bool IsBrowserTab => _activeTab == BrowserTab;
+
     /// <summary>True while the expert MCP tab shows.</summary>
     public bool IsMcpTab => _activeTab == McpTab;
 
@@ -395,6 +402,9 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
     /// <summary>Shows the shell commands section (expert).</summary>
     public RelayCommand ShowShellCommand { get; }
 
+    /// <summary>Shows the browser section (expert).</summary>
+    public RelayCommand ShowBrowserCommand { get; }
+
     /// <summary>Shows the MCP tab.</summary>
     public RelayCommand ShowMcpCommand { get; }
 
@@ -445,7 +455,7 @@ public sealed partial class SettingsScreenViewModel : ObservableObject
         Config.Email.IsExpert = _mode.IsExpert;
         Config.Drive.IsExpert = _mode.IsExpert;
         Config.Chat.IsExpert = _mode.IsExpert;
-        if (_mode.IsNovice && (IsRagTab || IsLimitsTab || IsJsonTab || IsMcpTab || IsShellTab))
+        if (_mode.IsNovice && (IsRagTab || IsLimitsTab || IsJsonTab || IsMcpTab || IsShellTab || IsBrowserTab))
             ActiveTab = ModelTab;
     }
 }

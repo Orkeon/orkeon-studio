@@ -150,6 +150,16 @@ internal static class SettingsStops
 
         new()
         {
+            Name = "reglages-navigateur",
+            Category = CaptureCategory.Settings,
+            Screen = CaptureScreen.SettingsBrowser,
+            Modes = CaptureModes.Expert,
+            Because = "The Browser section (expert, Orkeon #440): the engine picker and the headless "
+                    + "switch, as the seeded file leaves them.",
+        },
+
+        new()
+        {
             Name = "reglages-mails-vide",
             Category = CaptureCategory.Settings,
             Screen = CaptureScreen.SettingsEmail,

@@ -2015,6 +2015,9 @@ public static class StudioStringKeys
     /// <summary>"offered only in the act of a script agent (.ork.ts); ..."</summary>
     public const string ToolScriptOnly = "Studio.Settings.ToolScriptOnly";
 
+    /// <summary>"registered by every run of a YAML team, but a call works only in a conversation of orkeon-host ..."</summary>
+    public const string ToolOnlyInAConversation = "Studio.Settings.ToolOnlyInAConversation";
+
     /// <summary>"{0} tools, nothing to configure"</summary>
     public const string ToolFamilyQuietPattern = "Studio.Settings.ToolFamilyQuietPattern";
 
@@ -2899,6 +2902,7 @@ public static class StudioStringKeys
     public const string SettingsTabShellDefault = "Studio.Settings.TabShellDefault";
     public const string SettingsTabShellReplaced = "Studio.Settings.TabShellReplaced";
     public const string SettingsTabShellExtra = "Studio.Settings.TabShellExtra";
+    public const string SettingsTabBrowserHeadless = "Studio.Settings.TabBrowserHeadless";
     public const string SettingsTabAccountsCount = "Studio.Settings.TabAccountsCount";
     public const string SettingsTabAccountsEmpty = "Studio.Settings.TabAccountsEmpty";
     public const string SettingsTabMcpCount = "Studio.Settings.TabMcpCount";
@@ -4144,6 +4148,10 @@ public sealed class EnglishStudioStrings : IStudioStrings
         ["Studio.Diagnostics.Code.STUDIO-MCP-TRANSPORT"] = "An MCP server names a transport the runtime does not know.",
         ["Studio.Diagnostics.Code.STUDIO-MCP-COMMAND"] = "A stdio MCP server names no command to launch.",
         ["Studio.Diagnostics.Code.STUDIO-MCP-URL"] = "An HTTP MCP server has no absolute http(s) URL.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-ENGINE"] = "The browser section names an engine the runtime does not know: firefox, chrome, edge, brave or safari.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS"] = "Safari has no headless mode: the run refuses Headless with it.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS"] = "The file holds both Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together.",
+        ["Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY"] = "The browser section still has its former name, Orkeon:Tools:Firefox: read today, to be renamed Orkeon:Tools:Browser.",
         ["Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET"] = "An MCP server's environment carries a secret in clear text; set it in your user environment instead.",
         ["Studio.Diagnostics.Code.STUDIO-MAIL-NAME"] = "An e-mail account name is unusable: letters, digits, '.', '_' and '-' only, 64 characters at most. The run sets the account aside.",
         ["Studio.Diagnostics.Code.STUDIO-MAIL-DUPLICATE"] = "Two e-mail accounts carry the same name but for the case: the run reads them as one, or cannot read the file at all. Rename one.",
@@ -4570,6 +4578,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.ToolOnlyWithDecisionProvider] = "present only once a decision provider is set in the Decision models tab: the key TYPESAFE_API_KEY or LIQUID_API_KEY, or Orkeon:Decision:Provider, or an Orkeon:TypeSafe or Orkeon:Liquid section in the settings file; without the key of TypeSafe or Liquid, the engine turns the decision models off and withholds the tool",
         [StudioStringKeys.ToolOnlyWithCognitiveMemory] = "present only with {0} written by hand in the settings file, and held only by a team with memory: true",
         [StudioStringKeys.ToolScriptOnly] = "offered only in the act of a script agent (.ork.ts); a YAML team, as Studio writes them, cannot list it",
+        [StudioStringKeys.ToolOnlyInAConversation] = "registered by every run of a YAML team, but a call works only in a conversation of orkeon-host (Discord, Microsoft Teams): a team Studio launches holds it for nothing",
         [StudioStringKeys.ToolFamilyQuietPattern] = "{0} tools, nothing to configure",
         [StudioStringKeys.McpProblemId] = "An identifier is required: letters, digits, '.', '_' and '-'.",
         [StudioStringKeys.McpProblemCommand] = "A stdio server needs a command to launch.",
@@ -4899,6 +4908,7 @@ public sealed class EnglishStudioStrings : IStudioStrings
         [StudioStringKeys.SettingsTabShellDefault] = "Default list",
         [StudioStringKeys.SettingsTabShellReplaced] = "Replaced list",
         [StudioStringKeys.SettingsTabShellExtra] = "{0} {0:plural:command|commands} added",
+        [StudioStringKeys.SettingsTabBrowserHeadless] = "{0}, without a window",
         [StudioStringKeys.SettingsTabAccountsCount] = "{0} {0:plural:account|accounts}",
         [StudioStringKeys.SettingsTabAccountsEmpty] = "No account",
         [StudioStringKeys.SettingsTabMcpCount] = "{0} {0:plural:server|servers}",

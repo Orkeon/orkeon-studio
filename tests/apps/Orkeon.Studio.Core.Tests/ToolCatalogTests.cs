@@ -22,14 +22,14 @@ namespace Orkeon.Studio.Core.Tests;
 public sealed partial class ToolCatalogTests
 {
     /// <summary>
-    /// The <c>orkeon run</c> column, counted by hand from the matrix: Web core 6 (firefox joined), search 8
+    /// The <c>orkeon run</c> column, counted by hand from the matrix: Web core 6 (browser, firefox before Orkeon #440), search 8
     /// (web_search, brave_search, cache_search, semantic_search, local_embed_text and the three RAG tools),
     /// files 8, data 22, e-mail 13 (the twelve account tools and email_parser, which left the files
-    /// family), drive 11, shell_command, session 7 (the six session tools and memory_recall), EventHub 7,
-    /// Analysis 29, collaboration 4 (human_input, the two per-agent coworker tools, spawn_agent),
+    /// family), drive 11, chat 10, shell_command, session 7 (the six session tools and memory_recall), EventHub 7,
+    /// Analysis 29, collaboration 5 (human_input, the two per-agent coworker tools, spawn_agent, chat_attach),
     /// system_one_decide, mcp_prompt_get, list_mounts.
     /// </summary>
-    private const int ToolsARunExposes = 129;
+    private const int ToolsARunExposes = 130;
 
     /// <summary>The one e-mail tool that works on a file rather than on an account.</summary>
     private const string EmailParser = "email_parser";
@@ -243,13 +243,27 @@ public sealed partial class ToolCatalogTests
     }
 
     [Fact]
-    public void The_expert_setting_names_the_shell_section_the_runtime_reads()
+    public void The_expert_settings_name_the_shell_and_browser_sections_the_runtime_reads()
     {
-        var shell = Assert.Single(ToolCatalog.All, t => t.Requirement == ToolRequirement.ExpertSetting);
+        var expert = ToolCatalog.All.Where(t => t.Requirement == ToolRequirement.ExpertSetting).ToList();
 
-        Assert.Equal("shell_command", shell.Name);
-        Assert.Equal(ShellToolsSection.SectionPath, shell.Argument);
+        Assert.Equal(["browser", "shell_command"], expert.Select(t => t.Name).Order(StringComparer.Ordinal));
+        Assert.Equal(ShellToolsSection.SectionPath, Assert.Single(expert, t => t.Name == "shell_command").Argument);
         Assert.Equal("Orkeon:Tools:Shell", ShellToolsSection.SectionPath);
+        Assert.Equal(BrowserToolsSection.SectionPath, Assert.Single(expert, t => t.Name == "browser").Argument);
+        Assert.Equal("Orkeon:Tools:Browser", BrowserToolsSection.SectionPath);
+    }
+
+    /// <summary>
+    /// chat_attach is registered by every run of a YAML crew (Orkeon.Hosting) but answers only inside a conversation
+    /// of orkeon-host: the catalogue says so, and keeps the former name of browser out of sight.
+    /// </summary>
+    [Fact]
+    public void Chat_attach_works_only_in_a_conversation_and_firefox_is_a_deprecated_name()
+    {
+        Assert.Equal(ToolRequirement.OnlyInAConversation, Assert.Single(ToolCatalog.All, t => t.Name == "chat_attach").Requirement);
+        Assert.Equal(["firefox"], ToolCatalog.DeprecatedNames);
+        Assert.DoesNotContain(ToolCatalog.All, t => t.Name == "firefox");
     }
 
     /// <summary>

@@ -141,6 +141,7 @@ public sealed class AppSettingsValidator
         ValidateRagLlmProfile(document, messages);
         ValidateMounts(document, messages);
         ValidateMcp(document, messages);
+        ValidateBrowser(document, messages);
         ValidateEmail(document, messages);
         ValidateDrive(document, messages);
         ValidateChat(document, messages);
@@ -469,6 +470,60 @@ public sealed class AppSettingsValidator
                 string.Create(CultureInfo.InvariantCulture,
                     $"'{name}' of MCP server '{id}' is written in clear text in this file. The server process inherits your user environment: set the variable there and leave it out of the file."),
                 $"{path}:Env:{name}"));
+        }
+    }
+
+    /// <summary>
+    /// The browser tool's section as the engine judges it at start (<c>FirefoxToolOptions</c>, Orkeon #440):
+    /// both sections at once, an unknown engine, and Safari asked to run headless are refused; the former
+    /// section alone is read, and said to be deprecated. <c>Engine</c> is not read in the former section.
+    /// </summary>
+    private static void ValidateBrowser(AppSettingsDocument document, List<ValidationMessage> messages)
+    {
+        var browser = document.BrowserTools;
+        if (browser.BothSet)
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.BrowserSectionsBoth,
+                $"The browser tool is set under both {BrowserToolsSection.SectionPath} and {BrowserToolsSection.LegacySectionPath}, which the run refuses. Move the keys of {BrowserToolsSection.LegacySectionPath} into {BrowserToolsSection.SectionPath}.",
+                BrowserToolsSection.LegacySectionPath));
+        }
+        else if (browser.LegacyExists && !browser.Exists)
+        {
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.BrowserSectionLegacy,
+                $"{BrowserToolsSection.LegacySectionPath} is the former name of {BrowserToolsSection.SectionPath}: the run still reads it, but a later Orkeon will not. Rename the section.",
+                BrowserToolsSection.LegacySectionPath));
+        }
+
+        // The run reads Headless leniently: a value that is no boolean is ignored, and the window shown.
+        var headlessPath = browser.HeadlessPath;
+        if (document.GetNode(headlessPath) is not null && document.GetBoolean(headlessPath) is null)
+        {
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.InvalidFieldType,
+                $"'{headlessPath}' must be true or false: the run ignores this value and shows the window.",
+                headlessPath));
+        }
+
+        if (!browser.Exists)
+            return;
+
+        var engine = browser.EffectiveEngine;
+        if (!BrowserToolsSection.Engines.Contains(engine, StringComparer.OrdinalIgnoreCase))
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.BrowserEngineUnknown,
+                string.Create(CultureInfo.InvariantCulture,
+                    $"Unknown browser engine '{engine}'. Known engines: {string.Join(", ", BrowserToolsSection.Engines)}."),
+                document.PathAsWritten($"{BrowserToolsSection.SectionPath}:Engine")));
+        }
+        else if (string.Equals(engine, BrowserToolsSection.SafariEngine, StringComparison.OrdinalIgnoreCase) && browser.Headless is true)
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.BrowserSafariHeadless,
+                "Safari has no headless mode: the run refuses Headless: true with the safari engine. Turn Headless off or pick another engine.",
+                headlessPath));
         }
     }
 
