@@ -5,8 +5,9 @@ namespace Orkeon.Studio.Wpf.ViewModels.Config;
 
 /// <summary>
 /// The <c>Orkeon:Tools:Browser</c> form of the Browser tab (expert, Orkeon #440): the browser the
-/// <c>browser</c> tool drives and whether it shows a window. The default engine and a visible window
-/// are written as no key at all; a change moves a lone former <c>Orkeon:Tools:Firefox</c> section under
+/// <c>browser</c> tool drives, whether it shows a window, the profile it starts on, whether it stays
+/// open from one task to the next (<c>Lifetime</c>) and whether agents working at once share it
+/// (<c>SharedInstance</c>). The runtime's defaults are written as no key at all; a change moves a lone former <c>Orkeon:Tools:Firefox</c> section under
 /// the new name first, so the file never holds the two the run refuses together.
 /// </summary>
 public sealed class BrowserToolsSectionViewModel : DocumentSectionViewModel
@@ -17,7 +18,11 @@ public sealed class BrowserToolsSectionViewModel : DocumentSectionViewModel
     {
         MoveLegacySectionCommand = new RelayCommand(MoveLegacySection);
         RemoveLegacySectionCommand = new RelayCommand(RemoveLegacySection);
+        RemoveLifetimeCommand = new RelayCommand(RemoveLifetime);
     }
+
+    /// <summary>Removes a lifetime the runtime does not know (<see cref="RemoveLifetime"/>).</summary>
+    public RelayCommand RemoveLifetimeCommand { get; }
 
     /// <summary>Renames a lone former <c>Orkeon:Tools:Firefox</c> section (<see cref="MoveLegacySection"/>).</summary>
     public RelayCommand MoveLegacySectionCommand { get; }
@@ -59,6 +64,10 @@ public sealed class BrowserToolsSectionViewModel : DocumentSectionViewModel
 
     private BrowserToolsSection Section => Document.BrowserTools;
 
+    // The profile as typed: the section keeps it trimmed, and a box that showed the trimmed text back
+    // would eat a blank typed inside a folder path.
+    private string? _profileText;
+
     /// <inheritdoc />
     public override bool Exists => Section.Exists;
 
@@ -87,6 +96,70 @@ public sealed class BrowserToolsSectionViewModel : DocumentSectionViewModel
     {
         get => Section.Headless ?? false;
         set => SetValue(Headless, value, v => Section.Headless = v);
+    }
+
+    /// <summary>
+    /// The profile a browser starts on when the agent names none: blank (or <c>disposable</c>) for a
+    /// fresh folder removed when the browser closes, which writes no key; else a Firefox profile name
+    /// or the path of a folder, written trimmed.
+    /// </summary>
+    public string Profile
+    {
+        get => _profileText ?? Section.Profile ?? "";
+        set
+        {
+            if (string.Equals(value, Profile, StringComparison.Ordinal))
+                return;
+
+            var before = Section.Profile;
+            _profileText = value;
+            Section.Profile = value;
+            OnPropertiesChanged(nameof(Profile), nameof(CanEditProfile));
+            if (!string.Equals(before, Section.Profile, StringComparison.Ordinal))
+                NotifyDocumentChanged();
+        }
+    }
+
+    /// <summary>
+    /// Whether the browser stays open from one task to the next (<c>Lifetime: Host</c>) rather than
+    /// closing at the end of each task (<c>Run</c>, the default, written as no key). A lifetime the
+    /// runtime does not know reads as off and stays as written, for the validator to refuse, until
+    /// the switch is set.
+    /// </summary>
+    public bool KeepsBrowserOpen
+    {
+        get => string.Equals(Section.EffectiveLifetime, BrowserToolsSection.HostLifetime, StringComparison.OrdinalIgnoreCase);
+        set => SetValue(KeepsBrowserOpen, value, v => Section.Lifetime = v ? BrowserToolsSection.HostLifetime : null);
+    }
+
+    /// <summary>Whether agents working at the same time share one browser per profile; off (the default) removes the key.</summary>
+    public bool SharedInstance
+    {
+        get => Section.SharedInstance ?? false;
+        set => SetValue(SharedInstance, value, v => Section.SharedInstance = v);
+    }
+
+    /// <summary>
+    /// Whether the file names a lifetime the runtime refuses (neither <c>Run</c> nor <c>Host</c>):
+    /// the switch then reads as off, and the tab offers to remove the value.
+    /// </summary>
+    public bool HasUnknownLifetime =>
+        Section.Lifetime is { } lifetime && !BrowserToolsSection.Lifetimes.Contains(lifetime, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Whether the profile can be edited: always, but under Safari, which runs on the disposable
+    /// profile alone; a profile the file still names stays editable there, to clear it.
+    /// </summary>
+    public bool CanEditProfile => !IsSafari || Profile.Length > 0;
+
+    /// <summary>Removes a lifetime the runtime does not know: the browser then closes with each task, the default.</summary>
+    public void RemoveLifetime()
+    {
+        if (!HasUnknownLifetime)
+            return;
+
+        Section.Lifetime = null;
+        NotifyDocumentChanged();
     }
 
     /// <summary>Whether the engine can run headless: Safari cannot.</summary>
@@ -128,9 +201,23 @@ public sealed class BrowserToolsSectionViewModel : DocumentSectionViewModel
     }
 
     /// <inheritdoc />
-    protected override void OnSectionChanged() =>
+    public override void Refresh()
+    {
+        _profileText = null;
+        base.Refresh();
+    }
+
+    /// <inheritdoc />
+    protected override void OnSectionChanged()
+    {
+        // The text typed stays while it is what the section holds; a profile changed elsewhere replaces it.
+        if (_profileText is not null && !string.Equals(BrowserToolsSection.NormalizeProfile(_profileText), Section.Profile, StringComparison.Ordinal))
+            _profileText = null;
+
         OnPropertiesChanged(nameof(Exists), nameof(Engine), nameof(EngineChoices), nameof(Headless), nameof(IsSafari),
-            nameof(CanRunHeadless), nameof(CanToggleHeadless), nameof(UsesLegacySection), nameof(HasBothSections));
+            nameof(CanRunHeadless), nameof(CanToggleHeadless), nameof(UsesLegacySection), nameof(HasBothSections),
+            nameof(Profile), nameof(KeepsBrowserOpen), nameof(SharedInstance), nameof(HasUnknownLifetime), nameof(CanEditProfile));
+    }
 }
 
 /// <summary>A choice of the browser engine picker: the runtime's id and the name its browser goes by.</summary>

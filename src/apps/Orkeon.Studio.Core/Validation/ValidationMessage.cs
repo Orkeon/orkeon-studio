@@ -267,6 +267,15 @@ public static class ValidationCodes
     /// <summary>The browser tool's settings are under the former <c>Orkeon:Tools:Firefox</c> alone: read, but deprecated.</summary>
     public const string BrowserSectionLegacy = "STUDIO-BROWSER-LEGACY";
 
+    /// <summary>The browser tool names a lifetime other than <c>Run</c> or <c>Host</c>: the run refuses to start.</summary>
+    public const string BrowserLifetimeUnknown = "STUDIO-BROWSER-LIFETIME";
+
+    /// <summary>
+    /// The browser tool's default profile is one the engine refuses when the browser starts: a name
+    /// rather than a folder path under Chrome, Edge or Brave, any named profile under Safari.
+    /// </summary>
+    public const string BrowserProfileRefused = "STUDIO-BROWSER-PROFILE";
+
     /// <summary>A stdio MCP server has no command to launch.</summary>
     public const string McpCommandMissing = "STUDIO-MCP-COMMAND";
 

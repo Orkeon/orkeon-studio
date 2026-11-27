@@ -1547,6 +1547,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari no tiene modo sin ventana: la ejecución rechaza Headless con él.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>El archivo contiene a la vez Orkeon:Tools:Browser y su nombre anterior Orkeon:Tools:Firefox: la ejecución rechaza las dos juntas.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>La sección del navegador aún lleva su nombre anterior, Orkeon:Tools:Firefox: se lee hoy, hay que renombrarla como Orkeon:Tools:Browser.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LIFETIME" xml:space="preserve"><value>La sección del navegador indica una duración distinta de Run o Host: la ejecución la rechaza.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-PROFILE" xml:space="preserve"><value>El perfil por defecto del navegador se rechaza en cuanto un agente actúa: prohibido por DeniedProfiles, distinto de la ruta completa de una carpeta existente en Chrome, Edge y Brave, o cualquier perfil con nombre en Safari.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve">
     <value>El entorno de un servidor MCP contiene un secreto en claro; póngalo en su entorno de usuario.</value>
   </data>
@@ -1909,6 +1911,14 @@
   <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Renombrar la sección</value></data>
   <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>Este archivo define la sección con sus dos nombres, Orkeon:Tools:Browser y su nombre anterior Orkeon:Tools:Firefox: la ejecución rechaza ambos juntos. Debe leer Orkeon:Tools:Browser.</value></data>
   <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Quitar la sección anterior</value></data>
+  <data name="Studio.Settings.BrowserProfileLabel" xml:space="preserve"><value>Perfil</value></data>
+  <data name="Studio.Settings.BrowserProfileHint" xml:space="preserve"><value>Vacío: un perfil nuevo, eliminado al cerrar el navegador. Un perfil con nombre se usa en su sitio y conserva sus cookies y sesiones de un lanzamiento a otro: dé a los agentes uno propio, nunca el suyo. Dos navegadores no pueden abrirlo a la vez: para agentes que trabajan al mismo tiempo, mantenga el navegador abierto o compártalo. Firefox acepta un nombre de perfil (about:profiles) o la ruta de una carpeta; Chrome, Edge y Brave solo la ruta completa de una carpeta existente; Safari ninguno.</value></data>
+  <data name="Studio.Settings.BrowserKeepOpen" xml:space="preserve"><value>Mantener el navegador abierto de una tarea a otra (Lifetime = Host)</value></data>
+  <data name="Studio.Settings.BrowserKeepOpenHint" xml:space="preserve"><value>Por defecto, el navegador se cierra al final de cada tarea. Mantenido, sigue abierto con sus pestañas hasta que termina el lanzamiento, un agente lo cierra o usted cierra su ventana; los agentes que trabajan a la vez lo usan entonces por turnos.</value></data>
+  <data name="Studio.Settings.BrowserShared" xml:space="preserve"><value>Los agentes que trabajan a la vez comparten un navegador (SharedInstance)</value></data>
+  <data name="Studio.Settings.BrowserSharedHint" xml:space="preserve"><value>Un navegador por perfil, cada agente en sus propias pestañas. Sin esta opción, cada tarea inicia su propio navegador, o usa por turnos el que se mantiene abierto.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeUnknown" xml:space="preserve"><value>Este archivo indica una duración que la ejecución rechaza: solo conoce Run y Host.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeRemove" xml:space="preserve"><value>Quitar el valor</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve">
     <value>Servidores MCP</value>
   </data>

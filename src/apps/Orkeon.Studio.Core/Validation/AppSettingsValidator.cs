@@ -101,10 +101,14 @@ public sealed class AppSettingsValidator
     private static readonly string[] SecretWords = ["TOKEN", "SECRET", "KEY", "PASSWORD", "PASSWD"];
 
     private readonly MountValidator _mounts;
+    private readonly IDirectoryProbe _directories;
 
     /// <summary>Creates a validator over the given directory access (defaults to the real disk).</summary>
-    public AppSettingsValidator(IDirectoryProbe? directories = null) =>
+    public AppSettingsValidator(IDirectoryProbe? directories = null)
+    {
         _mounts = new MountValidator(directories);
+        _directories = directories ?? PhysicalDirectoryProbe.Instance;
+    }
 
     /// <summary>Parses then validates JSON text; a malformed document yields a single error.</summary>
     /// <param name="json">The file's text.</param>
@@ -474,11 +478,14 @@ public sealed class AppSettingsValidator
     }
 
     /// <summary>
-    /// The browser tool's section as the engine judges it at start (<c>FirefoxToolOptions</c>, Orkeon #440):
-    /// both sections at once, an unknown engine, and Safari asked to run headless are refused; the former
-    /// section alone is read, and said to be deprecated. <c>Engine</c> is not read in the former section.
+    /// The browser tool's section as the engine judges it (<c>FirefoxToolOptions</c>, Orkeon #440): both
+    /// sections at once, an unknown engine, Safari asked to run headless and an unknown lifetime are
+    /// refused; the former section alone is read, and said to be deprecated (<c>Engine</c> is not read
+    /// there). A switch that reads as no boolean, a profile that is no text, and a default profile the
+    /// browser refuses when an agent acts (forbidden, a name or a missing folder under Chromium, any
+    /// named one under Safari) are warnings.
     /// </summary>
-    private static void ValidateBrowser(AppSettingsDocument document, List<ValidationMessage> messages)
+    private void ValidateBrowser(AppSettingsDocument document, List<ValidationMessage> messages)
     {
         var browser = document.BrowserTools;
         if (browser.BothSet)
@@ -506,6 +513,46 @@ public sealed class AppSettingsValidator
                 headlessPath));
         }
 
+        // SharedInstance likewise: a value that is no boolean is read as false.
+        var sharedPath = browser.KeyPath("SharedInstance");
+        if (document.GetNode(sharedPath) is not null && document.GetBoolean(sharedPath) is null)
+        {
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.InvalidFieldType,
+                $"'{sharedPath}' must be true or false: the run ignores this value and reads it as false, no browser shared.",
+                sharedPath));
+        }
+
+        // A profile that is no text (an object, a list) is no value to the configuration: the disposable one is used.
+        var profilePath = browser.KeyPath("Profile");
+        if (document.GetNode(profilePath) is JsonObject or JsonArray)
+        {
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.InvalidFieldType,
+                $"'{profilePath}' must be the name or the folder path of a profile: the run ignores this value and starts on a disposable profile.",
+                profilePath));
+        }
+
+        // A forbidden default profile is refused at every action that names none, whatever the engine.
+        if (browser.Profile is { } named && BrowserToolsSection.NormalizeProfile(named) is not null
+            && browser.DeniedProfiles.Contains(named, StringComparer.OrdinalIgnoreCase))
+        {
+            messages.Add(ValidationMessage.Warning(
+                ValidationCodes.BrowserProfileRefused,
+                $"The default profile '{named}' is one {browser.KeyPath("DeniedProfiles")} forbids: the browser refuses every action of an agent that names no profile.",
+                profilePath));
+        }
+
+        // Lifetime is read by its name alone, under either section: anything else stops the run.
+        if (browser.Lifetime is { } lifetime && !BrowserToolsSection.Lifetimes.Contains(lifetime, StringComparer.OrdinalIgnoreCase))
+        {
+            messages.Add(ValidationMessage.Error(
+                ValidationCodes.BrowserLifetimeUnknown,
+                string.Create(CultureInfo.InvariantCulture,
+                    $"Unknown browser lifetime '{lifetime}': the run refuses it. Write one of {string.Join(", ", BrowserToolsSection.Lifetimes)}."),
+                browser.KeyPath("Lifetime")));
+        }
+
         if (!browser.Exists)
             return;
 
@@ -524,6 +571,23 @@ public sealed class AppSettingsValidator
                 ValidationCodes.BrowserSafariHeadless,
                 "Safari has no headless mode: the run refuses Headless: true with the safari engine. Turn Headless off or pick another engine.",
                 headlessPath));
+        }
+
+        // A profile the engine refuses fails the agent's first browser action, not the run's start:
+        // Safari's policy refuses it before any browser starts, Chromium when it opens the folder.
+        if (browser.Profile is { } profile && BrowserToolsSection.NormalizeProfile(profile) is not null)
+        {
+            var refusal = string.Equals(engine, BrowserToolsSection.SafariEngine, StringComparison.OrdinalIgnoreCase)
+                ? $"Safari runs on the disposable profile only: the browser refuses '{profile}' at the agent's first action. Leave the profile blank."
+                : !BrowserToolsSection.ChromiumEngines.Contains(engine, StringComparer.OrdinalIgnoreCase)
+                    ? null
+                    : !Path.IsPathRooted(profile)
+                        ? $"Chrome, Edge and Brave take a profile by the full path of a folder kept for it, never by a name: the browser refuses '{profile}' at the agent's first action."
+                        : !_directories.Exists(profile)
+                            ? $"The profile folder '{profile}' does not exist: the browser refuses it at the agent's first action. Create the folder, or leave the profile blank."
+                            : null;
+            if (refusal is not null)
+                messages.Add(ValidationMessage.Warning(ValidationCodes.BrowserProfileRefused, refusal, profilePath));
         }
     }
 

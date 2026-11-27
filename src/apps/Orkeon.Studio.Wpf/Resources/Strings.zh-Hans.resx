@@ -1547,6 +1547,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari 没有无窗口模式：运行会拒绝与之同时设置 Headless。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>文件同时包含 Orkeon:Tools:Browser 和其旧名称 Orkeon:Tools:Firefox：运行会拒绝两者同时存在。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>浏览器节仍使用旧名称 Orkeon:Tools:Firefox：目前仍会读取，应重命名为 Orkeon:Tools:Browser。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LIFETIME" xml:space="preserve"><value>浏览器节指定了 Run 或 Host 以外的生命周期：运行将拒绝该值。</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-PROFILE" xml:space="preserve"><value>代理操作时浏览器会拒绝其默认配置文件：被 DeniedProfiles 禁止；在 Chrome、Edge 和 Brave 下不是现有文件夹的完整路径；或在 Safari 下为任何命名的配置文件。</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve">
     <value>某个 MCP 服务器的环境中含有明文机密；请改为在您的用户环境中设置。</value>
   </data>
@@ -1909,6 +1911,14 @@
   <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>重命名该节</value></data>
   <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>此文件以两个名称设置了该节：Orkeon:Tools:Browser 及其旧名称 Orkeon:Tools:Firefox：运行会拒绝两者同时存在。运行应读取 Orkeon:Tools:Browser。</value></data>
   <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>删除旧节</value></data>
+  <data name="Studio.Settings.BrowserProfileLabel" xml:space="preserve"><value>配置文件</value></data>
+  <data name="Studio.Settings.BrowserProfileHint" xml:space="preserve"><value>留空：使用全新的配置文件，浏览器关闭时删除。命名的配置文件会原地使用，并在每次启动之间保留其 Cookie 和登录状态：请为代理准备专用的配置文件，切勿使用您自己的。两个浏览器不能同时打开它：若代理同时工作，请保持浏览器打开或共享浏览器。Firefox 接受配置文件名称（about:profiles）或文件夹路径；Chrome、Edge 和 Brave 只接受现有文件夹的完整路径；Safari 不接受任何配置文件。</value></data>
+  <data name="Studio.Settings.BrowserKeepOpen" xml:space="preserve"><value>在任务之间保持浏览器打开（Lifetime = Host）</value></data>
+  <data name="Studio.Settings.BrowserKeepOpenHint" xml:space="preserve"><value>默认情况下，浏览器在每个任务结束时关闭。保持打开时，它会连同标签页一直保留，直到本次启动结束、代理将其关闭或您关闭其窗口；同时工作的代理将轮流使用它。</value></data>
+  <data name="Studio.Settings.BrowserShared" xml:space="preserve"><value>同时工作的代理共享一个浏览器（SharedInstance）</value></data>
+  <data name="Studio.Settings.BrowserSharedHint" xml:space="preserve"><value>每个配置文件一个浏览器，每个代理使用自己的标签页。未启用时，每个任务启动自己的浏览器，或轮流使用保持打开的那个。</value></data>
+  <data name="Studio.Settings.BrowserLifetimeUnknown" xml:space="preserve"><value>此文件指定了运行会拒绝的生命周期：它只接受 Run 和 Host。</value></data>
+  <data name="Studio.Settings.BrowserLifetimeRemove" xml:space="preserve"><value>移除该值</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve">
     <value>MCP 服务器</value>
   </data>

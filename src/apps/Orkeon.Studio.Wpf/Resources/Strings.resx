@@ -608,6 +608,8 @@
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SAFARI-HEADLESS" xml:space="preserve"><value>Safari has no headless mode: the run refuses Headless with it.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-SECTIONS" xml:space="preserve"><value>The file holds both Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LEGACY" xml:space="preserve"><value>The browser section still has its former name, Orkeon:Tools:Firefox: read today, to be renamed Orkeon:Tools:Browser.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-LIFETIME" xml:space="preserve"><value>The browser section names a lifetime other than Run or Host: the run refuses it.</value></data>
+  <data name="Studio.Diagnostics.Code.STUDIO-BROWSER-PROFILE" xml:space="preserve"><value>The browser's default profile is one it refuses when an agent acts: forbidden by DeniedProfiles, not the full path of an existing folder under Chrome, Edge and Brave, or any named profile under Safari.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MCP-ENV-SECRET" xml:space="preserve"><value>An MCP server's environment carries a secret in clear text; set it in your user environment instead.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-NAME" xml:space="preserve"><value>An e-mail account name is unusable: letters, digits, '.', '_' and '-' only, 64 characters at most. The run sets the account aside.</value></data>
   <data name="Studio.Diagnostics.Code.STUDIO-MAIL-DUPLICATE" xml:space="preserve"><value>Two e-mail accounts carry the same name but for the case: the run reads them as one, or cannot read the file at all. Rename one.</value></data>
@@ -774,6 +776,14 @@
   <data name="Studio.Settings.BrowserLegacyMove" xml:space="preserve"><value>Rename the section</value></data>
   <data name="Studio.Settings.BrowserBoth" xml:space="preserve"><value>This file sets the section under both names, Orkeon:Tools:Browser and its former name Orkeon:Tools:Firefox: the run refuses the two together. The run is to read Orkeon:Tools:Browser.</value></data>
   <data name="Studio.Settings.BrowserBothRemove" xml:space="preserve"><value>Remove the former section</value></data>
+  <data name="Studio.Settings.BrowserProfileLabel" xml:space="preserve"><value>Profile</value></data>
+  <data name="Studio.Settings.BrowserProfileHint" xml:space="preserve"><value>Blank: a fresh profile, removed when the browser closes. A named profile is used in place and keeps its cookies and sign-ins from one launch to the next: give the agents one of their own, never yours. Two browsers cannot open it at once: for agents working at the same time, keep the browser open or share it. Firefox takes a profile name (about:profiles) or a folder path; Chrome, Edge and Brave the full path of an existing folder only; Safari none.</value></data>
+  <data name="Studio.Settings.BrowserKeepOpen" xml:space="preserve"><value>Keep the browser open from one task to the next (Lifetime = Host)</value></data>
+  <data name="Studio.Settings.BrowserKeepOpenHint" xml:space="preserve"><value>By default the browser closes at the end of each task. Kept, it stays open with its tabs until the launch ends, an agent closes it or you close its window; agents working at the same time then take turns in it.</value></data>
+  <data name="Studio.Settings.BrowserShared" xml:space="preserve"><value>Agents working at the same time share one browser (SharedInstance)</value></data>
+  <data name="Studio.Settings.BrowserSharedHint" xml:space="preserve"><value>One browser per profile, each agent in tabs of its own. Without it, each task starts a browser of its own, or takes turns in the one kept open.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeUnknown" xml:space="preserve"><value>This file names a lifetime the run refuses: it knows Run and Host only.</value></data>
+  <data name="Studio.Settings.BrowserLifetimeRemove" xml:space="preserve"><value>Remove the value</value></data>
   <data name="Studio.Settings.McpTitle" xml:space="preserve"><value>MCP servers</value></data>
   <data name="Studio.Settings.McpIntro" xml:space="preserve"><value>The servers a run connects before the team starts; their tools join the catalogue under their own names. Experimental: the servers are launched at every run.</value></data>
   <data name="Studio.Settings.McpEnabled" xml:space="preserve"><value>Connect the declared servers</value></data>
