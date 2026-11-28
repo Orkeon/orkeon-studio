@@ -4,12 +4,13 @@ All notable changes to Orkeon Studio are recorded here. Breaking changes come fi
 
 ## Unreleased
 
-Built against Orkeon `main` at `9ca8530fd` (untagged), from packs of that commit in `dev-feed/`.
+Built against Orkeon `main` at `f1fe70919` (untagged), from packs of that commit in `dev-feed/`.
 
 ### Changed
 
 - **The `firefox` tool is now `browser`** (Orkeon [#440](https://github.com/Orkeon/orkeon/issues/440)): the catalogue shows `browser`, in the Web family, with its expert setting; `firefox`, its deprecated name that Orkeon still registers, stays a known tool (a `.png` writer for the deliverable check) but is no longer listed.
 - **`chat_attach` joins the catalogue** (Orkeon [#485](https://github.com/Orkeon/orkeon/issues/485)) under Collaboration, said to work only in a conversation of `orkeon-host`: every run of a YAML team registers it, but a team Studio launches cannot use it, and the forge does not offer it.
+- **A cached system prompt or tool list now caches the conversation too** (Orkeon [#490](https://github.com/Orkeon/orkeon/issues/490)): with `Llm:Cache:SystemPrompt` or `Cache:Tools` set and `Cache:Conversation` left out, the run also caches the conversation of a tool loop on Anthropic, so the share of prompt tokens the cache serves, in the cache chip of the status bar, grows; `"Conversation": false` keeps the former behaviour. Studio writes no cache key.
 
 ### Added
 
@@ -18,6 +19,10 @@ Built against Orkeon `main` at `9ca8530fd` (untagged), from packs of that commit
 - **Test tab**: Settings tests every declared model and System One, sends a free message and shows its reply, and keeps a journal that can be copied or saved.
 - **What the engine says on the wizard's grey line can be copied** (an error it carries on after, a warning, a refused rephrase), with its report and log.
 - **Browser tab** (expert; Orkeon [#440](https://github.com/Orkeon/orkeon/issues/440)): Settings and the terminal editor pick the engine of the `browser` tool (`Orkeon:Tools:Browser:Engine`: firefox, chrome, edge, brave, safari), its window (`Headless`, refused with Safari), the profile it starts on (`Profile`), whether it stays open from one task to the next (`Lifetime: Host`) and whether agents working at once share it (`SharedInstance`). The settings check refuses an unknown engine, Safari with `Headless` and both `Orkeon:Tools:Browser` and `Orkeon:Tools:Firefox` (`STUDIO-BROWSER-*`), and warns on the former section alone, which Settings and the terminal editor rename (its `Engine`, which the run ignores there, left behind), and on a `Headless` or `SharedInstance` the run cannot read. An unknown `Lifetime` is an error (`STUDIO-BROWSER-LIFETIME`), which Settings offers to remove and the terminal editor refuses until its switch replaces it; a `Profile` that is no text is a warning, and so is a default profile the browser refuses at the agent's first action (`STUDIO-BROWSER-PROFILE`: forbidden by `DeniedProfiles`, not the full path of an existing folder under Chrome, Edge and Brave, any named profile under Safari).
+
+### Fixed
+
+- **A cache lifetime set on the conversation alone is accepted** (Orkeon [#490](https://github.com/Orkeon/orkeon/issues/490)): the settings check reads `Cache:Conversation` under `Llm` and each profile, as the run now does, so `"Cache": { "Conversation": true, "Ttl": "1h" }` is no longer refused at `Cache:Ttl`; `"Conversation": false` with nothing else marked still is. A cache switch that is not true or false (`"yes"`, `1`), which stops the run's start, is now an error at its own key, where it went unreported (or was reported at `Cache:Ttl`), and a key written as one flattened name (`"Cache:Ttl"`) is judged as the run reads it.
 
 ## [1.4.0] - 2026-11-23
 

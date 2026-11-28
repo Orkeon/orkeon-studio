@@ -1,5 +1,8 @@
+using System.Text;
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Configuration;
 using Orkeon.Constants.Configuration;
+using Orkeon.Infrastructure.LLMs.Profiles;
 using Orkeon.Studio.Core.Configuration;
 using Orkeon.Studio.Core.Tests.Doubles;
 using Orkeon.Studio.Core.Validation;
@@ -537,6 +540,79 @@ public sealed class AppSettingsValidatorTests
         var messages = Validator().Validate(document);
 
         Assert.Contains(messages, m => m.Severity == ValidationSeverity.Error && m.Path == "Llm:Cache:Ttl");
+    }
+
+    /// <summary>
+    /// A lifetime needs a breakpoint, and <c>Cache:Conversation</c> marks one (Orkeon #490): left out it
+    /// follows the other two switches, set it decides alone. A switch that is not true or false stops the
+    /// start at that switch, a blank one is unset. Judged as the run reads the section (<c>LlmSettings</c>),
+    /// under the default and under a profile; <paramref name="refusedAt"/> is the key refused, if any.
+    /// </summary>
+    [Theory]
+    [InlineData("""{ "Conversation": true, "Ttl": "1h" }""", null)]
+    [InlineData("""{ "Conversation": "true", "Ttl": "5m" }""", null)]
+    [InlineData("""{ "Conversation": false, "Ttl": "1h" }""", "Cache:Ttl")]
+    [InlineData("""{ "Ttl": "1h" }""", "Cache:Ttl")]
+    [InlineData("""{ "SystemPrompt": true, "Conversation": false, "Ttl": "1h" }""", null)]
+    [InlineData("""{ "Tools": true, "Ttl": "1h" }""", null)]
+    [InlineData("""{ "Conversation": true, "Ttl": "2h" }""", "Cache:Ttl")]
+    [InlineData("""{ "Conversation": "yes" }""", "Cache:Conversation")]
+    [InlineData("""{ "Conversation": "yes", "Ttl": "1h" }""", "Cache:Conversation")]
+    [InlineData("""{ "SystemPrompt": 1 }""", "Cache:SystemPrompt")]
+    [InlineData("""{ "Tools": "on", "Ttl": "1h" }""", "Cache:Tools")]
+    [InlineData("""{ "Conversation": " " }""", null)]
+    [InlineData("""{ "Conversation": "", "Ttl": "1h" }""", "Cache:Ttl")]
+    [InlineData("""{ "SystemPrompt": "TRUE", "Ttl": " 1h " }""", null)]
+    public void A_cache_is_judged_with_the_conversation_as_the_run_reads_it(string cache, string? refusedAt)
+    {
+        AssertCacheAsTheRun($$"""{ "Llm": { "Model": "m", "Cache": {{cache}}, "Profiles": { "p": { "Model": "m", "Cache": {{cache}} } } } }""", refusedAt);
+    }
+
+    /// <summary>A key written as one flattened name reads as its segments, to the run as here.</summary>
+    [Theory]
+    [InlineData("""{ "Cache:Ttl": "2h" }""", "Cache:Ttl")]
+    [InlineData("""{ "Cache:Conversation": true, "Cache:Ttl": "1h" }""", null)]
+    [InlineData("""{ "Cache": { "Conversation": "yes" }, "Cache:Ttl": "1h" }""", "Cache:Conversation")]
+    public void A_flattened_cache_key_is_judged_as_the_run_reads_it(string members, string? refusedAt)
+    {
+        var inner = members.Trim()[1..^1];
+        AssertCacheAsTheRun($$"""{ "Llm": { "Model": "m", {{inner}}, "Profiles": { "p": { "Model": "m", {{inner}} } } } }""", refusedAt);
+    }
+
+    private static void AssertCacheAsTheRun(string json, string? refusedAt)
+    {
+        var runtime = new ConfigurationBuilder()
+            .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json))).Build();
+
+        var errors = Validator().Validate(AppSettingsDocument.Parse(json))
+            .Where(m => m.Severity == ValidationSeverity.Error && m.Path?.Contains(":Cache:", StringComparison.Ordinal) == true)
+            .Select(m => m.Path)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        string[] expected = refusedAt is null ? [] : [$"Llm:{refusedAt}", $"Llm:Profiles:p:{refusedAt}"];
+        Assert.Equal(expected.Order(StringComparer.Ordinal), errors);
+        Assert.Equal(refusedAt is null ? null : $"Llm:{refusedAt}", Refusal(() => LlmSettings.ReadDefault(runtime)));
+        Assert.Equal(refusedAt is null ? null : $"Llm:Profiles:p:{refusedAt}", Refusal(() => LlmSettings.ReadProfiles(runtime)));
+
+        // The key the run names in its refusal: every refusal of a cache key starts with its path.
+        static string? Refusal(Action read)
+        {
+            try
+            {
+                read();
+                return null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                var cache = ex.Message.IndexOf(":Cache:", StringComparison.Ordinal);
+                Assert.True(cache > 0, ex.Message);
+                var end = cache + ":Cache:".Length;
+                while (end < ex.Message.Length && char.IsAsciiLetter(ex.Message[end]))
+                    end++;
+                return ex.Message[..end];
+            }
+        }
     }
 
     [Theory]
