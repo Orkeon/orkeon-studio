@@ -94,7 +94,9 @@ public sealed class AppSettingsValidator
          LlmProfilesSection.WorkspaceIdKey];
     private static readonly string[] LlmIntegerKeys =
         ["MaxTokens", "TimeoutSeconds", "StreamIdleSeconds", "MaxRetries", LlmProfilesSection.ContextWindowTokensKey];
-    private static readonly string[] LlmBooleanKeys = ["Thinking:Enabled", ConfigurationKeys.LlmGrammar];
+    // The switches the run reads with LlmSettings.ReadBool: a value bool.TryParse refuses stops its start.
+    private static readonly string[] LlmBooleanKeys =
+        ["Thinking:Enabled", ConfigurationKeys.LlmGrammar, "Cache:SystemPrompt", "Cache:Tools", "Cache:Conversation"];
 
     // The words that make an environment value read as a secret: written in clear in the
     // settings file, it is the very thing the API-key rows keep out of every file.
@@ -909,7 +911,7 @@ public sealed class AppSettingsValidator
         foreach (var key in LlmIntegerKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadInt32(node) is null))
             messages.Add(WrongType($"{sectionPath}:{key}", "a whole number"));
 
-        foreach (var key in LlmBooleanKeys.Where(key => Written(section, key) is { } node && AppSettingsDocument.ReadBoolean(node) is null))
+        foreach (var key in LlmBooleanKeys.Where(key => UnreadableSwitch(Child(section, key))))
             messages.Add(WrongType($"{sectionPath}:{key}", "true or false"));
 
         // A window of zero or less would leave the agent's loop no room: the host refuses to start.
@@ -950,8 +952,10 @@ public sealed class AppSettingsValidator
 
     /// <summary>
     /// <c>Cache:Ttl</c> of a section of the <c>Llm</c> shape, judged by the Domain's
-    /// <see cref="LlmCacheConfig.Request"/> as the run reads it: a lifetime other than <c>5m</c> or
-    /// <c>1h</c>, or one set with no breakpoint marked, is an error at <c>Cache:Ttl</c>.
+    /// <see cref="LlmCacheConfig.Request(bool, bool, bool?, string?)"/> as the run reads it (<c>LlmSettings</c>):
+    /// a lifetime other than <c>5m</c> or <c>1h</c>, or one set with no breakpoint marked, is an error at
+    /// <c>Cache:Ttl</c>. <c>Cache:Conversation</c> marks one too (Orkeon #490); left out, it follows the
+    /// other two switches.
     /// </summary>
     private static void ValidateCache(JsonObject section, string sectionPath, List<ValidationMessage> messages)
     {
@@ -961,11 +965,17 @@ public sealed class AppSettingsValidator
             return;
         }
 
+        // A switch the run cannot read stops its start at that switch, reported there: no lifetime to judge.
+        string[] switches = ["Cache:SystemPrompt", "Cache:Tools", "Cache:Conversation"];
+        if (switches.Any(key => UnreadableSwitch(Child(section, key))))
+            return;
+
         var systemPrompt = Child(section, "Cache:SystemPrompt") is { } s && AppSettingsDocument.ReadBoolean(s) == true;
         var tools = Child(section, "Cache:Tools") is { } t && AppSettingsDocument.ReadBoolean(t) == true;
+        var conversation = Child(section, "Cache:Conversation") is { } c ? AppSettingsDocument.ReadBoolean(c) : null;
         try
         {
-            LlmCacheConfig.Request(systemPrompt, tools, ttl);
+            LlmCacheConfig.Request(systemPrompt, tools, conversation, ttl);
         }
         catch (ArgumentException ex)
         {
@@ -1148,20 +1158,43 @@ public sealed class AppSettingsValidator
     /// The node at <paramref name="relativePath"/> under <paramref name="section"/>, keys compared
     /// without case as the configuration binds them; null when absent.
     /// </summary>
-    private static JsonNode? Child(JsonObject section, string relativePath)
+    /// <remarks>
+    /// A key may hold several segments, as the configuration flattens them: <c>"Cache:Ttl"</c> written as
+    /// one name reads as <c>Cache</c> then <c>Ttl</c>. The nested spelling is tried first.
+    /// </remarks>
+    private static JsonNode? Child(JsonObject section, string relativePath) =>
+        Descend(section, relativePath.Split(':'), 0);
+
+    private static JsonNode? Descend(JsonNode? current, string[] segments, int start)
     {
-        JsonNode? current = section;
-        foreach (var segment in relativePath.Split(':'))
+        if (start == segments.Length)
+            return current;
+        if (current is not JsonObject container)
+            return null;
+
+        for (var end = start + 1; end <= segments.Length; end++)
         {
-            if (current is not JsonObject container)
-                return null;
-            current = container.FirstOrDefault(property => string.Equals(property.Key, segment, StringComparison.OrdinalIgnoreCase)).Value;
-            if (current is null)
-                return null;
+            var key = string.Join(':', segments[start..end]);
+            var next = container.FirstOrDefault(property => string.Equals(property.Key, key, StringComparison.OrdinalIgnoreCase)).Value;
+            if (next is not null && Descend(next, segments, end) is { } found)
+                return found;
         }
 
-        return current;
+        return null;
     }
+
+    /// <summary>
+    /// A switch the run refuses at start (<c>LlmSettings.ReadBool</c>): a value that is not true or false
+    /// in any case, or a list or object that holds anything. A blank value, an empty list or object is
+    /// unset, as the run reads it.
+    /// </summary>
+    private static bool UnreadableSwitch(JsonNode? node) => node switch
+    {
+        JsonValue value => AppSettingsDocument.ReadBoolean(value) is null
+            && !(value.TryGetValue<string>(out var text) && string.IsNullOrWhiteSpace(text)),
+        JsonObject { Count: 0 } or JsonArray { Count: 0 } or null => false,
+        _ => true,
+    };
 
     /// <summary>
     /// <see cref="Child"/>, an empty object or list read as absent: the run's configuration holds no
